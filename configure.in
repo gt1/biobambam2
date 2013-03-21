@@ -1,9 +1,9 @@
-AC_INIT(bambam,0.0.42,[gt1@sanger.ac.uk],[bambam],[http://www.sanger.ac.uk])
+AC_INIT(biobambam,0.0.42,[gt1@sanger.ac.uk],[biobambam],[http://www.sanger.ac.uk])
 AC_CANONICAL_SYSTEM
 AC_PROG_LIBTOOL
 
 AM_CONFIG_HEADER(config.h)
-AM_INIT_AUTOMAKE(bambam,0.0.42)
+AM_INIT_AUTOMAKE(biobambam,0.0.42)
 AC_CONFIG_MACRO_DIR([m4])
 
 AC_ARG_ENABLE(optimization,
@@ -224,4 +224,4 @@ AC_SUBST([BAMBAMHAVESAMTOOLS])
 #
 AC_SUBST([BAMHEADERDEFINE])
 # 
-AC_OUTPUT(Makefile src/Makefile src/bambam/BamBamConfig.hpp)
+AC_OUTPUT(Makefile src/Makefile src/biobambam/BamBamConfig.hpp)

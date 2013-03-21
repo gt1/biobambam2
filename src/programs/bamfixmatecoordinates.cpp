@@ -36,7 +36,7 @@
 #include <libmaus/util/ArgInfo.hpp>
 #include <libmaus/timing/RealTimeClock.hpp>
 
-// #include <bambam/BamFile.hpp>
+// #include <biobambam/BamFile.hpp>
 
 static std::vector < std::string > tmpfilenames;
 

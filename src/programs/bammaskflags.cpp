@@ -20,7 +20,7 @@
 #include <libmaus/bambam/BamWriter.hpp>
 #include <libmaus/util/ArgInfo.hpp>
 #include <libmaus/bambam/ProgramHeaderLineSet.hpp>
-#include <bambam/Licensing.hpp>
+#include <biobambam/Licensing.hpp>
 
 #include <config.h>
 
@@ -124,7 +124,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--version"
 			)
 			{
-				std::cerr << ::bambam::Licensing::license();
+				std::cerr << ::biobambam::Licensing::license();
 				return EXIT_SUCCESS;
 			}
 			else if ( 
@@ -133,17 +133,17 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--help"
 			)
 			{
-				std::cerr << ::bambam::Licensing::license();
+				std::cerr << ::biobambam::Licensing::license();
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
 				
 				std::vector< std::pair<std::string,std::string> > V;
 			
-				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::bambam::Licensing::formatNumber(getDefaultLevel())+"]>", "compression settings for output bam file (0=uncompressed,1=fast,9=best,-1=zlib default)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "maskneg=<["+::bambam::Licensing::formatNumber(getDefaultMaskNeg())+"]>", "flag masking bitmask" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", "compression settings for output bam file (0=uncompressed,1=fast,9=best,-1=zlib default)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "maskneg=<["+::biobambam::Licensing::formatNumber(getDefaultMaskNeg())+"]>", "flag masking bitmask" ) );
 
-				::bambam::Licensing::printMap(std::cerr,V);
+				::biobambam::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;

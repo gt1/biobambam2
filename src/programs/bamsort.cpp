@@ -33,7 +33,7 @@
 #include <libmaus/bambam/BamEntryContainer.hpp>
 #include <libmaus/bambam/BamAlignmentPosComparator.hpp>
 #include <libmaus/bambam/BamAlignmentNameComparator.hpp>
-#include <bambam/Licensing.hpp>
+#include <biobambam/Licensing.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; }
@@ -170,7 +170,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--version"
 			)
 			{
-				std::cerr << ::bambam::Licensing::license();
+				std::cerr << ::biobambam::Licensing::license();
 				return EXIT_SUCCESS;
 			}
 			else if ( 
@@ -179,20 +179,20 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--help"
 			)
 			{
-				std::cerr << ::bambam::Licensing::license();
+				std::cerr << ::biobambam::Licensing::license();
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
 				
 				std::vector< std::pair<std::string,std::string> > V;
 			
-				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::bambam::Licensing::formatNumber(getDefaultLevel())+"]>", "compression settings for output bam file (0=uncompressed,1=fast,9=best,-1=zlib default)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", "compression settings for output bam file (0=uncompressed,1=fast,9=best,-1=zlib default)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "SO=<["+getDefaultSortOrder()+"]>", "sorting order (coordinate or queryname)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::bambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "blockmb=<["+::bambam::Licensing::formatNumber(getDefaultBlockSize())+"]>", "size of internal memory buffer used for sorting in MiB" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "blockmb=<["+::biobambam::Licensing::formatNumber(getDefaultBlockSize())+"]>", "size of internal memory buffer used for sorting in MiB" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "tmpfile=<filename>", "prefix for temporary files, default: create files in current directory" ) );
 
-				::bambam::Licensing::printMap(std::cerr,V);
+				::biobambam::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;

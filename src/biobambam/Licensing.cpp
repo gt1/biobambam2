@@ -16,12 +16,12 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
-#include <bambam/Licensing.hpp>
+#include <biobambam/Licensing.hpp>
 #include <sstream>
 #include <iomanip>
 #include "config.h"
 
-std::string bambam::Licensing::license()
+std::string biobambam::Licensing::license()
 {
 	std::ostringstream ostr;
 	ostr << "This is " << PACKAGE_NAME << " version " << PACKAGE_VERSION << "." << std::endl;
@@ -29,7 +29,7 @@ std::string bambam::Licensing::license()
 	return ostr.str();
 }
 
-std::string bambam::Licensing::printLeft(std::string const & s, uint64_t const w, char const fill)
+std::string biobambam::Licensing::printLeft(std::string const & s, uint64_t const w, char const fill)
 {
 	std::ostringstream ostr;
 	ostr << std::setiosflags(std::ios::left);
@@ -39,7 +39,7 @@ std::string bambam::Licensing::printLeft(std::string const & s, uint64_t const w
 	return ostr.str();
 }
 
-std::ostream & bambam::Licensing::printMap(std::ostream & out, std::vector< std::pair<std::string,std::string> > const & M)
+std::ostream & biobambam::Licensing::printMap(std::ostream & out, std::vector< std::pair<std::string,std::string> > const & M)
 {
 	uint64_t maxfield = 0;
 	for ( std::vector< std::pair<std::string,std::string> >::const_iterator ita = M.begin(); ita != M.end(); ++ita )
@@ -51,4 +51,4 @@ std::ostream & bambam::Licensing::printMap(std::ostream & out, std::vector< std:
 	return out;
 }
 
-std::string bambam::Licensing::formatNumber(int64_t const n) { std::ostringstream ostr; ostr << n; return ostr.str(); }
+std::string biobambam::Licensing::formatNumber(int64_t const n) { std::ostringstream ostr; ostr << n; return ostr.str(); }

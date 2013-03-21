@@ -21,7 +21,7 @@
 #include <libmaus/util/ArgInfo.hpp>
 #include <libmaus/util/TempFileRemovalContainer.hpp>
 #include <config.h>
-#include <bambam/Licensing.hpp>
+#include <biobambam/Licensing.hpp>
 #include <libmaus/bambam/ProgramHeaderLineSet.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
@@ -159,7 +159,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--version"
 			)
 			{
-				std::cerr << ::bambam::Licensing::license();
+				std::cerr << ::biobambam::Licensing::license();
 				return EXIT_SUCCESS;
 			}
 			else if ( 
@@ -168,7 +168,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--help"
 			)
 			{
-				std::cerr << ::bambam::Licensing::license();
+				std::cerr << ::biobambam::Licensing::license();
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
@@ -177,12 +177,12 @@ int main(int argc, char * argv[])
 				
 				V.push_back ( std::pair<std::string,std::string> ( "tmpfile=[<filename>]", "prefix for temporary files, default: create files in current directory" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "readgroups=[]", "filter for read groups, default: do not filter" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "pairsonly=["+ ::bambam::Licensing::formatNumber(getDefaultPairsOnly())+ "]", "output complete pairs only (1=yes,0=no)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::bambam::Licensing::formatNumber(getDefaultLevel())+"]>", "compression settings for output bam file (0=uncompressed,1=fast,9=best,-1=zlib default)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "colhashbits=<["+::bambam::Licensing::formatNumber(getDefaultColHashBits())+"]>", "log_2 of size of hash table used for collation" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "collistsize=<["+::bambam::Licensing::formatNumber(getDefaultColListSize())+"]>", "output list size for collation" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "pairsonly=["+ ::biobambam::Licensing::formatNumber(getDefaultPairsOnly())+ "]", "output complete pairs only (1=yes,0=no)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", "compression settings for output bam file (0=uncompressed,1=fast,9=best,-1=zlib default)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "colhashbits=<["+::biobambam::Licensing::formatNumber(getDefaultColHashBits())+"]>", "log_2 of size of hash table used for collation" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "collistsize=<["+::biobambam::Licensing::formatNumber(getDefaultColListSize())+"]>", "output list size for collation" ) );
 
-				::bambam::Licensing::printMap(std::cerr,V);
+				::biobambam::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;

@@ -33,7 +33,7 @@
 #include <libmaus/timing/RealTimeClock.hpp>
 #include <libmaus/util/ArgInfo.hpp>
 #include <libmaus/util/MemUsage.hpp>
-#include <bambam/Licensing.hpp>
+#include <biobambam/Licensing.hpp>
 
 // static std::string formatNumber(int64_t const n) { std::ostringstream ostr; ostr << n; return ostr.str(); }
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
@@ -1012,7 +1012,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--version"
 			)
 			{
-				std::cerr << ::bambam::Licensing::license();
+				std::cerr << ::biobambam::Licensing::license();
 				return EXIT_SUCCESS;
 			}
 			else if ( 
@@ -1021,7 +1021,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--help"
 			)
 			{
-				std::cerr << ::bambam::Licensing::license();
+				std::cerr << ::biobambam::Licensing::license();
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
@@ -1032,16 +1032,16 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "O=<filename>", "output file, stdout if unset" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "M=<filename>", "metrics file, stderr if unset" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "tmpfile=<filename>", "prefix for temporary files, default: create files in current directory" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::bambam::Licensing::formatNumber(getDefaultLevel())+"]>", "compression settings for output bam file (0=uncompressed,1=fast,9=best,-1=zlib default)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::bambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report (default: 1)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "mod=<["+::bambam::Licensing::formatNumber(getDefaultMod())+"]>", "print progress for each mod'th record/alignment" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "rewritebam=<["+::bambam::Licensing::formatNumber(getDefaultRewriteBam())+"]>", "compression of temporary alignment file when input is via stdin (0=snappy,1=gzip/bam)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "rewritebamlevel=<["+::bambam::Licensing::formatNumber(getDefaultRewriteBamLevel())+"]>", "compression settings for temporary alignment file if rewritebam=1" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "colhashbits=<["+::bambam::Licensing::formatNumber(getDefaultColHashBits())+"]>", "log_2 of size of hash table used for collation" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "collistsize=<["+::bambam::Licensing::formatNumber(getDefaultColListSize())+"]>", "output list size for collation" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "fragbufsize=<["+::bambam::Licensing::formatNumber(getDefaultFragBufSize())+"]>", "size of each fragment/pair file buffer in bytes" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", "compression settings for output bam file (0=uncompressed,1=fast,9=best,-1=zlib default)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report (default: 1)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "mod=<["+::biobambam::Licensing::formatNumber(getDefaultMod())+"]>", "print progress for each mod'th record/alignment" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "rewritebam=<["+::biobambam::Licensing::formatNumber(getDefaultRewriteBam())+"]>", "compression of temporary alignment file when input is via stdin (0=snappy,1=gzip/bam)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "rewritebamlevel=<["+::biobambam::Licensing::formatNumber(getDefaultRewriteBamLevel())+"]>", "compression settings for temporary alignment file if rewritebam=1" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "colhashbits=<["+::biobambam::Licensing::formatNumber(getDefaultColHashBits())+"]>", "log_2 of size of hash table used for collation" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "collistsize=<["+::biobambam::Licensing::formatNumber(getDefaultColListSize())+"]>", "output list size for collation" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "fragbufsize=<["+::biobambam::Licensing::formatNumber(getDefaultFragBufSize())+"]>", "size of each fragment/pair file buffer in bytes" ) );
 
-				::bambam::Licensing::printMap(std::cerr,V);
+				::biobambam::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;

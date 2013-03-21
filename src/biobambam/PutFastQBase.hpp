@@ -21,7 +21,7 @@
 #if ! defined(PUTFASTQBASE_HPP)
 #define PUTFASTQBASE_HPP
 
-#include <bambam/BamBamConfig.hpp>
+#include <biobambam/BamBamConfig.hpp>
 
 #if defined(BAMBAM_HAVE_SAMTOOLS)
 
@@ -42,7 +42,7 @@
 #include <libmaus/bambam/BamFlagBase.hpp>
 #include <libmaus/bambam/BamAlignment.hpp>
 
-namespace bambam
+namespace biobambam
 {
 	struct PutFastQBase
 	{

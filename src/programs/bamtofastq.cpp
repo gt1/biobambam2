@@ -17,9 +17,9 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#include <bambam/bamToFastQ.hpp>
+#include <biobambam/bamToFastQ.hpp>
 #include <iomanip>
-#include <bambam/Licensing.hpp>
+#include <biobambam/Licensing.hpp>
 #include <config.h>
 
 int main(int argc, char * argv[])
@@ -35,7 +35,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--version"
 			)
 			{
-				std::cerr << ::bambam::Licensing::license();
+				std::cerr << ::biobambam::Licensing::license();
 				return EXIT_SUCCESS;
 			}
 			else if ( 
@@ -44,7 +44,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--help"
 			)
 			{
-				std::cerr << ::bambam::Licensing::license() << std::endl;
+				std::cerr << ::biobambam::Licensing::license() << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
 				
@@ -59,9 +59,9 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<[bam]>", "input format, bam or sam" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "filename=<[-]>", "input file name, - for stdin" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "exclude=<[]>", "exclude alignments matching any of the given flags" ) );
-				V.push_back ( std::pair<std::string,std::string> ( std::string("T=<[") + bambam::getUnmatchedFilename(arginfo,"<pid>") + "]>" , "temporary file name" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("T=<[") + biobambam::getUnmatchedFilename(arginfo,"<pid>") + "]>" , "temporary file name" ) );
 				
-				::bambam::Licensing::printMap(std::cerr,V);
+				::biobambam::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 				std::cerr << "Alignment flags: PAIRED,PROPER_PAIR,UNMAP,MUNMAP,REVERSE,MREVERSE,READ1,READ2,SECONDARY,QCFAIL,DUP" << std::endl;
@@ -70,7 +70,7 @@ int main(int argc, char * argv[])
 				return EXIT_SUCCESS;
 			}
 			
-		bambam::processMain(arginfo);
+		biobambam::processMain(arginfo);
 	}
 	catch(std::exception const & ex)
 	{

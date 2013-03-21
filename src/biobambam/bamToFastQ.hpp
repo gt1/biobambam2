@@ -22,7 +22,7 @@
 
 #include <libmaus/util/ArgInfo.hpp>
 
-namespace bambam
+namespace biobambam
 {
 	int processMain(::libmaus::util::ArgInfo const & arginfo);
 	std::string getUnmatchedFilename(::libmaus::util::ArgInfo const & arginfo, std::string const pid);

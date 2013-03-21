@@ -20,9 +20,9 @@
 #if ! defined(BAMBAMOUTPUTBUFFER_HPP)
 #define BAMBAMOUTPUTBUFFER_HPP
 
-#include <bambam/PutFastQBase.hpp>
+#include <biobambam/PutFastQBase.hpp>
 
-namespace bambam
+namespace biobambam
 {
 	struct OutputBuffer : public PutFastQBase
 	{

@@ -17,8 +17,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#include <bambam/PutFastQBase.hpp>
-#include <bambam/OutputBuffer.hpp>
+#include <biobambam/PutFastQBase.hpp>
+#include <biobambam/OutputBuffer.hpp>
 
 #include <fstream>
 #include <iomanip>
@@ -27,11 +27,11 @@
 #include <libmaus/util/unordered_map.hpp>
 #include <csignal>
 
-#include <bambam/BamBamConfig.hpp>
+#include <biobambam/BamBamConfig.hpp>
 
 
 #if defined(BAMBAM_HAVE_SAMTOOLS)
-#include <bambam/BamFile.hpp>
+#include <biobambam/BamFile.hpp>
 
 #if defined(HAVE_BAM_H)
 #include <bam.h>
@@ -62,7 +62,7 @@
 #include <libmaus/util/TempFileNameGenerator.hpp>
 #include <libmaus/bambam/BamDecoder.hpp>
 
-#include <bambam/bamToFastQ.hpp>
+#include <biobambam/bamToFastQ.hpp>
 
 static std::vector < std::string > removeList;
 
@@ -137,7 +137,7 @@ void sigPipeHandler(int arg)
 	}
 }
 
-namespace bambam
+namespace biobambam
 {
 	std::string getUnmatchedFilename(::libmaus::util::ArgInfo const & arginfo, std::string const pid)
 	{

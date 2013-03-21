@@ -26,7 +26,7 @@
 #include <libmaus/util/ArgInfo.hpp>
 #include <libmaus/exception/LibMausException.hpp>
 
-#include <bambam/BamBamConfig.hpp>
+#include <biobambam/BamBamConfig.hpp>
 
 #if defined(BAMBAM_HAVE_SAMTOOLS)
 
@@ -41,7 +41,7 @@
 #endif
 
 
-namespace bambam
+namespace biobambam
 {
 	struct BamAlignment
 	{
