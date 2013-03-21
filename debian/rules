@@ -1,0 +1,7 @@
+#!/usr/bin/make -f
+%:
+	dh $@ 
+
+override_dh_auto_configure:
+	autoreconf -i -f
+	dh_auto_configure --
