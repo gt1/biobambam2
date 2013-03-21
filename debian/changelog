@@ -1,4 +1,10 @@
-libmaus (0.0.42-1) UNRELEASED; urgency=low
+biobambam (0.0.44-1) UNRELEASED; urgency=low
+
+  * bump version number again after fixing versioning script 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Thu, 21 Mar 2013 11:37:20 +0000
+
+biobambam (0.0.42-1) UNRELEASED; urgency=low
 
   * initial build
 
