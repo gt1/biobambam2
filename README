@@ -1,0 +1,4 @@
+For compiling this package there are two prerequisites:
+
+1. The libmaus library
+2. samtools
