@@ -11,7 +11,9 @@ awk -v first=${FIRST} -v second=${SECOND} -v third=${THIRD} '/^AC_INIT/ {gsub(fi
 mv configure.in.tmp configure.in
 
 pushd debian
-dch --distribution UNRELEASED -v ${FIRST}.${SECOND}.${NEXTTHIRD}-1
+dch --distribution unstable -v ${FIRST}.${SECOND}.${NEXTTHIRD}-0
+dch --release
+# dch --release -v ${FIRST}.${SECOND}.${NEXTTHIRD}-1
 popd
 
 git add debian/changelog
