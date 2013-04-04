@@ -190,7 +190,7 @@ if test ! -z "${with_libmaus}" ; then
 	fi
 fi
 
-PKG_CHECK_MODULES([libmaus],[libmaus >= 0.0.32])
+PKG_CHECK_MODULES([libmaus],[libmaus >= 0.0.34])
 
 if test ! -z "${with_libmaus}" ; then
 	if test ! -z "${PKGCONFIGPATHSAVE}" ; then
@@ -200,6 +200,54 @@ fi
 
 LIBMAUSCPPFLAGS="${libmaus_CFLAGS}"
 LIBMAUSLIBS="${libmaus_LIBS}"
+
+CPPFLAGS_SAVE="${CPPFLAGS}"
+LDFLAGS_SAVE="${LDFLAGS}"
+LIBS_SAVE="${LIBS}"
+
+CPPFLAGS="${CPPFLAGS} ${libmaus_CFLAGS}"
+LIBS="${LIBS} ${libmaus_LIBS}"
+
+AC_LANG_PUSH([C++])
+AC_MSG_CHECKING([whether we can compile a program using libmaus])
+	AC_LINK_IFELSE([AC_LANG_SOURCE([
+#include <libmaus/util/ArgInfo.hpp>
+
+				int main(int argc, char * argv[[]]) {
+					::libmaus::util::ArgInfo const arginfo(argc,argv);
+					return 0;
+			}])],
+			have_libmaus=yes,
+			have_libmaus=no
+		)
+AC_LANG_POP
+AC_MSG_RESULT($have_libmaus)
+
+if test "${have_libmaus}" = "no" ; then
+	AC_MSG_ERROR([Required libmaus is not available.])
+fi
+
+AC_LANG_PUSH([C++])
+AC_MSG_CHECKING([whether we libmaus has support for io_lib])
+	AC_LINK_IFELSE([AC_LANG_SOURCE([
+#include <libmaus/LibMausConfig.hpp>
+
+				int main(int argc, char * argv[[]]) {
+					#if ! defined(LIBMAUS_HAVE_IO_LIB)
+					#error "installed libmaus does not support io_lib"
+					#endif
+					return 0;
+			}])],
+			have_libmaus_iolib=yes,
+			have_libmaus_iolib=no
+		)
+AC_LANG_POP
+AC_MSG_RESULT($have_libmaus_iolib)
+
+
+CPPFLAGS="${CPPFLAGS_SAVE}"
+LDFLAGS="${LDFLAGS_SAVE}"
+LIBS="${LIBS_SAVE}"
 
 BAMBAM_CFLAGS="${CPPFLAGS} ${SAMTOOLSCPPFLAGS}"
 BAMBAM_LDFLAGS="${LDFLAGS} ${SAMTOOLSLDFLAGS}"
