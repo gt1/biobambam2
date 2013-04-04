@@ -64,6 +64,18 @@
 
 #include <biobambam/bamToFastQ.hpp>
 
+#if ! defined(BAMTOFASTQ_USE_LIBMAUS_IO_LIB)
+#if defined(BAMBAM_HAVE_SAMTOOLS)
+#define BAMTOFASTQ_USE_SAMTOOLS
+#else
+#define BAMTOFASTQ_USE_LIBMAUS
+#endif
+#endif
+
+#if defined(BAMTOFASTQ_USE_LIBMAUS_IO_LIB)
+#include <libmaus/bambam/ScramDecoder.hpp>
+#endif
+
 static std::vector < std::string > removeList;
 
 void removeTempFiles()
@@ -1405,18 +1417,51 @@ namespace biobambam
 		return flags;
 	}
 
-	template<typename file_set_type>
-	void processMainCollate(
-		::libmaus::util::ArgInfo const & arginfo, 
-		file_set_type * FS,
-		bool verbose
-	)
+	#if defined(BAMTOFASTQ_USE_LIBMAUS_IO_LIB)
+	::libmaus::bambam::ScramDecoder::unique_ptr_type setupScramDecoder(::libmaus::util::ArgInfo const & arginfo)
 	{
-		#if defined(BAMBAM_HAVE_SAMTOOLS)
-		BamFile BAM(arginfo);
-		samfile_t * bamfile = BAM.bamfile;
-		bam1_t * alignment = BAM.alignment;
-		#else
+		::libmaus::bambam::ScramDecoder::unique_ptr_type BAM;
+		bool const trustinput = arginfo.getValue("trustinput",false);
+		std::string const inputformat = arginfo.getValue<std::string>("inputformat",std::string("bam"));
+		
+		if ( inputformat != "bam" && inputformat != "sam" && inputformat != "cram" )
+		{
+			::libmaus::exception::LibMausException se;
+			se.getStream() << "Unknown input format " << inputformat << ", please use bam, sam or cram." << std::endl;
+			se.finish();
+			throw se;
+		}
+		std::string mode;
+		if ( inputformat == "sam" )
+			mode = "r";
+		else if ( inputformat == "bam" )
+			mode = "rb";
+		else //
+			mode = "rc";
+		
+		std::string reference;	
+		if ( mode == "rc" )
+			reference = arginfo.getValue<std::string>("reference","");
+		
+		BAM = UNIQUE_PTR_MOVE(
+			::libmaus::bambam::ScramDecoder::unique_ptr_type(
+				new ::libmaus::bambam::ScramDecoder(
+					arginfo.getValue<std::string>("filename","-"),
+					mode,
+					reference
+				)
+			)
+		);
+		
+		if ( trustinput )
+			BAM->disableValidation();
+	
+		return UNIQUE_PTR_MOVE(BAM);
+	}
+	#endif
+
+	::libmaus::bambam::BamDecoder::unique_ptr_type setupBamDecoder(::libmaus::util::ArgInfo const & arginfo)
+	{
 		::libmaus::bambam::BamDecoder::unique_ptr_type BAM;
 		bool const trustinput = arginfo.getValue("trustinput",false);
 		
@@ -1436,12 +1481,32 @@ namespace biobambam
 				)
 			);
 		}
+		
 		if ( trustinput )
 			BAM->disableValidation();
-		
+	
+		return UNIQUE_PTR_MOVE(BAM);
+	}
+
+
+	template<typename file_set_type>
+	void processMainCollate(
+		::libmaus::util::ArgInfo const & arginfo, 
+		file_set_type * FS,
+		bool verbose
+	)
+	{
+		#if defined(BAMTOFASTQ_USE_SAMTOOLS)
+		BamFile BAM(arginfo);
+		samfile_t * bamfile = BAM.bamfile;
+		bam1_t * alignment = BAM.alignment;
+		#elif defined(BAMTOFASTQ_USE_LIBMAUS_IO_LIB)
+		::libmaus::bambam::ScramDecoder::unique_ptr_type BAM = UNIQUE_PTR_MOVE(setupScramDecoder(arginfo));
+		::libmaus::bambam::BamAlignment const & alignment = BAM->alignment;		
+		#else
+		::libmaus::bambam::BamDecoder::unique_ptr_type BAM = UNIQUE_PTR_MOVE(setupBamDecoder(arginfo));		
 		::libmaus::bambam::BamAlignment const & alignment = BAM->alignment;
 		#endif
-
 		uint64_t const exclude = stringToFlags(arginfo.getValue<std::string>("exclude",std::string()));
 
 		typename file_set_type::read_buffer_type * NRB = FS->NRB.get();
@@ -1455,13 +1520,13 @@ namespace biobambam
 		::libmaus::fastx::SpaceTable const ST;
 
 		// read next alignment
-		#if defined(BAMBAM_HAVE_SAMTOOLS)
+		#if defined(BAMTOFASTQ_USE_SAMTOOLS)
 		while ( samread(bamfile,alignment) >= 0 )
 		#else
 		while ( BAM->readAlignment() )
 		#endif
 		{
-			#if defined(BAMBAM_HAVE_SAMTOOLS)
+			#if defined(BAMTOFASTQ_USE_SAMTOOLS)
 			if ( (alignment->core.flag & exclude) != 0 )
 			#else
 			if ( (alignment.getFlags() & exclude) != 0 )			
@@ -1670,37 +1735,19 @@ namespace biobambam
 			std::cerr << "PB pairs: " << FS->PB->pairs << std::endl;
 		}
 	}
+	
 
 	void processMainNoCollate(::libmaus::util::ArgInfo const & arginfo, bool const verbose = true)
 	{
-		#if defined(BAMBAM_HAVE_SAMTOOLS)
+		#if defined(BAMTOFASTQ_USE_SAMTOOLS)
 		BamFile BAM(arginfo);
 		samfile_t * bamfile = BAM.bamfile;
 		bam1_t * alignment = BAM.alignment;
+		#elif defined(BAMTOFASTQ_USE_LIBMAUS_IO_LIB)
+		::libmaus::bambam::ScramDecoder::unique_ptr_type BAM = UNIQUE_PTR_MOVE(setupScramDecoder(arginfo));
+		::libmaus::bambam::BamAlignment const & alignment = BAM->alignment;		
 		#else
-		::libmaus::bambam::BamDecoder::unique_ptr_type BAM;
-		bool const trustinput = arginfo.getValue("trustinput",false);
-		
-		if ( arginfo.hasArg("filename") && arginfo.getValue<std::string>("filename","-") != "-" )
-		{
-			BAM = UNIQUE_PTR_MOVE(
-				::libmaus::bambam::BamDecoder::unique_ptr_type(
-					new ::libmaus::bambam::BamDecoder(arginfo.getValue<std::string>("filename","-"))
-				)
-			);
-		}
-		else
-		{
-			BAM = UNIQUE_PTR_MOVE(
-				::libmaus::bambam::BamDecoder::unique_ptr_type(
-					new ::libmaus::bambam::BamDecoder(std::cin)
-				)
-			);
-		}
-		
-		if ( trustinput )
-			BAM->disableValidation();
-		
+		::libmaus::bambam::BamDecoder::unique_ptr_type BAM = UNIQUE_PTR_MOVE(setupBamDecoder(arginfo));		
 		::libmaus::bambam::BamAlignment const & alignment = BAM->alignment;
 		#endif
 		uint64_t const exclude = stringToFlags(arginfo.getValue<std::string>("exclude",std::string()));
@@ -1714,13 +1761,13 @@ namespace biobambam
 		uint64_t processed = 0;
 			
 		// read next alignment
-		#if defined(BAMBAM_HAVE_SAMTOOLS)
+		#if defined(BAMTOFASTQ_USE_SAMTOOLS)
 		while ( samread(bamfile,alignment) >= 0 )
 		#else
 		while ( BAM->readAlignment() )
 		#endif
 		{
-			#if defined(BAMBAM_HAVE_SAMTOOLS)
+			#if defined(BAMTOFASTQ_USE_SAMTOOLS)
 			if ( (alignment->core.flag & exclude) != 0 )
 			#else
 			if ( (alignment.getFlags() & exclude) != 0 )

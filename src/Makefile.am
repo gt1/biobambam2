@@ -8,8 +8,9 @@ noinst_HEADERS=\
 	biobambam/BamBamConfig.hpp \
 	biobambam/Licensing.hpp
 
-bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags
+bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags @SCRAMTOFASTQ@
 noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments
+EXTRA_PROGRAMS = scramtofastq
 
 bamcollate_SOURCES = programs/bamcollate.cpp biobambam/Licensing.cpp
 bamcollate_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
@@ -55,3 +56,8 @@ bamcheckalignments_SOURCES = programs/bamcheckalignments.cpp biobambam/Licensing
 bamcheckalignments_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
 bamcheckalignments_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
 bamcheckalignments_LDADD = ${LIBMAUSLIBS}
+
+scramtofastq_SOURCES = programs/bamtofastq.cpp biobambam/bamToFastQ.cpp biobambam/Licensing.cpp
+scramtofastq_LDADD = ${LIBMAUSLIBS}
+scramtofastq_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS}
+scramtofastq_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} -DBAMTOFASTQ_USE_LIBMAUS_IO_LIB

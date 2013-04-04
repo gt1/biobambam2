@@ -20,6 +20,7 @@
 #include <biobambam/bamToFastQ.hpp>
 #include <iomanip>
 #include <biobambam/Licensing.hpp>
+#include <biobambam/BamBamConfig.hpp>
 #include <config.h>
 
 int main(int argc, char * argv[])
@@ -56,7 +57,13 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "O=<[orphans_1.fq]>", "unmatched pairs first mates" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "O2=<[orphans_2.fq]>", "unmatched pairs second mates" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "collate=<[1]>", "collate pairs" ) );
+				#if defined(BAMTOFASTQ_USE_LIBMAUS_IO_LIB)
+				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<[bam]>", "input format, cram, bam or sam" ) );
+				#elif defined(BAMBAM_HAVE_SAMTOOLS)
 				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<[bam]>", "input format, bam or sam" ) );
+				#else
+				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<[bam]>", "input format, bam" ) );
+				#endif
 				V.push_back ( std::pair<std::string,std::string> ( "filename=<[-]>", "input file name, - for stdin" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "exclude=<[]>", "exclude alignments matching any of the given flags" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("T=<[") + biobambam::getUnmatchedFilename(arginfo,"<pid>") + "]>" , "temporary file name" ) );
