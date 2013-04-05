@@ -1,3 +1,9 @@
+biobambam (0.0.48-0) unstable; urgency=low
+
+  * bump version after simplifying configure.in 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Fri, 05 Apr 2013 11:10:43 +0100
+
 biobambam (0.0.47-0) unstable; urgency=low
 
   * bump version after adding support for io_lib/scram 
