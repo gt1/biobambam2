@@ -11,6 +11,8 @@ awk -v first=${FIRST} -v second=${SECOND} -v third=${THIRD} '/^AC_INIT/ {gsub(fi
 mv configure.in.tmp configure.in
 
 pushd debian
+export DEBEMAIL=gt1@sanger.ac.uk
+export DEBFULLNAME="German Tischler"
 dch --distribution unstable -v ${FIRST}.${SECOND}.${NEXTTHIRD}-0
 dch --release
 # dch --release -v ${FIRST}.${SECOND}.${NEXTTHIRD}-1
