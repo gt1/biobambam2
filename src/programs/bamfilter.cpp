@@ -27,6 +27,7 @@ int main(int argc, char * argv[])
 		::libmaus::util::ArgInfo const arginfo(argc,argv);
 		uint64_t const minmapped = arginfo.getValue<uint64_t>("minmapped",0);
 		uint64_t const maxmapped = arginfo.getValue<uint64_t>("maxmapped",std::numeric_limits<uint64_t>::max());
+		uint64_t const minlen = arginfo.getValue<uint64_t>("minlen",0);
 
 		int const level = arginfo.getValue<int>("level",Z_DEFAULT_COMPRESSION);
 		
@@ -65,7 +66,7 @@ int main(int argc, char * argv[])
 
 			uint64_t const nummapped = (a_1_mapped?1:0)+(a_2_mapped?1:0)+(proper?1:0);
 
-			if ( nummapped >= minmapped && nummapped <= maxmapped )
+			if ( nummapped >= minmapped && nummapped <= maxmapped && alignment.getLseq() >= minlen )
 				alignment.serialise(writer.bgzfos);
 		}	
 	}
