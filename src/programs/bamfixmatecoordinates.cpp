@@ -36,91 +36,7 @@
 #include <libmaus/util/ArgInfo.hpp>
 #include <libmaus/timing/RealTimeClock.hpp>
 
-// #include <biobambam/BamFile.hpp>
-
-static std::vector < std::string > tmpfilenames;
-
-static void removeTempFiles()
-{
-	for ( uint64_t i = 0; i < tmpfilenames.size(); ++i )
-		remove ( tmpfilenames[i].c_str() );
-}
-
-#include <csignal>
-
-#if defined(__APPLE__) || defined(__FreeBSD__)
-typedef sig_t sighandler_t;
-#endif
-
-static sighandler_t siginthandler = 0;
-static sighandler_t sigtermhandler = 0;
-static sighandler_t sighuphandler = 0;
-static sighandler_t sigpipehandler = 0;
-
-static void sigIntHandler(int arg)
-{
-	removeTempFiles();
-	if ( siginthandler )
-	{
-		siginthandler(arg);
-	}
-	else
-	{
-		signal(SIGINT,SIG_DFL);
-		raise(SIGINT);
-	}
-}
-
-static void sigHupHandler(int arg)
-{
-	removeTempFiles();
-	if ( sighuphandler )
-	{
-		sighuphandler(arg);
-	}
-	else
-	{
-		signal(SIGHUP,SIG_DFL);
-		raise(SIGHUP);
-	}
-}
-
-static void sigTermHandler(int arg)
-{
-	removeTempFiles();
-	if ( sigtermhandler )
-	{
-		sigtermhandler(arg);
-	}
-	else
-	{
-		signal(SIGTERM,SIG_DFL);
-		raise(SIGTERM);
-	}
-}
-
-static void sigPipeHandler(int arg)
-{
-	removeTempFiles();
-	if ( sigpipehandler )
-	{
-		sigpipehandler(arg);
-	}
-	else
-	{
-		signal(SIGPIPE,SIG_DFL);
-		raise(SIGPIPE);
-	}
-}
-
-static void setupTempFileRemovalRoutines()
-{
-	siginthandler = signal(SIGINT,sigIntHandler);
-	sigtermhandler = signal(SIGTERM,sigTermHandler);
-	sigpipehandler = signal(SIGPIPE,sigPipeHandler);
-	sighuphandler = signal(SIGHUP,sigHupHandler);
-	atexit(removeTempFiles);
-}
+#include <libmaus/util/TempFileRemovalContainer.hpp>
 
 static uint64_t getMapCnt(::libmaus::bambam::CollatingBamDecoder::alignment_ptr_type const & p)
 {
@@ -134,12 +50,11 @@ int main(int argc, char * argv[])
 {
 	try
 	{
+		::libmaus::util::TempFileRemovalContainer::setup();
 		::libmaus::util::ArgInfo const arginfo(argc,argv);
 		::libmaus::timing::RealTimeClock rtc; rtc.start();
 		bool const verbose = arginfo.getValue<unsigned int>("verbose",1);
 	
-		setupTempFileRemovalRoutines();	
-		
 		unsigned int const colhashbits = arginfo.getValue<unsigned int>("colhashbits",20);
 		unsigned int const collistsize = arginfo.getValue<unsigned int>("collistsize",512*1024);
 
@@ -170,7 +85,7 @@ int main(int argc, char * argv[])
 
 		std::string const tmpfilenamebase = arginfo.getValue<std::string>("tmpfile",arginfo.getDefaultTmpFileName());
 		std::string const tmpfilename = tmpfilenamebase + "_bamcollate";
-		tmpfilenames.push_back(tmpfilename);
+		::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilename);
 		
 		::libmaus::bambam::CollatingBamDecoder CBD(std::cin,tmpfilename,false /* put rank */,colhashbits/*hash bits*/,collistsize/*size of output list*/);
 		::libmaus::bambam::BamFormatAuxiliary auxdata;

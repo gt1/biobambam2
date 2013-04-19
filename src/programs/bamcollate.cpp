@@ -18,11 +18,13 @@
 **/
 #include <libmaus/bambam/CollatingBamDecoder.hpp>
 #include <libmaus/bambam/BamWriter.hpp>
+#include <libmaus/bambam/ProgramHeaderLineSet.hpp>
+
 #include <libmaus/util/ArgInfo.hpp>
 #include <libmaus/util/TempFileRemovalContainer.hpp>
+
 #include <config.h>
 #include <biobambam/Licensing.hpp>
-#include <libmaus/bambam/ProgramHeaderLineSet.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static unsigned int getDefaultColHashBits() { return 20; }

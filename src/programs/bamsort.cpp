@@ -20,19 +20,24 @@
 
 #include <iostream>
 #include <queue>
-#include <libmaus/util/ArgInfo.hpp>
-#include <libmaus/bambam/BamAlignment.hpp>
-#include <libmaus/bambam/BamDecoder.hpp>
-#include <libmaus/util/PutObject.hpp>
-#include <libmaus/util/GetObject.hpp>
+
 #include <libmaus/aio/CheckedOutputStream.hpp>
-#include <libmaus/util/TempFileRemovalContainer.hpp>
-#include <libmaus/lz/SnappyCompress.hpp>
+
+#include <libmaus/bambam/BamAlignment.hpp>
+#include <libmaus/bambam/BamAlignmentNameComparator.hpp>
+#include <libmaus/bambam/BamAlignmentPosComparator.hpp>
+#include <libmaus/bambam/BamDecoder.hpp>
+#include <libmaus/bambam/BamEntryContainer.hpp>
 #include <libmaus/bambam/BamWriter.hpp>
 #include <libmaus/bambam/ProgramHeaderLineSet.hpp>
-#include <libmaus/bambam/BamEntryContainer.hpp>
-#include <libmaus/bambam/BamAlignmentPosComparator.hpp>
-#include <libmaus/bambam/BamAlignmentNameComparator.hpp>
+
+#include <libmaus/lz/SnappyCompress.hpp>
+
+#include <libmaus/util/ArgInfo.hpp>
+#include <libmaus/util/GetObject.hpp>
+#include <libmaus/util/PutObject.hpp>
+#include <libmaus/util/TempFileRemovalContainer.hpp>
+
 #include <biobambam/Licensing.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }

@@ -17,10 +17,12 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#include <biobambam/bamToFastQ.hpp>
-#include <iomanip>
-#include <biobambam/Licensing.hpp>
 #include <biobambam/BamBamConfig.hpp>
+#include <biobambam/bamToFastQ.hpp>
+#include <biobambam/Licensing.hpp>
+
+#include <iomanip>
+
 #include <config.h>
 
 int main(int argc, char * argv[])

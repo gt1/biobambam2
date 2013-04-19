@@ -18,8 +18,8 @@
 **/
 #include <libmaus/bambam/CollatingBamDecoder.hpp>
 #include <libmaus/bambam/BamWriter.hpp>
-#include <libmaus/util/ArgInfo.hpp>
 #include <libmaus/bambam/ProgramHeaderLineSet.hpp>
+#include <libmaus/util/ArgInfo.hpp>
 #include <biobambam/Licensing.hpp>
 
 #include <config.h>
