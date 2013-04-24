@@ -969,7 +969,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 
 	std::ostream & metricsstr = *pmetricstr;
 
-	::libmaus::bambam::DuplicationMetrics::printFormatHeader(metricsstr);
+	::libmaus::bambam::DuplicationMetrics::printFormatHeader(arginfo.commandline,metricsstr);
 	for ( std::map<uint64_t,::libmaus::bambam::DuplicationMetrics>::const_iterator ita = metrics.begin(); ita != metrics.end();
 		++ita )
 		ita->second.format(metricsstr, bamheader.getLibraryName(ita->first));
@@ -977,7 +977,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	if ( metrics.size() == 1 )
 	{
 		metricsstr << std::endl;
-		metricsstr << "BIN\tVALUE" << std::endl;
+		metricsstr << "## HISTOGRAM\nBIN\tVALUE" << std::endl;
 		metrics.begin()->second.printHistogram(metricsstr);
 	}
 	
