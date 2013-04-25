@@ -28,6 +28,29 @@
 #include <libmaus/bambam/BamToFastqOutputFileSet.hpp>
 #include <libmaus/util/TempFileRemovalContainer.hpp>
 
+struct BamToFastQInputFileStream
+{
+	std::string const fn;
+	libmaus::aio::CheckedInputStream::unique_ptr_type CIS;
+	std::istream & in;
+	
+	static libmaus::aio::CheckedInputStream::unique_ptr_type openFile(std::string const & fn)
+	{
+		return UNIQUE_PTR_MOVE(libmaus::aio::CheckedInputStream::unique_ptr_type(new libmaus::aio::CheckedInputStream(fn)));
+	}
+	
+	BamToFastQInputFileStream(libmaus::util::ArgInfo const & arginfo)
+	: fn(arginfo.getValue<std::string>("filename","-")),
+	  CIS(
+		(fn != "?") ? UNIQUE_PTR_MOVE(openFile(fn)) : UNIQUE_PTR_MOVE(libmaus::aio::CheckedInputStream::unique_ptr_type())
+	), in((fn != "-") ? (*CIS) : std::cin) {}
+
+	BamToFastQInputFileStream(std::string const & rfn)
+	: fn(rfn), CIS(
+		(fn != "?") ? UNIQUE_PTR_MOVE(openFile(fn)) : UNIQUE_PTR_MOVE(libmaus::aio::CheckedInputStream::unique_ptr_type())
+	), in((fn != "-") ? (*CIS) : std::cin) {}
+};
+
 void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::bambam::BamAlignmentDecoder & bamdec)
 {
 	libmaus::timing::RealTimeClock rtc; rtc.start();
@@ -64,22 +87,24 @@ void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::bam
 void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo)
 {
 	std::string const inputformat = arginfo.getValue<std::string>("inputformat","bam");
+	std::string const inputfilename = arginfo.getValue<std::string>("filename","-");
 	
 	if ( inputformat == "bam" )
 	{
-		libmaus::bambam::BamDecoder bamdec(std::cin);
+		BamToFastQInputFileStream bamin(inputfilename);
+		libmaus::bambam::BamDecoder bamdec(bamin.in);
 		bamtofastqNonCollating(arginfo,bamdec);
 	}
 	#if defined(BAMTOFASTQ_USE_LIBMAUS_IO_LIB)
 	else if ( inputformat == "sam" )
 	{
-		libmaus::bambam::ScramDecoder bamdec("-","r","");
+		libmaus::bambam::ScramDecoder bamdec(inputfilename,"r","");
 		bamtofastqNonCollating(arginfo,bamdec);
 	}
 	else if ( inputformat == "cram" )
 	{
 		std::string const reference = arginfo.getValue<std::string>("reference","");
-		libmaus::bambam::ScramDecoder bamdec("-","r",reference);
+		libmaus::bambam::ScramDecoder bamdec(inputfilename,"r",reference);
 		bamtofastqNonCollating(arginfo,bamdec);
 	}
 	#endif
@@ -171,22 +196,24 @@ void bamtofastqCollating(libmaus::util::ArgInfo const & arginfo)
 	std::string const tmpfilename = arginfo.getValue<std::string>("T",arginfo.getDefaultTmpFileName());
 	libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilename);
 	std::string const inputformat = arginfo.getValue<std::string>("inputformat","bam");
+	std::string const inputfilename = arginfo.getValue<std::string>("filename","-");
 
 	if ( inputformat == "bam" )
 	{
-		libmaus::bambam::BamCircularHashCollatingBamDecoder CHCBD(std::cin,tmpfilename,excludeflags);
+		BamToFastQInputFileStream bamin(inputfilename);
+		libmaus::bambam::BamCircularHashCollatingBamDecoder CHCBD(bamin.in,tmpfilename,excludeflags);
 		bamtofastqCollating(arginfo,CHCBD);
 	}
 	#if defined(BAMTOFASTQ_USE_LIBMAUS_IO_LIB)
 	else if ( inputformat == "sam" )
 	{
-		libmaus::bambam::ScramCircularHashCollatingBamDecoder CHCBD("-","r","",tmpfilename,excludeflags);
+		libmaus::bambam::ScramCircularHashCollatingBamDecoder CHCBD(inputfilename,"r","",tmpfilename,excludeflags);
 		bamtofastqCollating(arginfo,CHCBD);
 	}
 	else if ( inputformat == "cram" )
 	{
 		std::string const reference = arginfo.getValue<std::string>("reference","");
-		libmaus::bambam::ScramCircularHashCollatingBamDecoder CHCBD("-","rc",reference,tmpfilename,excludeflags);
+		libmaus::bambam::ScramCircularHashCollatingBamDecoder CHCBD(inputfilename,"rc",reference,tmpfilename,excludeflags);
 		bamtofastqCollating(arginfo,CHCBD);
 	}
 	#endif
@@ -243,6 +270,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "O=<[stdout]>", "unmatched pairs first mates" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "O2=<[stdout]>", "unmatched pairs second mates" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "collate=<[1]>", "collate pairs" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "filename=<[-]>", "input filename (default: read file from standard input)" ) );
 				#if defined(BAMTOFASTQ_USE_LIBMAUS_IO_LIB)
 				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<[bam]>", "input format, cram, bam or sam" ) );
 				#else
