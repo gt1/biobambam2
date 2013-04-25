@@ -42,12 +42,12 @@ struct BamToFastQInputFileStream
 	BamToFastQInputFileStream(libmaus::util::ArgInfo const & arginfo)
 	: fn(arginfo.getValue<std::string>("filename","-")),
 	  CIS(
-		(fn != "?") ? UNIQUE_PTR_MOVE(openFile(fn)) : UNIQUE_PTR_MOVE(libmaus::aio::CheckedInputStream::unique_ptr_type())
+		(fn != "-") ? UNIQUE_PTR_MOVE(openFile(fn)) : UNIQUE_PTR_MOVE(libmaus::aio::CheckedInputStream::unique_ptr_type())
 	), in((fn != "-") ? (*CIS) : std::cin) {}
 
 	BamToFastQInputFileStream(std::string const & rfn)
 	: fn(rfn), CIS(
-		(fn != "?") ? UNIQUE_PTR_MOVE(openFile(fn)) : UNIQUE_PTR_MOVE(libmaus::aio::CheckedInputStream::unique_ptr_type())
+		(fn != "-") ? UNIQUE_PTR_MOVE(openFile(fn)) : UNIQUE_PTR_MOVE(libmaus::aio::CheckedInputStream::unique_ptr_type())
 	), in((fn != "-") ? (*CIS) : std::cin) {}
 };
 
