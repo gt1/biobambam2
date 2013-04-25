@@ -393,6 +393,16 @@ struct SnappyRewrittenInput
 	
 	}
 	
+	::libmaus::bambam::BamAlignment & getAlignment()
+	{
+		return alignment;
+	}
+
+	::libmaus::bambam::BamAlignment const & getAlignment() const
+	{
+		return alignment;
+	}
+	
 	bool readAlignment()
 	{
 		/* read alignment block size */
@@ -455,12 +465,12 @@ bool checkSnappyRewrite(
 		
 		// std::cerr << SRI.alignment.blocksize << "\t" << BFD.alignment.blocksize << std::endl;
 		
-		assert ( SRI.alignment.blocksize == BFD.alignment.blocksize );
+		assert ( SRI.alignment.blocksize == BFD.getAlignment().blocksize );
 		
 		assert (
 			memcmp(
 				SRI.alignment.D.begin(),
-				BFD.alignment.D.begin(),
+				BFD.getAlignment().D.begin(),
 				SRI.alignment.blocksize)
 			== 0 );
 	}
@@ -526,11 +536,11 @@ static void markDuplicatesInFileTemplate(
 	for ( uint64_t r = 0; decoder.readAlignment(); ++r )
 	{
 		if ( DSC.isMarked(r) )
-			decoder.alignment.putFlags(
-				decoder.alignment.getFlags() | ::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FDUP
+			decoder.getAlignment().putFlags(
+				decoder.getAlignment().getFlags() | ::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FDUP
 			);
 		
-		decoder.alignment.serialise(writer->bgzfos);
+		decoder.getAlignment().serialise(writer->bgzfos);
 		
 		if ( verbose && (r+1) % mod == 0 )
 		{

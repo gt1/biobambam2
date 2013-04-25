@@ -55,7 +55,7 @@ int main(int argc, char * argv[])
 
 		::libmaus::bambam::BamDecoder BD(std::cin);
 		::libmaus::bambam::BamHeader const & bamheader = BD.bamheader;
-		::libmaus::bambam::BamAlignment & alignment = BD.alignment;
+		::libmaus::bambam::BamAlignment & alignment = BD.getAlignment();
 		::libmaus::bambam::BamWriter writer(std::cout,bamheader,level);
 		
 		while ( BD.readAlignment() )

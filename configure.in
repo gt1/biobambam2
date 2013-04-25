@@ -107,96 +107,6 @@ AC_LANG_PUSH([C++])
 AC_HEADER_STDC
 AC_LANG_POP
 
-# check for samtools library and headers
-BAMBAMHAVESAMTOOLS=
-SAMTOOLSCPPFLAGS=
-SAMTOOLSLDFLAGS=
-SAMTOOLSLIBS=
-AC_ARG_WITH([samtools],
-            [AS_HELP_STRING([--with-samtools@<:@=PATH@:>@], [path to samtools directory with compiled library @<:@default=no@:>@])],
-            [with_samtools=${withval}],
-            [with_samtools=no])
-
-if [[ "${with_samtools}" != "no" ]] ; then
-	LIBSSAVE="${LIBS}"
-	LDFLAGSSAVE="${LDFLAGS}"
-	CPPFLAGSSAVE="${CPPFLAGS}"
-
-	if [[ \( ! -z "${with_samtools}" \) -a \( "${with_samtools}" != "yes" \) ]] ; then
-		SAMTOOLSCPPFLAGS="-I${with_samtools}/include -I${with_samtools}"
-		SAMTOOLSLDFLAGS="-L${with_samtools}/lib -L${with_samtools}"
-	fi
-
-	SAMTOOLSLIBS="-lbam -lz"
-
-	CPPFLAGSSAVE="${CPPFLAGS}"
-	LDFLAGSSAVE="${LDFLAGS}"
-	CPPFLAGS="${CPPFLAGS} ${SAMTOOLSCPPFLAGS}"
-	LDFLAGS="${LDFLAGS} ${SAMTOOLSLDFLAGS}"
-
-	AC_LANG_PUSH([C++])
-	AC_CHECK_HEADER(bam.h, [bam_h=yes], [bam_h=no])
-	AC_CHECK_HEADER(samtools/bam.h, [samtools_bam_h=yes], [samtools_bam_h=no])
-	AC_LANG_POP
-
-	CPPFLAGS="${CPPFLAGSSAVE}"
-	LDFLAGS="${LDFLAGSSAVE}"
-
-	if test "${bam_h}" = "yes" -o "${samtools_bam_h}" = "yes" ; then
-		AC_LANG_PUSH([C++])
-
-		CPPFLAGSSAVE="${CPPFLAGS}"
-		LDFLAGSSAVE="${LDFLAGS}"
-		LIBSSAVE="${LIBS}"
-		CPPFLAGS="${CPPFLAGS} ${SAMTOOLSCPPFLAGS}"
-		LDFLAGS="${LDFLAGS} ${SAMTOOLSLDFLAGS}"
-		LIBS="${LIBS} ${SAMTOOLSLIBS}"
-
-		if test "${bam_h}" = "yes" ; then
-			BAMHEADER="bam.h"
-			BAMHEADERDEFINE="#define HAVE_BAM_H"
-			CPPFLAGS="${CPPFLAGS} -DHAVE_BAM_H"
-		fi
-		if test "${samtools_bam_h}" = "yes" ; then
-			BAMHEADER="samtools/bam.h"
-			BAMHEADERDEFINE="#define HAVE_SAMTOOLS_BAM_H"
-			CPPFLAGS="${CPPFLAGS} -DHAVE_SAMTOOLS_BAM_H"
-		fi
-
-		AC_MSG_CHECKING([whether we can compile a program using bam.h])
-			AC_LINK_IFELSE([AC_LANG_SOURCE([
-#if defined(HAVE_BAM_H)
-#include <bam.h>
-#elif defined(HAVE_SAMTOOLS_BAM_H)
-#include <samtools/bam.h>
-#else
-#error "Required bam.h header not available."
-#endif
-
-				int main() {
-					sam_open("reads.bam");
-					return 0;
-			}])],
-			have_bam=yes,
-			have_bam_h=no
-		)
-
-		AC_MSG_RESULT($bam_h)
-		CPPFLAGS="${CPPFLAGSSAVE}"
-		LDFLAGS="${LDFLAGSSAVE}"
-		LIBS="${LIBSSAVE}"
-		AC_LANG_POP
-
-		if test "${have_bam}" = "no" ; then
-			AC_MSG_ERROR(["Compiling test program failed, aborting.])
-		else
-			BAMBAMHAVESAMTOOLS="#define BAMBAM_HAVE_SAMTOOLS"
-		fi
-	else
-		AC_MSG_ERROR([Header bam.h not found.])
-	fi
-fi
-
 if test "${CXX}" = "g++" ; then
 	CPPFLAGS="${CPPFLAGS} -W -Wall"
 fi
@@ -215,7 +125,7 @@ if test ! -z "${with_libmaus}" ; then
 	fi
 fi
 
-PKG_CHECK_MODULES([libmaus],[libmaus >= 0.0.34])
+PKG_CHECK_MODULES([libmaus],[libmaus >= 0.0.38])
 
 if test ! -z "${with_libmaus}" ; then
 	if test ! -z "${PKGCONFIGPATHSAVE}" ; then
@@ -270,10 +180,8 @@ AC_LANG_POP
 AC_MSG_RESULT($have_libmaus_iolib)
 
 LIBMAUSIOLIBDEFINE=
-SCRAMTOFASTQ=
 if test "${have_libmaus_iolib}" = "yes" ; then
 	LIBMAUSIOLIBDEFINE="#define BIOBAMBAM_LIBMAUS_HAVE_IO_LIB"
-	SCRAMTOFASTQ="scramtofastq"
 fi
 
 CPPFLAGS="${CPPFLAGS_SAVE}"
@@ -282,10 +190,6 @@ LIBS="${LIBS_SAVE}"
 
 AC_MSG_NOTICE([Using flags ${CFLAGS} for C compiler ${CC}])
 AC_MSG_NOTICE([Using flags ${CXXFLAGS} for C++ compiler ${CXX}])
-
-BAMBAM_CFLAGS="${CPPFLAGS} ${SAMTOOLSCPPFLAGS}"
-BAMBAM_LDFLAGS="${LDFLAGS} ${SAMTOOLSLDFLAGS}"
-BAMBAM_LIBS="${LDFLAGS} ${SAMTOOLSLIBS}"
 
 PACKAGE_NAME=${PACKAGE}
 PACKAGE_VERSION=${VERSION}
@@ -298,15 +202,7 @@ AC_SUBST([BAMBAM_LIBS])
 # libmaus
 AC_SUBST([LIBMAUSCPPFLAGS])
 AC_SUBST([LIBMAUSLIBS])
-# samtools
-AC_SUBST([SAMTOOLSCPPFLAGS])
-AC_SUBST([SAMTOOLSLDFLAGS])
-AC_SUBST([SAMTOOLSLIBS])
-AC_SUBST([BAMBAMHAVESAMTOOLS])
+# 
 AC_SUBST([LIBMAUSIOLIBDEFINE])
-#
-AC_SUBST([SCRAMTOFASTQ])
-#
-AC_SUBST([BAMHEADERDEFINE])
 # 
 AC_OUTPUT(Makefile src/Makefile src/biobambam/BamBamConfig.hpp)

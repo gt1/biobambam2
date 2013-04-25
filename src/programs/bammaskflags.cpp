@@ -99,7 +99,7 @@ int bammaskflags(::libmaus::util::ArgInfo const & arginfo)
 	// construct new header
 	::libmaus::bambam::BamHeader uphead(upheadtext);
 
-	::libmaus::bambam::BamAlignment & alignment = BD.alignment;
+	::libmaus::bambam::BamAlignment & alignment = BD.getAlignment();
 	::libmaus::bambam::BamWriter writer(std::cout,uphead,level);
 	
 	while ( BD.readAlignment() )

@@ -125,7 +125,7 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 		
 		while ( dec.readAlignment() )
 		{
-			BEC.putAlignment(dec.alignment);
+			BEC.putAlignment(dec.getAlignment());
 			incnt++;
 			if ( verbose && (incnt % (1024*1024) == 0) )
 				std::cerr << "[V] " << incnt/(1024*1024) << "M" << std::endl;
@@ -147,7 +147,7 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 		
 		while ( dec.readAlignment() )
 		{
-			BEC.putAlignment(dec.alignment);
+			BEC.putAlignment(dec.getAlignment());
 			incnt++;
 			if ( verbose && (incnt % (1024*1024) == 0) )
 				std::cerr << "[V] " << incnt/(1024*1024) << "M" << std::endl;

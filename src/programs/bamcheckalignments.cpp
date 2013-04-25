@@ -229,7 +229,7 @@ int main(int argc, char * argv[])
 				std::cerr << "[V] " << decoded << std::endl;
 			}
 			
-			::libmaus::bambam::BamAlignment & alignment = decoder.alignment;
+			::libmaus::bambam::BamAlignment & alignment = decoder.getAlignment();
 
 			bool const cigok = checkCigarValid(alignment,bamheader,text);
 			

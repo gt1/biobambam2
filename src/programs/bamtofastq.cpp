@@ -1,5 +1,5 @@
 /**
-    bambam
+    biobambam
     Copyright (C) 2009-2013 German Tischler
     Copyright (C) 2011-2013 Genome Research Limited
 
@@ -18,12 +18,196 @@
 **/
 
 #include <biobambam/BamBamConfig.hpp>
-#include <biobambam/bamToFastQ.hpp>
 #include <biobambam/Licensing.hpp>
 
 #include <iomanip>
 
 #include <config.h>
+
+#include <libmaus/bambam/CircularHashCollatingBamDecoder.hpp>
+#include <libmaus/bambam/BamToFastqOutputFileSet.hpp>
+#include <libmaus/util/TempFileRemovalContainer.hpp>
+
+void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::bambam::BamAlignmentDecoder & bamdec)
+{
+	libmaus::timing::RealTimeClock rtc; rtc.start();
+	uint32_t const excludeflags = libmaus::bambam::BamFlagBase::stringToFlags(arginfo.getValue<std::string>("exclude","SECONDARY,QCFAIL"));
+	libmaus::bambam::BamAlignment const & algn = bamdec.getAlignment();
+	::libmaus::autoarray::AutoArray<uint8_t> T;
+	uint64_t cnt = 0;
+	uint64_t bcnt = 0;
+	unsigned int const verbshift = 20;
+		
+	while ( bamdec.readAlignment() )
+	{
+		uint64_t const precnt = cnt++;
+		
+		if ( ! (algn.getFlags() & excludeflags) )
+		{
+			uint64_t la = libmaus::bambam::BamAlignmentDecoderBase::putFastQ(algn.D.begin(),T);
+			std::cout.write(reinterpret_cast<char const *>(T.begin()),la);
+			bcnt += la;
+		}
+
+		if ( precnt >> verbshift != cnt >> verbshift )
+		{
+			std::cerr 
+				<< (cnt >> 20) 
+				<< "\t"
+				<< (static_cast<double>(bcnt)/(1024.0*1024.0))/rtc.getElapsedSeconds() << "MB/s"
+				<< "\t" << static_cast<double>(cnt)/rtc.getElapsedSeconds() << std::endl;
+		}
+	}
+
+}
+
+void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo)
+{
+	std::string const inputformat = arginfo.getValue<std::string>("inputformat","bam");
+	
+	if ( inputformat == "bam" )
+	{
+		libmaus::bambam::BamDecoder bamdec(std::cin);
+		bamtofastqNonCollating(arginfo,bamdec);
+	}
+	#if defined(BAMTOFASTQ_USE_LIBMAUS_IO_LIB)
+	else if ( inputformat == "sam" )
+	{
+		libmaus::bambam::ScramDecoder bamdec("-","r","");
+		bamtofastqNonCollating(arginfo,bamdec);
+	}
+	else if ( inputformat == "cram" )
+	{
+		std::string const reference = arginfo.getValue<std::string>("reference","");
+		libmaus::bambam::ScramDecoder bamdec("-","r",reference);
+		bamtofastqNonCollating(arginfo,bamdec);
+	}
+	#endif
+	else
+	{
+		libmaus::exception::LibMausException se;
+		se.getStream() << "unknown input format " << inputformat << std::endl;
+		se.finish();
+		throw se;
+	}
+		
+	std::cout.flush();
+}
+
+void bamtofastqCollating(
+	libmaus::util::ArgInfo const & arginfo,
+	libmaus::bambam::CircularHashCollatingBamDecoder & CHCBD
+)
+{
+	libmaus::bambam::BamToFastqOutputFileSet OFS(arginfo);
+
+	libmaus::bambam::CircularHashCollatingBamDecoder::OutputBufferEntry const * ob = 0;
+	
+	// number of alignments written to files
+	uint64_t cnt = 0;
+	// number of bytes written to files
+	uint64_t bcnt = 0;
+	unsigned int const verbshift = 20;
+	libmaus::timing::RealTimeClock rtc; rtc.start();
+	::libmaus::autoarray::AutoArray<uint8_t> T;
+	
+	while ( (ob = CHCBD.process()) )
+	{
+		uint64_t const precnt = cnt;
+		
+		if ( ob->fpair )
+		{
+			uint64_t la = libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T);
+			OFS.Fout.write(reinterpret_cast<char const *>(T.begin()),la);
+			uint64_t lb = libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Db,T);
+			OFS.F2out.write(reinterpret_cast<char const *>(T.begin()),lb);
+
+			cnt += 2;
+			bcnt += (la+lb);
+		}
+		else if ( ob->fsingle )
+		{
+			uint64_t la = libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T);
+			OFS.Sout.write(reinterpret_cast<char const *>(T.begin()),la);
+
+			cnt += 1;
+			bcnt += (la);
+		}
+		else if ( ob->forphan1 )
+		{
+			uint64_t la = libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T);
+			OFS.Oout.write(reinterpret_cast<char const *>(T.begin()),la);
+
+			cnt += 1;
+			bcnt += (la);
+		}
+		else if ( ob->forphan2 )
+		{
+			uint64_t la = libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T);
+			OFS.O2out.write(reinterpret_cast<char const *>(T.begin()),la);
+
+			cnt += 1;
+			bcnt += (la);
+		}
+		
+		if ( precnt >> verbshift != cnt >> verbshift )
+		{
+			std::cerr 
+				<< "[V] "
+				<< (cnt >> 20) 
+				<< "\t"
+				<< (static_cast<double>(bcnt)/(1024.0*1024.0))/rtc.getElapsedSeconds() << "MB/s"
+				<< "\t" << static_cast<double>(cnt)/rtc.getElapsedSeconds() << std::endl;
+		}
+	}
+	
+	std::cerr << "[V] " << cnt << std::endl;
+}
+
+void bamtofastqCollating(libmaus::util::ArgInfo const & arginfo)
+{
+	uint32_t const excludeflags = libmaus::bambam::BamFlagBase::stringToFlags(arginfo.getValue<std::string>("exclude","SECONDARY,QCFAIL"));
+	libmaus::util::TempFileRemovalContainer::setup();
+	std::string const tmpfilename = arginfo.getValue<std::string>("T",arginfo.getDefaultTmpFileName());
+	libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilename);
+	std::string const inputformat = arginfo.getValue<std::string>("inputformat","bam");
+
+	if ( inputformat == "bam" )
+	{
+		libmaus::bambam::BamCircularHashCollatingBamDecoder CHCBD(std::cin,tmpfilename,excludeflags);
+		bamtofastqCollating(arginfo,CHCBD);
+	}
+	#if defined(BAMTOFASTQ_USE_LIBMAUS_IO_LIB)
+	else if ( inputformat == "sam" )
+	{
+		libmaus::bambam::ScramCircularHashCollatingBamDecoder CHCBD("-","r","",tmpfilename,excludeflags);
+		bamtofastqCollating(arginfo,CHCBD);
+	}
+	else if ( inputformat == "cram" )
+	{
+		std::string const reference = arginfo.getValue<std::string>("reference","");
+		libmaus::bambam::ScramCircularHashCollatingBamDecoder CHCBD("-","rc",reference,tmpfilename,excludeflags);
+		bamtofastqCollating(arginfo,CHCBD);
+	}
+	#endif
+	else
+	{
+		libmaus::exception::LibMausException se;
+		se.getStream() << "unknown input format " << inputformat << std::endl;
+		se.finish();
+		throw se;
+	}
+	
+	std::cout.flush();
+}
+
+void bamtofastq(libmaus::util::ArgInfo const & arginfo)
+{
+	if ( arginfo.getValue<uint64_t>("collate",1) )
+		bamtofastqCollating(arginfo);
+	else
+		bamtofastqNonCollating(arginfo);
+}
 
 int main(int argc, char * argv[])
 {
@@ -53,22 +237,19 @@ int main(int argc, char * argv[])
 				
 				std::vector< std::pair<std::string,std::string> > V;
 				
-				V.push_back ( std::pair<std::string,std::string> ( "F=<[matched_1.fq]>", "matched pairs first mates" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "F2=<[matched_2.fq]>", "matched pairs second mates" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "S=<[single.fq]>", "single end" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "O=<[orphans_1.fq]>", "unmatched pairs first mates" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "O2=<[orphans_2.fq]>", "unmatched pairs second mates" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "F=<[stdout]>", "matched pairs first mates" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "F2=<[stdout]>", "matched pairs second mates" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "S=<[stdout]>", "single end" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "O=<[stdout]>", "unmatched pairs first mates" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "O2=<[stdout]>", "unmatched pairs second mates" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "collate=<[1]>", "collate pairs" ) );
 				#if defined(BAMTOFASTQ_USE_LIBMAUS_IO_LIB)
 				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<[bam]>", "input format, cram, bam or sam" ) );
-				#elif defined(BAMBAM_HAVE_SAMTOOLS)
-				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<[bam]>", "input format, bam or sam" ) );
 				#else
 				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<[bam]>", "input format, bam" ) );
 				#endif
-				V.push_back ( std::pair<std::string,std::string> ( "filename=<[-]>", "input file name, - for stdin" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "exclude=<[]>", "exclude alignments matching any of the given flags" ) );
-				V.push_back ( std::pair<std::string,std::string> ( std::string("T=<[") + biobambam::getUnmatchedFilename(arginfo,"<pid>") + "]>" , "temporary file name" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("T=<[") + arginfo.getDefaultTmpFileName() + "]>" , "temporary file name" ) );
 				
 				::biobambam::Licensing::printMap(std::cerr,V);
 
@@ -79,7 +260,7 @@ int main(int argc, char * argv[])
 				return EXIT_SUCCESS;
 			}
 			
-		biobambam::processMain(arginfo);
+		bamtofastq(arginfo);
 	}
 	catch(std::exception const & ex)
 	{
