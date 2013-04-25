@@ -271,7 +271,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "O=<[stdout]>", "unmatched pairs first mates" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "O2=<[stdout]>", "unmatched pairs second mates" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "collate=<[1]>", "collate pairs" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "filename=<[-]>", "input filename (default: read file from standard input)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "filename=<[stdin]>", "input filename (default: read file from standard input)" ) );
 				#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
 				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<[bam]>", "input format, cram, bam or sam" ) );
 				#else
