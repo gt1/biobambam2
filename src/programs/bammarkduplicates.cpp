@@ -22,6 +22,7 @@
 #include <libmaus/aio/CheckedInputStream.hpp>
 #include <libmaus/aio/CheckedOutputStream.hpp>
 #include <libmaus/bambam/BamWriter.hpp>
+#include <libmaus/bambam/CircularHashCollatingBamDecoder.hpp>
 #include <libmaus/bambam/CollatingBamDecoder.hpp>
 #include <libmaus/bambam/DuplicationMetrics.hpp>
 #include <libmaus/bambam/OpticalComparator.hpp>
@@ -688,24 +689,51 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	SnappyRewriteCallback::unique_ptr_type SRC;
 	BamRewriteCallback::unique_ptr_type BWR;
 	::libmaus::aio::CheckedInputStream::unique_ptr_type CIS;
-	::libmaus::bambam::CollatingBamDecoder::unique_ptr_type CBD;
+
+	#define CIRCULARCOLLATOR
+
+	#if defined(CIRCULARCOLLATOR)
+	typedef ::libmaus::bambam::BamCircularHashCollatingBamDecoder col_type;
+	typedef ::libmaus::bambam::CircularHashCollatingBamDecoder col_base_type;
+	typedef col_base_type::unique_ptr_type col_base_ptr_type;	
+	col_base_ptr_type CBD;
+	#else
+	typedef ::libmaus::bambam::CollatingBamDecoder col_type;
+	typedef col_type col_base_type;
+	typedef col_base_type::unique_ptr_type col_base_ptr_type;
+	col_base_ptr_type CBD;
+	#endif
+	
+	// BamCircularHashCollatingBamDecoder
 
 	if ( arginfo.hasArg("I") && (arginfo.getValue<std::string>("I","") != "") )
 	{
 		std::string const inputfilename = arginfo.getValue<std::string>("I","I");
 		CIS = UNIQUE_PTR_MOVE(::libmaus::aio::CheckedInputStream::unique_ptr_type(new ::libmaus::aio::CheckedInputStream(inputfilename)));
+		
+		#if defined(CIRCULARCOLLATOR)
+		CBD = UNIQUE_PTR_MOVE(col_base_ptr_type(new col_type(*CIS,true /* put rank */,tmpfilename,
+			/* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY	| libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL*/ 0,colhashbits,collistsize)));
+		#else
 		CBD = UNIQUE_PTR_MOVE(::libmaus::bambam::CollatingBamDecoder::unique_ptr_type(
 			new ::libmaus::bambam::CollatingBamDecoder(*CIS,tmpfilename,true /* put rank */,colhashbits/*hash bits*/,collistsize/*size of output list*/)));
+		#endif
 	}
 	else
 	{
+		#if defined(CIRCULARCOLLATOR)
+		CBD = UNIQUE_PTR_MOVE(col_base_ptr_type(new col_type(*CIS,true /* put rank */,tmpfilename,
+			/* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY	| libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL */ 0,colhashbits,collistsize)));		
+		#else
 		CBD = UNIQUE_PTR_MOVE(::libmaus::bambam::CollatingBamDecoder::unique_ptr_type(
 			new ::libmaus::bambam::CollatingBamDecoder(std::cin,tmpfilename,true /* put rank */,colhashbits/*hash bits*/,collistsize/*size of output list*/)));
+		#endif
+
 
 		if ( rewritebam )
 		{
 			// rewrite file and mark duplicates
-			BWR = UNIQUE_PTR_MOVE(BamRewriteCallback::unique_ptr_type(new BamRewriteCallback(tmpfilesnappyreads,CBD->bamdecoder.bamheader,rewritebamlevel)));
+			BWR = UNIQUE_PTR_MOVE(BamRewriteCallback::unique_ptr_type(new BamRewriteCallback(tmpfilesnappyreads,CBD->getHeader(),rewritebamlevel)));
 			CBD->setInputCallback(BWR.get());
 
 			if ( verbose )
@@ -720,9 +748,9 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 		}
 	}
 	
-	::libmaus::bambam::BamHeader const bamheader = CBD->bamdecoder.bamheader;
+	::libmaus::bambam::BamHeader const bamheader = CBD->getHeader();
 
-	typedef ::libmaus::bambam::CollatingBamDecoder::alignment_ptr_type alignment_ptr_type;
+	typedef col_base_type::alignment_ptr_type alignment_ptr_type;
 	std::pair<alignment_ptr_type,alignment_ptr_type> P;
 	uint64_t const mod = arginfo.getValue<unsigned int>("mod",getDefaultMod()); // modulus for verbosity
 	uint64_t fragcnt = 0; // mapped fragments
@@ -800,11 +828,19 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 		// we are not interested in unmapped reads, ignore them
 		if ( P.first && P.first->isUnmap() )
 		{
+			#if defined(CIRCULARCOLLATOR)
+			P.first = 0;
+			#else
 			P.first.reset();
+			#endif
 		}
 		if ( P.second && P.second->isUnmap() )
 		{
-			P.second.reset();
+			#if defined(CIRCULARCOLLATOR)
+			P.second = 0;
+			#else
+			P.second.reset();			
+			#endif
 		}
 			
 		if ( P.first && P.second )
@@ -872,7 +908,9 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 
 	if ( verbose )
 	{
+		#if !defined(CIRCULARCOLLATOR)
 		CBD->printWriteOutHist(std::cerr,"[V] [wohist]");
+		#endif
 	}
 
 	CBD.reset();
@@ -887,6 +925,10 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 		std::cerr << "[V] fragment and pair data computed in time " << fragrtc.getElapsedSeconds() << std::endl;
 
 	uint64_t const numranks = maxrank+1;
+	
+	if ( numranks != als )
+		std::cerr << "[D] numranks=" << numranks << " != als=" << als << std::endl;
+	
 	assert ( numranks == als );
 
 	DupSetCallbackVector DSCV(numranks,metrics);
