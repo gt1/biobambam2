@@ -202,19 +202,19 @@ void bamtofastqCollating(libmaus::util::ArgInfo const & arginfo)
 	if ( inputformat == "bam" )
 	{
 		BamToFastQInputFileStream bamin(inputfilename);
-		libmaus::bambam::BamCircularHashCollatingBamDecoder CHCBD(bamin.in,tmpfilename,excludeflags);
+		libmaus::bambam::BamCircularHashCollatingBamDecoder CHCBD(bamin.in,false /* put rank */,tmpfilename,excludeflags);
 		bamtofastqCollating(arginfo,CHCBD);
 	}
 	#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
 	else if ( inputformat == "sam" )
 	{
-		libmaus::bambam::ScramCircularHashCollatingBamDecoder CHCBD(inputfilename,"r","",tmpfilename,excludeflags);
+		libmaus::bambam::ScramCircularHashCollatingBamDecoder CHCBD(inputfilename,"r","",false /* put rank */,tmpfilename,excludeflags);
 		bamtofastqCollating(arginfo,CHCBD);
 	}
 	else if ( inputformat == "cram" )
 	{
 		std::string const reference = arginfo.getValue<std::string>("reference","");
-		libmaus::bambam::ScramCircularHashCollatingBamDecoder CHCBD(inputfilename,"rc",reference,tmpfilename,excludeflags);
+		libmaus::bambam::ScramCircularHashCollatingBamDecoder CHCBD(inputfilename,"rc",reference,false /* put rank */,tmpfilename,excludeflags);
 		bamtofastqCollating(arginfo,CHCBD);
 	}
 	#endif
