@@ -95,7 +95,8 @@ void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo)
 		libmaus::bambam::BamDecoder bamdec(bamin.in);
 		bamtofastqNonCollating(arginfo,bamdec);
 	}
-	#if defined(BAMTOFASTQ_USE_LIBMAUS_IO_LIB)
+	BIOBAMBAM_LIBMAUS_HAVE_IO_LIB
+	#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
 	else if ( inputformat == "sam" )
 	{
 		libmaus::bambam::ScramDecoder bamdec(inputfilename,"r","");
@@ -204,7 +205,7 @@ void bamtofastqCollating(libmaus::util::ArgInfo const & arginfo)
 		libmaus::bambam::BamCircularHashCollatingBamDecoder CHCBD(bamin.in,tmpfilename,excludeflags);
 		bamtofastqCollating(arginfo,CHCBD);
 	}
-	#if defined(BAMTOFASTQ_USE_LIBMAUS_IO_LIB)
+	#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
 	else if ( inputformat == "sam" )
 	{
 		libmaus::bambam::ScramCircularHashCollatingBamDecoder CHCBD(inputfilename,"r","",tmpfilename,excludeflags);
@@ -271,7 +272,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "O2=<[stdout]>", "unmatched pairs second mates" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "collate=<[1]>", "collate pairs" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "filename=<[-]>", "input filename (default: read file from standard input)" ) );
-				#if defined(BAMTOFASTQ_USE_LIBMAUS_IO_LIB)
+				#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
 				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<[bam]>", "input format, cram, bam or sam" ) );
 				#else
 				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<[bam]>", "input format, bam" ) );
