@@ -1502,7 +1502,7 @@ namespace biobambam
 		bam1_t * alignment = BAM.alignment;
 		#elif defined(BAMTOFASTQ_USE_LIBMAUS_IO_LIB)
 		::libmaus::bambam::ScramDecoder::unique_ptr_type BAM = UNIQUE_PTR_MOVE(setupScramDecoder(arginfo));
-		::libmaus::bambam::BamAlignment const & alignment = BAM->alignment;		
+		::libmaus::bambam::BamAlignment const & alignment = BAM->getAlignment();	
 		#else
 		::libmaus::bambam::BamDecoder::unique_ptr_type BAM = UNIQUE_PTR_MOVE(setupBamDecoder(arginfo));		
 		::libmaus::bambam::BamAlignment const & alignment = BAM->alignment;
@@ -1745,10 +1745,10 @@ namespace biobambam
 		bam1_t * alignment = BAM.alignment;
 		#elif defined(BAMTOFASTQ_USE_LIBMAUS_IO_LIB)
 		::libmaus::bambam::ScramDecoder::unique_ptr_type BAM = UNIQUE_PTR_MOVE(setupScramDecoder(arginfo));
-		::libmaus::bambam::BamAlignment const & alignment = BAM->alignment;		
+		::libmaus::bambam::BamAlignment const & alignment = BAM->getAlignment();
 		#else
 		::libmaus::bambam::BamDecoder::unique_ptr_type BAM = UNIQUE_PTR_MOVE(setupBamDecoder(arginfo));		
-		::libmaus::bambam::BamAlignment const & alignment = BAM->alignment;
+		::libmaus::bambam::BamAlignment const & alignment = BAM->getAlignment();
 		#endif
 		uint64_t const exclude = stringToFlags(arginfo.getValue<std::string>("exclude",std::string()));
 
