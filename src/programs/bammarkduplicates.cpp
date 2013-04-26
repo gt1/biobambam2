@@ -722,7 +722,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	else
 	{
 		#if defined(CIRCULARCOLLATOR)
-		CBD = UNIQUE_PTR_MOVE(col_base_ptr_type(new col_type(*CIS,true /* put rank */,tmpfilename,
+		CBD = UNIQUE_PTR_MOVE(col_base_ptr_type(new col_type(std::cin,true /* put rank */,tmpfilename,
 			/* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY	| libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL */ 0,colhashbits,collistsize)));		
 		#else
 		CBD = UNIQUE_PTR_MOVE(::libmaus::bambam::CollatingBamDecoder::unique_ptr_type(
