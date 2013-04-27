@@ -43,7 +43,7 @@ static uint64_t getDefaultMod() { return 1048576;  }
 static bool getDefaultRewriteBam() { return 0; }
 static int getDefaultRewriteBamLevel() { return Z_DEFAULT_COMPRESSION; }
 static unsigned int getDefaultColHashBits() { return 20; }
-static uint64_t getDefaultColListSize() { return 512*1024; }
+static uint64_t getDefaultColListSize() { return 128*1024*1024; }
 static uint64_t getDefaultFragBufSize() { return 128*1024*1024; }
 
 struct DupSetCallback
@@ -616,7 +616,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	// logarithm of collation hash table size
 	unsigned int const colhashbits = arginfo.getValue<unsigned int>("colhashbits",getDefaultColHashBits());
 	// length of collation output list
-	unsigned int const collistsize = arginfo.getValue<unsigned int>("collistsize",getDefaultColListSize());
+	uint64_t const collistsize = arginfo.getValue<uint64_t>("collistsize",getDefaultColListSize());
 	// buffer size for fragment and pair data
 	unsigned int const fragbufsize = arginfo.getValue<unsigned int>("fragbufsize",getDefaultFragBufSize());
 	// print verbosity messages
