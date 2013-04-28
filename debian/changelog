@@ -1,3 +1,9 @@
+biobambam (0.0.51-0) unstable; urgency=low
+
+  * bump version after updating dependency information 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Sun, 28 Apr 2013 22:20:32 +0100
+
 biobambam (0.0.50-0) unstable; urgency=low
 
   * bump version after switching to new collation code in libmaus
