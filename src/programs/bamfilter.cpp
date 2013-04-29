@@ -66,7 +66,11 @@ int main(int argc, char * argv[])
 
 			uint64_t const nummapped = (a_1_mapped?1:0)+(a_2_mapped?1:0)+(proper?1:0);
 
-			if ( nummapped >= minmapped && nummapped <= maxmapped && alignment.getLseq() >= minlen )
+			if ( 
+				nummapped >= minmapped && 
+				nummapped <= maxmapped && 
+				alignment.getLseq() >= static_cast<int64_t>(minlen)
+			)
 				alignment.serialise(writer.bgzfos);
 		}	
 	}
