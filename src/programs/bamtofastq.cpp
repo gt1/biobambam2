@@ -105,7 +105,7 @@ void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo)
 	else if ( inputformat == "cram" )
 	{
 		std::string const reference = arginfo.getValue<std::string>("reference","");
-		libmaus::bambam::ScramDecoder bamdec(inputfilename,"r",reference);
+		libmaus::bambam::ScramDecoder bamdec(inputfilename,"rc",reference);
 		bamtofastqNonCollating(arginfo,bamdec);
 	}
 	#endif
