@@ -712,8 +712,12 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 		CIS = UNIQUE_PTR_MOVE(::libmaus::aio::CheckedInputStream::unique_ptr_type(new ::libmaus::aio::CheckedInputStream(inputfilename)));
 		
 		#if defined(CIRCULARCOLLATOR)
-		CBD = UNIQUE_PTR_MOVE(col_base_ptr_type(new col_type(*CIS,true /* put rank */,tmpfilename,
-			/* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY	| libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL*/ 0,colhashbits,collistsize)));
+		CBD = UNIQUE_PTR_MOVE(col_base_ptr_type(new col_type(
+			*CIS,
+			tmpfilename,
+			/* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY	| libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL*/ 0,
+			true /* put rank */,
+			colhashbits,collistsize)));
 		#else
 		CBD = UNIQUE_PTR_MOVE(::libmaus::bambam::CollatingBamDecoder::unique_ptr_type(
 			new ::libmaus::bambam::CollatingBamDecoder(*CIS,tmpfilename,true /* put rank */,colhashbits/*hash bits*/,collistsize/*size of output list*/)));
@@ -722,8 +726,11 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	else
 	{
 		#if defined(CIRCULARCOLLATOR)
-		CBD = UNIQUE_PTR_MOVE(col_base_ptr_type(new col_type(std::cin,true /* put rank */,tmpfilename,
-			/* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY	| libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL */ 0,colhashbits,collistsize)));		
+		CBD = UNIQUE_PTR_MOVE(col_base_ptr_type(new col_type(std::cin,
+			tmpfilename,
+			/* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY	| libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL */ 0,
+			true /* put rank */,
+			colhashbits,collistsize)));		
 		#else
 		CBD = UNIQUE_PTR_MOVE(::libmaus::bambam::CollatingBamDecoder::unique_ptr_type(
 			new ::libmaus::bambam::CollatingBamDecoder(std::cin,tmpfilename,true /* put rank */,colhashbits/*hash bits*/,collistsize/*size of output list*/)));

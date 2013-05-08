@@ -311,7 +311,10 @@ void bamdisthist(libmaus::util::ArgInfo const & arginfo)
 	if ( inputformat == "bam" )
 	{
 		BamDistHistInputFileStream bamin(inputfilename);
-		libmaus::bambam::BamCircularHashCollatingBamDecoder CHCBD(bamin.in,true /* put rank */,tmpfilename,excludeflags);
+		libmaus::bambam::BamCircularHashCollatingBamDecoder CHCBD(bamin.in,
+			tmpfilename,excludeflags,
+			true /* put rank */
+		);
 		dh.bamheader = &(CHCBD.getHeader());
 		CHCBD.setInputCallback(&dh);
 		bamdisthist(arginfo,CHCBD);
@@ -320,7 +323,10 @@ void bamdisthist(libmaus::util::ArgInfo const & arginfo)
 	#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
 	else if ( inputformat == "sam" )
 	{
-		libmaus::bambam::ScramCircularHashCollatingBamDecoder CHCBD(inputfilename,"r","",true /* put rank */,tmpfilename,excludeflags);
+		libmaus::bambam::ScramCircularHashCollatingBamDecoder CHCBD(inputfilename,"r","",
+			tmpfilename,excludeflags,
+			true /* put rank */
+		);
 		dh.bamheader = &(CHCBD.getHeader());
 		CHCBD.setInputCallback(&dh);
 		bamdisthist(arginfo,CHCBD);
@@ -329,7 +335,10 @@ void bamdisthist(libmaus::util::ArgInfo const & arginfo)
 	else if ( inputformat == "cram" )
 	{
 		std::string const reference = arginfo.getValue<std::string>("reference","");
-		libmaus::bambam::ScramCircularHashCollatingBamDecoder CHCBD(inputfilename,"rc",reference,true /* put rank */,tmpfilename,excludeflags);
+		libmaus::bambam::ScramCircularHashCollatingBamDecoder CHCBD(inputfilename,"rc",reference,
+			tmpfilename,excludeflags,
+			true /* put rank */
+		);
 		dh.bamheader = &(CHCBD.getHeader());
 		CHCBD.setInputCallback(&dh);
 		bamdisthist(arginfo,CHCBD);
