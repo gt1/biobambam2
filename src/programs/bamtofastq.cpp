@@ -96,7 +96,6 @@ void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo)
 		libmaus::bambam::BamDecoder bamdec(bamin.in);
 		bamtofastqNonCollating(arginfo,bamdec);
 	}
-	BIOBAMBAM_LIBMAUS_HAVE_IO_LIB
 	#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
 	else if ( inputformat == "sam" )
 	{
