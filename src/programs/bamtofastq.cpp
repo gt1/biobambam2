@@ -27,6 +27,7 @@
 #include <libmaus/bambam/CircularHashCollatingBamDecoder.hpp>
 #include <libmaus/bambam/BamToFastqOutputFileSet.hpp>
 #include <libmaus/util/TempFileRemovalContainer.hpp>
+#include <libmaus/util/MemUsage.hpp>
 
 struct BamToFastQInputFileStream
 {
@@ -235,6 +236,8 @@ void bamtofastq(libmaus::util::ArgInfo const & arginfo)
 		bamtofastqCollating(arginfo);
 	else
 		bamtofastqNonCollating(arginfo);
+		
+	std::cerr << "[V] " << libmaus::util::MemUsage() << std::endl;		
 }
 
 int main(int argc, char * argv[])
