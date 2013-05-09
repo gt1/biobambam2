@@ -54,6 +54,9 @@ struct BamToFastQInputFileStream
 
 void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::bambam::BamAlignmentDecoder & bamdec)
 {
+	if ( arginfo.getValue<unsigned int>("disablevalidation",0) )
+		bamdec.disableValidation();
+
 	libmaus::timing::RealTimeClock rtc; rtc.start();
 	uint32_t const excludeflags = libmaus::bambam::BamFlagBase::stringToFlags(arginfo.getValue<std::string>("exclude","SECONDARY"));
 	libmaus::bambam::BamAlignment const & algn = bamdec.getAlignment();
@@ -125,6 +128,9 @@ void bamtofastqCollating(
 	libmaus::bambam::CircularHashCollatingBamDecoder & CHCBD
 )
 {
+	if ( arginfo.getValue<unsigned int>("disablevalidation",0) )
+		CHCBD.disableValidation();
+
 	libmaus::bambam::BamToFastqOutputFileSet OFS(arginfo);
 
 	libmaus::bambam::CircularHashCollatingBamDecoder::OutputBufferEntry const * ob = 0;
@@ -245,14 +251,14 @@ void bamtofastq(libmaus::util::ArgInfo const & arginfo)
 		bamtofastqCollating(arginfo);
 	else
 		bamtofastqNonCollating(arginfo);
-		
-	std::cerr << "[V] " << libmaus::util::MemUsage() << std::endl;		
 }
 
 int main(int argc, char * argv[])
 {
 	try
 	{
+		libmaus::timing::RealTimeClock rtc; rtc.start();
+		
 		::libmaus::util::ArgInfo const arginfo(argc,argv);
 		
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
@@ -285,11 +291,12 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "collate=<[1]>", "collate pairs" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "filename=<[stdin]>", "input filename (default: read file from standard input)" ) );
 				#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
-				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<[bam]>", "input format, cram, bam or sam" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<[bam]>", "input format: cram, bam or sam" ) );
 				#else
-				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<[bam]>", "input format, bam" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<[bam]>", "input format: bam" ) );
 				#endif
 				V.push_back ( std::pair<std::string,std::string> ( "exclude=<[SECONDARY]>", "exclude alignments matching any of the given flags" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "disablevalidation=<[0]>", "disable validation of input data" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("T=<[") + arginfo.getDefaultTmpFileName() + "]>" , "temporary file name" ) );
 				
 				::biobambam::Licensing::printMap(std::cerr,V);
@@ -300,8 +307,11 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;
 			}
+		
 			
 		bamtofastq(arginfo);
+		
+		std::cerr << "[V] " << libmaus::util::MemUsage() << " wall clock time " << rtc.formatTime(rtc.getElapsedSeconds()) << std::endl;		
 	}
 	catch(std::exception const & ex)
 	{
