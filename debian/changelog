@@ -1,3 +1,9 @@
+biobambam (0.0.52-0) unstable; urgency=low
+
+  * bump version after adding function to disable input validation for bamtofasq
+
+ -- German Tischler <gt1@sanger.ac.uk>  Thu, 09 May 2013 12:05:06 +0100
+
 biobambam (0.0.51-0) unstable; urgency=low
 
   * bump version after updating dependency information 
