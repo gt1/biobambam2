@@ -205,13 +205,18 @@ void bamtofastqCollating(libmaus::util::ArgInfo const & arginfo)
 	std::string const inputformat = arginfo.getValue<std::string>("inputformat","bam");
 	std::string const inputfilename = arginfo.getValue<std::string>("filename","-");
 
+	unsigned int const hlog = arginfo.getValue<unsigned int>("colhlog",18);
+	uint64_t const sbs = arginfo.getValue<uint64_t>("colsbs",128ull*1024ull*1024ull);
+
 	if ( inputformat == "bam" )
 	{
 		BamToFastQInputFileStream bamin(inputfilename);
 		libmaus::bambam::BamCircularHashCollatingBamDecoder CHCBD(
 			bamin.in,
 			tmpfilename,excludeflags,
-			false /* put rank */
+			false, /* put rank */
+			hlog,
+			sbs
 		);
 		bamtofastqCollating(arginfo,CHCBD);
 	}
@@ -220,7 +225,8 @@ void bamtofastqCollating(libmaus::util::ArgInfo const & arginfo)
 	{
 		libmaus::bambam::ScramCircularHashCollatingBamDecoder CHCBD(inputfilename,"r","",
 			tmpfilename,excludeflags,
-			false /* put rank */
+			false, /* put rank */
+			hlog,sbs
 		);
 		bamtofastqCollating(arginfo,CHCBD);
 	}
@@ -229,7 +235,8 @@ void bamtofastqCollating(libmaus::util::ArgInfo const & arginfo)
 		std::string const reference = arginfo.getValue<std::string>("reference","");
 		libmaus::bambam::ScramCircularHashCollatingBamDecoder CHCBD(inputfilename,"rc",reference,
 			tmpfilename,excludeflags,
-			false /* put rank */
+			false, /* put rank */
+			hlog,sbs
 		);
 		bamtofastqCollating(arginfo,CHCBD);
 	}
@@ -297,6 +304,8 @@ int main(int argc, char * argv[])
 				#endif
 				V.push_back ( std::pair<std::string,std::string> ( "exclude=<[SECONDARY]>", "exclude alignments matching any of the given flags" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "disablevalidation=<[0]>", "disable validation of input data" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "colhlog=<[18]>", "base 2 logarithm of hash table size used for collation" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("colsbs=<[")+libmaus::util::NumberSerialisation::formatNumber(128ull*1024*1024,0)+"]>", "size of hash table overflow list in bytes" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("T=<[") + arginfo.getDefaultTmpFileName() + "]>" , "temporary file name" ) );
 				
 				::biobambam::Licensing::printMap(std::cerr,V);
