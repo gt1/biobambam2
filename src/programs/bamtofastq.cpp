@@ -92,12 +92,21 @@ void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo)
 {
 	std::string const inputformat = arginfo.getValue<std::string>("inputformat","bam");
 	std::string const inputfilename = arginfo.getValue<std::string>("filename","-");
+	uint64_t const numthreads = arginfo.getValue<uint64_t>("threads",0);
 	
 	if ( inputformat == "bam" )
 	{
 		BamToFastQInputFileStream bamin(inputfilename);
-		libmaus::bambam::BamDecoder bamdec(bamin.in);
-		bamtofastqNonCollating(arginfo,bamdec);
+		if ( numthreads > 0 )
+		{
+			libmaus::bambam::BamParallelDecoderWrapper bamdecwrap(bamin.in,numthreads);
+			bamtofastqNonCollating(arginfo,bamdecwrap.bamdec);	
+		}
+		else
+		{
+			libmaus::bambam::BamDecoder bamdec(bamin.in);
+			bamtofastqNonCollating(arginfo,bamdec);
+		}
 	}
 	#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
 	else if ( inputformat == "sam" )
@@ -204,6 +213,7 @@ void bamtofastqCollating(libmaus::util::ArgInfo const & arginfo)
 	libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilename);
 	std::string const inputformat = arginfo.getValue<std::string>("inputformat","bam");
 	std::string const inputfilename = arginfo.getValue<std::string>("filename","-");
+	uint64_t const numthreads = arginfo.getValue<uint64_t>("threads",0);
 
 	unsigned int const hlog = arginfo.getValue<unsigned int>("colhlog",18);
 	uint64_t const sbs = arginfo.getValue<uint64_t>("colsbs",128ull*1024ull*1024ull);
@@ -211,14 +221,30 @@ void bamtofastqCollating(libmaus::util::ArgInfo const & arginfo)
 	if ( inputformat == "bam" )
 	{
 		BamToFastQInputFileStream bamin(inputfilename);
-		libmaus::bambam::BamCircularHashCollatingBamDecoder CHCBD(
-			bamin.in,
-			tmpfilename,excludeflags,
-			false, /* put rank */
-			hlog,
-			sbs
-		);
-		bamtofastqCollating(arginfo,CHCBD);
+
+		if ( numthreads > 0 )
+		{
+			libmaus::bambam::BamParallelCircularHashCollatingBamDecoder CHCBD(
+				bamin.in,
+				numthreads,
+				tmpfilename,excludeflags,
+				false, /* put rank */
+				hlog,
+				sbs
+				);
+			bamtofastqCollating(arginfo,CHCBD);
+		}
+		else
+		{
+			libmaus::bambam::BamCircularHashCollatingBamDecoder CHCBD(
+				bamin.in,
+				tmpfilename,excludeflags,
+				false, /* put rank */
+				hlog,
+				sbs
+				);
+			bamtofastqCollating(arginfo,CHCBD);
+		}
 	}
 	#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
 	else if ( inputformat == "sam" )

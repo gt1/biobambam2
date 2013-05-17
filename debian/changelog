@@ -1,3 +1,9 @@
+biobambam (0.0.53-0) unstable; urgency=low
+
+  * added parallel bam decoding option for bamtofastq 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Fri, 17 May 2013 13:39:03 +0100
+
 biobambam (0.0.52-0) unstable; urgency=low
 
   * bump version after adding function to disable input validation for bamtofasq
