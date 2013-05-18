@@ -128,8 +128,8 @@ int bamCollate(::libmaus::util::ArgInfo const & arginfo)
 			if ( !readgroups.size() 
 				||
 				( 
-					LHTsnofailure->searchCompleteNoFailure(a->getReadGroup()) != -1 &&
-					LHTsnofailure->searchCompleteNoFailure(b->getReadGroup()) != -1
+					LHTsnofailure->searchCompleteNoFailure(std::string(a->getReadGroup())) != -1 &&
+					LHTsnofailure->searchCompleteNoFailure(std::string(b->getReadGroup())) != -1
 				)	
 			)
 			{
@@ -141,7 +141,7 @@ int bamCollate(::libmaus::util::ArgInfo const & arginfo)
 	else
 	{
 		while ( a = CBD.get() )
-			if ( !readgroups.size() || LHTsnofailure->searchCompleteNoFailure(a->getReadGroup()) != -1 )
+			if ( !readgroups.size() || LHTsnofailure->searchCompleteNoFailure(std::string(a->getReadGroup())) != -1 )
 				a->serialise(writer.bgzfos);
 	}
 		
