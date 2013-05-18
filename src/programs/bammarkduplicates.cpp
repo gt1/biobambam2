@@ -531,6 +531,9 @@ static void markDuplicatesInFileTemplate(
 	}
 
 	std::ostream & outputstr = *poutputstr;
+	
+	libmaus::timing::RealTimeClock globrtc, locrtc;
+	globrtc.start(); locrtc.start();
 
 	// rewrite file and mark duplicates
 	::libmaus::bambam::BamWriter::unique_ptr_type writer(new ::libmaus::bambam::BamWriter(outputstr,uphead,level));
@@ -545,7 +548,11 @@ static void markDuplicatesInFileTemplate(
 		
 		if ( verbose && (r+1) % mod == 0 )
 		{
-			std::cerr << "[V] Marked " << static_cast<double>(r+1)/maxrank << std::endl;
+			std::cerr << "[V] Marked " << static_cast<double>(r+1)/maxrank 
+				<< " time " << locrtc.getElapsedSeconds()
+				<< " total " << globrtc.formatTime(globrtc.getElapsedSeconds())
+				<< std::endl;
+			locrtc.start();
 		}
 	}
 	
@@ -554,7 +561,7 @@ static void markDuplicatesInFileTemplate(
 	pO.reset();
 	
 	if ( verbose )
-		std::cerr << "[V] Marked " << 1.0 << std::endl;		
+		std::cerr << "[V] Marked " << 1.0 << " total for marking time " << globrtc.formatTime(globrtc.getElapsedSeconds()) << std::endl;		
 
 }
 
@@ -595,6 +602,8 @@ static void markDuplicatesInFile(
 
 static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 {
+	libmaus::timing::RealTimeClock globrtc; globrtc.start();
+
 	::libmaus::util::TempFileRemovalContainer::setup();
 
 	if ( (!(arginfo.hasArg("I") && (arginfo.getValue<std::string>("I","") != ""))) && isatty(STDIN_FILENO) )
@@ -616,9 +625,9 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	// logarithm of collation hash table size
 	unsigned int const colhashbits = arginfo.getValue<unsigned int>("colhashbits",getDefaultColHashBits());
 	// length of collation output list
-	uint64_t const collistsize = arginfo.getValue<uint64_t>("collistsize",getDefaultColListSize());
+	uint64_t const collistsize = arginfo.getValueUnsignedNumeric<uint64_t>("collistsize",getDefaultColListSize());
 	// buffer size for fragment and pair data
-	unsigned int const fragbufsize = arginfo.getValue<unsigned int>("fragbufsize",getDefaultFragBufSize());
+	uint64_t const fragbufsize = arginfo.getValueUnsignedNumeric<uint64_t>("fragbufsize",getDefaultFragBufSize());
 	// print verbosity messages
 	bool const verbose = arginfo.getValue<unsigned int>("verbose",getDefaultVerbose());
 	// rewritten file should be in bam format, if input is given via stdin
@@ -785,6 +794,8 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	::libmaus::bambam::BamFormatAuxiliary bamauxiliary;
 	#endif
 	
+	libmaus::timing::RealTimeClock readinrtc; readinrtc.start();
+	
 	while ( CBD->tryPair(P) )
 	{
 		assert ( P.first || P.second );
@@ -883,7 +894,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 			{
 				std::swap(P.first,P.second);
 			}
-			
+		
 			pairREC->putPair(*(P.first),*(P.second),bamheader);
 			paircnt++;
 		}
@@ -908,7 +919,12 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 				<< paircnt << " mapped pairs, "
 				<< fragcnt/rtc.getElapsedSeconds() << " frags/s "
 				<< ::libmaus::util::MemUsage()
+				<< " time "
+				<< readinrtc.getElapsedSeconds()
+				<< " total "
+				<< fragrtc.formatTime(fragrtc.getElapsedSeconds())
 				<< std::endl;
+			readinrtc.start();
 			lastproc = fragcnt;
 		}		
 	}
@@ -919,7 +935,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 		CBD->printWriteOutHist(std::cerr,"[V] [wohist]");
 		#endif
 	}
-
+	
 	CBD.reset();
 	CIS.reset();
 	SRC.reset();
@@ -929,7 +945,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	pairREC->flush();
 	
 	if ( verbose )
-		std::cerr << "[V] fragment and pair data computed in time " << fragrtc.getElapsedSeconds() << std::endl;
+		std::cerr << "[V] fragment and pair data computed in time " << fragrtc.getElapsedSeconds() << " (" << fragrtc.formatTime(fragrtc.getElapsedSeconds()) << ")" << std::endl;
 
 	uint64_t const numranks = maxrank+1;
 	
@@ -1053,7 +1069,12 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	markDuplicatesInFile(arginfo,verbose,bamheader,maxrank,mod,level,DSCV,tmpfilesnappyreads,rewritebam);
 		
 	if ( verbose )
-		std::cerr << "[V] " << ::libmaus::util::MemUsage() << std::endl;
+		std::cerr << "[V] " << ::libmaus::util::MemUsage() << " " 
+			<< globrtc.getElapsedSeconds() 
+			<< " ("
+			<< globrtc.formatTime(globrtc.getElapsedSeconds())
+			<< ")"
+			<< std::endl;
 		
 	return EXIT_SUCCESS;
 }
