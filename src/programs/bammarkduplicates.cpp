@@ -67,16 +67,16 @@ struct DupSetCallbackVector : public DupSetCallback
 	
 	void operator()(::libmaus::bambam::ReadEnds const & A)
 	{
-		B.set(A.read1IndexInFile,true);
+		B.set(A.getRead1IndexInFile(),true);
 		
 		if ( A.isPaired() )
 		{
-			B.set(A.read2IndexInFile,true);
-			metrics[A.libraryId].readpairduplicates++;
+			B.set(A.getRead2IndexInFile(),true);
+			metrics[A.getLibraryId()].readpairduplicates++;
 		}
 		else
 		{
-			metrics[A.libraryId].unpairedreadduplicates++;
+			metrics[A.getLibraryId()].unpairedreadduplicates++;
 		}
 	}	
 
@@ -121,13 +121,13 @@ static uint64_t markDuplicatePairs(
 			std::cerr << "[V] " << lfrags[i] << std::endl;
 		#endif
 	
-		uint64_t maxscore = lfrags[0].score;
+		uint64_t maxscore = lfrags[0].getScore();
 		uint64_t maxindex = 0;
 		
 		for ( uint64_t i = 1 ; i < lfrags.size(); ++i )
-			if ( lfrags[i].score > maxscore )
+			if ( lfrags[i].getScore() > maxscore )
 			{
-				maxscore = lfrags[i].score;
+				maxscore = lfrags[i].getScore();
 				maxindex = i;
 			}
 
@@ -145,13 +145,13 @@ static uint64_t markDuplicatePairs(
 			// search top end of tile
 			while ( 
 				high < lfrags.size() && 
-				lfrags[high].readGroup == lfrags[low].readGroup &&
-				lfrags[high].tile == lfrags[low].tile )
+				lfrags[high].getReadGroup() == lfrags[low].getReadGroup() &&
+				lfrags[high].getTile() == lfrags[low].getTile() )
 			{
 				high++;
 			}
 			
-			if ( high-low > 1 && lfrags[low].tile )
+			if ( high-low > 1 && lfrags[low].getTile() )
 			{
 				#if defined(DEBUG)
 				std::cerr << "[D] Range " << high-low << " for " << lfrags[low] << std::endl;
@@ -164,14 +164,14 @@ static uint64_t markDuplicatePairs(
 				{
 					for ( 
 						uint64_t j = i+1; 
-						j < high && lfrags[j].x - lfrags[low].x <= optminpixeldif;
+						j < high && lfrags[j].getX() - lfrags[low].getX() <= optminpixeldif;
 						++j 
 					)
 						if ( 
 							::libmaus::math::iabs(
-								static_cast<int64_t>(lfrags[i].y)
+								static_cast<int64_t>(lfrags[i].getY())
 								-
-								static_cast<int64_t>(lfrags[j].y)
+								static_cast<int64_t>(lfrags[j].getY())
 							)
 							<= optminpixeldif
 						)
@@ -183,7 +183,7 @@ static uint64_t markDuplicatePairs(
 				
 				if ( haveoptdup )
 				{
-					unsigned int const lib = lfrags[low].libraryId;
+					unsigned int const lib = lfrags[low].getLibraryId();
 					uint64_t numopt = 0;
 					for ( uint64_t i = 0; i < opt.size(); ++i )
 						if ( opt[i] )
@@ -261,13 +261,13 @@ static uint64_t markDuplicateFrags(
 				#endif
 				// std::cerr << "Frags only." << std::endl;
 			
-				uint64_t maxscore = lfrags[0].score;
+				uint64_t maxscore = lfrags[0].getScore();
 				uint64_t maxindex = 0;
 				
 				for ( uint64_t i = 1; i < lfrags.size(); ++i )
-					if ( lfrags[i].score > maxscore )
+					if ( lfrags[i].getScore() > maxscore )
 					{
-						maxscore = lfrags[i].score;
+						maxscore = lfrags[i].getScore();
 						maxindex = i;
 					}
 
@@ -296,12 +296,12 @@ static uint64_t markDuplicateFrags(
 static bool isDupPair(::libmaus::bambam::ReadEnds const & A, ::libmaus::bambam::ReadEnds const & B)
 {
 	bool const notdup = 
-		A.libraryId       != B.libraryId       ||
-		A.read1Sequence   != B.read1Sequence   ||
-		A.read1Coordinate != B.read1Coordinate ||
-		A.orientation     != B.orientation     ||
-		A.read2Sequence   != B.read2Sequence   ||
-		A.read2Coordinate != B.read2Coordinate 
+		A.getLibraryId()       != B.getLibraryId()       ||
+		A.getRead1Sequence()   != B.getRead1Sequence()   ||
+		A.getRead1Coordinate() != B.getRead1Coordinate() ||
+		A.getOrientation()     != B.getOrientation()     ||
+		A.getRead2Sequence()   != B.getRead2Sequence()   ||
+		A.getRead2Coordinate() != B.getRead2Coordinate()
 	;
 	
 	return ! notdup;
@@ -310,10 +310,10 @@ static bool isDupPair(::libmaus::bambam::ReadEnds const & A, ::libmaus::bambam::
 static bool isDupFrag(::libmaus::bambam::ReadEnds const & A, ::libmaus::bambam::ReadEnds const & B)
 {
 	bool const notdup = 
-		A.libraryId       != B.libraryId       ||
-		A.read1Sequence   != B.read1Sequence   ||
-		A.read1Coordinate != B.read1Coordinate ||
-		A.orientation     != B.orientation
+		A.getLibraryId()      != B.getLibraryId()       ||
+		A.getRead1Sequence()   != B.getRead1Sequence()   ||
+		A.getRead1Coordinate() != B.getRead1Coordinate() ||
+		A.getOrientation()     != B.getOrientation()
 	;
 	
 	return ! notdup;
