@@ -1,3 +1,9 @@
+biobambam (0.0.54-0) unstable; urgency=low
+
+  * bump version after bambam api changes in libmaus 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Tue, 21 May 2013 07:11:27 +0100
+
 biobambam (0.0.53-0) unstable; urgency=low
 
   * added parallel bam decoding option for bamtofastq 
