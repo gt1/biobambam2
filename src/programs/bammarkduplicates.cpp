@@ -31,6 +31,7 @@
 #include <libmaus/bambam/SortedFragDecoder.hpp>
 #include <libmaus/bitio/BitVector.hpp>
 #include <libmaus/math/iabs.hpp>
+#include <libmaus/math/numbits.hpp>
 #include <libmaus/timing/RealTimeClock.hpp>
 #include <libmaus/util/ArgInfo.hpp>
 #include <libmaus/util/MemUsage.hpp>
@@ -534,21 +535,22 @@ static void markDuplicatesInFileTemplate(
 	
 	libmaus::timing::RealTimeClock globrtc, locrtc;
 	globrtc.start(); locrtc.start();
+	uint64_t const bmod = libmaus::math::nextTwoPow(mod);
+	uint64_t const bmask = bmod-1;
 
 	// rewrite file and mark duplicates
 	::libmaus::bambam::BamWriter::unique_ptr_type writer(new ::libmaus::bambam::BamWriter(outputstr,uphead,level));
+	libmaus::bambam::BamAlignment & alignment = decoder.getAlignment();
 	for ( uint64_t r = 0; decoder.readAlignment(); ++r )
 	{
 		if ( DSC.isMarked(r) )
-			decoder.getAlignment().putFlags(
-				decoder.getAlignment().getFlags() | ::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FDUP
-			);
+			alignment.putFlags(alignment.getFlags() | ::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FDUP);
 		
-		decoder.getAlignment().serialise(writer->bgzfos);
+		alignment.serialise(writer->bgzfos);
 		
-		if ( verbose && (r+1) % mod == 0 )
+		if ( verbose && ((r+1) & bmask) == 0 )
 		{
-			std::cerr << "[V] Marked " << static_cast<double>(r+1)/maxrank 
+			std::cerr << "[V] Marked " << (r+1) << " (" << (r+1)/(1024*1024) << "," << static_cast<double>(r+1)/maxrank << ")"
 				<< " time " << locrtc.getElapsedSeconds()
 				<< " total " << globrtc.formatTime(globrtc.getElapsedSeconds())
 				<< std::endl;
@@ -581,6 +583,7 @@ static void markDuplicatesInFile(
 	{
 		std::string const inputfilename = arginfo.getValue<std::string>("I","I");
 		::libmaus::bambam::BamDecoder decoder(inputfilename);
+		decoder.disableValidation();
 		markDuplicatesInFileTemplate(arginfo,verbose,bamheader,maxrank,mod,level,DSC,decoder);
 	}
 	else
@@ -588,6 +591,7 @@ static void markDuplicatesInFile(
 		if ( rewritebam )
 		{
 			::libmaus::bambam::BamDecoder decoder(recompressedalignments);
+			decoder.disableValidation();
 			markDuplicatesInFileTemplate(arginfo,verbose,bamheader,maxrank,mod,level,DSC,decoder);
 		}
 		else
