@@ -801,9 +801,14 @@ static void markDuplicatesInFile(
 	{
 		if ( rewritebam )
 		{
+			#if 0
 			::libmaus::bambam::BamDecoder decoder(recompressedalignments);
 			decoder.disableValidation();
 			markDuplicatesInFileTemplate(arginfo,verbose,bamheader,maxrank,mod,level,DSC,decoder);
+			#else
+			libmaus::aio::CheckedInputStream CIS(recompressedalignments);
+			addBamDuplicateFlag(arginfo,verbose,bamheader,maxrank,mod,level,DSC,CIS);		
+			#endif
 		}
 		else
 		{
