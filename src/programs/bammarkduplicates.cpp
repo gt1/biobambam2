@@ -30,10 +30,12 @@
 #include <libmaus/bambam/ReadEndsContainer.hpp>
 #include <libmaus/bambam/SortedFragDecoder.hpp>
 #include <libmaus/bitio/BitVector.hpp>
+#include <libmaus/lz/BgzfRecode.hpp>
 #include <libmaus/math/iabs.hpp>
 #include <libmaus/math/numbits.hpp>
 #include <libmaus/timing/RealTimeClock.hpp>
 #include <libmaus/util/ArgInfo.hpp>
+#include <libmaus/util/ContainerGetObject.hpp>
 #include <libmaus/util/MemUsage.hpp>
 #include <biobambam/Licensing.hpp>
 
@@ -488,6 +490,209 @@ bool checkSnappyRewrite(
 	return true;
 }
 
+void addBamDuplicateFlag(
+	::libmaus::util::ArgInfo const & arginfo,
+	bool const verbose,
+	::libmaus::bambam::BamHeader const & bamheader,
+	uint64_t const maxrank,
+	uint64_t const mod,
+	int const level,
+	DupSetCallback const & DSC,
+	std::istream & in
+)
+{
+	std::string const headertext(bamheader.text);
+
+	// add PG line to header
+	std::string const upheadtext = ::libmaus::bambam::ProgramHeaderLineSet::addProgramLine(
+		headertext,
+		"bammarkduplicates_m", // ID
+		"bammarkduplicates", // PN
+		arginfo.commandline, // CL
+		::libmaus::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
+		std::string(PACKAGE_VERSION) // VN			
+	);
+	// construct new header
+	::libmaus::bambam::BamHeader uphead(upheadtext);
+
+	::libmaus::aio::CheckedOutputStream::unique_ptr_type pO;
+	std::ostream * poutputstr = 0;
+	
+	if ( arginfo.hasArg("O") && (arginfo.getValue<std::string>("O","") != "") )
+	{
+		pO = UNIQUE_PTR_MOVE(
+			::libmaus::aio::CheckedOutputStream::unique_ptr_type(
+				new ::libmaus::aio::CheckedOutputStream(arginfo.getValue<std::string>("O",std::string("O")))
+			)
+		);
+		poutputstr = pO.get();
+	}
+	else
+	{
+		poutputstr = & std::cout;
+	}
+
+	std::ostream & outputstr = *poutputstr;
+
+	/* write bam header */
+	{
+		libmaus::lz::BgzfDeflate<std::ostream> headout(outputstr);
+		uphead.serialise(headout);
+		headout.flush();
+	}
+
+	
+	uint64_t const bmod = libmaus::math::nextTwoPow(mod);
+	uint64_t const bmask = bmod-1;
+
+	libmaus::timing::RealTimeClock globrtc; globrtc.start();
+	libmaus::timing::RealTimeClock locrtc; locrtc.start();
+	libmaus::lz::BgzfRecode rec(in,outputstr,level);
+	
+	bool haveheader = false;
+	uint64_t blockskip = 0;
+	std::vector<uint8_t> headerstr;
+	uint64_t preblocksizes = 0;
+	
+	/* read and copy blocks until we have reached the end of the BAM header */
+	while ( (!haveheader) && rec.getBlock() )
+	{
+		std::copy ( rec.deflatebase.pa, rec.deflatebase.pa + rec.P.second,
+			std::back_insert_iterator < std::vector<uint8_t> > (headerstr) );
+		
+		try
+		{
+			libmaus::util::ContainerGetObject< std::vector<uint8_t> > CGO(headerstr);
+			libmaus::bambam::BamHeader header;
+			header.init(CGO);
+			haveheader = true;
+			blockskip = CGO.i - preblocksizes;
+		}
+		catch(std::exception const & ex)
+		{
+			std::cerr << "[D] " << ex.what() << std::endl;
+		}
+	
+		// need to read another block to get header, remember size of current block
+		if ( ! haveheader )
+			preblocksizes += rec.P.second;
+	}
+	
+	if ( blockskip )
+	{
+		uint64_t const bytesused = (rec.deflatebase.pc - rec.deflatebase.pa) - blockskip;
+		memmove ( rec.deflatebase.pa, rec.deflatebase.pa + blockskip, bytesused );
+		rec.deflatebase.pc = rec.deflatebase.pa + bytesused;
+		rec.P.second = bytesused;
+		blockskip = 0;
+		
+		if ( ! bytesused )
+			rec.getBlock();
+	}
+
+	/* parser state types and variables */
+	enum parsestate { state_reading_blocklen, state_pre_skip, state_marking, state_post_skip };
+	parsestate state = state_reading_blocklen;
+	unsigned int blocklenred = 0;
+	uint32_t blocklen = 0;
+	uint32_t preskip = 0;
+	uint64_t alcnt = 0;
+	unsigned int const dupflagskip = 15;
+	// uint8_t const dupflagmask = static_cast<uint8_t>(~(4u));
+			
+	/* while we have alignment data blocks */
+	while ( rec.P.second )
+	{
+		uint8_t * pa       = rec.deflatebase.pa;
+		uint8_t * const pc = rec.deflatebase.pc;
+
+		while ( pa != pc )
+			switch ( state )
+			{
+				/* read length of next alignment block */
+				case state_reading_blocklen:
+					/* if this is a little endian machine allowing unaligned access */
+					#if defined(LIBMAUS_HAVE_i386)
+					if ( (!blocklenred) && ((pc-pa) >= static_cast<ptrdiff_t>(sizeof(uint32_t))) )
+					{
+						blocklen = *(reinterpret_cast<uint32_t const *>(pa));
+						blocklenred = sizeof(uint32_t);
+						pa += sizeof(uint32_t);
+						
+						state = state_pre_skip;
+						preskip = dupflagskip;
+					}
+					else
+					#endif
+					{
+						while ( pa != pc && blocklenred < sizeof(uint32_t) )
+							blocklen |= static_cast<uint32_t>(*(pa++)) << ((blocklenred++)*8);
+
+						if ( blocklenred == sizeof(uint32_t) )
+						{
+							state = state_pre_skip;
+							preskip = dupflagskip;
+						}
+					}
+					break;
+				/* skip data before the part we modify */
+				case state_pre_skip:
+					{
+						uint32_t const skip = std::min(pc-pa,static_cast<ptrdiff_t>(preskip));
+						pa += skip;
+						preskip -= skip;
+						blocklen -= skip;
+						
+						if ( ! skip )
+							state = state_marking;
+					}
+					break;
+				/* change data */
+				case state_marking:
+					assert ( pa != pc );
+					if ( DSC.isMarked(alcnt) )
+						*pa |= 4;
+					state = state_post_skip;
+					// intented fall through to post_skip case
+				/* skip data after part we modify */
+				case state_post_skip:
+				{
+					uint32_t const skip = std::min(pc-pa,static_cast<ptrdiff_t>(blocklen));
+					pa += skip;
+					blocklen -= skip;
+
+					if ( ! blocklen )
+					{
+						state = state_reading_blocklen;
+						blocklenred = 0;
+						blocklen = 0;
+						alcnt++;
+						
+						if ( verbose && ((alcnt & (bmask)) == 0) )
+						{
+							std::cerr << "[V] Marked " << (alcnt+1) << " (" << (alcnt+1)/(1024*1024) << "," << static_cast<double>(alcnt+1)/maxrank << ")"
+								<< " time " << locrtc.getElapsedSeconds()
+								<< " total " << globrtc.formatTime(globrtc.getElapsedSeconds())
+									<< std::endl;
+							locrtc.start();
+						}
+					}
+					break;
+				}
+			}
+
+		rec.putBlock();			
+		rec.getBlock();
+	}
+			
+	rec.addEOFBlock();
+	std::cout.flush();
+	
+	if ( verbose )
+		std::cerr << "[V] Marked " << 1.0 << " total for marking time " << globrtc.formatTime(globrtc.getElapsedSeconds()) << std::endl;
+}
+
+
 template<typename decoder_type>
 static void markDuplicatesInFileTemplate(
 	::libmaus::util::ArgInfo const & arginfo,
@@ -581,10 +786,16 @@ static void markDuplicatesInFile(
 {
 	if ( arginfo.hasArg("I") && (arginfo.getValue<std::string>("I","") != "") )
 	{
+		#if 0
 		std::string const inputfilename = arginfo.getValue<std::string>("I","I");
 		::libmaus::bambam::BamDecoder decoder(inputfilename);
 		decoder.disableValidation();
 		markDuplicatesInFileTemplate(arginfo,verbose,bamheader,maxrank,mod,level,DSC,decoder);
+		#else
+		std::string const inputfilename = arginfo.getValue<std::string>("I","I");
+		libmaus::aio::CheckedInputStream CIS(inputfilename);
+		addBamDuplicateFlag(arginfo,verbose,bamheader,maxrank,mod,level,DSC,CIS);
+		#endif
 	}
 	else
 	{
