@@ -1163,6 +1163,8 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 			
 	fragREC->flush();
 	pairREC->flush();
+	fragREC->releaseArray();
+	pairREC->releaseArray();
 	
 	if ( verbose )
 		std::cerr << "[V] fragment and pair data computed in time " << fragrtc.getElapsedSeconds() << " (" << fragrtc.formatTime(fragrtc.getElapsedSeconds()) << ")" << std::endl;
@@ -1174,8 +1176,6 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	
 	assert ( numranks == als );
 
-	DupSetCallbackVector DSCV(numranks,metrics);
-
 	if ( verbose )
 		std::cerr
 			<< "[V] " 
@@ -1185,6 +1185,8 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 			<< fragcnt/rtc.getElapsedSeconds() << " frags/s "
 			<< ::libmaus::util::MemUsage()
 			<< std::endl;
+
+	DupSetCallbackVector DSCV(numranks,metrics);
 
 	/*
 	 * process fragment and pair data to determine which reads are to be marked as duplicates
@@ -1212,6 +1214,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	}
 	dupcnt += markDuplicatePairs(lfrags,DSCV);
 	lfrags.resize(0);
+	pairDec.reset();
 	if ( verbose )
 		std::cerr << "done, rate " << paircnt/rtc.getElapsedSeconds() << std::endl;
 
@@ -1233,6 +1236,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	}
 	dupcnt += markDuplicateFrags(lfrags,DSCV);
 	lfrags.resize(0);
+	fragDec.reset();
 	if ( verbose )
 		std::cerr << "done, rate " << fragcnt/rtc.getElapsedSeconds() << std::endl;		
 
