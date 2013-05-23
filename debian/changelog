@@ -1,3 +1,9 @@
+biobambam (0.0.56-0) unstable; urgency=low
+
+  * no change version bump after changing libmaus dependency 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Thu, 23 May 2013 13:32:31 +0100
+
 biobambam (0.0.55-0) unstable; urgency=low
 
   * bump version after importing code and updating libmaus dependency 
