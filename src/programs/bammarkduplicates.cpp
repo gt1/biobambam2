@@ -506,7 +506,7 @@ void addBamDuplicateFlag(
 	// add PG line to header
 	std::string const upheadtext = ::libmaus::bambam::ProgramHeaderLineSet::addProgramLine(
 		headertext,
-		"bammarkduplicates_m", // ID
+		"bammarkduplicates", // ID
 		"bammarkduplicates", // PN
 		arginfo.commandline, // CL
 		::libmaus::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
@@ -653,7 +653,7 @@ void addBamDuplicateFlag(
 					if ( DSC.isMarked(alcnt) )
 						*pa |= 4;
 					state = state_post_skip;
-					// intented fall through to post_skip case
+					// intended fall through to post_skip case
 				/* skip data after part we modify */
 				case state_post_skip:
 				{
