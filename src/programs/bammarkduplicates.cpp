@@ -758,6 +758,8 @@ static void markDuplicatesInFileTemplate(
 			std::cerr << "[V] Marked " << (r+1) << " (" << (r+1)/(1024*1024) << "," << static_cast<double>(r+1)/maxrank << ")"
 				<< " time " << locrtc.getElapsedSeconds()
 				<< " total " << globrtc.formatTime(globrtc.getElapsedSeconds())
+				<< " "
+				<< libmaus::util::MemUsage()
 				<< std::endl;
 			locrtc.start();
 		}
@@ -768,7 +770,10 @@ static void markDuplicatesInFileTemplate(
 	pO.reset();
 	
 	if ( verbose )
-		std::cerr << "[V] Marked " << 1.0 << " total for marking time " << globrtc.formatTime(globrtc.getElapsedSeconds()) << std::endl;		
+		std::cerr << "[V] Marked " << maxrank << "(" << maxrank/(1024*1024) << "," << 1 << ")" << " total for marking time " << globrtc.formatTime(globrtc.getElapsedSeconds()) 
+			<< " "
+			<< libmaus::util::MemUsage()
+			<< std::endl;
 
 }
 
