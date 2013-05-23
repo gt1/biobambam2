@@ -686,7 +686,7 @@ void addBamDuplicateFlag(
 	}
 			
 	rec.addEOFBlock();
-	std::cout.flush();
+	outputstr.flush();
 	
 	if ( verbose )
 		std::cerr << "[V] Marked " << 1.0 << " total for marking time " << globrtc.formatTime(globrtc.getElapsedSeconds()) << std::endl;
