@@ -216,7 +216,7 @@ void bamtofastqCollating(libmaus::util::ArgInfo const & arginfo)
 	uint64_t const numthreads = arginfo.getValue<uint64_t>("threads",0);
 
 	unsigned int const hlog = arginfo.getValue<unsigned int>("colhlog",18);
-	uint64_t const sbs = arginfo.getValue<uint64_t>("colsbs",128ull*1024ull*1024ull);
+	uint64_t const sbs = arginfo.getValueUnsignedNumeric<uint64_t>("colsbs",128ull*1024ull*1024ull);
 
 	if ( inputformat == "bam" )
 	{
