@@ -46,8 +46,8 @@ static uint64_t getDefaultMod() { return 1048576;  }
 static bool getDefaultRewriteBam() { return 0; }
 static int getDefaultRewriteBamLevel() { return Z_DEFAULT_COMPRESSION; }
 static unsigned int getDefaultColHashBits() { return 20; }
-static uint64_t getDefaultColListSize() { return 128*1024*1024; }
-static uint64_t getDefaultFragBufSize() { return 128*1024*1024; }
+static uint64_t getDefaultColListSize() { return 32*1024*1024; }
+static uint64_t getDefaultFragBufSize() { return 48*1024*1024; }
 
 struct DupSetCallback
 {
@@ -673,7 +673,9 @@ void addBamDuplicateFlag(
 							std::cerr << "[V] Marked " << (alcnt+1) << " (" << (alcnt+1)/(1024*1024) << "," << static_cast<double>(alcnt+1)/maxrank << ")"
 								<< " time " << locrtc.getElapsedSeconds()
 								<< " total " << globrtc.formatTime(globrtc.getElapsedSeconds())
-									<< std::endl;
+								<< " "
+								<< libmaus::util::MemUsage()
+								<< std::endl;
 							locrtc.start();
 						}
 					}
@@ -689,7 +691,11 @@ void addBamDuplicateFlag(
 	outputstr.flush();
 	
 	if ( verbose )
-		std::cerr << "[V] Marked " << 1.0 << " total for marking time " << globrtc.formatTime(globrtc.getElapsedSeconds()) << std::endl;
+		std::cerr << "[V] Marked " << 1.0 << " total for marking time "
+			<< globrtc.formatTime(globrtc.getElapsedSeconds()) 
+			<< " "
+			<< libmaus::util::MemUsage()
+			<< std::endl;
 }
 
 
