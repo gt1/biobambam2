@@ -1,3 +1,9 @@
+biobambam (0.0.58-0) unstable; urgency=low
+
+  * update libmaus dependency
+
+ -- German Tischler <gt1@sanger.ac.uk>  Thu, 30 May 2013 10:40:34 +0100
+
 biobambam (0.0.57-0) unstable; urgency=low
 
   * change bammarkduplicates default buffer sizes 
