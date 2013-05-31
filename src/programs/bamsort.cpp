@@ -98,7 +98,7 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 	std::string const sortorder = arginfo.getValue<std::string>("SO","coordinate");
 
 	::libmaus::bambam::BamDecoder dec(std::cin,false);
-	::libmaus::bambam::BamHeader const & header = dec.bamheader;
+	::libmaus::bambam::BamHeader const & header = dec.getHeader();
 
 	std::string const headertext(header.text);
 

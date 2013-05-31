@@ -168,7 +168,7 @@ int main(int argc, char * argv[])
 			fapref [ i ] += info[i].idlen + 2; // > + newline
 
 		::libmaus::bambam::BamDecoder decoder(std::cin);
-		::libmaus::bambam::BamHeader const & bamheader = decoder.bamheader;
+		::libmaus::bambam::BamHeader const & bamheader = decoder.getHeader();
 		// std::vector< ::libmaus::bambam::Chromosome > chromosomes
 
 		::libmaus::autoarray::AutoArray<uint8_t> uptab(256,false);
@@ -329,7 +329,7 @@ int main(int argc, char * argv[])
 					alignment.replaceSequence(modseq);
 				}
 
-				alignment.serialise(BW.bgzfos);
+				alignment.serialise(BW.getStream());
 			}			
 		}
 	}

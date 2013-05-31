@@ -39,7 +39,7 @@ int main(int argc, char * argv[])
 		int const level = arginfo.getValue<int>("level",1);
 		
 		::libmaus::bambam::BamDecoder bamfile(std::cin);
-		std::string const headertext(bamfile.bamheader.text);
+		std::string const headertext(bamfile.getHeader().text);
 	
 		// "reconstruct" command line
 		std::string cl;
@@ -127,8 +127,8 @@ int main(int argc, char * argv[])
 				}
 			
 				// write alignments
-				P.first.first->serialise(writer.bgzfos);
-				P.second.first->serialise(writer.bgzfos);
+				P.first.first->serialise(writer.getStream());
+				P.second.first->serialise(writer.getStream());
 				// read new alignments
 				P.first.second = bamfile.readAlignment();
 				if ( P.first.second )
@@ -145,7 +145,7 @@ int main(int argc, char * argv[])
 			else
 			{
 				// write first alignment
-				P.first.first->serialise(writer.bgzfos);
+				P.first.first->serialise(writer.getStream());
 				// move second to first
 				std::swap(P.first,P.second);
 				// read new second
@@ -168,7 +168,7 @@ int main(int argc, char * argv[])
 		
 		if ( P.first.second )
 		{
-			P.first.first->serialise(writer.bgzfos);
+			P.first.first->serialise(writer.getStream());
 			single++;
 			proc += 1;
 		}

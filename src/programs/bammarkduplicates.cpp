@@ -382,7 +382,7 @@ struct BamRewriteCallback : public ::libmaus::bambam::CollatingBamDecoderAlignme
 	{
 		// std::cerr << "Callback." << std::endl;
 		als++;
-		A.serialise(BWR->bgzfos);
+		A.serialise(BWR->getStream());
 	}	
 };
 
@@ -757,7 +757,7 @@ static void markDuplicatesInFileTemplate(
 		if ( DSC.isMarked(r) )
 			alignment.putFlags(alignment.getFlags() | ::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FDUP);
 		
-		alignment.serialise(writer->bgzfos);
+		alignment.serialise(writer->getStream());
 		
 		if ( verbose && ((r+1) & bmask) == 0 )
 		{

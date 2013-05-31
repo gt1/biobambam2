@@ -100,7 +100,7 @@ void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo)
 		if ( numthreads > 0 )
 		{
 			libmaus::bambam::BamParallelDecoderWrapper bamdecwrap(bamin.in,numthreads);
-			bamtofastqNonCollating(arginfo,bamdecwrap.bamdec);	
+			bamtofastqNonCollating(arginfo,bamdecwrap.getDecoder());	
 		}
 		else
 		{

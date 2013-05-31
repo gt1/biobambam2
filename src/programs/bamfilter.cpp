@@ -54,7 +54,7 @@ int main(int argc, char * argv[])
 		}
 
 		::libmaus::bambam::BamDecoder BD(std::cin);
-		::libmaus::bambam::BamHeader const & bamheader = BD.bamheader;
+		::libmaus::bambam::BamHeader const & bamheader = BD.getHeader();
 		::libmaus::bambam::BamAlignment & alignment = BD.getAlignment();
 		::libmaus::bambam::BamWriter writer(std::cout,bamheader,level);
 		
@@ -71,7 +71,7 @@ int main(int argc, char * argv[])
 				nummapped <= maxmapped && 
 				alignment.getLseq() >= static_cast<int64_t>(minlen)
 			)
-				alignment.serialise(writer.bgzfos);
+				alignment.serialise(writer.getStream());
 		}	
 	}
 	catch(std::exception const & ex)

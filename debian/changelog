@@ -1,3 +1,9 @@
+biobambam (0.0.61-0) unstable; urgency=low
+
+  * apply fixes for libmaus api cleanup changes
+
+ -- German Tischler <gt1@sanger.ac.uk>  Fri, 31 May 2013 15:53:39 +0100
+
 biobambam (0.0.60-0) unstable; urgency=low
 
   * update libmaus dependency in debian/control 

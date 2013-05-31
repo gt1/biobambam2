@@ -94,7 +94,7 @@ int bamCollate(::libmaus::util::ArgInfo const & arginfo)
 	}
 
 	::libmaus::bambam::CollatingBamDecoder CBD(std::cin,tmpfile,false/* add rank */,colhashbits,collistsize);
-	::libmaus::bambam::BamHeader const & bamheader = CBD.bamdecoder.bamheader;
+	::libmaus::bambam::BamHeader const & bamheader = CBD.bamdecoder.getHeader();
 
 	std::string const headertext(bamheader.text);
 
@@ -133,8 +133,8 @@ int bamCollate(::libmaus::util::ArgInfo const & arginfo)
 				)	
 			)
 			{
-				a->serialise(writer.bgzfos);
-				b->serialise(writer.bgzfos);
+				a->serialise(writer.getStream());
+				b->serialise(writer.getStream());
 			}
 		}
 	}
@@ -142,7 +142,7 @@ int bamCollate(::libmaus::util::ArgInfo const & arginfo)
 	{
 		while ( a = CBD.get() )
 			if ( !readgroups.size() || LHTsnofailure->searchCompleteNoFailure(std::string(a->getReadGroup())) != -1 )
-				a->serialise(writer.bgzfos);
+				a->serialise(writer.getStream());
 	}
 		
 	return EXIT_SUCCESS;

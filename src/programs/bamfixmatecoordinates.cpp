@@ -89,7 +89,7 @@ int main(int argc, char * argv[])
 		
 		::libmaus::bambam::CollatingBamDecoder CBD(std::cin,tmpfilename,false /* put rank */,colhashbits/*hash bits*/,collistsize/*size of output list*/);
 		::libmaus::bambam::BamFormatAuxiliary auxdata;
-		::libmaus::bambam::BamHeader const & bamheader = CBD.bamdecoder.bamheader;
+		::libmaus::bambam::BamHeader const & bamheader = CBD.bamdecoder.getHeader();
 		
 		// "reconstruct" command line
 		std::string cl;
@@ -166,12 +166,12 @@ int main(int argc, char * argv[])
 			
 			if ( P.first )
 			{
-				P.first->serialise(writer.bgzfos);
+				P.first->serialise(writer.getStream());
 				++proc;
 			}
 			if ( P.second )
 			{
-				P.second->serialise(writer.bgzfos);
+				P.second->serialise(writer.getStream());
 				++proc;
 			}
 			if ( P.first && P.second )

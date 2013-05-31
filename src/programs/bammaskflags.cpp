@@ -83,7 +83,7 @@ int bammaskflags(::libmaus::util::ArgInfo const & arginfo)
 	}
 
 	::libmaus::bambam::BamDecoder BD(std::cin);
-	::libmaus::bambam::BamHeader const & bamheader = BD.bamheader;
+	::libmaus::bambam::BamHeader const & bamheader = BD.getHeader();
 
 	std::string const headertext(bamheader.text);
 
@@ -105,7 +105,7 @@ int bammaskflags(::libmaus::util::ArgInfo const & arginfo)
 	while ( BD.readAlignment() )
 	{
 		alignment.putFlags(alignment.getFlags() & mask);
-		alignment.serialise(writer.bgzfos);
+		alignment.serialise(writer.getStream());
 	}	
 
 	return EXIT_SUCCESS;
