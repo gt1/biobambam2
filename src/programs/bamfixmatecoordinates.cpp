@@ -89,7 +89,7 @@ int main(int argc, char * argv[])
 		
 		::libmaus::bambam::CollatingBamDecoder CBD(std::cin,tmpfilename,false /* put rank */,colhashbits/*hash bits*/,collistsize/*size of output list*/);
 		::libmaus::bambam::BamFormatAuxiliary auxdata;
-		::libmaus::bambam::BamHeader const & bamheader = CBD.bamdecoder.getHeader();
+		::libmaus::bambam::BamHeader const & bamheader = CBD.getHeader();
 		
 		// "reconstruct" command line
 		std::string cl;

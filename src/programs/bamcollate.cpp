@@ -94,7 +94,7 @@ int bamCollate(::libmaus::util::ArgInfo const & arginfo)
 	}
 
 	::libmaus::bambam::CollatingBamDecoder CBD(std::cin,tmpfile,false/* add rank */,colhashbits,collistsize);
-	::libmaus::bambam::BamHeader const & bamheader = CBD.bamdecoder.getHeader();
+	::libmaus::bambam::BamHeader const & bamheader = CBD.getHeader();
 
 	std::string const headertext(bamheader.text);
 
