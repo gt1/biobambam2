@@ -1,3 +1,9 @@
+biobambam (0.0.62-0) unstable; urgency=low
+
+  * more fixes for libmaus api changes 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Sat, 01 Jun 2013 22:43:47 +0100
+
 biobambam (0.0.61-0) unstable; urgency=low
 
   * apply fixes for libmaus api cleanup changes
