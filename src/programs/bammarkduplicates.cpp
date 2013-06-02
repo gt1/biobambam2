@@ -862,7 +862,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	// print verbosity messages
 	bool const verbose = arginfo.getValue<unsigned int>("verbose",getDefaultVerbose());
 	// rewritten file should be in bam format, if input is given via stdin
-	bool const rewritebam = arginfo.getValue<unsigned int>("rewritebam",getDefaultRewriteBam());
+	unsigned int const rewritebam = arginfo.getValue<unsigned int>("rewritebam",getDefaultRewriteBam());
 	int const rewritebamlevel = arginfo.getValue<int>("rewritebamlevel",getDefaultRewriteBamLevel());
 
 	// prefix for tmp files
@@ -929,65 +929,70 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	SnappyRewriteCallback::unique_ptr_type SRC;
 	BamRewriteCallback::unique_ptr_type BWR;
 	::libmaus::aio::CheckedInputStream::unique_ptr_type CIS;
+	libmaus::aio::CheckedOutputStream::unique_ptr_type copybamstr;
 
-	#define CIRCULARCOLLATOR
-
-	#if defined(CIRCULARCOLLATOR)
 	typedef ::libmaus::bambam::BamCircularHashCollatingBamDecoder col_type;
 	typedef ::libmaus::bambam::CircularHashCollatingBamDecoder col_base_type;
 	typedef col_base_type::unique_ptr_type col_base_ptr_type;	
 	col_base_ptr_type CBD;
-	#else
-	typedef ::libmaus::bambam::CollatingBamDecoder col_type;
-	typedef col_type col_base_type;
-	typedef col_base_type::unique_ptr_type col_base_ptr_type;
-	col_base_ptr_type CBD;
-	#endif
 	
-	// BamCircularHashCollatingBamDecoder
-
+	// if we are reading the input from a file
 	if ( arginfo.hasArg("I") && (arginfo.getValue<std::string>("I","") != "") )
 	{
 		std::string const inputfilename = arginfo.getValue<std::string>("I","I");
 		CIS = UNIQUE_PTR_MOVE(::libmaus::aio::CheckedInputStream::unique_ptr_type(new ::libmaus::aio::CheckedInputStream(inputfilename)));
 		
-		#if defined(CIRCULARCOLLATOR)
 		CBD = UNIQUE_PTR_MOVE(col_base_ptr_type(new col_type(
 			*CIS,
 			tmpfilename,
 			/* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY	| libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL*/ 0,
 			true /* put rank */,
 			colhashbits,collistsize)));
-		#else
-		CBD = UNIQUE_PTR_MOVE(::libmaus::bambam::CollatingBamDecoder::unique_ptr_type(
-			new ::libmaus::bambam::CollatingBamDecoder(*CIS,tmpfilename,true /* put rank */,colhashbits/*hash bits*/,collistsize/*size of output list*/)));
-		#endif
 	}
+	// not a file, we are reading from standard input
 	else
 	{
-		#if defined(CIRCULARCOLLATOR)
-		CBD = UNIQUE_PTR_MOVE(col_base_ptr_type(new col_type(std::cin,
-			tmpfilename,
-			/* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY	| libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL */ 0,
-			true /* put rank */,
-			colhashbits,collistsize)));		
-		#else
-		CBD = UNIQUE_PTR_MOVE(::libmaus::bambam::CollatingBamDecoder::unique_ptr_type(
-			new ::libmaus::bambam::CollatingBamDecoder(std::cin,tmpfilename,true /* put rank */,colhashbits/*hash bits*/,collistsize/*size of output list*/)));
-		#endif
-
 
 		if ( rewritebam )
 		{
-			// rewrite file and mark duplicates
-			BWR = UNIQUE_PTR_MOVE(BamRewriteCallback::unique_ptr_type(new BamRewriteCallback(tmpfilesnappyreads,CBD->getHeader(),rewritebamlevel)));
-			CBD->setInputCallback(BWR.get());
+			if ( rewritebam > 1 )
+			{
+				copybamstr = UNIQUE_PTR_MOVE(libmaus::aio::CheckedOutputStream::unique_ptr_type(new libmaus::aio::CheckedOutputStream(tmpfilesnappyreads)));
 
-			if ( verbose )
-				std::cerr << "[V] Writing bam compressed alignments to file " << tmpfilesnappyreads << std::endl;
+				CBD = UNIQUE_PTR_MOVE(col_base_ptr_type(new col_type(std::cin,
+					*copybamstr,
+					tmpfilename,
+					/* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY	| libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL */ 0,
+					true /* put rank */,
+					colhashbits,collistsize)));		
+
+				if ( verbose )
+					std::cerr << "[V] Copying bam compressed alignments to file " << tmpfilesnappyreads << std::endl;
+			}
+			else
+			{
+				CBD = UNIQUE_PTR_MOVE(col_base_ptr_type(new col_type(std::cin,
+					tmpfilename,
+					/* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY	| libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL */ 0,
+					true /* put rank */,
+					colhashbits,collistsize)));		
+
+				// rewrite file and mark duplicates
+				BWR = UNIQUE_PTR_MOVE(BamRewriteCallback::unique_ptr_type(new BamRewriteCallback(tmpfilesnappyreads,CBD->getHeader(),rewritebamlevel)));
+				CBD->setInputCallback(BWR.get());
+
+				if ( verbose )
+					std::cerr << "[V] Writing bam compressed alignments to file " << tmpfilesnappyreads << std::endl;
+			}
 		}
 		else
 		{
+			CBD = UNIQUE_PTR_MOVE(col_base_ptr_type(new col_type(std::cin,
+				tmpfilename,
+				/* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY	| libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL */ 0,
+				true /* put rank */,
+				colhashbits,collistsize)));
+
 			SRC = UNIQUE_PTR_MOVE(SnappyRewriteCallback::unique_ptr_type(new SnappyRewriteCallback(tmpfilesnappyreads)));
 			CBD->setInputCallback(SRC.get());
 			if ( verbose )
@@ -1077,19 +1082,11 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 		// we are not interested in unmapped reads, ignore them
 		if ( P.first && P.first->isUnmap() )
 		{
-			#if defined(CIRCULARCOLLATOR)
 			P.first = 0;
-			#else
-			P.first.reset();
-			#endif
 		}
 		if ( P.second && P.second->isUnmap() )
 		{
-			#if defined(CIRCULARCOLLATOR)
 			P.second = 0;
-			#else
-			P.second.reset();			
-			#endif
 		}
 			
 		if ( P.first && P.second )
@@ -1159,12 +1156,11 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 			lastproc = fragcnt;
 		}		
 	}
-
-	if ( verbose )
+	
+	if ( copybamstr )
 	{
-		#if !defined(CIRCULARCOLLATOR)
-		CBD->printWriteOutHist(std::cerr,"[V] [wohist]");
-		#endif
+		copybamstr->flush();
+		copybamstr.reset();
 	}
 	
 	CBD.reset();
@@ -1350,7 +1346,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", "compression settings for output bam file (0=uncompressed,1=fast,9=best,-1=zlib default)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report (default: 1)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "mod=<["+::biobambam::Licensing::formatNumber(getDefaultMod())+"]>", "print progress for each mod'th record/alignment" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "rewritebam=<["+::biobambam::Licensing::formatNumber(getDefaultRewriteBam())+"]>", "compression of temporary alignment file when input is via stdin (0=snappy,1=gzip/bam)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "rewritebam=<["+::biobambam::Licensing::formatNumber(getDefaultRewriteBam())+"]>", "compression of temporary alignment file when input is via stdin (0=snappy,1=gzip/bam,2=copy)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "rewritebamlevel=<["+::biobambam::Licensing::formatNumber(getDefaultRewriteBamLevel())+"]>", "compression settings for temporary alignment file if rewritebam=1" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "colhashbits=<["+::biobambam::Licensing::formatNumber(getDefaultColHashBits())+"]>", "log_2 of size of hash table used for collation" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "collistsize=<["+::biobambam::Licensing::formatNumber(getDefaultColListSize())+"]>", "output list size for collation" ) );

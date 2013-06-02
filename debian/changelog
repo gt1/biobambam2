@@ -1,3 +1,9 @@
+biobambam (0.0.63-0) unstable; urgency=low
+
+  * add option for copying instead of rewriting bam on input for bammarkduplicates if input is via stdin
+
+ -- German Tischler <gt1@sanger.ac.uk>  Sun, 02 Jun 2013 12:01:53 +0100
+
 biobambam (0.0.62-0) unstable; urgency=low
 
   * more fixes for libmaus api changes 
