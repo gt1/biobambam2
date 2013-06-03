@@ -1,3 +1,9 @@
+biobambam (0.0.65-0) unstable; urgency=low
+
+  * add some parallel processing to bammarkduplicates 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Mon, 03 Jun 2013 20:14:13 +0100
+
 biobambam (0.0.64-0) unstable; urgency=low
 
   * turn off error message when BAM header uses more than one bgzf block 
