@@ -1,3 +1,9 @@
+biobambam (0.0.64-0) unstable; urgency=low
+
+  * turn off error message when BAM header uses more than one bgzf block 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Mon, 03 Jun 2013 14:44:10 +0100
+
 biobambam (0.0.63-0) unstable; urgency=low
 
   * add option for copying instead of rewriting bam on input for bammarkduplicates if input is via stdin
