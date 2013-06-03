@@ -30,6 +30,7 @@
 #include <libmaus/bambam/ReadEndsContainer.hpp>
 #include <libmaus/bambam/SortedFragDecoder.hpp>
 #include <libmaus/bitio/BitVector.hpp>
+#include <libmaus/lz/BgzfInflateDeflateParallel.hpp>
 #include <libmaus/lz/BgzfRecode.hpp>
 #include <libmaus/math/iabs.hpp>
 #include <libmaus/math/numbits.hpp>
@@ -700,6 +701,287 @@ void addBamDuplicateFlag(
 			<< std::endl;
 }
 
+namespace libmaus
+{
+	namespace lz
+	{
+		struct BgzfParallelRecodeDeflateBase : public ::libmaus::lz::BgzfConstants
+		{
+			libmaus::autoarray::AutoArray<uint8_t> B;
+			
+			uint8_t * const pa;
+			uint8_t * pc;
+			uint8_t * const pe;
+			
+			BgzfParallelRecodeDeflateBase()
+			: B(maxblocksize,false), 
+			  pa(B.begin()), 
+			  pc(B.begin()), 
+			  pe(B.end())
+			{
+			
+			}
+		};
+	}
+}
+
+namespace libmaus
+{
+	namespace lz
+	{
+		struct BgzfRecodeParallel : public ::libmaus::lz::BgzfConstants
+		{
+			libmaus::lz::BgzfInflateDeflateParallel BIDP; // (std::cin,std::cout,Z_DEFAULT_COMPRESSION,32,128);
+			libmaus::lz::BgzfParallelRecodeDeflateBase deflatebase;
+			std::pair<uint64_t,uint64_t> P;
+
+			BgzfRecodeParallel(
+				std::istream & in, std::ostream & out,
+				int const level, // = Z_DEFAULT_COMPRESSION,
+				uint64_t const numthreads,
+				uint64_t const numbuffers
+			) : BIDP(in,out,level,numthreads,numbuffers), deflatebase(), P(0,0)
+			{
+			
+			}
+			
+			~BgzfRecodeParallel()
+			{
+				BIDP.flush();
+			}
+			
+			bool getBlock()
+			{
+				P.second = BIDP.read(reinterpret_cast<char *>(deflatebase.B.begin()),deflatebase.B.size());
+				deflatebase.pc = deflatebase.pa + P.second;
+				
+				return P.second != 0;
+			}
+			
+			void putBlock()
+			{
+				BIDP.write(reinterpret_cast<char const *>(deflatebase.B.begin()),P.second);
+			}
+			
+			void addEOFBlock()
+			{
+				BIDP.flush();
+			}
+		};
+	}
+}
+
+void addBamDuplicateFlagParallel(
+	::libmaus::util::ArgInfo const & arginfo,
+	bool const verbose,
+	::libmaus::bambam::BamHeader const & bamheader,
+	uint64_t const maxrank,
+	uint64_t const mod,
+	int const level,
+	DupSetCallback const & DSC,
+	std::istream & in,
+	uint64_t const numthreads
+)
+{
+	std::string const headertext(bamheader.text);
+
+	// add PG line to header
+	std::string const upheadtext = ::libmaus::bambam::ProgramHeaderLineSet::addProgramLine(
+		headertext,
+		"bammarkduplicates", // ID
+		"bammarkduplicates", // PN
+		arginfo.commandline, // CL
+		::libmaus::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
+		std::string(PACKAGE_VERSION) // VN			
+	);
+	// construct new header
+	::libmaus::bambam::BamHeader uphead(upheadtext);
+
+	::libmaus::aio::CheckedOutputStream::unique_ptr_type pO;
+	std::ostream * poutputstr = 0;
+	
+	if ( arginfo.hasArg("O") && (arginfo.getValue<std::string>("O","") != "") )
+	{
+		pO = UNIQUE_PTR_MOVE(
+			::libmaus::aio::CheckedOutputStream::unique_ptr_type(
+				new ::libmaus::aio::CheckedOutputStream(arginfo.getValue<std::string>("O",std::string("O")))
+			)
+		);
+		poutputstr = pO.get();
+	}
+	else
+	{
+		poutputstr = & std::cout;
+	}
+
+	std::ostream & outputstr = *poutputstr;
+
+	/* write bam header */
+	{
+		libmaus::lz::BgzfDeflate<std::ostream> headout(outputstr);
+		uphead.serialise(headout);
+		headout.flush();
+	}
+
+	libmaus::lz::BgzfRecodeParallel rec(in,outputstr,level,numthreads,numthreads*4);
+
+	uint64_t const bmod = libmaus::math::nextTwoPow(mod);
+	uint64_t const bmask = bmod-1;
+
+	libmaus::timing::RealTimeClock globrtc; globrtc.start();
+	libmaus::timing::RealTimeClock locrtc; locrtc.start();
+	
+	bool haveheader = false;
+	uint64_t blockskip = 0;
+	std::vector<uint8_t> headerstr;
+	uint64_t preblocksizes = 0;
+	
+	/* read and copy blocks until we have reached the end of the BAM header */
+	while ( (!haveheader) && rec.getBlock() )
+	{
+		std::copy ( rec.deflatebase.pa, rec.deflatebase.pa + rec.P.second,
+			std::back_insert_iterator < std::vector<uint8_t> > (headerstr) );
+		
+		try
+		{
+			libmaus::util::ContainerGetObject< std::vector<uint8_t> > CGO(headerstr);
+			libmaus::bambam::BamHeader header;
+			header.init(CGO);
+			haveheader = true;
+			blockskip = CGO.i - preblocksizes;
+		}
+		catch(std::exception const & ex)
+		{
+			#if 0
+			std::cerr << "[D] " << ex.what() << std::endl;
+			#endif
+		}
+	
+		// need to read another block to get header, remember size of current block
+		if ( ! haveheader )
+			preblocksizes += rec.P.second;
+	}
+	
+	if ( blockskip )
+	{
+		uint64_t const bytesused = (rec.deflatebase.pc - rec.deflatebase.pa) - blockskip;
+		memmove ( rec.deflatebase.pa, rec.deflatebase.pa + blockskip, bytesused );
+		rec.deflatebase.pc = rec.deflatebase.pa + bytesused;
+		rec.P.second = bytesused;
+		blockskip = 0;
+		
+		if ( ! bytesused )
+			rec.getBlock();
+	}
+
+	/* parser state types and variables */
+	enum parsestate { state_reading_blocklen, state_pre_skip, state_marking, state_post_skip };
+	parsestate state = state_reading_blocklen;
+	unsigned int blocklenred = 0;
+	uint32_t blocklen = 0;
+	uint32_t preskip = 0;
+	uint64_t alcnt = 0;
+	unsigned int const dupflagskip = 15;
+	// uint8_t const dupflagmask = static_cast<uint8_t>(~(4u));
+			
+	/* while we have alignment data blocks */
+	while ( rec.P.second )
+	{
+		uint8_t * pa       = rec.deflatebase.pa;
+		uint8_t * const pc = rec.deflatebase.pc;
+
+		while ( pa != pc )
+			switch ( state )
+			{
+				/* read length of next alignment block */
+				case state_reading_blocklen:
+					/* if this is a little endian machine allowing unaligned access */
+					#if defined(LIBMAUS_HAVE_i386)
+					if ( (!blocklenred) && ((pc-pa) >= static_cast<ptrdiff_t>(sizeof(uint32_t))) )
+					{
+						blocklen = *(reinterpret_cast<uint32_t const *>(pa));
+						blocklenred = sizeof(uint32_t);
+						pa += sizeof(uint32_t);
+						
+						state = state_pre_skip;
+						preskip = dupflagskip;
+					}
+					else
+					#endif
+					{
+						while ( pa != pc && blocklenred < sizeof(uint32_t) )
+							blocklen |= static_cast<uint32_t>(*(pa++)) << ((blocklenred++)*8);
+
+						if ( blocklenred == sizeof(uint32_t) )
+						{
+							state = state_pre_skip;
+							preskip = dupflagskip;
+						}
+					}
+					break;
+				/* skip data before the part we modify */
+				case state_pre_skip:
+					{
+						uint32_t const skip = std::min(pc-pa,static_cast<ptrdiff_t>(preskip));
+						pa += skip;
+						preskip -= skip;
+						blocklen -= skip;
+						
+						if ( ! skip )
+							state = state_marking;
+					}
+					break;
+				/* change data */
+				case state_marking:
+					assert ( pa != pc );
+					if ( DSC.isMarked(alcnt) )
+						*pa |= 4;
+					state = state_post_skip;
+					// intended fall through to post_skip case
+				/* skip data after part we modify */
+				case state_post_skip:
+				{
+					uint32_t const skip = std::min(pc-pa,static_cast<ptrdiff_t>(blocklen));
+					pa += skip;
+					blocklen -= skip;
+
+					if ( ! blocklen )
+					{
+						state = state_reading_blocklen;
+						blocklenred = 0;
+						blocklen = 0;
+						alcnt++;
+						
+						if ( verbose && ((alcnt & (bmask)) == 0) )
+						{
+							std::cerr << "[V] Marked " << (alcnt+1) << " (" << (alcnt+1)/(1024*1024) << "," << static_cast<double>(alcnt+1)/maxrank << ")"
+								<< " time " << locrtc.getElapsedSeconds()
+								<< " total " << globrtc.formatTime(globrtc.getElapsedSeconds())
+								<< " "
+								<< libmaus::util::MemUsage()
+								<< std::endl;
+							locrtc.start();
+						}
+					}
+					break;
+				}
+			}
+
+		rec.putBlock();			
+		rec.getBlock();
+	}
+			
+	rec.addEOFBlock();
+	outputstr.flush();
+	
+	if ( verbose )
+		std::cerr << "[V] Marked " << 1.0 << " total for marking time "
+			<< globrtc.formatTime(globrtc.getElapsedSeconds()) 
+			<< " "
+			<< libmaus::util::MemUsage()
+			<< std::endl;
+}
+
 
 template<typename decoder_type>
 static void markDuplicatesInFileTemplate(
@@ -797,6 +1079,9 @@ static void markDuplicatesInFile(
 	bool const rewritebam
 )
 {
+	uint64_t const markthreads = 
+		std::max(static_cast<uint64_t>(1),arginfo.getValue<uint64_t>("markthreads",1));
+
 	if ( arginfo.hasArg("I") && (arginfo.getValue<std::string>("I","") != "") )
 	{
 		#if 0
@@ -807,7 +1092,11 @@ static void markDuplicatesInFile(
 		#else
 		std::string const inputfilename = arginfo.getValue<std::string>("I","I");
 		libmaus::aio::CheckedInputStream CIS(inputfilename);
-		addBamDuplicateFlag(arginfo,verbose,bamheader,maxrank,mod,level,DSC,CIS);
+	
+		if ( markthreads == 1 )
+			addBamDuplicateFlag(arginfo,verbose,bamheader,maxrank,mod,level,DSC,CIS);
+		else
+			addBamDuplicateFlagParallel(arginfo,verbose,bamheader,maxrank,mod,level,DSC,CIS,markthreads);
 		#endif
 	}
 	else
@@ -820,7 +1109,11 @@ static void markDuplicatesInFile(
 			markDuplicatesInFileTemplate(arginfo,verbose,bamheader,maxrank,mod,level,DSC,decoder);
 			#else
 			libmaus::aio::CheckedInputStream CIS(recompressedalignments);
-			addBamDuplicateFlag(arginfo,verbose,bamheader,maxrank,mod,level,DSC,CIS);		
+			
+			if ( markthreads == 1 )
+				addBamDuplicateFlag(arginfo,verbose,bamheader,maxrank,mod,level,DSC,CIS);		
+			else
+				addBamDuplicateFlagParallel(arginfo,verbose,bamheader,maxrank,mod,level,DSC,CIS,markthreads);
 			#endif
 		}
 		else
@@ -934,9 +1227,13 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	libmaus::aio::CheckedOutputStream::unique_ptr_type copybamstr;
 
 	typedef ::libmaus::bambam::BamCircularHashCollatingBamDecoder col_type;
+	typedef ::libmaus::bambam::BamParallelCircularHashCollatingBamDecoder par_col_type;
 	typedef ::libmaus::bambam::CircularHashCollatingBamDecoder col_base_type;
 	typedef col_base_type::unique_ptr_type col_base_ptr_type;	
 	col_base_ptr_type CBD;
+
+	uint64_t const markthreads = 
+		std::max(static_cast<uint64_t>(1),arginfo.getValue<uint64_t>("markthreads",1));
 	
 	// if we are reading the input from a file
 	if ( arginfo.hasArg("I") && (arginfo.getValue<std::string>("I","") != "") )
@@ -944,40 +1241,79 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 		std::string const inputfilename = arginfo.getValue<std::string>("I","I");
 		CIS = UNIQUE_PTR_MOVE(::libmaus::aio::CheckedInputStream::unique_ptr_type(new ::libmaus::aio::CheckedInputStream(inputfilename)));
 		
-		CBD = UNIQUE_PTR_MOVE(col_base_ptr_type(new col_type(
-			*CIS,
-			tmpfilename,
-			/* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY	| libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL*/ 0,
-			true /* put rank */,
-			colhashbits,collistsize)));
+		if ( markthreads > 1 )
+		{
+			CBD = UNIQUE_PTR_MOVE(col_base_ptr_type(new par_col_type(
+				*CIS,
+				markthreads,
+				tmpfilename,
+				/* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY	| libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL*/ 0,
+				true /* put rank */,
+				colhashbits,collistsize)));		
+		}
+		else
+		{
+			CBD = UNIQUE_PTR_MOVE(col_base_ptr_type(new col_type(
+				*CIS,
+				// numthreads
+				tmpfilename,
+				/* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY	| libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL*/ 0,
+				true /* put rank */,
+				colhashbits,collistsize)));
+		}
 	}
 	// not a file, we are reading from standard input
 	else
 	{
 
+		// rewrite to bam
 		if ( rewritebam )
 		{
 			if ( rewritebam > 1 )
 			{
 				copybamstr = UNIQUE_PTR_MOVE(libmaus::aio::CheckedOutputStream::unique_ptr_type(new libmaus::aio::CheckedOutputStream(tmpfilesnappyreads)));
 
-				CBD = UNIQUE_PTR_MOVE(col_base_ptr_type(new col_type(std::cin,
-					*copybamstr,
-					tmpfilename,
-					/* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY	| libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL */ 0,
-					true /* put rank */,
-					colhashbits,collistsize)));		
+				if ( markthreads > 1 )
+				{
+					CBD = UNIQUE_PTR_MOVE(col_base_ptr_type(new par_col_type(std::cin,
+						*copybamstr,
+						markthreads,
+						tmpfilename,
+						/* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY	| libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL */ 0,
+						true /* put rank */,
+						colhashbits,collistsize)));		
+				}
+				else
+				{
+					CBD = UNIQUE_PTR_MOVE(col_base_ptr_type(new col_type(std::cin,
+						*copybamstr,
+						tmpfilename,
+						/* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY	| libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL */ 0,
+						true /* put rank */,
+						colhashbits,collistsize)));		
+				}
 
 				if ( verbose )
 					std::cerr << "[V] Copying bam compressed alignments to file " << tmpfilesnappyreads << std::endl;
 			}
 			else
 			{
-				CBD = UNIQUE_PTR_MOVE(col_base_ptr_type(new col_type(std::cin,
-					tmpfilename,
-					/* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY	| libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL */ 0,
-					true /* put rank */,
-					colhashbits,collistsize)));		
+				if ( markthreads > 1 )
+				{
+					CBD = UNIQUE_PTR_MOVE(col_base_ptr_type(new par_col_type(std::cin,markthreads,
+						tmpfilename,
+						/* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY	| libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL */ 0,
+						true /* put rank */,
+						colhashbits,collistsize)));						
+				}
+				else
+				{
+					CBD = UNIQUE_PTR_MOVE(col_base_ptr_type(new col_type(std::cin,
+						tmpfilename,
+						/* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY	| libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL */ 0,
+						true /* put rank */,
+						colhashbits,collistsize)));		
+				}
 
 				// rewrite file and mark duplicates
 				BWR = UNIQUE_PTR_MOVE(BamRewriteCallback::unique_ptr_type(new BamRewriteCallback(tmpfilesnappyreads,CBD->getHeader(),rewritebamlevel)));
