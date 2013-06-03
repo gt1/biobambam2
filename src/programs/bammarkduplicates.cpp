@@ -49,6 +49,7 @@ static int getDefaultRewriteBamLevel() { return Z_DEFAULT_COMPRESSION; }
 static unsigned int getDefaultColHashBits() { return 20; }
 static uint64_t getDefaultColListSize() { return 32*1024*1024; }
 static uint64_t getDefaultFragBufSize() { return 48*1024*1024; }
+static uint64_t getDefaultMarkThreads() { return 1; }
 
 struct DupSetCallback
 {
@@ -1080,7 +1081,7 @@ static void markDuplicatesInFile(
 )
 {
 	uint64_t const markthreads = 
-		std::max(static_cast<uint64_t>(1),arginfo.getValue<uint64_t>("markthreads",1));
+		std::max(static_cast<uint64_t>(1),arginfo.getValue<uint64_t>("markthreads",getDefaultMarkThreads()));
 
 	if ( arginfo.hasArg("I") && (arginfo.getValue<std::string>("I","") != "") )
 	{
@@ -1233,7 +1234,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	col_base_ptr_type CBD;
 
 	uint64_t const markthreads = 
-		std::max(static_cast<uint64_t>(1),arginfo.getValue<uint64_t>("markthreads",1));
+		std::max(static_cast<uint64_t>(1),arginfo.getValue<uint64_t>("markthreads",getDefaultMarkThreads()));
 	
 	// if we are reading the input from a file
 	if ( arginfo.hasArg("I") && (arginfo.getValue<std::string>("I","") != "") )
@@ -1682,6 +1683,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "M=<filename>", "metrics file, stderr if unset" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "tmpfile=<filename>", "prefix for temporary files, default: create files in current directory" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", "compression settings for output bam file (0=uncompressed,1=fast,9=best,-1=zlib default)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "markthreads=<["+::biobambam::Licensing::formatNumber(getDefaultMarkThreads())+"]>", "number of helper threads" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report (default: 1)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "mod=<["+::biobambam::Licensing::formatNumber(getDefaultMod())+"]>", "print progress for each mod'th record/alignment" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "rewritebam=<["+::biobambam::Licensing::formatNumber(getDefaultRewriteBam())+"]>", "compression of temporary alignment file when input is via stdin (0=snappy,1=gzip/bam,2=copy)" ) );
