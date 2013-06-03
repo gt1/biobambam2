@@ -570,7 +570,9 @@ void addBamDuplicateFlag(
 		}
 		catch(std::exception const & ex)
 		{
+			#if 0
 			std::cerr << "[D] " << ex.what() << std::endl;
+			#endif
 		}
 	
 		// need to read another block to get header, remember size of current block
