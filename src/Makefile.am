@@ -2,7 +2,7 @@ ACLOCAL_AMFLAGS=-I m4
 
 noinst_HEADERS=biobambam/BamBamConfig.hpp biobambam/Licensing.hpp
 
-bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags
+bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamrecompress
 noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments bamtoname \
 	bamdisthist
 
@@ -60,3 +60,8 @@ bamdisthist_SOURCES = programs/bamdisthist.cpp biobambam/Licensing.cpp
 bamdisthist_LDADD = ${LIBMAUSLIBS}
 bamdisthist_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS}
 bamdisthist_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+bamrecompress_SOURCES = programs/bamrecompress.cpp biobambam/Licensing.cpp
+bamrecompress_LDADD = ${LIBMAUSLIBS}
+bamrecompress_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+bamrecompress_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}

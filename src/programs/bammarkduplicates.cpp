@@ -715,7 +715,7 @@ namespace libmaus
 			uint8_t * const pe;
 			
 			BgzfParallelRecodeDeflateBase()
-			: B(maxblocksize,false), 
+			: B(getBgzfMaxBlockSize(),false), 
 			  pa(B.begin()), 
 			  pc(B.begin()), 
 			  pe(B.end())
