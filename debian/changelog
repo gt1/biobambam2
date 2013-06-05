@@ -1,3 +1,9 @@
+biobambam (0.0.68-0) unstable; urgency=low
+
+  * add parallel bam recompression tool 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Wed, 05 Jun 2013 12:51:42 +0100
+
 biobambam (0.0.67-0) unstable; urgency=low
 
   * update libmaus dependency after API adjustments in libmaus (darwin compatibility) 
