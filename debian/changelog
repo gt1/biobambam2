@@ -1,3 +1,9 @@
+biobambam (0.0.67-0) unstable; urgency=low
+
+  * update libmaus dependency after API adjustments in libmaus (darwin compatibility) 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Wed, 05 Jun 2013 12:13:57 +0100
+
 biobambam (0.0.66-0) unstable; urgency=low
 
   * update help message for bammarkduplicates 
