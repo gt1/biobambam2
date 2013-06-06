@@ -1,4 +1,29 @@
 biobambam
 ======
 
-Tools for bam file processing
+This package contains some tools for processing BAM files including
+
+ - bamcollate: reads BAM and writes BAM reordered such that alignment
+   or collated by query name
+ - bammarkduplicates: reads BAM and writes BAM with duplicate alignments
+   marked using the BAM flags field
+ - bammaskflags: reads BAM and writes BAM while masking (removing)
+   bits from the flags column
+ - bamrecompress: reads BAM and writes BAM with a defined compression
+   setting. This tool is capable of multi-threading.
+ - bamsort: reads BAM and writes BAM resorted by coordinates or query
+   name
+ - bamtofastq: reads BAM and writes FastQ; output can be collated or
+   uncollated by query name
+
+Compilation of biobambam
+------------------------
+
+biobambam needs libmaus [https://github.com/gt1/libmaus] . When libmaus
+is installed in ${LIBMAUSPREFIX} then biobambam can be compiled and
+installed in ${HOME}/biobambam using
+
+	- autoreconf -i -f
+	- ./configure --with-libmaus=${LIBMAUSPREFIX} \
+		--prefix=${HOME}/biobambam
+	- make
