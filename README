@@ -1,4 +1,1 @@
-For compiling this package there are two prerequisites:
-
-1. The libmaus library
-2. samtools
+This package depends on libmaus (https://github.com/gt1/libmaus).
