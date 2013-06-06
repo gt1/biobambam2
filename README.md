@@ -26,4 +26,4 @@ installed in ${HOME}/biobambam using
 	- autoreconf -i -f
 	- ./configure --with-libmaus=${LIBMAUSPREFIX} \
 		--prefix=${HOME}/biobambam
-	- make
+	- make install
