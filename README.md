@@ -16,6 +16,11 @@ This package contains some tools for processing BAM files including
  - bamtofastq: reads BAM and writes FastQ; output can be collated or
    uncollated by query name
 
+A short list of options is available for each program by calling it
+with the -h parameter, e.g.
+
+	bamsort -h
+
 Compilation of biobambam
 ------------------------
 
