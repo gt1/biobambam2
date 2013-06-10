@@ -4,7 +4,10 @@ noinst_HEADERS=biobambam/BamBamConfig.hpp biobambam/Licensing.hpp
 
 bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamrecompress
 noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments bamtoname \
-	bamdisthist
+	bamdisthist \
+	bamadapterfind \
+	bamfilteraux \
+	bamauxsort
 
 bamcollate_SOURCES = programs/bamcollate.cpp biobambam/Licensing.cpp
 bamcollate_LDADD = ${LIBMAUSLIBS}
@@ -65,3 +68,18 @@ bamrecompress_SOURCES = programs/bamrecompress.cpp biobambam/Licensing.cpp
 bamrecompress_LDADD = ${LIBMAUSLIBS}
 bamrecompress_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
 bamrecompress_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+bamadapterfind_SOURCES = programs/bamadapterfind.cpp biobambam/Licensing.cpp
+bamadapterfind_LDADD = ${LIBMAUSLIBS}
+bamadapterfind_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+bamadapterfind_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+bamfilteraux_SOURCES = programs/bamfilteraux.cpp biobambam/Licensing.cpp
+bamfilteraux_LDADD = ${LIBMAUSLIBS}
+bamfilteraux_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+bamfilteraux_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+bamauxsort_SOURCES = programs/bamauxsort.cpp biobambam/Licensing.cpp
+bamauxsort_LDADD = ${LIBMAUSLIBS}
+bamauxsort_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+bamauxsort_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
