@@ -21,6 +21,13 @@ with the -h parameter, e.g.
 
 	bamsort -h
 
+Source
+------
+
+The biobambam source code is hosted on github:
+
+	git@github.com:gt1/biobambam.git
+
 Compilation of biobambam
 ------------------------
 
