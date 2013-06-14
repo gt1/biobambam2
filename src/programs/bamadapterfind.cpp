@@ -23,40 +23,58 @@
 
 #include <libmaus/aio/CheckedOutputStream.hpp>
 
+#include <libmaus/bambam/AdapterFilter.hpp>
 #include <libmaus/bambam/BamAlignment.hpp>
 #include <libmaus/bambam/BamDecoder.hpp>
 #include <libmaus/bambam/BamWriter.hpp>
 #include <libmaus/bambam/ProgramHeaderLineSet.hpp>
 #include <libmaus/fastx/acgtnMap.hpp>
-
 #include <libmaus/rank/popcnt.hpp>
-
 #include <libmaus/util/ArgInfo.hpp>
+#include <libmaus/util/Histogram.hpp>
 
 #include <biobambam/Licensing.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; }
-static unsigned int getDefaultSeedLength() { return 12; }
+static uint64_t getDefaultMod() { return 1024*1024; }
+static uint64_t getDefaultPCT_MISMATCH() { return 10; }
+static unsigned int getDefaultSEED_LENGTH() { return 12; }
+static uint64_t getDefaultMIN_OVERLAP() { return 32; }
+static uint64_t getDefaultADAPTER_MATCH() { return 12; }
 
-template<typename iterator>
-bool compareHamming(
-	iterator ita,
-	iterator const itae,
-	iterator itb,
-	double const maxmismatchrate,
-	unsigned int const baselength,
-	unsigned int const basemismatches
+void adapterListMatch(
+	libmaus::autoarray::AutoArray<char> & Aread,
+	libmaus::util::PushBuffer<libmaus::bambam::AdapterOffsetStrand> & AOSPB,
+	libmaus::bambam::BamAlignment & algn,
+	libmaus::bambam::AdapterFilter & AF,
+	int const verbose
 )
 {
-	unsigned int const maxmismatches = maxmismatchrate * (baselength + (itae-ita));
-	unsigned int nummis = basemismatches;
-	
-	while ( ita != itae && nummis <= maxmismatches )
-		if ( *(ita++) != *(itb++) )
-			nummis++;
+	uint64_t const len = algn.decodeRead(Aread);
+	uint8_t const * const ua = reinterpret_cast<uint8_t const *>(Aread.begin());
 			
-	return (ita == itae) && (nummis <= maxmismatches);
+	bool const matched = AF.searchAdapters(ua, len, 2 /* max mismatches */, AOSPB,16 /* min score */,0.75 /* minfrac */,0.8 /* minpfrac */);
+			
+	if ( matched )
+	{
+		std::sort(AOSPB.begin(),AOSPB.end(),libmaus::bambam::AdapterOffsetStrandMatchStartComparator());
+		uint64_t const clip = len - AOSPB.begin()[0].getMatchStart();
+		
+		if ( verbose > 1 )
+		{
+			std::cerr << "\n" << std::string(80,'-') << "\n\n";
+		
+			std::cerr << "read length " << len << " clip " << clip << std::endl;
+				
+			for ( libmaus::bambam::AdapterOffsetStrand const * it = AOSPB.begin(); it != AOSPB.end(); ++it )
+				AF.printAdapterMatch(ua,len,*it);
+		}
+		
+		algn.putAuxNumber("as",'i',clip);
+		algn.putAuxString("aa",AF.getAdapterName(AOSPB.begin()[0]));
+		algn.putAuxNumber("af",'f',AOSPB.begin()[0].pfrac);
+	}
 }
 
 int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
@@ -79,13 +97,21 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 
 	int const level = arginfo.getValue<int>("level",getDefaultLevel());
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
+	uint64_t const mod = arginfo.getValue<int>("mod",getDefaultMod());
+	// length of seed
 	uint64_t const seedlength = 
 		std::min(
 			static_cast<unsigned int>((8*sizeof(uint64_t))/3),
-			std::max(arginfo.getValue<unsigned int>("seedlength",getDefaultSeedLength()),1u));
-	double const mismatchrate = std::min(100u,arginfo.getValue<unsigned int>("maxmismatchpercent",4))/100.0;
-	unsigned int const maxseedmismatches = arginfo.getValue<unsigned int>("maxseedmismatches",static_cast<unsigned int>(std::ceil(seedlength * mismatchrate)));
-	
+			std::max(arginfo.getValue<unsigned int>("SEED_LENGTH",getDefaultSEED_LENGTH()),1u));
+	// maximum mismatch rate in overlap
+	double const mismatchrate = std::min(100u,arginfo.getValue<unsigned int>("PCT_MISMATCH",getDefaultPCT_MISMATCH()))/100.0;
+	// maximum number of mismatches in seed
+	unsigned int const maxseedmismatches = arginfo.getValue<unsigned int>("MAX_SEED_MISMATCHES",static_cast<unsigned int>(std::ceil(seedlength * mismatchrate)));
+	// minimum length of overlap between reads
+	uint64_t const minoverlap = arginfo.getValue<uint64_t>("MIN_OVERLAP",getDefaultMIN_OVERLAP());
+	// maximum number of adapter bases to be compared
+	uint64_t const almax = arginfo.getValue<uint64_t>("ADAPTER_MATCH",getDefaultADAPTER_MATCH());
+		
 	switch ( level )
 	{
 		case Z_NO_COMPRESSION:
@@ -107,6 +133,13 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 		}
 			break;
 	}
+
+	std::string const builtinAdapters = libmaus::bambam::BamDefaultAdapters::getDefaultAdapters();
+	std::istringstream builtinAdaptersStr(builtinAdapters);
+	libmaus::bambam::AdapterFilter AF(builtinAdaptersStr,12 /* seed length */);
+
+	libmaus::autoarray::AutoArray<char> Aread;
+	libmaus::util::PushBuffer<libmaus::bambam::AdapterOffsetStrand> AOSPB;
 
 	::libmaus::bambam::BamDecoder bamdec(std::cin,false);
 	::libmaus::bambam::BamHeader const & header = bamdec.getHeader();
@@ -168,9 +201,38 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 		(1ull << 57) |
 		(1ull << 60) |
 		(1ull << 63);
+
+	libmaus::bambam::BamAuxFilterVector auxfilter;
+	auxfilter.set("a3");
+	auxfilter.set("ah");
+	
+	uint64_t alcnt = 0;
+	uint64_t adptcnt = 0;
+	uint64_t lastalcnt = std::numeric_limits<uint64_t>::max();
+	uint64_t paircnt = 0;
+	uint64_t orphcnt = 0;
+
+	uint64_t const bmod = libmaus::math::nextTwoPow(mod);
+	// uint64_t const bmask = bmod-1;
+	uint64_t const bshift = libmaus::math::ilog(bmod);
+	
+	libmaus::util::Histogram overlaphist;
+	libmaus::util::Histogram adapterhist;
+	
+	// std::cerr << "bmask=" << bmask << std::endl;
 	
 	while ( (running = bamdec.readAlignment()) )
 	{
+		if ( verbose && ( (alcnt >> bshift) != (lastalcnt >> bshift) ) )
+		{
+			std::cerr << "[V]\t" << alcnt << "\t" << paircnt << "\t" << adptcnt << std::endl;
+			lastalcnt = alcnt;
+		}
+	
+		alcnt++;
+
+		adapterListMatch(Aread,AOSPB,inputalgn,AF,verbose);
+
 		// if this is a single end read, then write it back and try the next one
 		if ( ! inputalgn.isPaired() )
 		{
@@ -183,10 +245,12 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 		
 		// read next alignment
 		bool const okb = bamdec.readAlignment();
+		alcnt++;
 		
 		if ( ! okb )
 		{
-			std::cerr << "[D] warning: orphan alignment"  << std::endl;
+			++orphcnt;
+			// std::cerr << "[D] warning: orphan alignment"  << std::endl;
 			algns[0].serialise(writer.getStream());
 			break;
 		}
@@ -194,9 +258,11 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 		// if next is not paired or name does not match
 		if ( (! inputalgn.isPaired()) || strcmp(algns[0].getName(), inputalgn.getName()) )
 		{
-			std::cerr << "[D] warning: orphan alignment" << std::endl;
+			++orphcnt;
+			//std::cerr << "[D] warning: orphan alignment" << std::endl;
 			algns[0].serialise(writer.getStream());
 			bamdec.putback();
+			alcnt--;
 			continue;
 		}
 		
@@ -225,6 +291,10 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 		
 		// put second read in algns[1]
 		algns[1].swap(inputalgn);
+
+		adapterListMatch(Aread,AOSPB,algns[1],AF,verbose);
+
+		paircnt++;
 		
 		unsigned int const rev0 = algns[0].isReverse() ? 1 : 0;
 		unsigned int const rev1 = algns[1].isReverse() ? 1 : 0;
@@ -269,11 +339,6 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 		uint64_t const lseedlength = std::min(seedlength,lm);
 		uint64_t const lseedmask = libmaus::math::lowbits(3*lseedlength);
 
-		#if 0
-		std::cerr << std::string(seqs[0].begin(),seqs[0].begin()+l0) << std::endl;
-		std::cerr << std::string(seqs[1].begin(),seqs[1].begin()+l1) << std::endl;
-		#endif
-		
 		// compute seed from last lseedlength bases of second read
 		uint64_t seed = 0;
 		uint8_t const * p = reinterpret_cast<uint8_t const *>(seqs[1].begin() + l1);
@@ -315,88 +380,114 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 					debdifcnt++;
 			assert ( debdifcnt == difcnt );
 			#endif
-			
+
 			// if the seed matches, then look at the rest
 			if ( difcnt <= maxseedmismatches )
 			{
+				// end of total match on read 1
 				uint64_t const end0 = matchpos + lseedlength;
+				// end of total match on read 2
 				uint64_t const end1 = l1;
+				// position of seed on read 1
 				uint64_t const seedp0 = end0 - lseedlength;
+				// position of seed on read 2
 				uint64_t const seedp1 = end1 - lseedlength;
+				// length of match between read 1 and read 2 (no indels allowed)
 				uint64_t const restoverlap = std::min(seedp0,seedp1);
 
-				uint8_t const * check0  = reinterpret_cast<uint8_t const *>(seqs[0].begin()+seedp0-restoverlap);
-				uint8_t const * check0e = check0 + restoverlap;
-				uint8_t const * check1  = reinterpret_cast<uint8_t const *>(seqs[1].begin()+seedp1-restoverlap);
-				
-				uint64_t const maxmis = (restoverlap+lseedlength) * mismatchrate;
-				
-				uint64_t nummis = difcnt;
-				while ( nummis <= maxmis && check0 != check0e  )
-					if ( S[*check0++] != R[*check1++] )
-						nummis++;
-				
-				if ( check0 == check0e && nummis <= maxmis )
+				// if length of overlap is sufficient
+				if ( lseedlength + restoverlap >= minoverlap )
 				{
-					// adapter length for read 1
-					uint64_t const al0 = (l0-end0);
-					// adapter length for read 2
-					uint64_t const al1 = end1-(restoverlap+lseedlength);
-					// maximum number of bases to be compared
-					uint64_t const almax = 12;
-					// number of bases compared in this case
-					uint64_t const alcmp = std::min(almax,std::min(al0,al1));
+					// iterator range of non seed overlap on read 1
+					uint8_t const * check0  = reinterpret_cast<uint8_t const *>(seqs[0].begin()+seedp0-restoverlap);
+					uint8_t const * check0e = check0 + restoverlap;
+					// start iterator of non seed overlap on read 2
+					uint8_t const * check1  = reinterpret_cast<uint8_t const *>(seqs[1].begin()+seedp1-restoverlap);
 					
-					char const * ap0 = seqs[0].begin()+end0;
-					char const * ap0e = ap0 + alcmp;
-					char const * ap1 = seqs[1].begin()+al1;
-					unsigned int aldif = 0;
+					// maximum number of mismatches allowed
+					uint64_t const maxmis = (restoverlap+lseedlength) * mismatchrate;
 					
-					while ( ap0 != ap0e )
-						if ( S[*(ap0++)] != R[libmaus::fastx::invertUnmapped(*(--ap1))] )
-							aldif++;
-
-					if ( (ap0 == ap0e) && ! aldif  /* && aldif < 5 */ )
+					// compute number of mismatches
+					uint64_t nummis = difcnt;
+					while ( nummis <= maxmis && check0 != check0e  )
+						if ( S[*check0++] != R[*check1++] )
+							nummis++;
+					
+					// if match is within the maximal number of mismatches
+					if ( check0 == check0e && nummis <= maxmis )
 					{
-						#if 0
-						std::cerr
-							<< "overlap: " << algns[0].getName() 
-							<< " mismatchrate=" << 
-								nummis << "/" << (restoverlap+lseedlength) << "=" <<
-								static_cast<double>(nummis)/(restoverlap+lseedlength)
-							<< " map0=" << map0
-							<< " map1=" << map1 
-							<< " al0=" << al0 
-							<< " al1=" << al1
-							<< " aldif=" << aldif
-							<< " alcmp=" << alcmp
-							<< "\n" <<
-						std::string(
-							seqs[0].begin()+seedp0-restoverlap,
-							seqs[0].begin()+end0) << "\n" <<
-						std::string(
-							seqs[1].begin()+seedp1-restoverlap,
-							seqs[1].begin()+end1) << "\n";
+						// update overlap histogram
+						overlaphist(lseedlength + restoverlap);
+					
+						// adapter length for read 1
+						uint64_t const al0 = (l0-end0);
+						// adapter length for read 2
+						uint64_t const al1 = end1-(restoverlap+lseedlength);
+						// number of bases compared in this case
+						uint64_t const alcmp = std::min(almax,std::min(al0,al1));
+
+						// adapter range on read 1
+						char const * ap0 = seqs[0].begin()+end0;
+						char const * ap0e = ap0 + alcmp;
+						// adapter start on read 2 (actually adapter end, we will read it backwards)
+						char const * ap1 = seqs[1].begin()+al1;
+						// number of mismatches on adapter (up to a length of almax)
+						unsigned int aldif = 0;
+						
+						// calculate mismatches in adapter
+						while ( ap0 != ap0e )
+							if ( S[*(ap0++)] != R[libmaus::fastx::invertUnmapped(*(--ap1))] )
+								aldif++;
+
+						// if number of mismatches is within the tolerated range (0 at this time)
+						if ( (ap0 == ap0e) && ! aldif )
+						{
+							if ( verbose > 1 )
+							{
+								std::cerr
+									<< "[V2] overlap: " << algns[0].getName() 
+									<< " mismatchrate=" << 
+										nummis << "/" << (restoverlap+lseedlength) << "=" <<
+										static_cast<double>(nummis)/(restoverlap+lseedlength)
+									<< " map0=" << map0
+									<< " map1=" << map1 
+									<< " al0=" << al0 
+									<< " al1=" << al1
+									<< " aldif=" << aldif
+									<< " alcmp=" << alcmp
+									<< "\n" <<
+									"[V2] " << std::string(
+										seqs[0].begin()+seedp0-restoverlap,
+										seqs[0].begin()+end0) << "\n" <<
+									"[V2] " << std::string(
+										seqs[1].begin()+seedp1-restoverlap,
+										seqs[1].begin()+end1) << "\n";
+									
+								std::cerr << "[V2] assumed adapter on read 1 ["<<al0<<"]: "
+									<< std::string(
+										seqs[0].begin()+end0,
+										seqs[0].begin()+l0
+									) << std::endl;
+								
+								std::cerr << "[V2] assumed adapter on read 2 ["<<al1<<"]: "
+									<< libmaus::fastx::reverseComplementUnmapped(std::string(
+										seqs[1].begin(),
+										seqs[1].begin()+al1)) << std::endl;
+							}
+
+							algns[0].filterOutAux(auxfilter);
+							algns[1].filterOutAux(auxfilter);
 							
-						std::cerr << "assumed adapter on read 1 ["<<al0<<"]: "
-							<< std::string(
-								seqs[0].begin()+end0,
-								seqs[0].begin()+l0
-							) << std::endl;
-						
-						std::cerr << "assumed adapter on read 2 ["<<al1<<"]: "
-							<< libmaus::fastx::reverseComplementUnmapped(std::string(
-								seqs[1].begin(),
-								seqs[1].begin()+al1)) << std::endl;
-						#endif
-						
-						algns[0].putAuxNumber("ah",'i',1);
-						algns[1].putAuxNumber("ah",'i',1);
-						algns[0].putAuxNumber("a3",'i',al0);
-						algns[1].putAuxNumber("a3",'i',al1);
-						// ah:i:1
-						
-						break;
+							algns[0].putAuxNumber("ah",'i',1);
+							algns[1].putAuxNumber("ah",'i',1);
+							algns[0].putAuxNumber("a3",'i',al0);
+							algns[1].putAuxNumber("a3",'i',al1);
+							
+							adptcnt += 1;
+							adapterhist(lseedlength + restoverlap);
+							
+							break;
+						}
 					}
 				}
 			}
@@ -409,7 +500,46 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 		algns[0].serialise(writer.getStream());		
 		algns[1].serialise(writer.getStream());		
 	}
+
+	if ( verbose )
+		std::cerr << "[V] processed " << alcnt << std::endl;
+
+	if ( verbose )
+		std::cerr << "[V] paircnt=" << paircnt << " adptcnt=" << adptcnt << " alcnt=" << alcnt << " orphcnt=" << orphcnt << std::endl;
+		
+	std::map<uint64_t,uint64_t> const overlaphistmap = overlaphist.get();
+	std::map<uint64_t,uint64_t> const adapterhistmap = adapterhist.get();
 	
+	uint64_t totOverlaps = 0;
+	uint64_t totAdapters = 0;
+	
+	// print histogram
+	for ( std::map<uint64_t,uint64_t>::const_iterator ita = overlaphistmap.begin();
+		ita != overlaphistmap.end(); ++ita )
+	{
+		// number of adapters for overlap
+		uint64_t const ladpt = (adapterhistmap.find(ita->first) != adapterhistmap.end()) ?
+			adapterhistmap.find(ita->first)->second : 0;
+			
+		std::cerr 
+			<< std::setfill('0') << std::setw(3) << ita->first << std::setw(0)
+			<< " "
+			<< std::setfill('0') << std::setw(7) << ita->second << std::setw(0)
+			<< " "
+			<< std::setfill('0') << std::setw(7) << ladpt << std::setw(0)
+			<< std::endl;
+			
+		totOverlaps += ita->second;
+		totAdapters += ladpt;
+	}
+
+	double const pctOverlaps = (static_cast<double>(totOverlaps)/paircnt)*100.0;
+	double const pctAdapters = (static_cast<double>(totAdapters)/paircnt)*100.0;
+	
+	std::cerr << "Processed " << std::setw(7) << std::setfill('0') << paircnt << std::setw(0) << " read pairs." << std::endl;
+	std::cerr << "Found     " << std::setw(7) << std::setfill('0') << totOverlaps << std::setw(0) << " overlaps (" << pctOverlaps << ")" << std::endl;
+	std::cerr << "Found     " << std::setw(7) << std::setfill('0') << totAdapters << std::setw(0) << " adapters (" << pctAdapters << ")" << std::endl;
+
 	return EXIT_SUCCESS;
 }
 
