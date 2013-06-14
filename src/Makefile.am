@@ -2,12 +2,13 @@ ACLOCAL_AMFLAGS=-I m4
 
 noinst_HEADERS=biobambam/BamBamConfig.hpp biobambam/Licensing.hpp
 
-bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamrecompress
-noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments bamtoname \
-	bamdisthist \
+bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamrecompress \
 	bamadapterfind \
 	bamfilteraux \
 	bamauxsort
+	
+noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments bamtoname \
+	bamdisthist
 
 bamcollate_SOURCES = programs/bamcollate.cpp biobambam/Licensing.cpp
 bamcollate_LDADD = ${LIBMAUSLIBS}
