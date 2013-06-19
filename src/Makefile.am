@@ -5,7 +5,8 @@ noinst_HEADERS=biobambam/BamBamConfig.hpp biobambam/Licensing.hpp
 bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamrecompress \
 	bamadapterfind \
 	bamfilteraux \
-	bamauxsort
+	bamauxsort \
+	bamadapterclip
 	
 noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments bamtoname \
 	bamdisthist
@@ -84,3 +85,8 @@ bamauxsort_SOURCES = programs/bamauxsort.cpp biobambam/Licensing.cpp
 bamauxsort_LDADD = ${LIBMAUSLIBS}
 bamauxsort_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
 bamauxsort_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+bamadapterclip_SOURCES = programs/bamadapterclip.cpp biobambam/Licensing.cpp
+bamadapterclip_LDADD = ${LIBMAUSLIBS}
+bamadapterclip_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+bamadapterclip_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
