@@ -326,7 +326,7 @@ int main(int argc, char * argv[])
 					}
 					
 					alignment.replaceCigarString(newcigarstream.str());
-					alignment.replaceSequence(modseq);
+					alignment.replaceSequence(modseq,alignment.getQual());
 				}
 
 				alignment.serialise(BW.getStream());
