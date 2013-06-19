@@ -574,6 +574,12 @@ int main(int argc, char * argv[])
 			
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", "compression settings for output bam file (0=uncompressed,1=fast,9=best,-1=zlib default)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "mod=<["+::biobambam::Licensing::formatNumber(getDefaultMod())+"]>", "print progress every mod'th line (if verbose>0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "SEED_LENGTH=<["+::biobambam::Licensing::formatNumber(getDefaultSEED_LENGTH())+"]>", "length of seed for matching" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "PCT_MISMATCH=<["+::biobambam::Licensing::formatNumber(getDefaultPCT_MISMATCH())+"]>", "maximum percentage of mismatches in matching" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "MAX_SEED_MISMATCHES=<[SEED_LENGTH*PCT_MISMATCH]>", "maximum number of mismatches in seed (up to 2)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "MIN_OVERLAP=<["+::biobambam::Licensing::formatNumber(getDefaultMIN_OVERLAP())+"]>", "minimum overlap between mates" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "ADAPTER_MATCH=<["+::biobambam::Licensing::formatNumber(getDefaultADAPTER_MATCH())+"]>", "maximum adapter match check" ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 
