@@ -1,3 +1,9 @@
+biobambam (0.0.69-0) unstable; urgency=low
+
+  * update libmaus dependency after fix for name sorting related crashes 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Thu, 20 Jun 2013 10:04:32 +0100
+
 biobambam (0.0.68-0) unstable; urgency=low
 
   * add parallel bam recompression tool 
