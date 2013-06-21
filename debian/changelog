@@ -1,3 +1,9 @@
+biobambam (0.0.70-0) unstable; urgency=low
+
+  * make libmaus dependency statements more precise
+
+ -- German Tischler <gt1@sanger.ac.uk>  Fri, 21 Jun 2013 09:28:38 +0100
+
 biobambam (0.0.69-0) unstable; urgency=low
 
   * update libmaus dependency after fix for name sorting related crashes 
