@@ -278,12 +278,181 @@ void bamtofastqCollating(libmaus::util::ArgInfo const & arginfo)
 	std::cout.flush();
 }
 
+void bamtofastqCollatingRanking(
+	libmaus::util::ArgInfo const & arginfo,
+	libmaus::bambam::CircularHashCollatingBamDecoder & CHCBD
+)
+{
+	if ( arginfo.getValue<unsigned int>("disablevalidation",0) )
+		CHCBD.disableValidation();
+
+	libmaus::bambam::BamToFastqOutputFileSet OFS(arginfo);
+
+	libmaus::bambam::CircularHashCollatingBamDecoder::OutputBufferEntry const * ob = 0;
+	
+	// number of alignments written to files
+	uint64_t cnt = 0;
+	// number of bytes written to files
+	uint64_t bcnt = 0;
+	unsigned int const verbshift = 20;
+	libmaus::timing::RealTimeClock rtc; rtc.start();
+	::libmaus::autoarray::AutoArray<uint8_t> T;
+	
+	while ( (ob = CHCBD.process()) )
+	{
+		uint64_t const precnt = cnt;
+		
+		if ( ob->fpair )
+		{
+			uint64_t const ranka = libmaus::bambam::BamAlignmentDecoderBase::getRank(ob->Da,ob->blocksizea);
+			uint64_t const rankb = libmaus::bambam::BamAlignmentDecoderBase::getRank(ob->Db,ob->blocksizeb);
+			uint64_t const la = libmaus::bambam::BamAlignmentDecoderBase::putFastQRanks(ob->Da,ranka,rankb,T);		
+			OFS.Fout.write(reinterpret_cast<char const *>(T.begin()),la);
+			uint64_t lb = libmaus::bambam::BamAlignmentDecoderBase::putFastQRanks(ob->Db,ranka,rankb,T);
+			OFS.F2out.write(reinterpret_cast<char const *>(T.begin()),lb);
+
+			cnt += 2;
+			bcnt += (la+lb);
+		}
+		else if ( ob->fsingle )
+		{
+			uint64_t const ranka = libmaus::bambam::BamAlignmentDecoderBase::getRank(ob->Da,ob->blocksizea);
+			
+			uint64_t la = libmaus::bambam::BamAlignmentDecoderBase::putFastQRanks(ob->Da,ranka,ranka,T);
+			OFS.Sout.write(reinterpret_cast<char const *>(T.begin()),la);
+
+			cnt += 1;
+			bcnt += (la);
+		}
+		else if ( ob->forphan1 )
+		{
+			uint64_t const ranka = libmaus::bambam::BamAlignmentDecoderBase::getRank(ob->Da,ob->blocksizea);
+			
+			uint64_t la = libmaus::bambam::BamAlignmentDecoderBase::putFastQRanks(ob->Da,ranka,ranka,T);
+			OFS.Oout.write(reinterpret_cast<char const *>(T.begin()),la);
+
+			cnt += 1;
+			bcnt += (la);
+		}
+		else if ( ob->forphan2 )
+		{
+			uint64_t const ranka = libmaus::bambam::BamAlignmentDecoderBase::getRank(ob->Da,ob->blocksizea);
+			
+			uint64_t la = libmaus::bambam::BamAlignmentDecoderBase::putFastQRanks(ob->Da,ranka,ranka,T);
+			OFS.O2out.write(reinterpret_cast<char const *>(T.begin()),la);
+
+			cnt += 1;
+			bcnt += (la);
+		}
+		
+		if ( precnt >> verbshift != cnt >> verbshift )
+		{
+			std::cerr 
+				<< "[V] "
+				<< (cnt >> 20) 
+				<< "\t"
+				<< (static_cast<double>(bcnt)/(1024.0*1024.0))/rtc.getElapsedSeconds() << "MB/s"
+				<< "\t" << static_cast<double>(cnt)/rtc.getElapsedSeconds() << std::endl;
+		}
+	}
+	
+	std::cerr << "[V] " << cnt << std::endl;
+}
+
+void bamtofastqCollatingRanking(libmaus::util::ArgInfo const & arginfo)
+{
+	uint32_t const excludeflags = libmaus::bambam::BamFlagBase::stringToFlags(arginfo.getValue<std::string>("exclude","SECONDARY"));
+	libmaus::util::TempFileRemovalContainer::setup();
+	std::string const tmpfilename = arginfo.getValue<std::string>("T",arginfo.getDefaultTmpFileName());
+	libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilename);
+	std::string const inputformat = arginfo.getValue<std::string>("inputformat","bam");
+	std::string const inputfilename = arginfo.getValue<std::string>("filename","-");
+	uint64_t const numthreads = arginfo.getValue<uint64_t>("threads",0);
+
+	unsigned int const hlog = arginfo.getValue<unsigned int>("colhlog",18);
+	uint64_t const sbs = arginfo.getValueUnsignedNumeric<uint64_t>("colsbs",128ull*1024ull*1024ull);
+
+	if ( inputformat == "bam" )
+	{
+		BamToFastQInputFileStream bamin(inputfilename);
+
+		if ( numthreads > 0 )
+		{
+			libmaus::bambam::BamParallelCircularHashCollatingBamDecoder CHCBD(
+				bamin.in,
+				numthreads,
+				tmpfilename,excludeflags,
+				true, /* put rank */
+				hlog,
+				sbs
+				);
+			bamtofastqCollatingRanking(arginfo,CHCBD);
+		}
+		else
+		{
+			libmaus::bambam::BamCircularHashCollatingBamDecoder CHCBD(
+				bamin.in,
+				tmpfilename,excludeflags,
+				true, /* put rank */
+				hlog,
+				sbs
+				);
+			bamtofastqCollatingRanking(arginfo,CHCBD);
+		}
+	}
+	#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
+	else if ( inputformat == "sam" )
+	{
+		libmaus::bambam::ScramCircularHashCollatingBamDecoder CHCBD(inputfilename,"r","",
+			tmpfilename,excludeflags,
+			true, /* put rank */
+			hlog,sbs
+		);
+		bamtofastqCollatingRanking(arginfo,CHCBD);
+	}
+	else if ( inputformat == "cram" )
+	{
+		std::string const reference = arginfo.getValue<std::string>("reference","");
+		libmaus::bambam::ScramCircularHashCollatingBamDecoder CHCBD(inputfilename,"rc",reference,
+			tmpfilename,excludeflags,
+			true, /* put rank */
+			hlog,sbs
+		);
+		bamtofastqCollatingRanking(arginfo,CHCBD);
+	}
+	#endif
+	else
+	{
+		libmaus::exception::LibMausException se;
+		se.getStream() << "unknown input format " << inputformat << std::endl;
+		se.finish();
+		throw se;
+	}
+	
+	std::cout.flush();
+}
+
 void bamtofastq(libmaus::util::ArgInfo const & arginfo)
 {
-	if ( arginfo.getValue<uint64_t>("collate",1) )
-		bamtofastqCollating(arginfo);
-	else
-		bamtofastqNonCollating(arginfo);
+	switch ( arginfo.getValue<uint64_t>("collate",1) )
+	{
+		case 0:
+			bamtofastqNonCollating(arginfo);
+			break;
+		case 1:
+			bamtofastqCollating(arginfo);
+			break;
+		case 2:		
+			bamtofastqCollatingRanking(arginfo);
+			break;
+		default:
+		{
+			libmaus::exception::LibMausException se;
+			se.getStream() << "unknown collate argument " << arginfo.getValue<uint64_t>("collate",1) << std::endl;
+			se.finish();
+			throw se;
+		}
+	}
 }
 
 int main(int argc, char * argv[])
