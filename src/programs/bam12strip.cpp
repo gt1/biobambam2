@@ -43,7 +43,7 @@
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; }
 
-int bamauxsort(::libmaus::util::ArgInfo const & arginfo)
+int bam12strip(::libmaus::util::ArgInfo const & arginfo)
 {
 	::libmaus::util::TempFileRemovalContainer::setup();
 
@@ -104,8 +104,8 @@ int bamauxsort(::libmaus::util::ArgInfo const & arginfo)
 	// add PG line to header
 	std::string const upheadtext = ::libmaus::bambam::ProgramHeaderLineSet::addProgramLine(
 		headertext,
-		"bamauxsort", // ID
-		"bamauxsort", // PN
+		"bam12strip", // ID
+		"bam12strip", // PN
 		arginfo.commandline, // CL
 		::libmaus::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
 		std::string(PACKAGE_VERSION) // VN			
@@ -121,8 +121,49 @@ int bamauxsort(::libmaus::util::ArgInfo const & arginfo)
 
 	while ( dec.readAlignment() )
 	{
-		algn.sortAux(sortbuffer);
-		algn.serialise(writer.getStream());
+		char const * name = algn.getName();
+		
+		char const * u1 = name;
+		
+		while ( *u1 && *u1 != '_' )
+			++u1;
+						
+		if ( ! *u1 )
+		{		
+			algn.serialise(writer.getStream());
+		}
+		else
+		{
+			bool ok = true;
+			uint64_t ranka = 0;
+				
+			for ( char const * t1 = name; t1 != u1; ++t1 )
+			{	
+				ranka *= 10;
+				ranka += ((*t1)-'0');
+				ok = ok && isdigit(*t1);
+			}
+
+			int const read1 = algn.isRead1() ? 1 : 0;
+			int const read2 = algn.isRead2() ? 1 : 0;
+				
+			if ( (read1+read2 != 1) || (!ok) )
+			{
+				algn.serialise(writer.getStream());		
+			}
+			else
+			{
+				std::ostringstream upnamestr;
+
+				upnamestr << (u1+1);
+
+				std::string const upname = upnamestr.str();
+					
+				algn.replaceName(upname.begin(),upname.size());
+				
+				algn.serialise(writer.getStream());		
+			}
+		}
  			
 		if ( verbose && (++c & (1024*1024-1)) == 0 )
 			std::cerr << "[V] " << c/(1024*1024) << std::endl;
@@ -167,12 +208,10 @@ int main(int argc, char * argv[])
 
 				std::cerr << std::endl;
 				
-				std::cerr << "The keep and remove keys are mutually exclusive. Tags are given by their two character ids. Multiple ids are separated by commas." << std::endl;
-				
 				return EXIT_SUCCESS;
 			}
 			
-		return bamauxsort(arginfo);
+		return bam12strip(arginfo);
 	}
 	catch(std::exception const & ex)
 	{
@@ -180,4 +219,3 @@ int main(int argc, char * argv[])
 		return EXIT_FAILURE;
 	}
 }
-
