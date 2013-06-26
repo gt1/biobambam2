@@ -132,6 +132,7 @@ int bamadapterclip(::libmaus::util::ArgInfo const & arginfo)
 			
 			if ( len - aclip )
 			{
+				// FIXME: if read is on the reverse strand, clip front instead of back
 				if ( algn.isMapped() )
 				{
 					uint32_t const numcigop = algn.getCigarOperations(cigop);
@@ -142,7 +143,7 @@ int bamadapterclip(::libmaus::util::ArgInfo const & arginfo)
 					cigop[numcigop] = libmaus::bambam::cigar_operation(5,aclip);
 					algn.replaceCigarString(cigop.begin(),numcigop+1);
 				}
-				
+			
 				algn.replaceSequence(seqenc,R.begin(),Q.begin(),len-aclip);
 				algn.putAuxString("qs",std::string(R.begin()+(len-aclip),R.begin()+len));
 				algn.putAuxString("qq",std::string(Q.begin()+(len-aclip),Q.begin()+len));
