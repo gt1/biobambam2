@@ -127,8 +127,11 @@ int bamclipreinsert(::libmaus::util::ArgInfo const & arginfo)
 			std::string const read = algn.getRead();
 			std::string const qual = algn.getQual();
 			
-			std::string const cigar = algn.getCigarString();
-			std::string const cigaradd = libmaus::util::NumberSerialisation::formatNumber(qs.size(),0) + "S";
+			if ( algn.isMapped() )
+			{
+				std::string const cigar = algn.getCigarString();
+				std::string const cigaradd = libmaus::util::NumberSerialisation::formatNumber(qs.size(),0) + "S";
+			}
 
 			// straight
 			if ( ! algn.isReverse () )
