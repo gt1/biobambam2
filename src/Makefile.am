@@ -11,7 +11,10 @@ bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamr
 	bam12auxmerge \
 	bam12split \
 	bam12strip \
-	bamreset
+	bamreset \
+	bamrank \
+	bamclipreinsert \
+	bamzztoname
 	
 noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments bamtoname \
 	bamdisthist
@@ -120,3 +123,18 @@ bamreset_SOURCES = programs/bamreset.cpp biobambam/Licensing.cpp
 bamreset_LDADD = ${LIBMAUSLIBS}
 bamreset_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
 bamreset_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+bamrank_SOURCES = programs/bamrank.cpp biobambam/Licensing.cpp
+bamrank_LDADD = ${LIBMAUSLIBS}
+bamrank_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+bamrank_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+bamclipreinsert_SOURCES = programs/bamclipreinsert.cpp biobambam/Licensing.cpp
+bamclipreinsert_LDADD = ${LIBMAUSLIBS}
+bamclipreinsert_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+bamclipreinsert_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+bamzztoname_SOURCES = programs/bamzztoname.cpp biobambam/Licensing.cpp
+bamzztoname_LDADD = ${LIBMAUSLIBS}
+bamzztoname_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+bamzztoname_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
