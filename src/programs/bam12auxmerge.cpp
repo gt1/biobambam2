@@ -192,7 +192,7 @@ int bam12auxmerge(::libmaus::util::ArgInfo const & arginfo)
 			++curid;
 			
 			if ( verbose > 1 )
-			std::cerr << "Merging:\n" << algn.formatAlignment(header) << "\n" << prealgn.formatAlignment(preheader) << std::endl;
+				std::cerr << "Merging:\n" << algn.formatAlignment(header) << "\n" << prealgn.formatAlignment(preheader) << std::endl;
 			
 			uint64_t pretagnum = prealgn.enumerateAuxTags(auxpre);
 			uint64_t newtagnum = algn.enumerateAuxTags(auxnew);
