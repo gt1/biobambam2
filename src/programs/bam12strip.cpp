@@ -63,14 +63,6 @@ int bam12strip(::libmaus::util::ArgInfo const & arginfo)
 		throw se;
 	}
 	
-	if ( arginfo.hasArg("keep") && arginfo.hasArg("remove") )
-	{
-		::libmaus::exception::LibMausException se;
-		se.getStream() << "The keep and remove keys are mutually exclusive." << std::endl;
-		se.finish();
-		throw se;		
-	}
-
 	int const level = arginfo.getValue<int>("level",getDefaultLevel());
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
 	
