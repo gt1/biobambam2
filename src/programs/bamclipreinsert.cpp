@@ -105,15 +105,6 @@ int bamclipreinsert(::libmaus::util::ArgInfo const & arginfo)
 
 	while ( dec.readAlignment() )
 	{
-		#if 0
-		algn.filterOutAux(bafv);
-
-		for ( uint64_t i = 0; i < R.size(); ++i )
-			R[i] = (c >> ((8-i-1)*8)) & 0xFF;
-
-		algn.putAuxNumberArray(zz, R);
-		#endif
-
 		uint64_t const numaux = algn.enumerateAuxTags(auxtags);
 		for ( uint64_t i = 0; i < numaux; ++i )
 			bafv.set(auxtags[i].first,auxtags[i].second);
@@ -147,15 +138,6 @@ int bamclipreinsert(::libmaus::util::ArgInfo const & arginfo)
 
 		for ( uint64_t i = 0; i < numaux; ++i )
 			bafv.clear(auxtags[i].first,auxtags[i].second);
-/*
-as:i:44 
-aa:Z:Nextflex-PCR-2
-af:f:1
-ah:i:1
-a3:i:94
-qs:Z:AGATCGGAAGAGCGGTTCAGCAGGAATGCCGAGACCGATCTCCAGATCTGATATCGTATGCCGTCTTCTGCTTGAACAAAAAAAATCACTACAG
-qq:Z:B0BF?FDAA/0FGCCGGEFHGGC/?0?1DGGCGC..<C--<=GHCG0:C00;0;;EH.GHEB9;-..FB0;0C0.00;/...99-.://///9/
-*/
 
 		algn.serialise(writer.getStream());
 
@@ -203,9 +185,7 @@ int main(int argc, char * argv[])
 				::biobambam::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
-				
-				std::cerr << "The keep and remove keys are mutually exclusive. Tags are given by their two character ids. Multiple ids are separated by commas." << std::endl;
-				
+								
 				return EXIT_SUCCESS;
 			}
 			
