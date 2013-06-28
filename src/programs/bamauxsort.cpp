@@ -62,14 +62,6 @@ int bamauxsort(::libmaus::util::ArgInfo const & arginfo)
 		se.finish();
 		throw se;
 	}
-	
-	if ( arginfo.hasArg("keep") && arginfo.hasArg("remove") )
-	{
-		::libmaus::exception::LibMausException se;
-		se.getStream() << "The keep and remove keys are mutually exclusive." << std::endl;
-		se.finish();
-		throw se;		
-	}
 
 	int const level = arginfo.getValue<int>("level",getDefaultLevel());
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
@@ -166,9 +158,7 @@ int main(int argc, char * argv[])
 				::biobambam::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
-				
-				std::cerr << "The keep and remove keys are mutually exclusive. Tags are given by their two character ids. Multiple ids are separated by commas." << std::endl;
-				
+								
 				return EXIT_SUCCESS;
 			}
 			
