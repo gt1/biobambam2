@@ -100,7 +100,9 @@ int bamreset(::libmaus::util::ArgInfo const & arginfo)
 	upheadtext = upheadstr.str();
 	
 	// construct new header
-	libmaus::bambam::BamHeader const uphead(upheadtext);
+	libmaus::bambam::BamHeader uphead(upheadtext);
+	uphead.changeSortOrder("unknown");
+
  	libmaus::bambam::BamWriter writer(std::cout,uphead,level);
  	libmaus::bambam::BamAuxFilterVector bafv;
  	

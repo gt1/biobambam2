@@ -147,6 +147,8 @@ int bam12auxmerge(::libmaus::util::ArgInfo const & arginfo)
 	upheadtext = sqconcstr.str();
 
 	::libmaus::bambam::BamHeader uphead(upheadtext);
+	uphead.changeSortOrder("unknown");
+	
 	::libmaus::bambam::BamWriter writer(std::cout,uphead);
 	
 	::libmaus::bambam::BamAlignment & algn = bamdec.getAlignment();

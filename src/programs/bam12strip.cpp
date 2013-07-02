@@ -103,7 +103,9 @@ int bam12strip(::libmaus::util::ArgInfo const & arginfo)
 		std::string(PACKAGE_VERSION) // VN			
 	);
 	// construct new header
-	libmaus::bambam::BamHeader const uphead(upheadtext);
+	libmaus::bambam::BamHeader uphead(upheadtext);
+	uphead.changeSortOrder("unknown");
+
  	libmaus::bambam::BamWriter writer(std::cout,uphead,level);
  	libmaus::bambam::BamAuxFilterVector bafv;
  	
