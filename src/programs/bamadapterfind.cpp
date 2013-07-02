@@ -134,9 +134,27 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 			break;
 	}
 
-	std::string const builtinAdapters = libmaus::bambam::BamDefaultAdapters::getDefaultAdapters();
-	std::istringstream builtinAdaptersStr(builtinAdapters);
-	libmaus::bambam::AdapterFilter AF(builtinAdaptersStr,12 /* seed length */);
+	libmaus::bambam::AdapterFilter::unique_ptr_type AF;
+	
+	if ( arginfo.hasArg("adaptersbam") )
+	{
+		libmaus::aio::CheckedInputStream adapterCIS(arginfo.getUnparsedValue("adaptersbam","adapters.bam"));
+		AF = UNIQUE_PTR_MOVE(
+			libmaus::bambam::AdapterFilter::unique_ptr_type(
+				new libmaus::bambam::AdapterFilter(adapterCIS,12 /* seed length */)
+			)
+		);	
+	}
+	else
+	{
+		std::string const builtinAdapters = libmaus::bambam::BamDefaultAdapters::getDefaultAdapters();
+		std::istringstream builtinAdaptersStr(builtinAdapters);
+		AF = UNIQUE_PTR_MOVE(
+			libmaus::bambam::AdapterFilter::unique_ptr_type(
+				new libmaus::bambam::AdapterFilter(builtinAdaptersStr,12 /* seed length */)
+			)
+		);	
+	}
 
 	libmaus::autoarray::AutoArray<char> Aread;
 	libmaus::util::PushBuffer<libmaus::bambam::AdapterOffsetStrand> AOSPB;
@@ -231,7 +249,7 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 	
 		alcnt++;
 
-		adapterListMatch(Aread,AOSPB,inputalgn,AF,verbose);
+		adapterListMatch(Aread,AOSPB,inputalgn,*AF,verbose);
 
 		// if this is a single end read, then write it back and try the next one
 		if ( ! inputalgn.isPaired() )
@@ -292,7 +310,7 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 		// put second read in algns[1]
 		algns[1].swap(inputalgn);
 
-		adapterListMatch(Aread,AOSPB,algns[1],AF,verbose);
+		adapterListMatch(Aread,AOSPB,algns[1],*AF,verbose);
 
 		paircnt++;
 		
@@ -575,6 +593,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", "compression settings for output bam file (0=uncompressed,1=fast,9=best,-1=zlib default)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "mod=<["+::biobambam::Licensing::formatNumber(getDefaultMod())+"]>", "print progress every mod'th line (if verbose>0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "adaptersbam=<[]>", "list of adapters/primers stored in a BAM file (use internal list if not given)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "SEED_LENGTH=<["+::biobambam::Licensing::formatNumber(getDefaultSEED_LENGTH())+"]>", "length of seed for matching" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "PCT_MISMATCH=<["+::biobambam::Licensing::formatNumber(getDefaultPCT_MISMATCH())+"]>", "maximum percentage of mismatches in matching" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "MAX_SEED_MISMATCHES=<[SEED_LENGTH*PCT_MISMATCH]>", "maximum number of mismatches in seed (up to 2)" ) );
