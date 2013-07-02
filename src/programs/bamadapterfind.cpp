@@ -42,19 +42,32 @@ static uint64_t getDefaultPCT_MISMATCH() { return 10; }
 static unsigned int getDefaultSEED_LENGTH() { return 12; }
 static uint64_t getDefaultMIN_OVERLAP() { return 32; }
 static uint64_t getDefaultADAPTER_MATCH() { return 12; }
+static uint64_t getDefaultMatchMinScore() { return 16; }
+static double getDefaultMatchMinFrac() { return 0.75; }
+static double getDefaultMatchMinPFrac() { return 0.8; }
 
 void adapterListMatch(
 	libmaus::autoarray::AutoArray<char> & Aread,
 	libmaus::util::PushBuffer<libmaus::bambam::AdapterOffsetStrand> & AOSPB,
 	libmaus::bambam::BamAlignment & algn,
 	libmaus::bambam::AdapterFilter & AF,
-	int const verbose
+	int const verbose,
+	uint64_t const adpmatchminscore, // = getDefaultMatchMinScore(),
+	double const adpmatchminfrac, // = getDefaultMatchMinFrac(),
+	double const adpmatchminpfrac // = getDefaultMatchMinPFrac()
 )
 {
 	uint64_t const len = algn.decodeRead(Aread);
 	uint8_t const * const ua = reinterpret_cast<uint8_t const *>(Aread.begin());
 			
-	bool const matched = AF.searchAdapters(ua, len, 2 /* max mismatches */, AOSPB,16 /* min score */,0.75 /* minfrac */,0.8 /* minpfrac */);
+	bool const matched = AF.searchAdapters(
+		ua, len, 
+		2 /* max mismatches */, 
+		AOSPB,
+		adpmatchminscore /* min score */,
+		adpmatchminfrac /* minfrac */,
+		adpmatchminpfrac /* minpfrac */
+	);
 			
 	if ( matched )
 	{
@@ -94,6 +107,10 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 		se.finish();
 		throw se;
 	}
+
+	uint64_t const adpmatchminscore  = arginfo.getValue<uint64_t>("adpmatchminscore",getDefaultMatchMinScore());
+	double   const adpmatchminfrac   = arginfo.getValue<double>("adpmatchminfrac",getDefaultMatchMinFrac());
+	double   const adpmatchminpfrac  = arginfo.getValue<double>("adpmatchminpfrac",getDefaultMatchMinPFrac());
 
 	int const level = arginfo.getValue<int>("level",getDefaultLevel());
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
@@ -249,7 +266,7 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 	
 		alcnt++;
 
-		adapterListMatch(Aread,AOSPB,inputalgn,*AF,verbose);
+		adapterListMatch(Aread,AOSPB,inputalgn,*AF,verbose,adpmatchminscore,adpmatchminfrac,adpmatchminpfrac);
 
 		// if this is a single end read, then write it back and try the next one
 		if ( ! inputalgn.isPaired() )
@@ -310,7 +327,7 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 		// put second read in algns[1]
 		algns[1].swap(inputalgn);
 
-		adapterListMatch(Aread,AOSPB,algns[1],*AF,verbose);
+		adapterListMatch(Aread,AOSPB,algns[1],*AF,verbose,adpmatchminscore,adpmatchminfrac,adpmatchminpfrac);
 
 		paircnt++;
 		
@@ -599,6 +616,9 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "MAX_SEED_MISMATCHES=<[SEED_LENGTH*PCT_MISMATCH]>", "maximum number of mismatches in seed (up to 2)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "MIN_OVERLAP=<["+::biobambam::Licensing::formatNumber(getDefaultMIN_OVERLAP())+"]>", "minimum overlap between mates" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "ADAPTER_MATCH=<["+::biobambam::Licensing::formatNumber(getDefaultADAPTER_MATCH())+"]>", "maximum adapter match check" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "adpmatchminscore=<["+::biobambam::Licensing::formatNumber(getDefaultMatchMinScore())+"]>", "minimum score for adapter list matching" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "adpmatchminfrac=<["+::biobambam::Licensing::formatFloatingPoint(getDefaultMatchMinFrac())+"]>", "minimum fraction for adapter list matching" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "adpmatchminpfrac=<["+::biobambam::Licensing::formatFloatingPoint(getDefaultMatchMinPFrac())+"]>", "minimum fraction of overlap for adapter list matching" ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 
