@@ -4,7 +4,7 @@ noinst_HEADERS=biobambam/BamBamConfig.hpp biobambam/Licensing.hpp
 
 man_MANS = programs/bamtofastq.1 programs/bamsort.1 programs/bammarkduplicates.1 programs/bamcollate.1 \
 	programs/bammaskflags.1 programs/bamrecompress.1 programs/bamadapterfind.1 \
-	programs/bamfilteraux.1
+	programs/bamfilteraux.1 programs/bamauxsort.1
 
 bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamrecompress \
 	bamadapterfind \
