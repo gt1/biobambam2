@@ -596,11 +596,6 @@ int main(int argc, char * argv[])
 				
 				std::vector< std::pair<std::string,std::string> > V;
 				
-				V.push_back ( std::pair<std::string,std::string> ( "F=<[stdout]>", "matched pairs first mates" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "F2=<[stdout]>", "matched pairs second mates" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "S=<[stdout]>", "single end" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "O=<[stdout]>", "unmatched pairs first mates" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "O2=<[stdout]>", "unmatched pairs second mates" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "collate=<[1]>", "collate pairs" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "filename=<[stdin]>", "input filename (default: read file from standard input)" ) );
 				#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)

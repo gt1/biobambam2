@@ -1,41 +1,30 @@
-.TH BAMTOFASTQ 1 "July 2013" BIOBAMBAM
+.TH BAMCOLLATE2 1 "July 2013" BIOBAMBAM
 .SH NAME
-bamtofastq - convert SAM, BAM or CRAM files to FastQ
+bamcollate2 - collate reads in a SAM, BAM or CRAM file by name
 .SH SYNOPSIS
 .PP
-.B bamtofastq
+.B bamcollate2
 [options]
 .SH DESCRIPTION
-bamtofastq reads a BAM file from standard input and converts it to the FastQ
-format. The output can be split into multiple files according to the pair
-flags of the reads involved. bamtofastq can collate the source reads
-according to their read names, i.e. place pairs of reads next to each other
-in the output. bamtofastq writes its output to the standard output channel
-by default.
+bamcollate2 reads a SAM, BAM or CRAM file from standard input, collates the contained
+reads/alignments by name and writes the resulting data to standard output in
+BAM format.
 .PP
 The following key=value pairs can be given:
 .PP
-.B F=<stdout>: 
-output file for the first mates of pairs if collation is active.
-.PP
-.B F2=<stdout>: 
-output file for the second mates of pairs if collation is active.
-.PP
-.B S=<stdout>: 
-output file for single end reads if collation is active.
-.PP
-.B O=<stdout>: 
-output file for unmatched (orphan) first mates if collation is active.
-.PP
-.B O2=<stdout>: 
-output file for unmatched (orphan) second mates if collation is active.
-.PP
-.B collate=<0|1>:
+.B collate=<0|1|2>:
 Valid values are
+.IP 2:
+collate read pairs and attach ranks (line numbers of alignments in source file)
+to each read. For pairs this add the prefix a_b_ to a pair when the first
+read of the pair appears in line a and the second one in line b of the
+source file, e.g. the name HS5 is changed to 25_32_HS5 for both ends if read
+1 appears in line 25 and read 2 in line 32. For single end reads it add the
+prefix a_ to the name where a is the rank (line number) of the read in the source file.
 .IP 1:
 collate read pairs
 .IP 0:
-output reads to standard output in the order in which they appear in the BAM file
+do not collate, keep reads in the original order
 .PP
 .B filename=<stdin>: 
 input file name (data is read from standard input if this option is not given)
