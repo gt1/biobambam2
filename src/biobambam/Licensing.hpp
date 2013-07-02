@@ -32,6 +32,7 @@ namespace biobambam
 		static std::string printLeft(std::string const & s, uint64_t const w, char const fill = ' ');
 		static std::ostream & printMap(std::ostream & out, std::vector< std::pair<std::string,std::string> > const & M);
 		static std::string formatNumber(int64_t const n);
+		static std::string formatFloatingPoint(double const n);
 	};
 }
 #endif
