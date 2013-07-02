@@ -1,0 +1,49 @@
+.TH BAM12SPLIT 1 "July 2013" BIOBAMBAM
+.SH NAME
+bam12split - project rank pairs produced by bamcollate2 to single ranks per read
+.SH SYNOPSIS
+.PP
+.B bam12split
+[options]
+.SH DESCRIPTION
+bam12split reads a BAM file from standard input, projects rank pairs produced
+by bamcollate2 to single ranks per read and writes the resulting data as a
+BAM file.
+.PP
+When the name A_B_C was produced for a pair a reads by 
+
+bamcollate2 collate=2
+
+then bam12split produces the name A_C for the first read of the pair and B_C
+for the second read of the pair.
+.PP
+The following key=value pairs can be given:
+.PP
+.B level=<-1|0|1|9>:
+set compression level of the output BAM file. Valid
+values are
+.IP -1:
+zlib/gzip default compression level
+.IP 0:
+uncompressed
+.IP 1:
+zlib/gzip level 1 (fast) compression
+.IP 9:
+zlib/gzip level 9 (best) compression
+.PP
+.B verbose=<1>:
+Valid values are
+.IP 1:
+print progress report on standard error
+.IP 0:
+do not print progress report
+.SH AUTHOR
+Written by German Tischler.
+.SH "REPORTING BUGS"
+Report bugs to <gt1@sanger.ac.uk>
+.SH COPYRIGHT
+Copyright \(co 2009-2013 German Tischler, \(co 2011-2013 Genome Research Limited.
+License GPLv3+: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
