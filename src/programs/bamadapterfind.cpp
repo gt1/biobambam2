@@ -261,7 +261,7 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 	libmaus::autoarray::AutoArray<char> CQ;
 	libmaus::bambam::BamSeqEncodeTable const seqenc;
 	libmaus::autoarray::AutoArray<libmaus::bambam::cigar_operation> cigop;
-	
+	libmaus::bambam::BamAlignment::D_array_type T;
 	
 	// std::cerr << "bmask=" << bmask << std::endl;
 	
@@ -282,7 +282,7 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 		if ( ! inputalgn.isPaired() )
 		{
 			if ( clip )
-				clipAdapters(inputalgn,CR,CQ,seqenc,cigop);
+				clipAdapters(inputalgn,CR,CQ,seqenc,cigop,T);
 			inputalgn.serialise(writer.getStream());
 			continue;
 		}
@@ -298,7 +298,7 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 		if ( ! okb )
 		{
 			if ( clip )
-				clipAdapters(algns[0],CR,CQ,seqenc,cigop);
+				clipAdapters(algns[0],CR,CQ,seqenc,cigop,T);
 		
 			++orphcnt;
 			// std::cerr << "[D] warning: orphan alignment"  << std::endl;
@@ -310,7 +310,7 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 		if ( (! inputalgn.isPaired()) || strcmp(algns[0].getName(), inputalgn.getName()) )
 		{
 			if ( clip )
-				clipAdapters(algns[0],CR,CQ,seqenc,cigop);
+				clipAdapters(algns[0],CR,CQ,seqenc,cigop,T);
 			++orphcnt;
 			//std::cerr << "[D] warning: orphan alignment" << std::endl;
 			algns[0].serialise(writer.getStream());
@@ -337,8 +337,8 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 			
 			if ( clip )
 			{
-				clipAdapters(algns[0],CR,CQ,seqenc,cigop);
-				clipAdapters(algns[1],CR,CQ,seqenc,cigop);
+				clipAdapters(algns[0],CR,CQ,seqenc,cigop,T);
+				clipAdapters(algns[1],CR,CQ,seqenc,cigop,T);
 			}
 			
 			algns[0].serialise(writer.getStream());
@@ -353,8 +353,8 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 
 			if ( clip )
 			{
-				clipAdapters(algns[0],CR,CQ,seqenc,cigop);
-				clipAdapters(algns[1],CR,CQ,seqenc,cigop);
+				clipAdapters(algns[0],CR,CQ,seqenc,cigop,T);
+				clipAdapters(algns[1],CR,CQ,seqenc,cigop,T);
 			}
 
 			algns[0].serialise(writer.getStream());
@@ -393,8 +393,8 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 		{
 			if ( clip )
 			{
-				clipAdapters(algns[0],CR,CQ,seqenc,cigop);
-				clipAdapters(algns[1],CR,CQ,seqenc,cigop);
+				clipAdapters(algns[0],CR,CQ,seqenc,cigop,T);
+				clipAdapters(algns[1],CR,CQ,seqenc,cigop,T);
 			}
 			
 			algns[0].serialise(writer.getStream());
@@ -573,8 +573,8 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 		
 		if ( clip )
 		{
-			clipAdapters(algns[0],CR,CQ,seqenc,cigop);
-			clipAdapters(algns[1],CR,CQ,seqenc,cigop);
+			clipAdapters(algns[0],CR,CQ,seqenc,cigop,T);
+			clipAdapters(algns[1],CR,CQ,seqenc,cigop,T);
 		}
 		
 		algns[0].serialise(writer.getStream());		

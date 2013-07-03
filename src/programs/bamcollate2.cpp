@@ -574,8 +574,6 @@ void bamcollate2CollatingPostRanking(
 	
 	// number of alignments written to files
 	uint64_t cnt = 0;
-	// number of bytes written to files
-	uint64_t bcnt = 0;
 	unsigned int const verbshift = 20;
 	libmaus::timing::RealTimeClock rtc; rtc.start();
 	::libmaus::autoarray::AutoArray<uint8_t> T;
@@ -595,10 +593,8 @@ void bamcollate2CollatingPostRanking(
 
 	libmaus::bambam::BamAuxFilterVector zzbafv;
 	zzbafv.set('z','z');
-	
-	libmaus::bambam::BamAuxFilterVector const emptybafv;
 
-	// bool resetAlignment(libmaus::bambam::BamAlignment & algn, libmaus::bambam::BamAuxFilterVector const & emptybafv);
+	libmaus::autoarray::AutoArray<char> namebuffer;
 
 	while ( (ob = CHCBD.process()) )
 	{
@@ -610,19 +606,33 @@ void bamcollate2CollatingPostRanking(
 			uint64_t const rankb = r++;
 			uint64_t const zranka = libmaus::bambam::BamAlignmentDecoderBase::getRank(ob->Da,ob->blocksizea);
 			uint64_t const zrankb = libmaus::bambam::BamAlignmentDecoderBase::getRank(ob->Db,ob->blocksizeb);
-			
-			std::ostringstream nameostr;
-			nameostr << ranka << "_" << rankb << "_" << libmaus::bambam::BamAlignmentDecoderBase::getReadName(ob->Da);
-			std::string const name = nameostr.str();
+
+			uint64_t const orignamelen = (::libmaus::bambam::BamAlignmentDecoderBase::getLReadName(ob->Da)-1);
+			char const * origname = libmaus::bambam::BamAlignmentDecoderBase::getReadName(ob->Da);			
+			uint64_t const namelen = 
+				libmaus::bambam::BamAlignmentDecoderBase::getDecimalNumberLength(ranka) + 1 +
+				libmaus::bambam::BamAlignmentDecoderBase::getDecimalNumberLength(rankb) + 1 +
+				orignamelen
+				;
+
+			if ( namelen > namebuffer.size() )
+				namebuffer = libmaus::autoarray::AutoArray<char>(namelen);
+				
+			char * np = namebuffer.begin();
+			np = libmaus::bambam::BamAlignmentDecoderBase::putNumberDecimal(np,ranka);
+			*(np++) = '_';
+			np = libmaus::bambam::BamAlignmentDecoderBase::putNumberDecimal(np,rankb);
+			*(np++) = '_';
+			std::copy(origname,origname + orignamelen,np);
 			
 			if ( algn.D.size() < ob->blocksizea )
 				algn.D.resize(ob->blocksizea);
 			std::copy ( ob->Da, ob->Da + ob->blocksizea, algn.D.begin() );
 			algn.blocksize = ob->blocksizea;
-			algn.replaceName(name.c_str(),name.size());
+			algn.replaceName(namebuffer.begin(),namelen);
 			algn.filterOutAux(zrtag);
 			if ( reset )
-				resetAlignment(algn,emptybafv);
+				resetAlignment(algn);
 			attachRank(algn,zranka,zzbafv);
 			algn.serialise(bgzfos);
 			
@@ -630,10 +640,10 @@ void bamcollate2CollatingPostRanking(
 				algn.D.resize(ob->blocksizeb);
 			std::copy ( ob->Db, ob->Db + ob->blocksizeb, algn.D.begin() );
 			algn.blocksize = ob->blocksizeb;
-			algn.replaceName(name.c_str(),name.size());
+			algn.replaceName(namebuffer.begin(),namelen);
 			algn.filterOutAux(zrtag);
 			if ( reset )
-				resetAlignment(algn,emptybafv);
+				resetAlignment(algn);
 			attachRank(algn,zrankb,zzbafv);
 			algn.serialise(bgzfos);
 			
@@ -647,16 +657,24 @@ void bamcollate2CollatingPostRanking(
 			if ( algn.D.size() < ob->blocksizea )
 				algn.D.resize(ob->blocksizea);
 				
-			std::ostringstream nameostr;
-			nameostr << ranka << "_" << libmaus::bambam::BamAlignmentDecoderBase::getReadName(ob->Da);
-			std::string const name = nameostr.str();
+			uint64_t const orignamelen = (::libmaus::bambam::BamAlignmentDecoderBase::getLReadName(ob->Da)-1);
+			char const * origname = libmaus::bambam::BamAlignmentDecoderBase::getReadName(ob->Da);	
+			uint64_t const namelen = libmaus::bambam::BamAlignmentDecoderBase::getDecimalNumberLength(ranka) + 1 + orignamelen;
+
+			if ( namelen > namebuffer.size() )
+				namebuffer = libmaus::autoarray::AutoArray<char>(namelen);
 				
+			char * np = namebuffer.begin();
+			np = libmaus::bambam::BamAlignmentDecoderBase::putNumberDecimal(np,ranka);
+			*(np++) = '_';
+			std::copy(origname,origname + orignamelen,np);
+	
 			std::copy ( ob->Da, ob->Da + ob->blocksizea, algn.D.begin() );
 			algn.blocksize = ob->blocksizea;
-			algn.replaceName(name.c_str(),name.size());
+			algn.replaceName(namebuffer.begin(),namelen);
 			algn.filterOutAux(zrtag);
 			if ( reset )
-				resetAlignment(algn,emptybafv);
+				resetAlignment(algn);
 			attachRank(algn,zranka,zzbafv);
 			algn.serialise(bgzfos);
 
@@ -670,16 +688,30 @@ void bamcollate2CollatingPostRanking(
 			if ( algn.D.size() < ob->blocksizea )
 				algn.D.resize(ob->blocksizea);
 
-			std::ostringstream nameostr;
-			nameostr << ranka << "_" << ranka << "_" << libmaus::bambam::BamAlignmentDecoderBase::getReadName(ob->Da);
-			std::string const name = nameostr.str();
+			uint64_t const orignamelen = (::libmaus::bambam::BamAlignmentDecoderBase::getLReadName(ob->Da)-1);
+			char const * origname = libmaus::bambam::BamAlignmentDecoderBase::getReadName(ob->Da);			
+			uint64_t const namelen = 
+				libmaus::bambam::BamAlignmentDecoderBase::getDecimalNumberLength(ranka) + 1 +
+				libmaus::bambam::BamAlignmentDecoderBase::getDecimalNumberLength(ranka) + 1 +
+				orignamelen
+				;
+
+			if ( namelen > namebuffer.size() )
+				namebuffer = libmaus::autoarray::AutoArray<char>(namelen);
 				
+			char * np = namebuffer.begin();
+			np = libmaus::bambam::BamAlignmentDecoderBase::putNumberDecimal(np,ranka);
+			*(np++) = '_';
+			np = libmaus::bambam::BamAlignmentDecoderBase::putNumberDecimal(np,ranka);
+			*(np++) = '_';
+			std::copy(origname,origname + orignamelen,np);
+
 			std::copy ( ob->Da, ob->Da + ob->blocksizea, algn.D.begin() );
 			algn.blocksize = ob->blocksizea;
-			algn.replaceName(name.c_str(),name.size());
+			algn.replaceName(namebuffer.begin(),namelen);
 			algn.filterOutAux(zrtag);
 			if ( reset )
-				resetAlignment(algn,emptybafv);
+				resetAlignment(algn);
 			attachRank(algn,zranka,zzbafv);
 			algn.serialise(bgzfos);
 
@@ -693,16 +725,30 @@ void bamcollate2CollatingPostRanking(
 			if ( algn.D.size() < ob->blocksizea )
 				algn.D.resize(ob->blocksizea);
 
-			std::ostringstream nameostr;
-			nameostr << ranka << "_" << ranka << "_" << libmaus::bambam::BamAlignmentDecoderBase::getReadName(ob->Da);
-			std::string const name = nameostr.str();
+			uint64_t const orignamelen = (::libmaus::bambam::BamAlignmentDecoderBase::getLReadName(ob->Da)-1);
+			char const * origname = libmaus::bambam::BamAlignmentDecoderBase::getReadName(ob->Da);			
+			uint64_t const namelen = 
+				libmaus::bambam::BamAlignmentDecoderBase::getDecimalNumberLength(ranka) + 1 +
+				libmaus::bambam::BamAlignmentDecoderBase::getDecimalNumberLength(ranka) + 1 +
+				orignamelen
+				;
+
+			if ( namelen > namebuffer.size() )
+				namebuffer = libmaus::autoarray::AutoArray<char>(namelen);
 				
+			char * np = namebuffer.begin();
+			np = libmaus::bambam::BamAlignmentDecoderBase::putNumberDecimal(np,ranka);
+			*(np++) = '_';
+			np = libmaus::bambam::BamAlignmentDecoderBase::putNumberDecimal(np,ranka);
+			*(np++) = '_';
+			std::copy(origname,origname + orignamelen,np);
+		
 			std::copy ( ob->Da, ob->Da + ob->blocksizea, algn.D.begin() );
 			algn.blocksize = ob->blocksizea;
-			algn.replaceName(name.c_str(),name.size());
+			algn.replaceName(namebuffer.begin(),namelen);
 			algn.filterOutAux(zrtag);
 			if ( reset )
-				resetAlignment(algn,emptybafv);
+				resetAlignment(algn);
 			attachRank(algn,zranka,zzbafv);
 			algn.serialise(bgzfos);
 
@@ -714,8 +760,6 @@ void bamcollate2CollatingPostRanking(
 			std::cerr 
 				<< "[V] "
 				<< (cnt >> 20) 
-				<< "\t"
-				<< (static_cast<double>(bcnt)/(1024.0*1024.0))/rtc.getElapsedSeconds() << "MB/s"
 				<< "\t" << static_cast<double>(cnt)/rtc.getElapsedSeconds() << std::endl;
 		}
 	}

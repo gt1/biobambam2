@@ -112,6 +112,7 @@ int bamadapterclip(::libmaus::util::ArgInfo const & arginfo)
 	libmaus::autoarray::AutoArray<char> Q;
 	libmaus::bambam::BamSeqEncodeTable const seqenc;
 	libmaus::autoarray::AutoArray<libmaus::bambam::cigar_operation> cigop;
+	libmaus::bambam::BamAlignment::D_array_type T;
 
 	while ( bamdec.readAlignment() )
 	{
@@ -121,7 +122,7 @@ int bamadapterclip(::libmaus::util::ArgInfo const & arginfo)
 			lastalcnt = alcnt;
 		}
 		
-		clipAdapters(algn,R,Q,seqenc,cigop);
+		clipAdapters(algn,R,Q,seqenc,cigop,T);
 			
 		alcnt++;
 
