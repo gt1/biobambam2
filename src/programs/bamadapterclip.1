@@ -1,0 +1,50 @@
+.TH BAMADAPTERCLIP 1 "July 2013" BIOBAMBAM
+.SH NAME
+bamadapterclip - remove the adapters marked by bamadapterfind
+.SH SYNOPSIS
+.PP
+.B bamadapterclip
+[options]
+.SH DESCRIPTION
+bamadapterclip reads a BAM file from standard input which was produced by bamadapterfind, 
+moves the detected adapters to auxiliary fields
+writes the resulting data to standard output in BAM format
+.PP
+bamadapterclip uses the maximum \fIm\fR of the tag fields \fIas\fR and \fIa3\fR
+if present. It then clips of \fIm\fR bases from the end of the query
+sequence and quality string and places those in the auxiliary fields
+\fIqs\fR and \fIqq\fR respectively.
+.PP
+The following key=value pairs can be given:
+.PP
+.B level=<-1|0|1|9>:
+set compression level of the output BAM file. Valid
+values are
+.IP -1:
+zlib/gzip default compression level
+.IP 0:
+uncompressed
+.IP 1:
+zlib/gzip level 1 (fast) compression
+.IP 9:
+zlib/gzip level 9 (best) compression
+.PP
+.B verbose=<1>:
+Valid values are
+.IP 1:
+print progress report on standard error
+.IP 0:
+do not print progress report
+.PP
+.B mod=<1048576>:
+print progress every for mod'th read/alignment if verbose is set
+.SH AUTHOR
+Written by German Tischler.
+.SH "REPORTING BUGS"
+Report bugs to <gt1@sanger.ac.uk>
+.SH COPYRIGHT
+Copyright \(co 2009-2013 German Tischler, \(co 2011-2013 Genome Research Limited.
+License GPLv3+: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.

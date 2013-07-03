@@ -1,0 +1,72 @@
+.TH BAMSORT 1 "July 2013" BIOBAMBAM
+.SH NAME
+bamsort - sort BAM files by coordinate or query name
+.SH SYNOPSIS
+.PP
+.B bamsort
+[options]
+.SH DESCRIPTION
+bamsort reads a BAM file from standard input, sorts it by coordinate
+(lexicographical by reference sequence id and position on reference sequence)
+or query name and writes the sorted file to standard output.
+.PP
+Lexicographical order denotes that pairs (a,b) and (c,d) will be ordered
+such that (a,b) < (c,d) if either a < c or a = c and b < d. For coordinates
+this means that the alignments are first grouped by reference sequence id
+(i.e. all alignments for one chromosome appear in one block) and within the
+block for each reference sequence the alignments are ordered by the start
+position of on this sequence.
+.PP
+The order by query name decomposes the read names into parts containing
+numbers and such containing no number. A read name A15_30_C50 will for
+instance be split into the components A, 15, _, 30, _C and 50. The comparison
+of read names is performed lexicographically along this decomposition, where
+number fields are compared as numbers. As an example we have A15<B12 as
+A<B and A9<A12 as A=A and 9<12 (where 9 and 12 are considered as numbers and
+not as the sequences of their digits).
+.PP
+The following key=value pairs can be given:
+.PP
+.B SO=<coordinate|queryname>: 
+set the sort order. Valid values are
+.IP coordinate:
+sort alignments by coordinate
+.IP queryname
+sort alignments by query name
+.PP
+.B level=<-1|0|1|9>:
+set compression level of the output BAM file. Valid
+values are
+.IP -1:
+zlib/gzip default compression level
+.IP 0:
+uncompressed
+.IP 1:
+zlib/gzip level 1 (fast) compression
+.IP 9:
+zlib/gzip level 9 (best) compression
+.PP
+.B verbose=<1>:
+Valid values are
+.IP 1:
+print progress report on standard error
+.IP 0:
+do not print progress report
+.PP
+.B blockmb=<1024>:
+set size of the internal memory sorting buffer in megabytes. The default
+buffer size is one gigabyte.
+.PP
+.B tmpfile=<filename>:
+set the prefix for temporary file names
+
+.SH AUTHOR
+Written by German Tischler.
+.SH "REPORTING BUGS"
+Report bugs to <gt1@sanger.ac.uk>
+.SH COPYRIGHT
+Copyright \(co 2009-2013 German Tischler, \(co 2011-2013 Genome Research Limited.
+License GPLv3+: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.

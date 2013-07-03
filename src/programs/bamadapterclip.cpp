@@ -132,6 +132,7 @@ int bamadapterclip(::libmaus::util::ArgInfo const & arginfo)
 			
 			if ( len - aclip )
 			{
+				// FIXME: if read is on the reverse strand, clip front instead of back
 				if ( algn.isMapped() )
 				{
 					uint32_t const numcigop = algn.getCigarOperations(cigop);
@@ -142,7 +143,7 @@ int bamadapterclip(::libmaus::util::ArgInfo const & arginfo)
 					cigop[numcigop] = libmaus::bambam::cigar_operation(5,aclip);
 					algn.replaceCigarString(cigop.begin(),numcigop+1);
 				}
-				
+			
 				algn.replaceSequence(seqenc,R.begin(),Q.begin(),len-aclip);
 				algn.putAuxString("qs",std::string(R.begin()+(len-aclip),R.begin()+len));
 				algn.putAuxString("qq",std::string(Q.begin()+(len-aclip),Q.begin()+len));
@@ -191,6 +192,7 @@ int main(int argc, char * argv[])
 			
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", "compression settings for output bam file (0=uncompressed,1=fast,9=best,-1=zlib default)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "mod=<["+::biobambam::Licensing::formatNumber(getDefaultMod())+"]>", "print progress for every mod'th alignment if verbose" ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 

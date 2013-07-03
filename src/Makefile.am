@@ -2,11 +2,26 @@ ACLOCAL_AMFLAGS=-I m4
 
 noinst_HEADERS=biobambam/BamBamConfig.hpp biobambam/Licensing.hpp
 
+man_MANS = programs/bamtofastq.1 programs/bamsort.1 programs/bammarkduplicates.1 programs/bamcollate.1 \
+	programs/bammaskflags.1 programs/bamrecompress.1 programs/bamadapterfind.1 \
+	programs/bamfilteraux.1 programs/bamauxsort.1 programs/bamadapterclip.1 \
+	programs/bamcollate2.1 programs/bam12auxmerge.1 programs/bam12split.1 \
+	programs/bam12strip.1 programs/bamreset.1 programs/bamrank.1 \
+	programs/bamclipreinsert.1 programs/bamzztoname.1
+
 bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamrecompress \
 	bamadapterfind \
 	bamfilteraux \
 	bamauxsort \
-	bamadapterclip
+	bamadapterclip \
+	bamcollate2 \
+	bam12auxmerge \
+	bam12split \
+	bam12strip \
+	bamreset \
+	bamrank \
+	bamclipreinsert \
+	bamzztoname
 	
 noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments bamtoname \
 	bamdisthist
@@ -90,3 +105,43 @@ bamadapterclip_SOURCES = programs/bamadapterclip.cpp biobambam/Licensing.cpp
 bamadapterclip_LDADD = ${LIBMAUSLIBS}
 bamadapterclip_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
 bamadapterclip_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+bamcollate2_SOURCES = programs/bamcollate2.cpp biobambam/Licensing.cpp
+bamcollate2_LDADD = ${LIBMAUSLIBS}
+bamcollate2_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+bamcollate2_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+bam12auxmerge_SOURCES = programs/bam12auxmerge.cpp biobambam/Licensing.cpp
+bam12auxmerge_LDADD = ${LIBMAUSLIBS}
+bam12auxmerge_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+bam12auxmerge_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+bam12split_SOURCES = programs/bam12split.cpp biobambam/Licensing.cpp
+bam12split_LDADD = ${LIBMAUSLIBS}
+bam12split_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+bam12split_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+bam12strip_SOURCES = programs/bam12strip.cpp biobambam/Licensing.cpp
+bam12strip_LDADD = ${LIBMAUSLIBS}
+bam12strip_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+bam12strip_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+bamreset_SOURCES = programs/bamreset.cpp biobambam/Licensing.cpp
+bamreset_LDADD = ${LIBMAUSLIBS}
+bamreset_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+bamreset_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+bamrank_SOURCES = programs/bamrank.cpp biobambam/Licensing.cpp
+bamrank_LDADD = ${LIBMAUSLIBS}
+bamrank_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+bamrank_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+bamclipreinsert_SOURCES = programs/bamclipreinsert.cpp biobambam/Licensing.cpp
+bamclipreinsert_LDADD = ${LIBMAUSLIBS}
+bamclipreinsert_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+bamclipreinsert_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+bamzztoname_SOURCES = programs/bamzztoname.cpp biobambam/Licensing.cpp
+bamzztoname_LDADD = ${LIBMAUSLIBS}
+bamzztoname_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+bamzztoname_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}

@@ -21,32 +21,20 @@
 #include <iostream>
 #include <queue>
 
-#include <libmaus/aio/CheckedOutputStream.hpp>
-
 #include <libmaus/bambam/BamAlignment.hpp>
-#include <libmaus/bambam/BamAlignmentNameComparator.hpp>
-#include <libmaus/bambam/BamAlignmentPosComparator.hpp>
 #include <libmaus/bambam/BamDecoder.hpp>
-#include <libmaus/bambam/BamEntryContainer.hpp>
 #include <libmaus/bambam/BamWriter.hpp>
 #include <libmaus/bambam/ProgramHeaderLineSet.hpp>
 
-#include <libmaus/lz/SnappyCompress.hpp>
-
 #include <libmaus/util/ArgInfo.hpp>
-#include <libmaus/util/GetObject.hpp>
-#include <libmaus/util/PutObject.hpp>
-#include <libmaus/util/TempFileRemovalContainer.hpp>
 
 #include <biobambam/Licensing.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; }
 
-int bamauxsort(::libmaus::util::ArgInfo const & arginfo)
+int bamreset(::libmaus::util::ArgInfo const & arginfo)
 {
-	::libmaus::util::TempFileRemovalContainer::setup();
-
 	if ( isatty(STDIN_FILENO) )
 	{
 		::libmaus::exception::LibMausException se;
@@ -62,7 +50,7 @@ int bamauxsort(::libmaus::util::ArgInfo const & arginfo)
 		se.finish();
 		throw se;
 	}
-
+	
 	int const level = arginfo.getValue<int>("level",getDefaultLevel());
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
 	
@@ -94,32 +82,88 @@ int bamauxsort(::libmaus::util::ArgInfo const & arginfo)
 	std::string const headertext(header.text);
 
 	// add PG line to header
-	std::string const upheadtext = ::libmaus::bambam::ProgramHeaderLineSet::addProgramLine(
+	std::string upheadtext = ::libmaus::bambam::ProgramHeaderLineSet::addProgramLine(
 		headertext,
-		"bamauxsort", // ID
-		"bamauxsort", // PN
+		"bamreset", // ID
+		"bamreset", // PN
 		arginfo.commandline, // CL
 		::libmaus::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
 		std::string(PACKAGE_VERSION) // VN			
 	);
+	
+	std::vector<libmaus::bambam::HeaderLine> allheaderlines = libmaus::bambam::HeaderLine::extractLines(upheadtext);
+
+	std::ostringstream upheadstr;
+	for ( uint64_t i = 0; i < allheaderlines.size(); ++i )
+		if ( allheaderlines[i].type != "SQ" )
+			upheadstr << allheaderlines[i].line << std::endl;
+	upheadtext = upheadstr.str();
+	
 	// construct new header
-	libmaus::bambam::BamHeader const uphead(upheadtext);
+	libmaus::bambam::BamHeader uphead(upheadtext);
+	uphead.changeSortOrder("unknown");
+
  	libmaus::bambam::BamWriter writer(std::cout,uphead,level);
  	libmaus::bambam::BamAuxFilterVector bafv;
  	
 	libmaus::bambam::BamAlignment & algn = dec.getAlignment();
 	uint64_t c = 0;
-	libmaus::bambam::BamAuxSortingBuffer sortbuffer;
 
 	while ( dec.readAlignment() )
 	{
-		algn.sortAux(sortbuffer);
-		algn.serialise(writer.getStream());
+		algn.filterAux(bafv);
+		algn.putRefId(-1);
+		algn.putPos(-1);
+		algn.putNextRefId(-1);
+		algn.putNextPos(-1);
+		algn.putTlen(0);
+		algn.replaceCigarString(std::string());
+		
+		if ( algn.isReverse() )
+		{
+			std::string const read = algn.getReadRC();
+			std::string const qual = algn.getQualRC();
+			algn.replaceSequence(read,qual);
+		}
+		
+		if ( algn.isPaired() )
+			algn.putFlags(
+				(algn.getFlags() |
+				libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FUNMAP |
+				libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FMUNMAP)
+				&
+				(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FDUP))) &
+				(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FPROPER_PAIR))) &
+				(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREVERSE))) &
+				(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FMREVERSE)))
+			);
+		else
+			algn.putFlags(
+				(algn.getFlags() | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FUNMAP) &
+				(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FDUP))) &
+				(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FPROPER_PAIR))) &
+				(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREVERSE))) &
+				(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FMREVERSE)))
+			);
+		
+		
+		if ( ! algn.isSecondary() )
+		{
+			algn.serialise(writer.getStream());
+		}
+
+/*
+LIBMAUS_BAMBAM_FPAIRED = (1u << 0),
+LIBMAUS_BAMBAM_FREAD1 = (1u << 6),
+LIBMAUS_BAMBAM_FREAD2 = (1u << 7),  
+LIBMAUS_BAMBAM_FQCFAIL = (1u << 9),
+*/
+                                                                                                                                                                                                                                                                                                                                                                
  			
 		if ( verbose && (++c & (1024*1024-1)) == 0 )
-			std::cerr << "[V] " << c/(1024*1024) << std::endl;
+ 			std::cerr << "[V] " << c/(1024*1024) << std::endl;
 	}
-	
+
 	return EXIT_SUCCESS;
 }
 
@@ -158,11 +202,11 @@ int main(int argc, char * argv[])
 				::biobambam::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
-								
+				
 				return EXIT_SUCCESS;
 			}
 			
-		return bamauxsort(arginfo);
+		return bamreset(arginfo);
 	}
 	catch(std::exception const & ex)
 	{

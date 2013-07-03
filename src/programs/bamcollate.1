@@ -1,0 +1,58 @@
+.TH BAMCOLLATE 1 "July 2013" BIOBAMBAM
+.SH NAME
+bamcollate - collate reads in a BAM file by name
+.SH SYNOPSIS
+.PP
+.B bamcollate
+[options]
+.SH DESCRIPTION
+bamcollate reads a BAM file from standard input, collates the contained
+reads/alignments by name and writes the resulting data to standard output in BAM format.
+.PP
+The following key=value pairs can be given:
+.PP
+.B tmpfile=<filename>
+file name of temporary file used for collation. By default a temporary file
+is created in the current directory.
+.PP
+.B level=<-1|0|1|9>:
+set compression level of the output BAM file. Valid
+values are
+.IP -1:
+zlib/gzip default compression level
+.IP 0:
+uncompressed
+.IP 1:
+zlib/gzip level 1 (fast) compression
+.IP 9:
+zlib/gzip level 9 (best) compression
+.PP
+.B colhashbits=<20>
+base two logarithm of the size of the hash table used for collation (the
+default value is 20 and should work reasonably well for most input files)
+.PP
+.B collistsize=<524288>
+size of hash table overflow list in alignments (the default is 512k and should
+work reasonably well for most input files)
+.PP
+.B pairsonly=<0|1>:
+output pairs only. Valid values are
+.IP 0:
+output all alignments
+.IP 1:
+output pairs only (no unmatched/orphans)
+.PP
+.B readgroups=<>:
+output only reads/alignments in the given list of read groups. Multiple
+read groups are given separated by comma. No filtering is performed if the
+key is not given.
+.SH AUTHOR
+Written by German Tischler.
+.SH "REPORTING BUGS"
+Report bugs to <gt1@sanger.ac.uk>
+.SH COPYRIGHT
+Copyright \(co 2009-2013 German Tischler, \(co 2011-2013 Genome Research Limited.
+License GPLv3+: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.

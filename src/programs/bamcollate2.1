@@ -1,0 +1,99 @@
+.TH BAMCOLLATE2 1 "July 2013" BIOBAMBAM
+.SH NAME
+bamcollate2 - collate reads in a SAM, BAM or CRAM file by name
+.SH SYNOPSIS
+.PP
+.B bamcollate2
+[options]
+.SH DESCRIPTION
+bamcollate2 reads a SAM, BAM or CRAM file from standard input, collates the contained
+reads/alignments by name and writes the resulting data to standard output in
+BAM format.
+.PP
+The following key=value pairs can be given:
+.PP
+.B collate=<0|1|2>:
+Valid values are
+.IP 2:
+collate read pairs and attach ranks (line numbers of alignments in source file)
+to each read. For pairs this add the prefix a_b_ to a pair when the first
+read of the pair appears in line a and the second one in line b of the
+source file, e.g. the name HS5 is changed to 25_32_HS5 for both ends if read
+1 appears in line 25 and read 2 in line 32. For single end reads it add the
+prefix a_ to the name where a is the rank (line number) of the read in the source file.
+.IP 1:
+collate read pairs
+.IP 0:
+do not collate, keep reads in the original order
+.PP
+.B filename=<stdin>: 
+input file name (data is read from standard input if this option is not given)
+.PP
+.B inputformat=<bam>: input file format
+All versions of bamtofastq come with support for the BAM input format. If
+the program in addition is linked to the io_lib package, then the following
+options are valid:
+.IP bam:
+BAM (see http://samtools.sourceforge.net/SAM1.pdf)
+.IP sam:
+SAM (see http://samtools.sourceforge.net/SAM1.pdf)
+.IP cram:
+CRAM (see http://www.ebi.ac.uk/ena/about/cram_toolkit)
+.PP
+.B exclude=<SECONDARY>:
+Do not include reads in the output that have any of the given flags set. The
+flags are given separated by commas. Valid flags are:
+.IP PAIRED:
+read was paired in sequencing
+.IP PROPER_PAIR:
+read has been mapped as part of a proper pair
+.IP UNMAP:
+read was not mapped
+.IP MUNMAP:
+mate of read was not mapped
+.IP REVERSE:
+read was mapped to the reverse strand
+.IP MREVERSE:
+mate of read was mapped to the reverse strand
+.IP READ1:
+read was first read of a pair during sequencing
+.IP READ2:
+read was second read of a pair during sequencing
+.IP SECONDARY:
+alignment is secondary, i.e. an alternative mapping to the primary alignment in the same file
+.IP QCFAIL:
+read as marked as having failed quality control
+.IP DUP:
+read is marked as a duplicate of another read in the same file (see bammarkduplicates)
+.PP
+.B disablevalidation=<0>:
+Valid values are
+.IP 0:
+run input file validation on alignments (this is the default)
+.IP 1:
+do not check the validity of the input file (this may help for some broken
+input files, but it is a security risk as it can lead to the execution of
+arbitrary code through a forged input file).
+.PP
+.B colhlog=<18>
+base two logarithm of the size of the hash table used for collation (the
+default value is 18 and should work reasonably well for most input files.
+Please see the biobambam paper at arxiv.org/abs/1306.0836 for details).
+.PP
+.B colsbs=<128M>
+size of hash table overflow list in bytes (the default is 128MB and should
+work reasonably well for most input files. Please see the biobambam paper at 
+arxiv.org/abs/1306.0836 for details).
+.PP
+.B T=<bamtofastq_hostname_pid_time>
+file name of temporary file used for collation
+.SH AUTHOR
+Written by German Tischler.
+.SH "REPORTING BUGS"
+Report bugs to <gt1@sanger.ac.uk>
+.SH COPYRIGHT
+Copyright \(co 2009-2013 German Tischler, \(co 2011-2013 Genome Research Limited.
+License GPLv3+: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.

@@ -21,32 +21,20 @@
 #include <iostream>
 #include <queue>
 
-#include <libmaus/aio/CheckedOutputStream.hpp>
-
 #include <libmaus/bambam/BamAlignment.hpp>
-#include <libmaus/bambam/BamAlignmentNameComparator.hpp>
-#include <libmaus/bambam/BamAlignmentPosComparator.hpp>
 #include <libmaus/bambam/BamDecoder.hpp>
-#include <libmaus/bambam/BamEntryContainer.hpp>
 #include <libmaus/bambam/BamWriter.hpp>
 #include <libmaus/bambam/ProgramHeaderLineSet.hpp>
 
-#include <libmaus/lz/SnappyCompress.hpp>
-
 #include <libmaus/util/ArgInfo.hpp>
-#include <libmaus/util/GetObject.hpp>
-#include <libmaus/util/PutObject.hpp>
-#include <libmaus/util/TempFileRemovalContainer.hpp>
 
 #include <biobambam/Licensing.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; }
 
-int bamauxsort(::libmaus::util::ArgInfo const & arginfo)
+int bamzztoname(::libmaus::util::ArgInfo const & arginfo)
 {
-	::libmaus::util::TempFileRemovalContainer::setup();
-
 	if ( isatty(STDIN_FILENO) )
 	{
 		::libmaus::exception::LibMausException se;
@@ -62,7 +50,7 @@ int bamauxsort(::libmaus::util::ArgInfo const & arginfo)
 		se.finish();
 		throw se;
 	}
-
+	
 	int const level = arginfo.getValue<int>("level",getDefaultLevel());
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
 	
@@ -96,30 +84,43 @@ int bamauxsort(::libmaus::util::ArgInfo const & arginfo)
 	// add PG line to header
 	std::string const upheadtext = ::libmaus::bambam::ProgramHeaderLineSet::addProgramLine(
 		headertext,
-		"bamauxsort", // ID
-		"bamauxsort", // PN
+		"bamzztoname", // ID
+		"bamzztoname", // PN
 		arginfo.commandline, // CL
 		::libmaus::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
 		std::string(PACKAGE_VERSION) // VN			
 	);
+		
 	// construct new header
-	libmaus::bambam::BamHeader const uphead(upheadtext);
+	libmaus::bambam::BamHeader uphead(upheadtext);
+	uphead.changeSortOrder("unknown");
+		
  	libmaus::bambam::BamWriter writer(std::cout,uphead,level);
  	libmaus::bambam::BamAuxFilterVector bafv;
- 	
+ 	bafv.set('z','z');
+
 	libmaus::bambam::BamAlignment & algn = dec.getAlignment();
 	uint64_t c = 0;
-	libmaus::bambam::BamAuxSortingBuffer sortbuffer;
+	libmaus::autoarray::AutoArray < std::pair<uint8_t,uint8_t> > auxtags;
 
 	while ( dec.readAlignment() )
 	{
-		algn.sortAux(sortbuffer);
+		uint64_t const rank = algn.getRank("zz");
+		algn.filterOutAux(bafv);
+		
+		std::string const newname = 
+			libmaus::util::NumberSerialisation::formatNumber(rank,0) + "_" + algn.getName();
+			
+		algn.replaceName(newname.begin(),newname.size());
+
 		algn.serialise(writer.getStream());
- 			
-		if ( verbose && (++c & (1024*1024-1)) == 0 )
-			std::cerr << "[V] " << c/(1024*1024) << std::endl;
+
+		++c;
+		
+		if ( verbose && (c & (1024*1024-1)) == 0 )
+ 			std::cerr << "[V] " << c/(1024*1024) << std::endl;
 	}
-	
+
 	return EXIT_SUCCESS;
 }
 
@@ -162,7 +163,7 @@ int main(int argc, char * argv[])
 				return EXIT_SUCCESS;
 			}
 			
-		return bamauxsort(arginfo);
+		return bamzztoname(arginfo);
 	}
 	catch(std::exception const & ex)
 	{

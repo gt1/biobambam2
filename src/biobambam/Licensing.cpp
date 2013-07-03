@@ -52,3 +52,4 @@ std::ostream & biobambam::Licensing::printMap(std::ostream & out, std::vector< s
 }
 
 std::string biobambam::Licensing::formatNumber(int64_t const n) { std::ostringstream ostr; ostr << n; return ostr.str(); }
+std::string biobambam::Licensing::formatFloatingPoint(double const n) { std::ostringstream ostr; ostr << n; return ostr.str(); }

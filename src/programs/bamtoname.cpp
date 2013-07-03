@@ -70,7 +70,8 @@ void bamtonameNonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::bamb
 			char const * name = libmaus::bambam::BamAlignmentDecoderBase::getReadName(algn.D.begin());
 			uint64_t const la = libmaus::bambam::BamAlignmentDecoderBase::getLReadName(algn.D.begin())-1;
 			std::cout.write(name,la);
-			bcnt += la;
+			std::cout.put('\n');
+			bcnt += la+1;
 		}
 
 		if ( precnt >> verbshift != cnt >> verbshift )
