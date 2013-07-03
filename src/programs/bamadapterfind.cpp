@@ -266,6 +266,7 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 	
 		alcnt++;
 
+		// find adapters in given list
 		adapterListMatch(Aread,AOSPB,inputalgn,*AF,verbose,adpmatchminscore,adpmatchminfrac,adpmatchminpfrac);
 
 		// if this is a single end read, then write it back and try the next one
@@ -282,6 +283,7 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 		bool const okb = bamdec.readAlignment();
 		alcnt++;
 		
+		// no next alignment, algns[0] is an orphan
 		if ( ! okb )
 		{
 			++orphcnt;
@@ -327,6 +329,7 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 		// put second read in algns[1]
 		algns[1].swap(inputalgn);
 
+		// find adapters in given list
 		adapterListMatch(Aread,AOSPB,algns[1],*AF,verbose,adpmatchminscore,adpmatchminfrac,adpmatchminpfrac);
 
 		paircnt++;
