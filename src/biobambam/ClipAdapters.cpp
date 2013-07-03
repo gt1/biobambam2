@@ -5,7 +5,8 @@ bool clipAdapters(
 	libmaus::autoarray::AutoArray<char> & R,
 	libmaus::autoarray::AutoArray<char> & Q,
 	libmaus::bambam::BamSeqEncodeTable const & seqenc,
-	libmaus::autoarray::AutoArray<libmaus::bambam::cigar_operation> & cigop
+	libmaus::autoarray::AutoArray<libmaus::bambam::cigar_operation> & cigop,
+	libmaus::bambam::BamAlignment::D_array_type & T
 )
 {
 	// a3,as
@@ -29,10 +30,10 @@ bool clipAdapters(
 					cigop.resize(numcigop+1);
 			
 				cigop[numcigop] = libmaus::bambam::cigar_operation(5,aclip);
-				algn.replaceCigarString(cigop.begin(),numcigop+1);
+				algn.replaceCigarString(cigop.begin(),numcigop+1,T);
 			}
 		
-			algn.replaceSequence(seqenc,R.begin(),Q.begin(),len-aclip);
+			algn.replaceSequence(seqenc,R.begin(),Q.begin(),len-aclip,T);
 			algn.putAuxString("qs",std::string(R.begin()+(len-aclip),R.begin()+len));
 			algn.putAuxString("qq",std::string(Q.begin()+(len-aclip),Q.begin()+len));
 		}
