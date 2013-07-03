@@ -106,20 +106,20 @@ int bamreset(::libmaus::util::ArgInfo const & arginfo)
 	uphead.changeSortOrder("unknown");
 
  	libmaus::bambam::BamWriter writer(std::cout,uphead,level);
- 	libmaus::bambam::BamAuxFilterVector const emptybafv;
+ 	libmaus::timing::RealTimeClock rtc; rtc.start();
  	
 	libmaus::bambam::BamAlignment & algn = dec.getAlignment();
 	uint64_t c = 0;
 
 	while ( dec.readAlignment() )
 	{
-		bool const keep = resetAlignment(algn,emptybafv);
+		bool const keep = resetAlignment(algn);
 		
 		if ( keep )
 			algn.serialise(writer.getStream());
 
 		if ( verbose && (++c & (1024*1024-1)) == 0 )
- 			std::cerr << "[V] " << c/(1024*1024) << std::endl;
+ 			std::cerr << "[V] " << c/(1024*1024) << " " << (c / rtc.getElapsedSeconds()) << std::endl;
 	}
 
 	return EXIT_SUCCESS;
