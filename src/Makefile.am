@@ -1,6 +1,7 @@
 ACLOCAL_AMFLAGS=-I m4
 
-noinst_HEADERS=biobambam/BamBamConfig.hpp biobambam/Licensing.hpp
+noinst_HEADERS=biobambam/BamBamConfig.hpp biobambam/Licensing.hpp \
+	biobambam/ClipAdapters.hpp
 
 man_MANS = programs/bamtofastq.1 programs/bamsort.1 programs/bammarkduplicates.1 programs/bamcollate.1 \
 	programs/bammaskflags.1 programs/bamrecompress.1 programs/bamadapterfind.1 \
@@ -101,7 +102,8 @@ bamauxsort_LDADD = ${LIBMAUSLIBS}
 bamauxsort_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
 bamauxsort_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
 
-bamadapterclip_SOURCES = programs/bamadapterclip.cpp biobambam/Licensing.cpp
+bamadapterclip_SOURCES = programs/bamadapterclip.cpp biobambam/Licensing.cpp \
+	biobambam/ClipAdapters.cpp
 bamadapterclip_LDADD = ${LIBMAUSLIBS}
 bamadapterclip_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
 bamadapterclip_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
