@@ -20,6 +20,7 @@
 #include <biobambam/BamBamConfig.hpp>
 #include <biobambam/Licensing.hpp>
 #include <biobambam/AttachRank.hpp>
+#include <biobambam/ResetAlignment.hpp>
 
 #include <iomanip>
 
@@ -87,13 +88,13 @@ struct BamToFastQInputFileStream
 };
 
 template<typename decoder_type>
-std::string getModifiedHeaderText(decoder_type const & bamdec, libmaus::util::ArgInfo const & arginfo)
+std::string getModifiedHeaderText(decoder_type const & bamdec, libmaus::util::ArgInfo const & arginfo, bool reset = false)
 {
 	libmaus::bambam::BamHeader const & header = bamdec.getHeader();
 	std::string const headertext(header.text);
 
 	// add PG line to header
-	std::string const upheadtext = ::libmaus::bambam::ProgramHeaderLineSet::addProgramLine(
+	std::string upheadtext = ::libmaus::bambam::ProgramHeaderLineSet::addProgramLine(
 		headertext,
 		"bamcollate2", // ID
 		"bamcollate2", // PN
@@ -101,6 +102,17 @@ std::string getModifiedHeaderText(decoder_type const & bamdec, libmaus::util::Ar
 		::libmaus::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
 		std::string(PACKAGE_VERSION) // VN			
 	);
+
+	if ( reset )
+	{
+		std::vector<libmaus::bambam::HeaderLine> allheaderlines = libmaus::bambam::HeaderLine::extractLines(upheadtext);
+
+		std::ostringstream upheadstr;
+		for ( uint64_t i = 0; i < allheaderlines.size(); ++i )
+			if ( allheaderlines[i].type != "SQ" )
+				upheadstr << allheaderlines[i].line << std::endl;
+		upheadtext = upheadstr.str();
+	}
 
 	return upheadtext;
 }
@@ -377,19 +389,21 @@ void bamcollate2CollatingRanking(
 			uint64_t const ranka = libmaus::bambam::BamAlignmentDecoderBase::getRank(ob->Da,ob->blocksizea);
 			uint64_t const rankb = libmaus::bambam::BamAlignmentDecoderBase::getRank(ob->Db,ob->blocksizeb);
 			
-			if ( algn.D.size() < std::max(ob->blocksizea,ob->blocksizeb) )
-				algn.D.resize(std::max(ob->blocksizea,ob->blocksizeb));
 				
 			std::ostringstream nameostr;
 			nameostr << ranka << "_" << rankb << "_" << libmaus::bambam::BamAlignmentDecoderBase::getReadName(ob->Da);
 			std::string const name = nameostr.str();
 			
+			if ( algn.D.size() < ob->blocksizea )
+				algn.D.resize(ob->blocksizea);
 			std::copy ( ob->Da, ob->Da + ob->blocksizea, algn.D.begin() );
 			algn.blocksize = ob->blocksizea;
 			algn.replaceName(name.c_str(),name.size());
 			algn.filterOutAux(zrtag);
 			algn.serialise(bgzfos);
 			
+			if ( algn.D.size() < ob->blocksizeb )
+				algn.D.resize(ob->blocksizeb);
 			std::copy ( ob->Db, ob->Db + ob->blocksizeb, algn.D.begin() );
 			algn.blocksize = ob->blocksizeb;
 			algn.replaceName(name.c_str(),name.size());
@@ -549,6 +563,8 @@ void bamcollate2CollatingPostRanking(
 	libmaus::bambam::CircularHashCollatingBamDecoder & CHCBD
 )
 {
+	int const reset = arginfo.getValue<int>("reset",1);
+
 	if ( arginfo.getValue<unsigned int>("disablevalidation",0) )
 		CHCBD.disableValidation();
 
@@ -566,7 +582,7 @@ void bamcollate2CollatingPostRanking(
 	libmaus::bambam::BamAlignment algn;
 
 	// construct new header
-	::libmaus::bambam::BamHeader uphead(getModifiedHeaderText(CHCBD,arginfo));
+	::libmaus::bambam::BamHeader uphead(getModifiedHeaderText(CHCBD,arginfo,reset));
 	uphead.changeSortOrder("unknown");
 	// construct writer
 	libmaus::bambam::BamWriter bamwriter(std::cout,uphead,getLevel(arginfo));
@@ -579,6 +595,10 @@ void bamcollate2CollatingPostRanking(
 
 	libmaus::bambam::BamAuxFilterVector zzbafv;
 	zzbafv.set('z','z');
+	
+	libmaus::bambam::BamAuxFilterVector const emptybafv;
+
+	// bool resetAlignment(libmaus::bambam::BamAlignment & algn, libmaus::bambam::BamAuxFilterVector const & emptybafv);
 
 	while ( (ob = CHCBD.process()) )
 	{
@@ -591,24 +611,29 @@ void bamcollate2CollatingPostRanking(
 			uint64_t const zranka = libmaus::bambam::BamAlignmentDecoderBase::getRank(ob->Da,ob->blocksizea);
 			uint64_t const zrankb = libmaus::bambam::BamAlignmentDecoderBase::getRank(ob->Db,ob->blocksizeb);
 			
-			if ( algn.D.size() < std::max(ob->blocksizea,ob->blocksizeb) )
-				algn.D.resize(std::max(ob->blocksizea,ob->blocksizeb));
-				
 			std::ostringstream nameostr;
 			nameostr << ranka << "_" << rankb << "_" << libmaus::bambam::BamAlignmentDecoderBase::getReadName(ob->Da);
 			std::string const name = nameostr.str();
 			
+			if ( algn.D.size() < ob->blocksizea )
+				algn.D.resize(ob->blocksizea);
 			std::copy ( ob->Da, ob->Da + ob->blocksizea, algn.D.begin() );
 			algn.blocksize = ob->blocksizea;
 			algn.replaceName(name.c_str(),name.size());
 			algn.filterOutAux(zrtag);
+			if ( reset )
+				resetAlignment(algn,emptybafv);
 			attachRank(algn,zranka,zzbafv);
 			algn.serialise(bgzfos);
 			
+			if ( algn.D.size() < ob->blocksizeb )
+				algn.D.resize(ob->blocksizeb);
 			std::copy ( ob->Db, ob->Db + ob->blocksizeb, algn.D.begin() );
 			algn.blocksize = ob->blocksizeb;
 			algn.replaceName(name.c_str(),name.size());
 			algn.filterOutAux(zrtag);
+			if ( reset )
+				resetAlignment(algn,emptybafv);
 			attachRank(algn,zrankb,zzbafv);
 			algn.serialise(bgzfos);
 			
@@ -630,6 +655,8 @@ void bamcollate2CollatingPostRanking(
 			algn.blocksize = ob->blocksizea;
 			algn.replaceName(name.c_str(),name.size());
 			algn.filterOutAux(zrtag);
+			if ( reset )
+				resetAlignment(algn,emptybafv);
 			attachRank(algn,zranka,zzbafv);
 			algn.serialise(bgzfos);
 
@@ -651,6 +678,8 @@ void bamcollate2CollatingPostRanking(
 			algn.blocksize = ob->blocksizea;
 			algn.replaceName(name.c_str(),name.size());
 			algn.filterOutAux(zrtag);
+			if ( reset )
+				resetAlignment(algn,emptybafv);
 			attachRank(algn,zranka,zzbafv);
 			algn.serialise(bgzfos);
 
@@ -672,6 +701,8 @@ void bamcollate2CollatingPostRanking(
 			algn.blocksize = ob->blocksizea;
 			algn.replaceName(name.c_str(),name.size());
 			algn.filterOutAux(zrtag);
+			if ( reset )
+				resetAlignment(algn,emptybafv);
 			attachRank(algn,zranka,zzbafv);
 			algn.serialise(bgzfos);
 
@@ -822,6 +853,7 @@ int main(int argc, char * argv[])
 				std::vector< std::pair<std::string,std::string> > V;
 				
 				V.push_back ( std::pair<std::string,std::string> ( "collate=<[1]>", "collate pairs" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "reset=<[1]>", "reset alignments and header like bamreset (for collate=3 only)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "filename=<[stdin]>", "input filename (default: read file from standard input)" ) );
 				#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
 				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<[bam]>", "input format: cram, bam or sam" ) );

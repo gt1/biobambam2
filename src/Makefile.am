@@ -109,7 +109,8 @@ bamadapterclip_LDADD = ${LIBMAUSLIBS}
 bamadapterclip_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
 bamadapterclip_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
 
-bamcollate2_SOURCES = programs/bamcollate2.cpp biobambam/Licensing.cpp biobambam/AttachRank.cpp
+bamcollate2_SOURCES = programs/bamcollate2.cpp biobambam/Licensing.cpp biobambam/AttachRank.cpp \
+	biobambam/ResetAlignment.cpp
 bamcollate2_LDADD = ${LIBMAUSLIBS}
 bamcollate2_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
 bamcollate2_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
