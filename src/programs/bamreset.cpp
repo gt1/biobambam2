@@ -33,6 +33,53 @@
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; }
 
+bool resetAlignment(
+	libmaus::bambam::BamAlignment & algn,
+ 	libmaus::bambam::BamAuxFilterVector const & emptybafv
+)
+{
+	algn.filterAux(emptybafv);
+	algn.putRefId(-1);
+	algn.putPos(-1);
+	algn.putNextRefId(-1);
+	algn.putNextPos(-1);
+	algn.putTlen(0);
+	algn.replaceCigarString(std::string());
+	
+	if ( algn.isReverse() )
+	{
+		std::string const read = algn.getReadRC();
+		std::string const qual = algn.getQualRC();
+		algn.replaceSequence(read,qual);
+	}
+	
+	if ( algn.isPaired() )
+		algn.putFlags(
+			(algn.getFlags() |
+			libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FUNMAP |
+			libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FMUNMAP)
+			&
+			(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FDUP))) &
+			(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FPROPER_PAIR))) &
+			(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREVERSE))) &
+			(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FMREVERSE)))
+		);
+	else
+		algn.putFlags(
+			(algn.getFlags() | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FUNMAP) &
+			(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FDUP))) &
+			(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FPROPER_PAIR))) &
+			(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREVERSE))) &
+			(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FMREVERSE)))
+		);
+	
+	
+	if ( algn.isSecondary() )
+		return false;
+		
+	return true;
+}
+
 int bamreset(::libmaus::util::ArgInfo const & arginfo)
 {
 	if ( isatty(STDIN_FILENO) )
@@ -104,62 +151,18 @@ int bamreset(::libmaus::util::ArgInfo const & arginfo)
 	uphead.changeSortOrder("unknown");
 
  	libmaus::bambam::BamWriter writer(std::cout,uphead,level);
- 	libmaus::bambam::BamAuxFilterVector bafv;
+ 	libmaus::bambam::BamAuxFilterVector const emptybafv;
  	
 	libmaus::bambam::BamAlignment & algn = dec.getAlignment();
 	uint64_t c = 0;
 
 	while ( dec.readAlignment() )
 	{
-		algn.filterAux(bafv);
-		algn.putRefId(-1);
-		algn.putPos(-1);
-		algn.putNextRefId(-1);
-		algn.putNextPos(-1);
-		algn.putTlen(0);
-		algn.replaceCigarString(std::string());
+		bool const keep = resetAlignment(algn,emptybafv);
 		
-		if ( algn.isReverse() )
-		{
-			std::string const read = algn.getReadRC();
-			std::string const qual = algn.getQualRC();
-			algn.replaceSequence(read,qual);
-		}
-		
-		if ( algn.isPaired() )
-			algn.putFlags(
-				(algn.getFlags() |
-				libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FUNMAP |
-				libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FMUNMAP)
-				&
-				(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FDUP))) &
-				(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FPROPER_PAIR))) &
-				(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREVERSE))) &
-				(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FMREVERSE)))
-			);
-		else
-			algn.putFlags(
-				(algn.getFlags() | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FUNMAP) &
-				(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FDUP))) &
-				(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FPROPER_PAIR))) &
-				(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREVERSE))) &
-				(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FMREVERSE)))
-			);
-		
-		
-		if ( ! algn.isSecondary() )
-		{
+		if ( keep )
 			algn.serialise(writer.getStream());
-		}
 
-/*
-LIBMAUS_BAMBAM_FPAIRED = (1u << 0),
-LIBMAUS_BAMBAM_FREAD1 = (1u << 6),
-LIBMAUS_BAMBAM_FREAD2 = (1u << 7),  
-LIBMAUS_BAMBAM_FQCFAIL = (1u << 9),
-*/
-                                                                                                                                                                                                                                                                                                                                                                
- 			
 		if ( verbose && (++c & (1024*1024-1)) == 0 )
  			std::cerr << "[V] " << c/(1024*1024) << std::endl;
 	}
