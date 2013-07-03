@@ -18,25 +18,18 @@
 **/
 #include <biobambam/ResetAlignment.hpp>
 
-bool resetAlignment(
-	libmaus::bambam::BamAlignment & algn,
- 	libmaus::bambam::BamAuxFilterVector const & emptybafv
-)
+bool resetAlignment(libmaus::bambam::BamAlignment & algn)
 {
-	algn.filterAux(emptybafv);
+	algn.eraseAux();
 	algn.putRefId(-1);
 	algn.putPos(-1);
 	algn.putNextRefId(-1);
 	algn.putNextPos(-1);
 	algn.putTlen(0);
-	algn.replaceCigarString(std::string());
+	algn.eraseCigarString();
 	
 	if ( algn.isReverse() )
-	{
-		std::string const read = algn.getReadRC();
-		std::string const qual = algn.getQualRC();
-		algn.replaceSequence(read,qual);
-	}
+		algn.reverseComplementInplace();
 	
 	if ( algn.isPaired() )
 		algn.putFlags(

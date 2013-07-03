@@ -21,8 +21,5 @@
 
 #include <libmaus/bambam/BamAlignment.hpp>
 
-bool resetAlignment(
-	libmaus::bambam::BamAlignment & algn,
- 	libmaus::bambam::BamAuxFilterVector const & emptybafv
-);
+bool resetAlignment(libmaus::bambam::BamAlignment & algn);
 #endif
