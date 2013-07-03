@@ -21,6 +21,9 @@ read of the pair appears in line a and the second one in line b of the
 output file, e.g. the name HS5 is changed to 20_21_HS5 for both ends if read
 1 appears in line 20 and read 2 in line 21. For single end reads it add the
 prefix a_ to the name where a is the rank (line number) of the read in the output file.
+The pre rank (line number in the input file) is attached to each read by
+putting it in the zz auxiliary field as an eight byte number array similar
+to the funcionality of bamrank.
 .IP 2:
 collate read pairs and attach ranks (line numbers of alignments in source file)
 to each read. For pairs this add the prefix a_b_ to a pair when the first

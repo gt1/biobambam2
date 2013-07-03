@@ -29,56 +29,11 @@
 #include <libmaus/util/ArgInfo.hpp>
 
 #include <biobambam/Licensing.hpp>
+#include <biobambam/ResetAlignment.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; }
 
-bool resetAlignment(
-	libmaus::bambam::BamAlignment & algn,
- 	libmaus::bambam::BamAuxFilterVector const & emptybafv
-)
-{
-	algn.filterAux(emptybafv);
-	algn.putRefId(-1);
-	algn.putPos(-1);
-	algn.putNextRefId(-1);
-	algn.putNextPos(-1);
-	algn.putTlen(0);
-	algn.replaceCigarString(std::string());
-	
-	if ( algn.isReverse() )
-	{
-		std::string const read = algn.getReadRC();
-		std::string const qual = algn.getQualRC();
-		algn.replaceSequence(read,qual);
-	}
-	
-	if ( algn.isPaired() )
-		algn.putFlags(
-			(algn.getFlags() |
-			libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FUNMAP |
-			libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FMUNMAP)
-			&
-			(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FDUP))) &
-			(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FPROPER_PAIR))) &
-			(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREVERSE))) &
-			(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FMREVERSE)))
-		);
-	else
-		algn.putFlags(
-			(algn.getFlags() | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FUNMAP) &
-			(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FDUP))) &
-			(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FPROPER_PAIR))) &
-			(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREVERSE))) &
-			(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FMREVERSE)))
-		);
-	
-	
-	if ( algn.isSecondary() )
-		return false;
-		
-	return true;
-}
 
 int bamreset(::libmaus::util::ArgInfo const & arginfo)
 {

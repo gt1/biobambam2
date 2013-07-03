@@ -19,6 +19,7 @@
 
 #include <biobambam/BamBamConfig.hpp>
 #include <biobambam/Licensing.hpp>
+#include <biobambam/AttachRank.hpp>
 
 #include <iomanip>
 
@@ -576,6 +577,9 @@ void bamcollate2CollatingPostRanking(
 	libmaus::bambam::BamAuxFilterVector zrtag;
 	zrtag.set('Z','R');
 
+	libmaus::bambam::BamAuxFilterVector zzbafv;
+	zzbafv.set('z','z');
+
 	while ( (ob = CHCBD.process()) )
 	{
 		uint64_t const precnt = cnt;
@@ -584,6 +588,8 @@ void bamcollate2CollatingPostRanking(
 		{
 			uint64_t const ranka = r++;
 			uint64_t const rankb = r++;
+			uint64_t const zranka = libmaus::bambam::BamAlignmentDecoderBase::getRank(ob->Da,ob->blocksizea);
+			uint64_t const zrankb = libmaus::bambam::BamAlignmentDecoderBase::getRank(ob->Db,ob->blocksizeb);
 			
 			if ( algn.D.size() < std::max(ob->blocksizea,ob->blocksizeb) )
 				algn.D.resize(std::max(ob->blocksizea,ob->blocksizeb));
@@ -596,12 +602,14 @@ void bamcollate2CollatingPostRanking(
 			algn.blocksize = ob->blocksizea;
 			algn.replaceName(name.c_str(),name.size());
 			algn.filterOutAux(zrtag);
+			attachRank(algn,zranka,zzbafv);
 			algn.serialise(bgzfos);
 			
 			std::copy ( ob->Db, ob->Db + ob->blocksizeb, algn.D.begin() );
 			algn.blocksize = ob->blocksizeb;
 			algn.replaceName(name.c_str(),name.size());
 			algn.filterOutAux(zrtag);
+			attachRank(algn,zrankb,zzbafv);
 			algn.serialise(bgzfos);
 			
 			cnt += 2;
@@ -609,10 +617,10 @@ void bamcollate2CollatingPostRanking(
 		else if ( ob->fsingle )
 		{
 			uint64_t const ranka = r++;
+			uint64_t const zranka = libmaus::bambam::BamAlignmentDecoderBase::getRank(ob->Da,ob->blocksizea);
 			
 			if ( algn.D.size() < ob->blocksizea )
 				algn.D.resize(ob->blocksizea);
-
 				
 			std::ostringstream nameostr;
 			nameostr << ranka << "_" << libmaus::bambam::BamAlignmentDecoderBase::getReadName(ob->Da);
@@ -622,6 +630,7 @@ void bamcollate2CollatingPostRanking(
 			algn.blocksize = ob->blocksizea;
 			algn.replaceName(name.c_str(),name.size());
 			algn.filterOutAux(zrtag);
+			attachRank(algn,zranka,zzbafv);
 			algn.serialise(bgzfos);
 
 			cnt += 1;
@@ -629,6 +638,7 @@ void bamcollate2CollatingPostRanking(
 		else if ( ob->forphan1 )
 		{
 			uint64_t const ranka = r++;
+			uint64_t const zranka = libmaus::bambam::BamAlignmentDecoderBase::getRank(ob->Da,ob->blocksizea);
 			
 			if ( algn.D.size() < ob->blocksizea )
 				algn.D.resize(ob->blocksizea);
@@ -641,6 +651,7 @@ void bamcollate2CollatingPostRanking(
 			algn.blocksize = ob->blocksizea;
 			algn.replaceName(name.c_str(),name.size());
 			algn.filterOutAux(zrtag);
+			attachRank(algn,zranka,zzbafv);
 			algn.serialise(bgzfos);
 
 			cnt += 1;
@@ -648,6 +659,7 @@ void bamcollate2CollatingPostRanking(
 		else if ( ob->forphan2 )
 		{
 			uint64_t const ranka = r++;
+			uint64_t const zranka = libmaus::bambam::BamAlignmentDecoderBase::getRank(ob->Da,ob->blocksizea);
 			
 			if ( algn.D.size() < ob->blocksizea )
 				algn.D.resize(ob->blocksizea);
@@ -660,6 +672,7 @@ void bamcollate2CollatingPostRanking(
 			algn.blocksize = ob->blocksizea;
 			algn.replaceName(name.c_str(),name.size());
 			algn.filterOutAux(zrtag);
+			attachRank(algn,zranka,zzbafv);
 			algn.serialise(bgzfos);
 
 			cnt += 1;
