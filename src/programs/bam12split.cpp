@@ -115,8 +115,6 @@ int bam12split(::libmaus::util::ArgInfo const & arginfo)
 	uphead.changeSortOrder("unknown");
 		
  	libmaus::bambam::BamWriter writer(std::cout,uphead,level);
- 	libmaus::bambam::BamAuxFilterVector bafv;
- 	
 	libmaus::bambam::BamAlignment & algn = dec.getAlignment();
 	uint64_t c = 0;
 
