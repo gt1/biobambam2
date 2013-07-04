@@ -64,9 +64,14 @@ Print progress report after processing each mod'th alignment if verbose is activ
 .B ranksplit=<0>:
 Split rank pairs into single ranks per read/alignment. This acts like
 preprocessing the file with bam12split before handing it to bam12auxmerge.
+.PP
 .B rankstrip=<0>:
 Strip ranks from reads/alignments. This acts like
 postprocessing the file with bam12strip after handing it to bam12auxmerge.
+.PP
+.B clipreinsert=<0>:
+Reinsert clipped sequence and quality string parts while marking them as soft
+clipped. This acts like postprocessing the file with bamclipreinsert after handing it to bam12auxmerge.
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"

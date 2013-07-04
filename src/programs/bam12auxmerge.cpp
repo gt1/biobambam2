@@ -36,12 +36,14 @@
 #include <biobambam/Licensing.hpp>
 #include <biobambam/Split12.hpp>
 #include <biobambam/Strip12.hpp>
+#include <biobambam/ClipReinsert.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; }
 static uint64_t getDefaultMod() { return 1024*1024; }
 static uint64_t getDefaultRankSplit() { return 0; }
 static uint64_t getDefaultRankStrip() { return 0; }
+static uint64_t getDefaultClipReinsert() { return 0; }
 
 int bam12auxmerge(::libmaus::util::ArgInfo const & arginfo)
 {
@@ -68,6 +70,7 @@ int bam12auxmerge(::libmaus::util::ArgInfo const & arginfo)
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
 	int const ranksplit = arginfo.getValue<int>("ranksplit",getDefaultRankSplit());
 	int const rankstrip = arginfo.getValue<int>("rankstrip",getDefaultRankSplit());
+	int const clipreinsert = arginfo.getValue<int>("clipreinsert",getDefaultClipReinsert());
 	uint64_t const mod = arginfo.getValue<int>("mod",getDefaultMod());
 	uint64_t const bmod = libmaus::math::nextTwoPow(mod);
 	uint64_t const bmask = bmod-1;
@@ -167,6 +170,13 @@ int bam12auxmerge(::libmaus::util::ArgInfo const & arginfo)
 	libmaus::autoarray::AutoArray< std::pair<uint8_t,uint8_t> > auxnew;
 	
 	libmaus::bambam::BamAuxFilterVector auxfilter;
+
+	// helpers for clipReinsert
+	libmaus::autoarray::AutoArray < std::pair<uint8_t,uint8_t> > auxtags;
+	libmaus::autoarray::AutoArray<libmaus::bambam::cigar_operation> cigop;
+	std::stack < libmaus::bambam::cigar_operation > hardstack;
+	libmaus::bambam::BamAlignment::D_array_type Tcigar;
+	libmaus::bambam::BamAuxFilterVector bafv;
 	
 	// loop over aligned BAM file
 	while ( bamdec.readAlignment() )
@@ -277,6 +287,9 @@ int bam12auxmerge(::libmaus::util::ArgInfo const & arginfo)
 		
 		if ( rankstrip )
 			strip12(algn);
+
+		if ( clipreinsert )
+			clipReinsert(algn,auxtags,bafv,cigop,Tcigar,hardstack);
 		
 		algn.serialise(writer.getStream());
 	}
@@ -318,6 +331,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "mod=<["+::biobambam::Licensing::formatNumber(getDefaultMod())+"]>", "print progress for every mod'th alignment if verbose" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "ranksplit=<["+::biobambam::Licensing::formatNumber(getDefaultRankSplit())+"]>", "split rank pairs in names (see bam12split command)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "rankstrip=<["+::biobambam::Licensing::formatNumber(getDefaultRankStrip())+"]>", "strip ranks of names (see bam12strip command)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "clipreinsert=<["+::biobambam::Licensing::formatNumber(getDefaultClipReinsert())+"]>", "reinsert clipped sequence fragments (see bamclipreinsert command)" ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 

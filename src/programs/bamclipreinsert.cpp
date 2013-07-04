@@ -102,6 +102,7 @@ int bamclipreinsert(::libmaus::util::ArgInfo const & arginfo)
  	
 	libmaus::bambam::BamAlignment & algn = dec.getAlignment();
 	uint64_t c = 0;
+
 	libmaus::autoarray::AutoArray < std::pair<uint8_t,uint8_t> > auxtags;
 	libmaus::autoarray::AutoArray<libmaus::bambam::cigar_operation> cigop;
 	std::stack < libmaus::bambam::cigar_operation > hardstack;
