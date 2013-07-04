@@ -119,7 +119,6 @@ int bam12split(::libmaus::util::ArgInfo const & arginfo)
  	
 	libmaus::bambam::BamAlignment & algn = dec.getAlignment();
 	uint64_t c = 0;
-	libmaus::bambam::BamAuxSortingBuffer sortbuffer;
 
 	while ( dec.readAlignment() )
 	{
