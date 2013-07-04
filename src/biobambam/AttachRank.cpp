@@ -23,14 +23,14 @@ bool attachRank(libmaus::bambam::BamAlignment & algn, uint64_t const c, libmaus:
 	algn.filterOutAux(zzbafv);
 
 	uint8_t const R[8] = {
-		(c >> ((8-0-1)*8)) & 0xFF,
-		(c >> ((8-1-1)*8)) & 0xFF,
-		(c >> ((8-2-1)*8)) & 0xFF,
-		(c >> ((8-3-1)*8)) & 0xFF,
-		(c >> ((8-4-1)*8)) & 0xFF,
-		(c >> ((8-5-1)*8)) & 0xFF,
-		(c >> ((8-6-1)*8)) & 0xFF,
-		(c >> ((8-7-1)*8)) & 0xFF
+		static_cast<uint8_t>((c >> ((8-0-1)*8)) & 0xFF),
+		static_cast<uint8_t>((c >> ((8-1-1)*8)) & 0xFF),
+		static_cast<uint8_t>((c >> ((8-2-1)*8)) & 0xFF),
+		static_cast<uint8_t>((c >> ((8-3-1)*8)) & 0xFF),
+		static_cast<uint8_t>((c >> ((8-4-1)*8)) & 0xFF),
+		static_cast<uint8_t>((c >> ((8-5-1)*8)) & 0xFF),
+		static_cast<uint8_t>((c >> ((8-6-1)*8)) & 0xFF),
+		static_cast<uint8_t>((c >> ((8-7-1)*8)) & 0xFF)
 	};
 
 	algn.putAuxNumberArray("zz", &R[0], sizeof(R)/sizeof(R[0]));
