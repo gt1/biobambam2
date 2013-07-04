@@ -142,7 +142,8 @@ bamrank_LDADD = ${LIBMAUSLIBS}
 bamrank_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
 bamrank_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
 
-bamclipreinsert_SOURCES = programs/bamclipreinsert.cpp biobambam/Licensing.cpp
+bamclipreinsert_SOURCES = programs/bamclipreinsert.cpp biobambam/Licensing.cpp \
+	biobambam/ClipReinsert.cpp
 bamclipreinsert_LDADD = ${LIBMAUSLIBS}
 bamclipreinsert_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
 bamclipreinsert_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
