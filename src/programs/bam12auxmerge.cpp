@@ -42,10 +42,10 @@
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; }
 static uint64_t getDefaultMod() { return 1024*1024; }
-static uint64_t getDefaultRankSplit() { return 0; }
-static uint64_t getDefaultRankStrip() { return 0; }
-static uint64_t getDefaultClipReinsert() { return 0; }
-static uint64_t getDefaultZZToName() { return 0; }
+static uint64_t getDefaultRankSplit() { return 1; }
+static uint64_t getDefaultRankStrip() { return 1; }
+static uint64_t getDefaultClipReinsert() { return 1; }
+static uint64_t getDefaultZZToName() { return 1; }
 
 int bam12auxmerge(::libmaus::util::ArgInfo const & arginfo)
 {
