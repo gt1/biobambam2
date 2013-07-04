@@ -60,6 +60,22 @@ do not print progress report
 .PP
 .B mod=<1048576>:
 Print progress report after processing each mod'th alignment if verbose is active.
+.PP
+.B ranksplit=<1>:
+Split rank pairs into single ranks per read/alignment. This acts like
+preprocessing the file with bam12split before handing it to bam12auxmerge.
+.PP
+.B rankstrip=<1>:
+Strip ranks from reads/alignments. This acts like
+postprocessing the file with bam12strip after handing it to bam12auxmerge.
+.PP
+.B clipreinsert=<1>:
+Reinsert clipped sequence and quality string parts while marking them as soft
+clipped. This acts like postprocessing the file with bamclipreinsert after handing it to bam12auxmerge.
+.PP
+.B zztoname=<1>:
+Insert rank stored in zz auxiliary field to name as a prefix and remove the
+zz auxiliary field. This acts like postprocessing the file with bamzztoname after handing it to bam12auxmerge.
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"

@@ -16,24 +16,17 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
-#include <biobambam/AttachRank.hpp>
+#include <biobambam/zzToName.hpp>
 
-bool attachRank(libmaus::bambam::BamAlignment & algn, uint64_t const c, libmaus::bambam::BamAuxFilterVector const & zzbafv)
+bool zzToRank(libmaus::bambam::BamAlignment & algn, libmaus::bambam::BamAuxFilterVector const & zzbafv)
 {
+	uint64_t const rank = algn.getRank("zz");
 	algn.filterOutAux(zzbafv);
-
-	uint8_t const R[8] = {
-		static_cast<uint8_t>((c >> ((8-0-1)*8)) & 0xFF),
-		static_cast<uint8_t>((c >> ((8-1-1)*8)) & 0xFF),
-		static_cast<uint8_t>((c >> ((8-2-1)*8)) & 0xFF),
-		static_cast<uint8_t>((c >> ((8-3-1)*8)) & 0xFF),
-		static_cast<uint8_t>((c >> ((8-4-1)*8)) & 0xFF),
-		static_cast<uint8_t>((c >> ((8-5-1)*8)) & 0xFF),
-		static_cast<uint8_t>((c >> ((8-6-1)*8)) & 0xFF),
-		static_cast<uint8_t>((c >> ((8-7-1)*8)) & 0xFF)
-	};
-
-	algn.putAuxNumberArray("zz", &R[0], sizeof(R)/sizeof(R[0]));
+	
+	std::string const newname = 
+		libmaus::util::NumberSerialisation::formatNumber(rank,0) + "_" + algn.getName();
+		
+	algn.replaceName(newname.begin(),newname.size());
 
 	return true;
 }

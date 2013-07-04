@@ -29,6 +29,7 @@
 #include <libmaus/util/ArgInfo.hpp>
 
 #include <biobambam/Licensing.hpp>
+#include <biobambam/zzToName.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; }
@@ -96,8 +97,9 @@ int bamzztoname(::libmaus::util::ArgInfo const & arginfo)
 	uphead.changeSortOrder("unknown");
 		
  	libmaus::bambam::BamWriter writer(std::cout,uphead,level);
- 	libmaus::bambam::BamAuxFilterVector bafv;
- 	bafv.set('z','z');
+
+ 	libmaus::bambam::BamAuxFilterVector zzbafv;
+ 	zzbafv.set('z','z');
 
 	libmaus::bambam::BamAlignment & algn = dec.getAlignment();
 	uint64_t c = 0;
@@ -105,14 +107,8 @@ int bamzztoname(::libmaus::util::ArgInfo const & arginfo)
 
 	while ( dec.readAlignment() )
 	{
-		uint64_t const rank = algn.getRank("zz");
-		algn.filterOutAux(bafv);
+		zzToRank(algn,zzbafv);
 		
-		std::string const newname = 
-			libmaus::util::NumberSerialisation::formatNumber(rank,0) + "_" + algn.getName();
-			
-		algn.replaceName(newname.begin(),newname.size());
-
 		algn.serialise(writer.getStream());
 
 		++c;

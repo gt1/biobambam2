@@ -16,24 +16,50 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
-#include <biobambam/AttachRank.hpp>
+#include <biobambam/Strip12.hpp>
 
-bool attachRank(libmaus::bambam::BamAlignment & algn, uint64_t const c, libmaus::bambam::BamAuxFilterVector const & zzbafv)
+bool strip12(libmaus::bambam::BamAlignment & algn)
 {
-	algn.filterOutAux(zzbafv);
+	char const * name = algn.getName();
+	
+	char const * u1 = name;
+	
+	while ( *u1 && *u1 != '_' )
+		++u1;
+					
+	if ( ! *u1 )
+		return true;
+	else
+	{
+		bool ok = true;
+		uint64_t ranka = 0;
+			
+		for ( char const * t1 = name; t1 != u1; ++t1 )
+		{	
+			ranka *= 10;
+			ranka += ((*t1)-'0');
+			ok = ok && isdigit(*t1);
+		}
 
-	uint8_t const R[8] = {
-		static_cast<uint8_t>((c >> ((8-0-1)*8)) & 0xFF),
-		static_cast<uint8_t>((c >> ((8-1-1)*8)) & 0xFF),
-		static_cast<uint8_t>((c >> ((8-2-1)*8)) & 0xFF),
-		static_cast<uint8_t>((c >> ((8-3-1)*8)) & 0xFF),
-		static_cast<uint8_t>((c >> ((8-4-1)*8)) & 0xFF),
-		static_cast<uint8_t>((c >> ((8-5-1)*8)) & 0xFF),
-		static_cast<uint8_t>((c >> ((8-6-1)*8)) & 0xFF),
-		static_cast<uint8_t>((c >> ((8-7-1)*8)) & 0xFF)
-	};
+		int const read1 = algn.isRead1() ? 1 : 0;
+		int const read2 = algn.isRead2() ? 1 : 0;
+			
+		if ( (read1+read2 != 1) || (!ok) )
+		{
+			return true;
+		}
+		else
+		{
+			std::ostringstream upnamestr;
 
-	algn.putAuxNumberArray("zz", &R[0], sizeof(R)/sizeof(R[0]));
+			upnamestr << (u1+1);
 
-	return true;
+			std::string const upname = upnamestr.str();
+				
+			algn.replaceName(upname.begin(),upname.size());
+			
+			return true;
+		}
+	}
+
 }

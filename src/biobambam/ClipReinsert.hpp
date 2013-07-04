@@ -16,24 +16,17 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
-#include <biobambam/AttachRank.hpp>
+#if ! defined(BIOBAMBAM_CLIPREINSERT_HPP)
+#define BIOBAMBAM_CLIPREINSERT_HPP
 
-bool attachRank(libmaus::bambam::BamAlignment & algn, uint64_t const c, libmaus::bambam::BamAuxFilterVector const & zzbafv)
-{
-	algn.filterOutAux(zzbafv);
+#include <libmaus/bambam/BamAlignment.hpp>
 
-	uint8_t const R[8] = {
-		static_cast<uint8_t>((c >> ((8-0-1)*8)) & 0xFF),
-		static_cast<uint8_t>((c >> ((8-1-1)*8)) & 0xFF),
-		static_cast<uint8_t>((c >> ((8-2-1)*8)) & 0xFF),
-		static_cast<uint8_t>((c >> ((8-3-1)*8)) & 0xFF),
-		static_cast<uint8_t>((c >> ((8-4-1)*8)) & 0xFF),
-		static_cast<uint8_t>((c >> ((8-5-1)*8)) & 0xFF),
-		static_cast<uint8_t>((c >> ((8-6-1)*8)) & 0xFF),
-		static_cast<uint8_t>((c >> ((8-7-1)*8)) & 0xFF)
-	};
-
-	algn.putAuxNumberArray("zz", &R[0], sizeof(R)/sizeof(R[0]));
-
-	return true;
-}
+bool clipReinsert(
+	libmaus::bambam::BamAlignment & algn,
+	libmaus::autoarray::AutoArray < std::pair<uint8_t,uint8_t> > & auxtags,
+ 	libmaus::bambam::BamAuxFilterVector & bafv,
+	libmaus::autoarray::AutoArray<libmaus::bambam::cigar_operation> & cigop,
+	libmaus::bambam::BamAlignment::D_array_type & Tcigar,
+	std::stack < libmaus::bambam::cigar_operation > & hardstack
+);
+#endif

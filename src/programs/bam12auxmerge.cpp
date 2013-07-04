@@ -34,10 +34,18 @@
 #include <libmaus/util/Histogram.hpp>
 
 #include <biobambam/Licensing.hpp>
+#include <biobambam/Split12.hpp>
+#include <biobambam/Strip12.hpp>
+#include <biobambam/ClipReinsert.hpp>
+#include <biobambam/zzToName.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; }
 static uint64_t getDefaultMod() { return 1024*1024; }
+static uint64_t getDefaultRankSplit() { return 1; }
+static uint64_t getDefaultRankStrip() { return 1; }
+static uint64_t getDefaultClipReinsert() { return 1; }
+static uint64_t getDefaultZZToName() { return 1; }
 
 int bam12auxmerge(::libmaus::util::ArgInfo const & arginfo)
 {
@@ -62,8 +70,14 @@ int bam12auxmerge(::libmaus::util::ArgInfo const & arginfo)
 
 	int const level = arginfo.getValue<int>("level",getDefaultLevel());
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
+	int const ranksplit = arginfo.getValue<int>("ranksplit",getDefaultRankSplit());
+	int const rankstrip = arginfo.getValue<int>("rankstrip",getDefaultRankSplit());
+	int const clipreinsert = arginfo.getValue<int>("clipreinsert",getDefaultClipReinsert());
+	int const zztoname = arginfo.getValue<int>("zztoname",getDefaultZZToName());
 	uint64_t const mod = arginfo.getValue<int>("mod",getDefaultMod());
-		
+	uint64_t const bmod = libmaus::math::nextTwoPow(mod);
+	uint64_t const bmask = bmod-1;
+	
 	switch ( level )
 	{
 		case Z_NO_COMPRESSION:
@@ -159,9 +173,25 @@ int bam12auxmerge(::libmaus::util::ArgInfo const & arginfo)
 	libmaus::autoarray::AutoArray< std::pair<uint8_t,uint8_t> > auxnew;
 	
 	libmaus::bambam::BamAuxFilterVector auxfilter;
-	
+
+	// helpers for clipReinsert
+	libmaus::autoarray::AutoArray < std::pair<uint8_t,uint8_t> > auxtags;
+	libmaus::autoarray::AutoArray<libmaus::bambam::cigar_operation> cigop;
+	std::stack < libmaus::bambam::cigar_operation > hardstack;
+	libmaus::bambam::BamAlignment::D_array_type Tcigar;
+	libmaus::bambam::BamAuxFilterVector bafv;
+
+	// helpers for zztoname	
+ 	libmaus::bambam::BamAuxFilterVector zzbafv;
+ 	zzbafv.set('z','z');
+
+	// loop over aligned BAM file
 	while ( bamdec.readAlignment() )
 	{
+		if ( ranksplit )
+			split12(algn);
+	
+		// extract rank
 		char const * name = algn.getName();
 		char const * u1 = name;
 		bool ok = true;
@@ -173,12 +203,15 @@ int bam12auxmerge(::libmaus::util::ArgInfo const & arginfo)
 			ok = ok && isdigit(*u1);
 			++u1;
 		}
-			
+		
+		// unable to find rank?	write out as is and continue
 		if ( ! ok )
 		{
 			algn.serialise(writer.getStream());
+			continue;
 		}
 		
+		// loop over unaligned BAM file
 		while ( curid != static_cast<int64_t>(rank) )
 		{
 			bool const a_ok = bampredec.readAlignment();
@@ -193,70 +226,82 @@ int bam12auxmerge(::libmaus::util::ArgInfo const & arginfo)
 			assert ( a_ok );
 			++curid;
 			
-			if ( verbose > 1 )
-				std::cerr << "Merging:\n" << algn.formatAlignment(header) << "\n" << prealgn.formatAlignment(preheader) << std::endl;
-			
-			uint64_t pretagnum = prealgn.enumerateAuxTags(auxpre);
-			uint64_t newtagnum = algn.enumerateAuxTags(auxnew);
-			
-			std::sort(auxpre.begin(),auxpre.begin()+pretagnum);
-			std::sort(auxnew.begin(),auxnew.begin()+newtagnum);
-			
-			if ( verbose > 1 )
-				std::cerr << "pretagnum=" << pretagnum << " newtagnum=" << newtagnum << std::endl;
-			
-			std::pair<uint8_t,uint8_t> * prec = auxpre.begin();
-			std::pair<uint8_t,uint8_t> * pree = prec + pretagnum;
-			std::pair<uint8_t,uint8_t> * preo = prec;
-
-			std::pair<uint8_t,uint8_t> * newc = auxnew.begin();
-			std::pair<uint8_t,uint8_t> * newe = newc + newtagnum;
-			std::pair<uint8_t,uint8_t> * newo = newc;
-			
-			while ( prec != pree && newc != newe )
-			{
-				// pre which is not in new
-				if ( *prec < *newc )
-				{
-					*(preo++) = *(prec++);
-				}
-				// tag in both, drop pre
-				else if ( *prec == *newc )
-				{
-					*(newo++) = *(newc++);
-					prec++;
-				}
-				// new not in pre
-				else
-				{
-					*(newo++) = *(newc++);					
-				}
-			}
-			
-			while ( prec != pree )
-				*(preo++) = *(prec++);
-			while ( newc != newe )
-				*(newo++) = *(newc++);
-				
-			pretagnum = preo-auxpre.begin();
-			newtagnum = newo-auxnew.begin();
-			
-			for ( uint64_t i = 0; i < pretagnum; ++i )
-				auxfilter.set(auxpre[i].first,auxpre[i].second);
-			
-			algn.copyAuxTags(prealgn, auxfilter);
-
-			for ( uint64_t i = 0; i < pretagnum; ++i )
-				auxfilter.clear(auxpre[i].first,auxpre[i].second);
-
-			if ( verbose > 1 )
-			{
-				std::cerr << "pretagnum=" << pretagnum << " newtagnum=" << newtagnum << std::endl;	
-				std::cerr << "result: " << algn.formatAlignment(header) << std::endl;
-			}
-			
-			algn.serialise(writer.getStream());
+			if ( verbose && (! (curid & bmask)) )
+				std::cerr << "[V] " << (curid / bmod) << std::endl;
 		}
+			
+		if ( verbose > 1 )
+			std::cerr << "Merging:\n" << algn.formatAlignment(header) << "\n" << prealgn.formatAlignment(preheader) << std::endl;
+		
+		uint64_t pretagnum = prealgn.enumerateAuxTags(auxpre);
+		uint64_t newtagnum = algn.enumerateAuxTags(auxnew);
+		
+		std::sort(auxpre.begin(),auxpre.begin()+pretagnum);
+		std::sort(auxnew.begin(),auxnew.begin()+newtagnum);
+		
+		if ( verbose > 1 )
+			std::cerr << "pretagnum=" << pretagnum << " newtagnum=" << newtagnum << std::endl;
+		
+		std::pair<uint8_t,uint8_t> * prec = auxpre.begin();
+		std::pair<uint8_t,uint8_t> * pree = prec + pretagnum;
+		std::pair<uint8_t,uint8_t> * preo = prec;
+
+		std::pair<uint8_t,uint8_t> * newc = auxnew.begin();
+		std::pair<uint8_t,uint8_t> * newe = newc + newtagnum;
+		std::pair<uint8_t,uint8_t> * newo = newc;
+		
+		while ( prec != pree && newc != newe )
+		{
+			// pre which is not in new
+			if ( *prec < *newc )
+			{
+				*(preo++) = *(prec++);
+			}
+			// tag in both, drop pre
+			else if ( *prec == *newc )
+			{
+				*(newo++) = *(newc++);
+				prec++;
+			}
+			// new not in pre
+			else
+			{
+				*(newo++) = *(newc++);					
+			}
+		}
+		
+		while ( prec != pree )
+			*(preo++) = *(prec++);
+		while ( newc != newe )
+			*(newo++) = *(newc++);
+			
+		pretagnum = preo-auxpre.begin();
+		newtagnum = newo-auxnew.begin();
+		
+		for ( uint64_t i = 0; i < pretagnum; ++i )
+			auxfilter.set(auxpre[i].first,auxpre[i].second);
+		
+		algn.copyAuxTags(prealgn, auxfilter);
+
+		for ( uint64_t i = 0; i < pretagnum; ++i )
+			auxfilter.clear(auxpre[i].first,auxpre[i].second);
+
+		if ( verbose > 1 )
+		{
+			std::cerr << "pretagnum=" << pretagnum << " newtagnum=" << newtagnum << std::endl;	
+			std::cerr << "result: " << algn.formatAlignment(header) << std::endl;
+		}
+		
+		if ( rankstrip )
+			strip12(algn);
+
+		if ( clipreinsert )
+			clipReinsert(algn,auxtags,bafv,cigop,Tcigar,hardstack);
+			
+		if ( zztoname )
+			zzToRank(algn,zzbafv);	
+		
+		algn.serialise(writer.getStream());
 	}
 	
 	return EXIT_SUCCESS;
@@ -294,6 +339,10 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", "compression settings for output bam file (0=uncompressed,1=fast,9=best,-1=zlib default)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "mod=<["+::biobambam::Licensing::formatNumber(getDefaultMod())+"]>", "print progress for every mod'th alignment if verbose" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "ranksplit=<["+::biobambam::Licensing::formatNumber(getDefaultRankSplit())+"]>", "split rank pairs in names (see bam12split command)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "rankstrip=<["+::biobambam::Licensing::formatNumber(getDefaultRankStrip())+"]>", "strip ranks of names (see bam12strip command)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "clipreinsert=<["+::biobambam::Licensing::formatNumber(getDefaultClipReinsert())+"]>", "reinsert clipped sequence fragments (see bamclipreinsert command)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "zztoname=<["+::biobambam::Licensing::formatNumber(getDefaultZZToName())+"]>", "move rank from zz to name aux field to name (see bamzztoname command)" ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 

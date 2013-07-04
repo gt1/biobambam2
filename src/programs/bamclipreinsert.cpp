@@ -29,6 +29,7 @@
 #include <libmaus/util/ArgInfo.hpp>
 
 #include <biobambam/Licensing.hpp>
+#include <biobambam/ClipReinsert.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; }
@@ -101,6 +102,7 @@ int bamclipreinsert(::libmaus::util::ArgInfo const & arginfo)
  	
 	libmaus::bambam::BamAlignment & algn = dec.getAlignment();
 	uint64_t c = 0;
+
 	libmaus::autoarray::AutoArray < std::pair<uint8_t,uint8_t> > auxtags;
 	libmaus::autoarray::AutoArray<libmaus::bambam::cigar_operation> cigop;
 	std::stack < libmaus::bambam::cigar_operation > hardstack;
@@ -108,69 +110,8 @@ int bamclipreinsert(::libmaus::util::ArgInfo const & arginfo)
 
 	while ( dec.readAlignment() )
 	{
-		uint64_t const numaux = algn.enumerateAuxTags(auxtags);
-		for ( uint64_t i = 0; i < numaux; ++i )
-			bafv.set(auxtags[i].first,auxtags[i].second);
-
-		if ( (bafv('a','s') || bafv('a','h')) && bafv('q','s') && bafv('q','q') )
-		{
-			std::string const qs = algn.getAuxAsString("qs");
-			std::string const qq = algn.getAuxAsString("qq");
-			assert ( qs.size() == qq.size() );
-
-			std::string const read = algn.getRead();
-			std::string const qual = algn.getQual();
-
-			// modify cigar string if read is mapped			
-			if ( algn.isMapped() )
-			{
-				// get current cigar string
-				uint32_t numcigop = algn.getCigarOperations(cigop);
-			
-				// make space for one more
-				if ( cigop.size() == numcigop )
-					cigop.resize(cigop.size()+1);
-			
-				// reverse cigar operations vector if read is mapped to reverse strand
-				if ( algn.isReverse() )
-					std::reverse(cigop.begin(),cigop.begin()+numcigop);
-			
-				// move hard clip operations to stack	
-				while ( numcigop && cigop[numcigop-1].first == libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CHARD_CLIP )
-					hardstack.push(cigop[--numcigop]);
-					
-				// if last operation is soft clip, then add number of bases
-				if ( numcigop && cigop[numcigop-1].first == libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CSOFT_CLIP )
-					cigop[numcigop-1].second += qs.size();
-				// otherwise add new operation
-				else
-					cigop[numcigop++] = libmaus::bambam::cigar_operation(
-						libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CSOFT_CLIP,qs.size()
-					);
-					
-				// reinsert hardclip operations
-				while ( hardstack.size() )
-				{
-					cigop[numcigop++] = hardstack.top();
-					hardstack.pop();
-				}
-
-				// reverse cigar operations vector if read is mapped to reverse strand
-				if ( algn.isReverse() )
-					std::reverse(cigop.begin(),cigop.begin()+numcigop);
-					
-				algn.replaceCigarString(cigop.begin(),numcigop,Tcigar);
-			}			
-
-			// straight
-			if ( ! algn.isReverse () )
-				algn.replaceSequence(read + qs, qual + qq);
-			else
-				algn.replaceSequence( libmaus::fastx::reverseComplementUnmapped(qs) + read, std::string(qq.rbegin(),qq.rend()) + qual);
-		}
-
-		for ( uint64_t i = 0; i < numaux; ++i )
-			bafv.clear(auxtags[i].first,auxtags[i].second);
+		// reinsert clipped parts and attach soft clipping cigar operations as needed
+		clipReinsert(algn,auxtags,bafv,cigop,Tcigar,hardstack);
 
 		algn.serialise(writer.getStream());
 
