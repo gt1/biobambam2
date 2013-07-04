@@ -72,6 +72,10 @@ postprocessing the file with bam12strip after handing it to bam12auxmerge.
 .B clipreinsert=<0>:
 Reinsert clipped sequence and quality string parts while marking them as soft
 clipped. This acts like postprocessing the file with bamclipreinsert after handing it to bam12auxmerge.
+.PP
+.B zztoname=<0>:
+Insert rank stored in zz auxiliary field to name as a prefix and remove the
+zz auxiliary field. This acts like postprocessing the file with bamzztoname after handing it to bam12auxmerge.
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"
