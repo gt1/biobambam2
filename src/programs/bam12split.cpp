@@ -39,9 +39,11 @@
 #include <libmaus/util/TempFileRemovalContainer.hpp>
 
 #include <biobambam/Licensing.hpp>
+#include <biobambam/Split12.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; }
+
 
 int bam12split(::libmaus::util::ArgInfo const & arginfo)
 {
@@ -120,70 +122,10 @@ int bam12split(::libmaus::util::ArgInfo const & arginfo)
 
 	while ( dec.readAlignment() )
 	{
-		char const * name = algn.getName();
+		bool const ok = split12(algn);
 		
-		char const * u1 = name;
-		
-		while ( *u1 && *u1 != '_' )
-			++u1;
-						
-		if ( ! *u1 )
-		{		
+		if ( ok )
 			algn.serialise(writer.getStream());
-		}
-		else
-		{
-			char const * u2 = u1+1;
-			
-			while ( *u2 && *u2 != '_' )
-				++u2;
-
-			if ( ! *u2 )
-			{		
-				algn.serialise(writer.getStream());
-			}
-			else
-			{
-				bool ok = true;
-				uint64_t ranka = 0, rankb = 0;
-				
-				for ( char const * t1 = name; t1 != u1; ++t1 )
-				{	
-					ranka *= 10;
-					ranka += ((*t1)-'0');
-					ok = ok && isdigit(*t1);
-				}
-				for ( char const * t2 = u1+1; t2 != u2; ++t2 )
-				{
-					rankb *= 10;
-					rankb += ((*t2)-'0');
-					ok = ok && isdigit(*t2);
-				}
-				
-				int const read1 = algn.isRead1() ? 1 : 0;
-				int const read2 = algn.isRead2() ? 1 : 0;
-				
-				if ( (read1+read2 != 1) || (!ok) )
-				{
-					algn.serialise(writer.getStream());		
-				}
-				else
-				{
-					std::ostringstream upnamestr;
-
-					if ( read1 )
-						upnamestr << ranka << u2;
-					else
-						upnamestr << rankb << u2;
-					
-					std::string const upname = upnamestr.str();
-					
-					algn.replaceName(upname.begin(),upname.size());
-					
-					algn.serialise(writer.getStream());		
-				}
-			}
-		}
  			
 		if ( verbose && (++c & (1024*1024-1)) == 0 )
 			std::cerr << "[V] " << c/(1024*1024) << std::endl;

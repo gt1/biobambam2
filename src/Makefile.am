@@ -1,7 +1,8 @@
 ACLOCAL_AMFLAGS=-I m4
 
 noinst_HEADERS=biobambam/BamBamConfig.hpp biobambam/Licensing.hpp \
-	biobambam/ClipAdapters.hpp biobambam/AttachRank.hpp biobambam/ResetAlignment.hpp
+	biobambam/ClipAdapters.hpp biobambam/AttachRank.hpp biobambam/ResetAlignment.hpp \
+	biobambam/Split12.hpp
 
 man_MANS = programs/bamtofastq.1 programs/bamsort.1 programs/bammarkduplicates.1 programs/bamcollate.1 \
 	programs/bammaskflags.1 programs/bamrecompress.1 programs/bamadapterfind.1 \
@@ -120,7 +121,7 @@ bam12auxmerge_LDADD = ${LIBMAUSLIBS}
 bam12auxmerge_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
 bam12auxmerge_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
 
-bam12split_SOURCES = programs/bam12split.cpp biobambam/Licensing.cpp
+bam12split_SOURCES = programs/bam12split.cpp biobambam/Licensing.cpp biobambam/Split12.cpp
 bam12split_LDADD = ${LIBMAUSLIBS}
 bam12split_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
 bam12split_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
