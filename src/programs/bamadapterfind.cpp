@@ -34,6 +34,7 @@
 #include <libmaus/util/Histogram.hpp>
 
 #include <biobambam/Licensing.hpp>
+#include <biobambam/ClipAdapters.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; }
@@ -45,6 +46,7 @@ static uint64_t getDefaultADAPTER_MATCH() { return 12; }
 static uint64_t getDefaultMatchMinScore() { return 16; }
 static double getDefaultMatchMinFrac() { return 0.75; }
 static double getDefaultMatchMinPFrac() { return 0.8; }
+static int getDefaultClip() { return 0; }
 
 void adapterListMatch(
 	libmaus::autoarray::AutoArray<char> & Aread,
@@ -114,6 +116,7 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 
 	int const level = arginfo.getValue<int>("level",getDefaultLevel());
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
+	int const clip = arginfo.getValue<int>("clip",getDefaultVerbose());
 	uint64_t const mod = arginfo.getValue<int>("mod",getDefaultMod());
 	// length of seed
 	uint64_t const seedlength = 
@@ -253,6 +256,12 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 	
 	libmaus::util::Histogram overlaphist;
 	libmaus::util::Histogram adapterhist;
+
+	libmaus::autoarray::AutoArray<char> CR;
+	libmaus::autoarray::AutoArray<char> CQ;
+	libmaus::bambam::BamSeqEncodeTable const seqenc;
+	libmaus::autoarray::AutoArray<libmaus::bambam::cigar_operation> cigop;
+	libmaus::bambam::BamAlignment::D_array_type T;
 	
 	// std::cerr << "bmask=" << bmask << std::endl;
 	
@@ -266,11 +275,14 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 	
 		alcnt++;
 
+		// find adapters in given list
 		adapterListMatch(Aread,AOSPB,inputalgn,*AF,verbose,adpmatchminscore,adpmatchminfrac,adpmatchminpfrac);
 
 		// if this is a single end read, then write it back and try the next one
 		if ( ! inputalgn.isPaired() )
 		{
+			if ( clip )
+				clipAdapters(inputalgn,CR,CQ,seqenc,cigop,T);
 			inputalgn.serialise(writer.getStream());
 			continue;
 		}
@@ -282,8 +294,12 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 		bool const okb = bamdec.readAlignment();
 		alcnt++;
 		
+		// no next alignment, algns[0] is an orphan
 		if ( ! okb )
 		{
+			if ( clip )
+				clipAdapters(algns[0],CR,CQ,seqenc,cigop,T);
+		
 			++orphcnt;
 			// std::cerr << "[D] warning: orphan alignment"  << std::endl;
 			algns[0].serialise(writer.getStream());
@@ -293,6 +309,8 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 		// if next is not paired or name does not match
 		if ( (! inputalgn.isPaired()) || strcmp(algns[0].getName(), inputalgn.getName()) )
 		{
+			if ( clip )
+				clipAdapters(algns[0],CR,CQ,seqenc,cigop,T);
 			++orphcnt;
 			//std::cerr << "[D] warning: orphan alignment" << std::endl;
 			algns[0].serialise(writer.getStream());
@@ -305,30 +323,45 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 		assert ( algns[0].isPaired() );
 		assert ( inputalgn.isPaired() );
 		assert ( strcmp(algns[0].getName(),inputalgn.getName()) == 0 );
+
+		// put second read in algns[1]
+		algns[1].swap(inputalgn);
+
+		// find adapters in given list
+		adapterListMatch(Aread,AOSPB,algns[1],*AF,verbose,adpmatchminscore,adpmatchminfrac,adpmatchminpfrac);
 		
 		// are the read in the correct order? if not, write them out without touching them
-		if ( !(algns[0].isRead1() && inputalgn.isRead2()) )
+		if ( !(algns[0].isRead1() && algns[1].isRead2()) )
 		{
 			std::cerr << "[D] warning: reads are not in the correct order" << std::endl;
+			
+			if ( clip )
+			{
+				clipAdapters(algns[0],CR,CQ,seqenc,cigop,T);
+				clipAdapters(algns[1],CR,CQ,seqenc,cigop,T);
+			}
+			
 			algns[0].serialise(writer.getStream());
-			inputalgn.serialise(writer.getStream());
+			algns[1].serialise(writer.getStream());
 			continue;
 		}
 
 		// are the reads both non empty?
-		if ( !(algns[0].getLseq() && inputalgn.getLseq()) )
+		if ( !(algns[0].getLseq() && algns[1].getLseq()) )
 		{
 			std::cerr << "[D] warning: empty read" << std::endl;
+
+			if ( clip )
+			{
+				clipAdapters(algns[0],CR,CQ,seqenc,cigop,T);
+				clipAdapters(algns[1],CR,CQ,seqenc,cigop,T);
+			}
+
 			algns[0].serialise(writer.getStream());
-			inputalgn.serialise(writer.getStream());
+			algns[1].serialise(writer.getStream());
 			continue;
 		}
 		
-		// put second read in algns[1]
-		algns[1].swap(inputalgn);
-
-		adapterListMatch(Aread,AOSPB,algns[1],*AF,verbose,adpmatchminscore,adpmatchminfrac,adpmatchminpfrac);
-
 		paircnt++;
 		
 		unsigned int const rev0 = algns[0].isReverse() ? 1 : 0;
@@ -358,6 +391,12 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 		}
 		else
 		{
+			if ( clip )
+			{
+				clipAdapters(algns[0],CR,CQ,seqenc,cigop,T);
+				clipAdapters(algns[1],CR,CQ,seqenc,cigop,T);
+			}
+			
 			algns[0].serialise(writer.getStream());
 			algns[1].serialise(writer.getStream());		
 			continue;
@@ -532,6 +571,12 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 
 		// std::cerr << "pair for " << algns[0].getName() << std::endl;
 		
+		if ( clip )
+		{
+			clipAdapters(algns[0],CR,CQ,seqenc,cigop,T);
+			clipAdapters(algns[1],CR,CQ,seqenc,cigop,T);
+		}
+		
 		algns[0].serialise(writer.getStream());		
 		algns[1].serialise(writer.getStream());		
 	}
@@ -611,6 +656,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "mod=<["+::biobambam::Licensing::formatNumber(getDefaultMod())+"]>", "print progress every mod'th line (if verbose>0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "adaptersbam=<[]>", "list of adapters/primers stored in a BAM file (use internal list if not given)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "clip=<["+::biobambam::Licensing::formatNumber(getDefaultClip())+"]>", "clip off adapters (see bamadapterclip program)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "SEED_LENGTH=<["+::biobambam::Licensing::formatNumber(getDefaultSEED_LENGTH())+"]>", "length of seed for matching" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "PCT_MISMATCH=<["+::biobambam::Licensing::formatNumber(getDefaultPCT_MISMATCH())+"]>", "maximum percentage of mismatches in matching" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "MAX_SEED_MISMATCHES=<[SEED_LENGTH*PCT_MISMATCH]>", "maximum number of mismatches in seed (up to 2)" ) );

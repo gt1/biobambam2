@@ -29,9 +29,11 @@
 #include <libmaus/util/ArgInfo.hpp>
 
 #include <biobambam/Licensing.hpp>
+#include <biobambam/AttachRank.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; }
+
 
 int bamrank(::libmaus::util::ArgInfo const & arginfo)
 {
@@ -94,23 +96,16 @@ int bamrank(::libmaus::util::ArgInfo const & arginfo)
 	// construct new header
 	libmaus::bambam::BamHeader const uphead(upheadtext);
  	libmaus::bambam::BamWriter writer(std::cout,uphead,level);
- 	libmaus::bambam::BamAuxFilterVector bafv;
- 	bafv.set('z','z');
- 	std::vector<uint8_t> R(8);
- 	std::string const zz("zz");
- 	
+ 	libmaus::bambam::BamAuxFilterVector zzbafv;
+ 	zzbafv.set('z','z');
+
 	libmaus::bambam::BamAlignment & algn = dec.getAlignment();
 	uint64_t c = 0;
 
 	while ( dec.readAlignment() )
 	{
-		algn.filterOutAux(bafv);
-
-		for ( uint64_t i = 0; i < R.size(); ++i )
-			R[i] = (c >> ((8-i-1)*8)) & 0xFF;
-
-		algn.putAuxNumberArray(zz, R);
-
+		attachRank(algn,c,zzbafv);
+		
 		algn.serialise(writer.getStream());
 
 		++c;
