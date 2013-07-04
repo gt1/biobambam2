@@ -34,10 +34,12 @@
 #include <libmaus/util/Histogram.hpp>
 
 #include <biobambam/Licensing.hpp>
+#include <biobambam/Split12.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; }
 static uint64_t getDefaultMod() { return 1024*1024; }
+static uint64_t getDefaultRankSplit() { return 0; }
 
 int bam12auxmerge(::libmaus::util::ArgInfo const & arginfo)
 {
@@ -62,6 +64,7 @@ int bam12auxmerge(::libmaus::util::ArgInfo const & arginfo)
 
 	int const level = arginfo.getValue<int>("level",getDefaultLevel());
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
+	int const ranksplit = arginfo.getValue<int>("ranksplit",getDefaultRankSplit());
 	uint64_t const mod = arginfo.getValue<int>("mod",getDefaultMod());
 	uint64_t const bmod = libmaus::math::nextTwoPow(mod);
 	uint64_t const bmask = bmod-1;
@@ -165,6 +168,9 @@ int bam12auxmerge(::libmaus::util::ArgInfo const & arginfo)
 	// loop over aligned BAM file
 	while ( bamdec.readAlignment() )
 	{
+		if ( ranksplit )
+			split12(algn);
+	
 		// extract rank
 		char const * name = algn.getName();
 		char const * u1 = name;
@@ -304,6 +310,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", "compression settings for output bam file (0=uncompressed,1=fast,9=best,-1=zlib default)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "mod=<["+::biobambam::Licensing::formatNumber(getDefaultMod())+"]>", "print progress for every mod'th alignment if verbose" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "ranksplit=<["+::biobambam::Licensing::formatNumber(getDefaultRankSplit())+"]>", "split ranks (see bam12split command)" ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 

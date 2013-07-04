@@ -60,6 +60,10 @@ do not print progress report
 .PP
 .B mod=<1048576>:
 Print progress report after processing each mod'th alignment if verbose is active.
+.PP
+.B ranksplit=<0>:
+Split rank pairs into single ranks per read/alignment. This acts like
+preprocessing the file with bam12split before handing it to bam12auxmerge.
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"
