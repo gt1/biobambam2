@@ -3,7 +3,8 @@ ACLOCAL_AMFLAGS=-I m4
 noinst_HEADERS=biobambam/BamBamConfig.hpp biobambam/Licensing.hpp \
 	biobambam/ClipAdapters.hpp biobambam/AttachRank.hpp biobambam/ResetAlignment.hpp \
 	biobambam/Split12.hpp biobambam/Strip12.hpp \
-	biobambam/ClipReinsert.hpp biobambam/zzToName.hpp
+	biobambam/ClipReinsert.hpp biobambam/zzToName.hpp \
+	biobambam/KmerProb.hpp
 
 man_MANS = programs/bamtofastq.1 programs/bamsort.1 programs/bammarkduplicates.1 programs/bamcollate.1 \
 	programs/bammaskflags.1 programs/bamrecompress.1 programs/bamadapterfind.1 \
@@ -24,7 +25,8 @@ bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamr
 	bamreset \
 	bamrank \
 	bamclipreinsert \
-	bamzztoname
+	bamzztoname \
+	kmerprob
 	
 noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments bamtoname \
 	bamdisthist
@@ -90,7 +92,7 @@ bamrecompress_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM
 bamrecompress_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
 
 bamadapterfind_SOURCES = programs/bamadapterfind.cpp biobambam/Licensing.cpp \
-	biobambam/ClipAdapters.cpp
+	biobambam/ClipAdapters.cpp biobambam/KmerProb.cpp
 bamadapterfind_LDADD = ${LIBMAUSLIBS}
 bamadapterfind_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
 bamadapterfind_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
@@ -153,3 +155,8 @@ bamzztoname_SOURCES = programs/bamzztoname.cpp biobambam/Licensing.cpp biobambam
 bamzztoname_LDADD = ${LIBMAUSLIBS}
 bamzztoname_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
 bamzztoname_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+kmerprob_SOURCES = programs/kmerprob.cpp biobambam/Licensing.cpp biobambam/KmerProb.cpp
+kmerprob_LDADD = ${LIBMAUSLIBS}
+kmerprob_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+kmerprob_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}

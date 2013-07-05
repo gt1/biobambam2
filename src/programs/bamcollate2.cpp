@@ -564,6 +564,7 @@ void bamcollate2CollatingPostRanking(
 )
 {
 	int const reset = arginfo.getValue<int>("reset",1);
+	bool const resetaux = arginfo.getValue<int>("resetaux",0);
 
 	if ( arginfo.getValue<unsigned int>("disablevalidation",0) )
 		CHCBD.disableValidation();
@@ -632,7 +633,7 @@ void bamcollate2CollatingPostRanking(
 			algn.replaceName(namebuffer.begin(),namelen);
 			algn.filterOutAux(zrtag);
 			if ( reset )
-				resetAlignment(algn);
+				resetAlignment(algn,resetaux);
 			attachRank(algn,zranka,zzbafv);
 			algn.serialise(bgzfos);
 			
@@ -643,7 +644,7 @@ void bamcollate2CollatingPostRanking(
 			algn.replaceName(namebuffer.begin(),namelen);
 			algn.filterOutAux(zrtag);
 			if ( reset )
-				resetAlignment(algn);
+				resetAlignment(algn,resetaux);
 			attachRank(algn,zrankb,zzbafv);
 			algn.serialise(bgzfos);
 			
@@ -674,7 +675,7 @@ void bamcollate2CollatingPostRanking(
 			algn.replaceName(namebuffer.begin(),namelen);
 			algn.filterOutAux(zrtag);
 			if ( reset )
-				resetAlignment(algn);
+				resetAlignment(algn,resetaux);
 			attachRank(algn,zranka,zzbafv);
 			algn.serialise(bgzfos);
 
@@ -711,7 +712,7 @@ void bamcollate2CollatingPostRanking(
 			algn.replaceName(namebuffer.begin(),namelen);
 			algn.filterOutAux(zrtag);
 			if ( reset )
-				resetAlignment(algn);
+				resetAlignment(algn,resetaux);
 			attachRank(algn,zranka,zzbafv);
 			algn.serialise(bgzfos);
 
@@ -748,7 +749,7 @@ void bamcollate2CollatingPostRanking(
 			algn.replaceName(namebuffer.begin(),namelen);
 			algn.filterOutAux(zrtag);
 			if ( reset )
-				resetAlignment(algn);
+				resetAlignment(algn,resetaux);
 			attachRank(algn,zranka,zzbafv);
 			algn.serialise(bgzfos);
 

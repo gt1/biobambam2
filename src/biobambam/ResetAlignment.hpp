@@ -21,5 +21,5 @@
 
 #include <libmaus/bambam/BamAlignment.hpp>
 
-bool resetAlignment(libmaus::bambam::BamAlignment & algn);
+bool resetAlignment(libmaus::bambam::BamAlignment & algn, bool const resetaux = true);
 #endif

@@ -18,9 +18,10 @@
 **/
 #include <biobambam/ResetAlignment.hpp>
 
-bool resetAlignment(libmaus::bambam::BamAlignment & algn)
+bool resetAlignment(libmaus::bambam::BamAlignment & algn, bool const resetaux)
 {
-	algn.eraseAux();
+	if ( resetaux )
+		algn.eraseAux();
 	algn.putRefId(-1);
 	algn.putPos(-1);
 	algn.putNextRefId(-1);
