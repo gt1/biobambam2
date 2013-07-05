@@ -2,7 +2,7 @@ biobambam (0.0.74-0) unstable; urgency=low
 
   * bump version after adding options for bam12auxmerge 
 
- -- German Tischler <gt1@sanger.ac.uk>  Thu, 04 Jul 2013 19:05:09 +0100
+ -- German Tischler <gt1@sanger.ac.uk>  Fri, 05 Jul 2013 10:55:35 +0100
 
 biobambam (0.0.73-0) unstable; urgency=low
 

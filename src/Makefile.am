@@ -92,7 +92,7 @@ bamrecompress_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM
 bamrecompress_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
 
 bamadapterfind_SOURCES = programs/bamadapterfind.cpp biobambam/Licensing.cpp \
-	biobambam/ClipAdapters.cpp
+	biobambam/ClipAdapters.cpp biobambam/KmerProb.cpp
 bamadapterfind_LDADD = ${LIBMAUSLIBS}
 bamadapterfind_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
 bamadapterfind_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}

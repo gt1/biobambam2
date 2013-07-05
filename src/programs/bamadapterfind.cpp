@@ -35,6 +35,7 @@
 
 #include <biobambam/Licensing.hpp>
 #include <biobambam/ClipAdapters.hpp>
+#include <biobambam/KmerProb.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; }
@@ -47,6 +48,11 @@ static uint64_t getDefaultMatchMinScore() { return 16; }
 static double getDefaultMatchMinFrac() { return 0.75; }
 static double getDefaultMatchMinPFrac() { return 0.8; }
 static int getDefaultClip() { return 0; }
+static uint64_t getDefaultRefLen() { return 3000000000ull; }
+static double getDefaultpA() { return 0.25; }
+static double getDefaultpC() { return 0.25; }
+static double getDefaultpG() { return 0.25; }
+static double getDefaultpT() { return 0.25; }
 
 void adapterListMatch(
 	libmaus::autoarray::AutoArray<char> & Aread,
@@ -56,7 +62,12 @@ void adapterListMatch(
 	int const verbose,
 	uint64_t const adpmatchminscore, // = getDefaultMatchMinScore(),
 	double const adpmatchminfrac, // = getDefaultMatchMinFrac(),
-	double const adpmatchminpfrac // = getDefaultMatchMinPFrac()
+	double const adpmatchminpfrac, // = getDefaultMatchMinPFrac()
+	uint64_t const reflen,
+	double const pA,
+	double const pC,
+	double const pG,
+	double const pT
 )
 {
 	uint64_t const len = algn.decodeRead(Aread);
@@ -75,12 +86,18 @@ void adapterListMatch(
 	{
 		std::sort(AOSPB.begin(),AOSPB.end(),libmaus::bambam::AdapterOffsetStrandMatchStartComparator());
 		uint64_t const clip = len - AOSPB.begin()[0].getMatchStart();
+
+		uint64_t fA, fC, fG, fT;
+		AF.getAdapterMatchFreqs(len,AOSPB.begin()[0],fA,fC,fG,fT);
+
+		// confidence that this is not a random event
+		double const randconfid = kmerPoisson(reflen,fA,fC,fG,fT,0/*n*/,pA,pC,pG,pT);
 		
 		if ( verbose > 1 )
 		{
 			std::cerr << "\n" << std::string(80,'-') << "\n\n";
 		
-			std::cerr << "read length " << len << " clip " << clip << std::endl;
+			std::cerr << "read length " << len << " clip " << clip << " randconfig=" << randconfid << " fA=" << fA << " fC=" << fC << " fG=" << fG << " fT=" << fT << std::endl;
 				
 			for ( libmaus::bambam::AdapterOffsetStrand const * it = AOSPB.begin(); it != AOSPB.end(); ++it )
 				AF.printAdapterMatch(ua,len,*it);
@@ -89,6 +106,7 @@ void adapterListMatch(
 		algn.putAuxNumber("as",'i',clip);
 		algn.putAuxString("aa",AF.getAdapterName(AOSPB.begin()[0]));
 		algn.putAuxNumber("af",'f',AOSPB.begin()[0].pfrac);
+		algn.putAuxNumber("ar",'f',randconfid);
 	}
 }
 
@@ -113,6 +131,11 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 	uint64_t const adpmatchminscore  = arginfo.getValue<uint64_t>("adpmatchminscore",getDefaultMatchMinScore());
 	double   const adpmatchminfrac   = arginfo.getValue<double>("adpmatchminfrac",getDefaultMatchMinFrac());
 	double   const adpmatchminpfrac  = arginfo.getValue<double>("adpmatchminpfrac",getDefaultMatchMinPFrac());
+	uint64_t const reflen = arginfo.getValue<uint64_t>("reflen",getDefaultRefLen());
+	double   const pA = arginfo.getValue<double>("pA",getDefaultpA());
+	double   const pC = arginfo.getValue<double>("pC",getDefaultpC());
+	double   const pG = arginfo.getValue<double>("pG",getDefaultpG());
+	double   const pT = arginfo.getValue<double>("pT",getDefaultpT());
 
 	int const level = arginfo.getValue<int>("level",getDefaultLevel());
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
@@ -276,7 +299,7 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 		alcnt++;
 
 		// find adapters in given list
-		adapterListMatch(Aread,AOSPB,inputalgn,*AF,verbose,adpmatchminscore,adpmatchminfrac,adpmatchminpfrac);
+		adapterListMatch(Aread,AOSPB,inputalgn,*AF,verbose,adpmatchminscore,adpmatchminfrac,adpmatchminpfrac,reflen,pA,pC,pG,pT);
 
 		// if this is a single end read, then write it back and try the next one
 		if ( ! inputalgn.isPaired() )
@@ -328,7 +351,7 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 		algns[1].swap(inputalgn);
 
 		// find adapters in given list
-		adapterListMatch(Aread,AOSPB,algns[1],*AF,verbose,adpmatchminscore,adpmatchminfrac,adpmatchminpfrac);
+		adapterListMatch(Aread,AOSPB,algns[1],*AF,verbose,adpmatchminscore,adpmatchminfrac,adpmatchminpfrac,reflen,pA,pC,pG,pT);
 		
 		// are the read in the correct order? if not, write them out without touching them
 		if ( !(algns[0].isRead1() && algns[1].isRead2()) )
@@ -665,6 +688,11 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "adpmatchminscore=<["+::biobambam::Licensing::formatNumber(getDefaultMatchMinScore())+"]>", "minimum score for adapter list matching" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "adpmatchminfrac=<["+::biobambam::Licensing::formatFloatingPoint(getDefaultMatchMinFrac())+"]>", "minimum fraction for adapter list matching" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "adpmatchminpfrac=<["+::biobambam::Licensing::formatFloatingPoint(getDefaultMatchMinPFrac())+"]>", "minimum fraction of overlap for adapter list matching" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "reflen=<["+::biobambam::Licensing::formatNumber(getDefaultRefLen())+"]>", "length of reference sequence/genome" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "pA=<["+::biobambam::Licensing::formatFloatingPoint(getDefaultpA())+"]>", "relative frequency of base A in reference sequence/genome" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "pC=<["+::biobambam::Licensing::formatFloatingPoint(getDefaultpC())+"]>", "relative frequency of base C in reference sequence/genome" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "pG=<["+::biobambam::Licensing::formatFloatingPoint(getDefaultpG())+"]>", "relative frequency of base G in reference sequence/genome" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "pT=<["+::biobambam::Licensing::formatFloatingPoint(getDefaultpT())+"]>", "relative frequency of base T in reference sequence/genome" ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 
