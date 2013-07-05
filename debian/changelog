@@ -1,3 +1,9 @@
+biobambam (0.0.75-0) unstable; urgency=low
+
+  * bump version after adding confidence for list based adapter detection 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Fri, 05 Jul 2013 10:59:07 +0100
+
 biobambam (0.0.74-0) unstable; urgency=low
 
   * bump version after adding options for bam12auxmerge 
