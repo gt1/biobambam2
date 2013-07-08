@@ -291,6 +291,10 @@ int bam12auxmerge(::libmaus::util::ArgInfo const & arginfo)
 			std::cerr << "pretagnum=" << pretagnum << " newtagnum=" << newtagnum << std::endl;	
 			std::cerr << "result: " << algn.formatAlignment(header) << std::endl;
 		}
+
+		// copy QC fail flag from original file to aligner output		
+		if ( prealgn.isQCFail() )
+			algn.putFlags( algn.getFlags() | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL );
 		
 		if ( rankstrip )
 			strip12(algn);
