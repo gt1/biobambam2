@@ -1,3 +1,9 @@
+biobambam (0.0.76-0) unstable; urgency=low
+
+  * add qc fail flag copying in bam12auxmerge 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Mon, 08 Jul 2013 10:38:10 +0100
+
 biobambam (0.0.75-0) unstable; urgency=low
 
   * bump version after adding confidence for list based adapter detection 
