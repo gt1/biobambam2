@@ -26,7 +26,8 @@ bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamr
 	bamrank \
 	bamclipreinsert \
 	bamzztoname \
-	kmerprob
+	kmerprob \
+	bamindex
 	
 noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments bamtoname \
 	bamdisthist
@@ -160,3 +161,8 @@ kmerprob_SOURCES = programs/kmerprob.cpp biobambam/Licensing.cpp biobambam/KmerP
 kmerprob_LDADD = ${LIBMAUSLIBS}
 kmerprob_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
 kmerprob_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+bamindex_SOURCES = programs/bamindex.cpp biobambam/Licensing.cpp
+bamindex_LDADD = ${LIBMAUSLIBS}
+bamindex_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+bamindex_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}

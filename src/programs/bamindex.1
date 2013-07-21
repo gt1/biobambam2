@@ -1,0 +1,31 @@
+.TH BAMINDEX 1 "July 2013" BIOBAMBAM
+.SH NAME
+bamindex - create index for BAM file
+.SH SYNOPSIS
+.PP
+.B bamindex
+[options]
+.SH DESCRIPTION
+bamindex reads a BAM file from standard input and produces a BAM index
+(.bai) file for this BAM file on standard output.
+.PP
+.B verbose=<1>:
+Valid values are
+.IP 1:
+print progress report on standard error
+.IP 0:
+do not print progress report
+.PP
+.B tmpfile=<filename>:
+set the prefix for temporary file names.
+By default temporary files are created in the current directory.
+.SH AUTHOR
+Written by German Tischler.
+.SH "REPORTING BUGS"
+Report bugs to <gt1@sanger.ac.uk>
+.SH COPYRIGHT
+Copyright \(co 2009-2013 German Tischler, \(co 2011-2013 Genome Research Limited.
+License GPLv3+: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
