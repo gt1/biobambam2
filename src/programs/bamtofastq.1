@@ -37,6 +37,9 @@ collate read pairs
 .IP 0:
 output reads to standard output in the order in which they appear in the BAM file
 .PP
+.B combs=<0|1>:
+print some counts after finishing collation based output
+.PP
 .B filename=<stdin>: 
 input file name (data is read from standard input if this option is not given)
 .PP
@@ -50,6 +53,10 @@ BAM (see http://samtools.sourceforge.net/SAM1.pdf)
 SAM (see http://samtools.sourceforge.net/SAM1.pdf)
 .IP cram:
 CRAM (see http://www.ebi.ac.uk/ena/about/cram_toolkit)
+.PP
+.B reference=: 
+file name of the reference for CRAM input files. If this key is unset, then
+the CRAM file header will be scanned for obtaining a reference file name.
 .PP
 .B exclude=<SECONDARY>:
 Do not include reads in the output that have any of the given flags set. The

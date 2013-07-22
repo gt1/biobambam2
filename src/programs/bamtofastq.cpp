@@ -132,6 +132,31 @@ void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo)
 	std::cout.flush();
 }
 
+struct CollateCombs
+{
+	uint64_t pairs;
+	uint64_t orphans1;
+	uint64_t orphans2;
+	uint64_t single;
+	uint64_t alignments;
+
+	CollateCombs()
+	: pairs(0), orphans1(0), orphans2(0), single(0), alignments(0)
+	{
+	
+	}
+};
+
+std::ostream & operator<<(std::ostream & out, CollateCombs const & combs)
+{
+	out << "[C]\tAlignments:\t" << combs.alignments << std::endl;
+	out << "[C]\tComplete pairs:\t" << combs.pairs << std::endl;
+	out << "[C]\tSingle:\t" << combs.single << std::endl;
+	out << "[C]\tOrphans:\t" << (combs.orphans1 + combs.orphans2) 
+		<< "\t" << combs.orphans1 << "\t" << combs.orphans2 << std::endl;
+	return out;
+};
+
 void bamtofastqCollating(
 	libmaus::util::ArgInfo const & arginfo,
 	libmaus::bambam::CircularHashCollatingBamDecoder & CHCBD
@@ -151,7 +176,8 @@ void bamtofastqCollating(
 	unsigned int const verbshift = 20;
 	libmaus::timing::RealTimeClock rtc; rtc.start();
 	::libmaus::autoarray::AutoArray<uint8_t> T;
-	
+	CollateCombs combs;
+		
 	while ( (ob = CHCBD.process()) )
 	{
 		uint64_t const precnt = cnt;
@@ -163,6 +189,7 @@ void bamtofastqCollating(
 			uint64_t lb = libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Db,T);
 			OFS.F2out.write(reinterpret_cast<char const *>(T.begin()),lb);
 
+			combs.pairs += 1;
 			cnt += 2;
 			bcnt += (la+lb);
 		}
@@ -171,6 +198,7 @@ void bamtofastqCollating(
 			uint64_t la = libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T);
 			OFS.Sout.write(reinterpret_cast<char const *>(T.begin()),la);
 
+			combs.single += 1;
 			cnt += 1;
 			bcnt += (la);
 		}
@@ -179,6 +207,7 @@ void bamtofastqCollating(
 			uint64_t la = libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T);
 			OFS.Oout.write(reinterpret_cast<char const *>(T.begin()),la);
 
+			combs.orphans1 += 1;
 			cnt += 1;
 			bcnt += (la);
 		}
@@ -187,6 +216,7 @@ void bamtofastqCollating(
 			uint64_t la = libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T);
 			OFS.O2out.write(reinterpret_cast<char const *>(T.begin()),la);
 
+			combs.orphans2 += 1;
 			cnt += 1;
 			bcnt += (la);
 		}
@@ -201,8 +231,13 @@ void bamtofastqCollating(
 				<< "\t" << static_cast<double>(cnt)/rtc.getElapsedSeconds() << std::endl;
 		}
 	}
-	
+
 	std::cerr << "[V] " << cnt << std::endl;
+	
+	combs.alignments = CHCBD.getRank();
+
+	if ( arginfo.getValue<unsigned int>("combs",0) )
+		std::cerr << combs;
 }
 
 void bamtofastqCollating(libmaus::util::ArgInfo const & arginfo)
@@ -297,6 +332,7 @@ void bamtofastqCollatingRanking(
 	unsigned int const verbshift = 20;
 	libmaus::timing::RealTimeClock rtc; rtc.start();
 	::libmaus::autoarray::AutoArray<uint8_t> T;
+	CollateCombs combs;
 	
 	while ( (ob = CHCBD.process()) )
 	{
@@ -311,6 +347,7 @@ void bamtofastqCollatingRanking(
 			uint64_t lb = libmaus::bambam::BamAlignmentDecoderBase::putFastQRanks(ob->Db,ranka,rankb,T);
 			OFS.F2out.write(reinterpret_cast<char const *>(T.begin()),lb);
 
+			combs.pairs += 1;
 			cnt += 2;
 			bcnt += (la+lb);
 		}
@@ -321,6 +358,7 @@ void bamtofastqCollatingRanking(
 			uint64_t la = libmaus::bambam::BamAlignmentDecoderBase::putFastQRanks(ob->Da,ranka,ranka,T);
 			OFS.Sout.write(reinterpret_cast<char const *>(T.begin()),la);
 
+			combs.single += 1;
 			cnt += 1;
 			bcnt += (la);
 		}
@@ -331,6 +369,7 @@ void bamtofastqCollatingRanking(
 			uint64_t la = libmaus::bambam::BamAlignmentDecoderBase::putFastQRanks(ob->Da,ranka,ranka,T);
 			OFS.Oout.write(reinterpret_cast<char const *>(T.begin()),la);
 
+			combs.orphans1 += 1;
 			cnt += 1;
 			bcnt += (la);
 		}
@@ -341,6 +380,7 @@ void bamtofastqCollatingRanking(
 			uint64_t la = libmaus::bambam::BamAlignmentDecoderBase::putFastQRanks(ob->Da,ranka,ranka,T);
 			OFS.O2out.write(reinterpret_cast<char const *>(T.begin()),la);
 
+			combs.orphans2 += 1;
 			cnt += 1;
 			bcnt += (la);
 		}
@@ -357,6 +397,11 @@ void bamtofastqCollatingRanking(
 	}
 	
 	std::cerr << "[V] " << cnt << std::endl;
+
+	combs.alignments = CHCBD.getRank();
+
+	if ( arginfo.getValue<unsigned int>("combs",0) )
+		std::cerr << combs;
 }
 
 void bamtofastqCollatingRanking(libmaus::util::ArgInfo const & arginfo)
@@ -491,9 +536,11 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "O=<[stdout]>", "unmatched pairs first mates" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "O2=<[stdout]>", "unmatched pairs second mates" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "collate=<[1]>", "collate pairs" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "combs=<[0]>", "print some counts after collation based processing" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "filename=<[stdin]>", "input filename (default: read file from standard input)" ) );
 				#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
 				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<[bam]>", "input format: cram, bam or sam" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "reference=<[]>", "name of reference FastA in case of inputformat=cram" ) );
 				#else
 				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<[bam]>", "input format: bam" ) );
 				#endif
