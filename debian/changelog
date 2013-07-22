@@ -1,3 +1,9 @@
+biobambam (0.0.78-0) unstable; urgency=low
+
+  * update libmaus dependency 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Mon, 22 Jul 2013 14:05:36 +0100
+
 biobambam (0.0.77-0) unstable; urgency=low
 
   * add statistics for bamtofastq tool 
