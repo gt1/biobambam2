@@ -556,6 +556,8 @@ int bamindex(libmaus::util::ArgInfo const & arginfo, std::istream & in, std::ost
 	int64_t prevrefid = -1;
 	int64_t prevpos = -1;
 	int64_t prevbin = -1;
+	int64_t prevcheckrefid = -1;
+	int64_t prevcheckpos = -1;
 	
 	std::string const tmpfileprefix = arginfo.getValue<std::string>("tmpfile",arginfo.getDefaultTmpFileName());
 	std::string const binchunktmpfilename = tmpfileprefix+".bin";
@@ -630,6 +632,22 @@ int bamindex(libmaus::util::ArgInfo const & arginfo, std::istream & in, std::ost
 						int64_t const thispos = algn.getPos();
 						int64_t const thisbin = 
 							(thisrefid >= 0 && thispos >= 0) ? algn.computeBin() : -1;
+
+						int64_t const thischeckrefid = (thisrefid >= 0) ? thisrefid : std::numeric_limits<int64_t>::max();
+						int64_t const thischeckpos   = (thispos >= 0) ? thispos : std::numeric_limits<int64_t>::max();
+						
+						bool const orderok =
+							(thischeckrefid > prevcheckrefid)
+							||
+							(thischeckrefid == prevcheckrefid && thischeckpos >= prevcheckpos);
+							
+						if ( ! orderok )
+						{
+							libmaus::exception::LibMausException se;
+							se.getStream() << "File is not sorted by coordinate." << std::endl;
+							se.finish();
+							throw se;
+						}
 							
 						if ( 
 							thisrefid != prevrefid ||
@@ -719,7 +737,10 @@ int bamindex(libmaus::util::ArgInfo const & arginfo, std::istream & in, std::ost
 						prevrefid = thisrefid;
 						prevpos = thispos;
 						prevbin = thisbin;
-						
+
+						prevcheckrefid = thischeckrefid;
+						prevcheckpos = thischeckpos;
+               
 						if ( verbose && (alcnt % (1024*1024) == 0) )
 							std::cerr << "[V] " << alcnt/(1024*1024) << std::endl;
 					}
