@@ -28,7 +28,8 @@
 #include <libmaus/util/TempFileRemovalContainer.hpp>
 #include <biobambam/Licensing.hpp>
 
-bool const getDefaultVerbose() { return true; }
+bool getDefaultVerbose() { return true; }
+bool getDefaultDisableValidation() { return false; }
 
 struct LinearChunk
 {
@@ -464,6 +465,7 @@ int bamindex(libmaus::util::ArgInfo const & arginfo, std::istream & in, std::ost
 {
 	bool const debug = arginfo.getValue<unsigned int>("debug",0);
 	unsigned int const verbose = arginfo.getValue<unsigned int>("verbose",getDefaultVerbose());
+	bool const validate = !(arginfo.getValue<unsigned int>("disablevalidation",getDefaultDisableValidation()));
 
 	libmaus::lz::BgzfInflate<std::istream> rec(in);
 	
@@ -621,6 +623,9 @@ int bamindex(libmaus::util::ArgInfo const & arginfo, std::istream & in, std::ost
 					
 					if ( ! blocklen )
 					{
+						if ( validate )
+							algn.checkAlignment();
+					
 						int64_t const thisrefid = algn.getRefID();
 						int64_t const thispos = algn.getPos();
 						int64_t const thisbin = 
@@ -921,6 +926,7 @@ int main(int argc, char * argv[])
 				std::vector< std::pair<std::string,std::string> > V;
 
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report (default: 1)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "disablevalidation=<["+::biobambam::Licensing::formatNumber(getDefaultDisableValidation())+"]>", "disable alignment validation (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "tmpfile=<["+arginfo.getDefaultTmpFileName()+"]>", "temporary file prefix (default: create in current directory)" ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);
