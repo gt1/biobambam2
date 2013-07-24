@@ -1,3 +1,10 @@
+biobambam (0.0.79-0) unstable; urgency=low
+
+  * add input checking for bamindex tool
+  * update libmaus dependency 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Wed, 24 Jul 2013 09:53:01 +0100
+
 biobambam (0.0.78-0) unstable; urgency=low
 
   * update libmaus dependency 
