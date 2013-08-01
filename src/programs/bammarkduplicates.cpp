@@ -21,6 +21,7 @@
 #include <libmaus/util/TempFileRemovalContainer.hpp>
 #include <libmaus/aio/CheckedInputStream.hpp>
 #include <libmaus/aio/CheckedOutputStream.hpp>
+#include <libmaus/bambam/BamParallelRewrite.hpp>
 #include <libmaus/bambam/BamWriter.hpp>
 #include <libmaus/bambam/CircularHashCollatingBamDecoder.hpp>
 #include <libmaus/bambam/CollatingBamDecoder.hpp>
@@ -50,6 +51,7 @@ static unsigned int getDefaultColHashBits() { return 20; }
 static uint64_t getDefaultColListSize() { return 32*1024*1024; }
 static uint64_t getDefaultFragBufSize() { return 48*1024*1024; }
 static uint64_t getDefaultMarkThreads() { return 1; }
+static bool getDefaultRmDup() { return 0; }
 
 struct DupSetCallback
 {
@@ -432,65 +434,6 @@ struct SnappyRewrittenInput
 		return true;
 	}
 };
-
-bool checkSnappyRewrite(
-	std::string const & inputfilename, std::string const & tmpfilename,
-	std::string const & snappyfile
-)
-{
-	typedef ::libmaus::bambam::CollatingBamDecoder::alignment_ptr_type alignment_ptr_type;
-	
-	::libmaus::aio::CheckedInputStream::unique_ptr_type CIS(new ::libmaus::aio::CheckedInputStream(inputfilename));
-	::libmaus::bambam::CollatingBamDecoder::unique_ptr_type CBD(
-		new ::libmaus::bambam::CollatingBamDecoder(*CIS,tmpfilename,true /* put rank */,16/*hash bits*/,64*1024/*size of output list*/));
-	SnappyRewriteCallback::unique_ptr_type SRC(new SnappyRewriteCallback(snappyfile));
-	CBD->setInputCallback(SRC.get());
-	
-	std::pair<alignment_ptr_type,alignment_ptr_type> P;
-	while ( CBD->tryPair(P) )
-	{
-	}
-	
-	CBD.reset();
-	CIS.reset();
-	
-	uint64_t const als = SRC->als;
-	SRC->flush();
-	SRC.reset();
-	
-	SnappyRewrittenInput SRI(snappyfile);
-	::libmaus::bambam::BamDecoder BFD(inputfilename);
-	
-	for ( uint64_t i = 0; i < als; ++i )
-	{
-		bool const oka = SRI.readAlignment();
-		bool const okb = BFD.readAlignment();
-		
-		assert ( oka );
-		assert ( okb );
-		
-		// std::cerr << SRI.alignment.blocksize << "\t" << BFD.alignment.blocksize << std::endl;
-		
-		assert ( SRI.alignment.blocksize == BFD.getAlignment().blocksize );
-		
-		assert (
-			memcmp(
-				SRI.alignment.D.begin(),
-				BFD.getAlignment().D.begin(),
-				SRI.alignment.blocksize)
-			== 0 );
-	}
-	
-	std::cerr << "[V] Checked " << als << " alignments." << std::endl;
-
-	bool const oka = SRI.readAlignment();
-	bool const okb = BFD.readAlignment();
-	
-	assert ( ! oka );
-	assert ( ! okb );
-	
-	return true;
-}
 
 void addBamDuplicateFlag(
 	::libmaus::util::ArgInfo const & arginfo,
@@ -1068,6 +1011,88 @@ static void markDuplicatesInFileTemplate(
 
 }
 
+template<typename decoder_type>
+static void removeDuplicatesFromFileTemplate(
+	::libmaus::util::ArgInfo const & arginfo,
+	bool const verbose,
+	::libmaus::bambam::BamHeader const & bamheader,
+	uint64_t const maxrank,
+	uint64_t const mod,
+	int const level,
+	DupSetCallback const & DSC,
+	decoder_type & decoder
+)
+{
+	std::string const headertext(bamheader.text);
+
+	// add PG line to header
+	std::string const upheadtext = ::libmaus::bambam::ProgramHeaderLineSet::addProgramLine(
+		headertext,
+		"bammarkduplicates", // ID
+		"bammarkduplicates", // PN
+		arginfo.commandline, // CL
+		::libmaus::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
+		std::string(PACKAGE_VERSION) // VN			
+	);
+	// construct new header
+	::libmaus::bambam::BamHeader uphead(upheadtext);
+
+	::libmaus::aio::CheckedOutputStream::unique_ptr_type pO;
+	std::ostream * poutputstr = 0;
+	
+	if ( arginfo.hasArg("O") && (arginfo.getValue<std::string>("O","") != "") )
+	{
+		pO = UNIQUE_PTR_MOVE(
+			::libmaus::aio::CheckedOutputStream::unique_ptr_type(
+				new ::libmaus::aio::CheckedOutputStream(arginfo.getValue<std::string>("O",std::string("O")))
+			)
+		);
+		poutputstr = pO.get();
+	}
+	else
+	{
+		poutputstr = & std::cout;
+	}
+
+	std::ostream & outputstr = *poutputstr;
+	
+	libmaus::timing::RealTimeClock globrtc, locrtc;
+	globrtc.start(); locrtc.start();
+	uint64_t const bmod = libmaus::math::nextTwoPow(mod);
+	uint64_t const bmask = bmod-1;
+
+	// rewrite file and mark duplicates
+	::libmaus::bambam::BamWriter::unique_ptr_type writer(new ::libmaus::bambam::BamWriter(outputstr,uphead,level));
+	libmaus::bambam::BamAlignment & alignment = decoder.getAlignment();
+	for ( uint64_t r = 0; decoder.readAlignment(); ++r )
+	{
+		if ( ! DSC.isMarked(r) )
+			alignment.serialise(writer->getStream());
+		
+		if ( verbose && ((r+1) & bmask) == 0 )
+		{
+			std::cerr << "[V] Filtered " << (r+1) << " (" << (r+1)/(1024*1024) << "," << static_cast<double>(r+1)/maxrank << ")"
+				<< " time " << locrtc.getElapsedSeconds()
+				<< " total " << globrtc.formatTime(globrtc.getElapsedSeconds())
+				<< " "
+				<< libmaus::util::MemUsage()
+				<< std::endl;
+			locrtc.start();
+		}
+	}
+	
+	writer.reset();
+	outputstr.flush();
+	pO.reset();
+	
+	if ( verbose )
+		std::cerr << "[V] Filtered " << maxrank << "(" << maxrank/(1024*1024) << "," << 1 << ")" << " total for marking time " << globrtc.formatTime(globrtc.getElapsedSeconds()) 
+			<< " "
+			<< libmaus::util::MemUsage()
+			<< std::endl;
+
+}
+
 static void markDuplicatesInFile(
 	::libmaus::util::ArgInfo const & arginfo,
 	bool const verbose,
@@ -1080,49 +1105,66 @@ static void markDuplicatesInFile(
 	bool const rewritebam
 )
 {
+	bool const rmdup = arginfo.getValue<int>("rmdup",getDefaultRmDup());
 	uint64_t const markthreads = 
 		std::max(static_cast<uint64_t>(1),arginfo.getValue<uint64_t>("markthreads",getDefaultMarkThreads()));
 
-	if ( arginfo.hasArg("I") && (arginfo.getValue<std::string>("I","") != "") )
+	if ( rmdup )
 	{
-		#if 0
-		std::string const inputfilename = arginfo.getValue<std::string>("I","I");
-		::libmaus::bambam::BamDecoder decoder(inputfilename);
-		decoder.disableValidation();
-		markDuplicatesInFileTemplate(arginfo,verbose,bamheader,maxrank,mod,level,DSC,decoder);
-		#else
-		std::string const inputfilename = arginfo.getValue<std::string>("I","I");
-		libmaus::aio::CheckedInputStream CIS(inputfilename);
-	
-		if ( markthreads == 1 )
-			addBamDuplicateFlag(arginfo,verbose,bamheader,maxrank,mod,level,DSC,CIS);
-		else
-			addBamDuplicateFlagParallel(arginfo,verbose,bamheader,maxrank,mod,level,DSC,CIS,markthreads);
-		#endif
-	}
-	else
-	{
-		if ( rewritebam )
+		if ( arginfo.hasArg("I") && (arginfo.getValue<std::string>("I","") != "") )
 		{
-			#if 0
-			::libmaus::bambam::BamDecoder decoder(recompressedalignments);
+			std::string const inputfilename = arginfo.getValue<std::string>("I","I");
+			::libmaus::bambam::BamDecoder decoder(inputfilename);
 			decoder.disableValidation();
-			markDuplicatesInFileTemplate(arginfo,verbose,bamheader,maxrank,mod,level,DSC,decoder);
-			#else
-			libmaus::aio::CheckedInputStream CIS(recompressedalignments);
-			
-			if ( markthreads == 1 )
-				addBamDuplicateFlag(arginfo,verbose,bamheader,maxrank,mod,level,DSC,CIS);		
-			else
-				addBamDuplicateFlagParallel(arginfo,verbose,bamheader,maxrank,mod,level,DSC,CIS,markthreads);
-			#endif
+			removeDuplicatesFromFileTemplate(arginfo,verbose,bamheader,maxrank,mod,level,DSC,decoder);
 		}
 		else
 		{
-			SnappyRewrittenInput decoder(recompressedalignments);
-			if ( verbose )
-				std::cerr << "[V] Reading snappy alignments from " << recompressedalignments << std::endl;
-			markDuplicatesInFileTemplate(arginfo,verbose,bamheader,maxrank,mod,level,DSC,decoder);
+			if ( rewritebam )
+			{
+				::libmaus::bambam::BamDecoder decoder(recompressedalignments);
+				decoder.disableValidation();
+				removeDuplicatesFromFileTemplate(arginfo,verbose,bamheader,maxrank,mod,level,DSC,decoder);
+			}
+			else
+			{
+				SnappyRewrittenInput decoder(recompressedalignments);
+				if ( verbose )
+					std::cerr << "[V] Reading snappy alignments from " << recompressedalignments << std::endl;
+				removeDuplicatesFromFileTemplate(arginfo,verbose,bamheader,maxrank,mod,level,DSC,decoder);
+			}
+		}
+	}
+	else
+	{
+		if ( arginfo.hasArg("I") && (arginfo.getValue<std::string>("I","") != "") )
+		{
+			std::string const inputfilename = arginfo.getValue<std::string>("I","I");
+			libmaus::aio::CheckedInputStream CIS(inputfilename);
+		
+			if ( markthreads == 1 )
+				addBamDuplicateFlag(arginfo,verbose,bamheader,maxrank,mod,level,DSC,CIS);
+			else
+				addBamDuplicateFlagParallel(arginfo,verbose,bamheader,maxrank,mod,level,DSC,CIS,markthreads);
+		}
+		else
+		{
+			if ( rewritebam )
+			{
+				libmaus::aio::CheckedInputStream CIS(recompressedalignments);
+				
+				if ( markthreads == 1 )
+					addBamDuplicateFlag(arginfo,verbose,bamheader,maxrank,mod,level,DSC,CIS);		
+				else
+					addBamDuplicateFlagParallel(arginfo,verbose,bamheader,maxrank,mod,level,DSC,CIS,markthreads);
+			}
+			else
+			{
+				SnappyRewrittenInput decoder(recompressedalignments);
+				if ( verbose )
+					std::cerr << "[V] Reading snappy alignments from " << recompressedalignments << std::endl;
+				markDuplicatesInFileTemplate(arginfo,verbose,bamheader,maxrank,mod,level,DSC,decoder);
+			}
 		}
 	}
 }
@@ -1688,6 +1730,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "mod=<["+::biobambam::Licensing::formatNumber(getDefaultMod())+"]>", "print progress for each mod'th record/alignment" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "rewritebam=<["+::biobambam::Licensing::formatNumber(getDefaultRewriteBam())+"]>", "compression of temporary alignment file when input is via stdin (0=snappy,1=gzip/bam,2=copy)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "rewritebamlevel=<["+::biobambam::Licensing::formatNumber(getDefaultRewriteBamLevel())+"]>", "compression settings for temporary alignment file if rewritebam=1" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "rmdup=<["+::biobambam::Licensing::formatNumber(getDefaultRmDup())+"]>", "remove duplicates (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "colhashbits=<["+::biobambam::Licensing::formatNumber(getDefaultColHashBits())+"]>", "log_2 of size of hash table used for collation" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "collistsize=<["+::biobambam::Licensing::formatNumber(getDefaultColListSize())+"]>", "output list size for collation" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "fragbufsize=<["+::biobambam::Licensing::formatNumber(getDefaultFragBufSize())+"]>", "size of each fragment/pair file buffer in bytes" ) );
