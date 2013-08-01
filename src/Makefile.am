@@ -11,7 +11,8 @@ man_MANS = programs/bamtofastq.1 programs/bamsort.1 programs/bammarkduplicates.1
 	programs/bamfilteraux.1 programs/bamauxsort.1 programs/bamadapterclip.1 \
 	programs/bamcollate2.1 programs/bam12auxmerge.1 programs/bam12split.1 \
 	programs/bam12strip.1 programs/bamreset.1 programs/bamrank.1 \
-	programs/bamclipreinsert.1 programs/bamzztoname.1
+	programs/bamclipreinsert.1 programs/bamzztoname.1 \
+	programs/bamindex.1
 
 bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamrecompress \
 	bamadapterfind \
