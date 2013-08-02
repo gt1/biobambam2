@@ -435,18 +435,12 @@ struct SnappyRewrittenInput
 	}
 };
 
-void addBamDuplicateFlag(
+::libmaus::bambam::BamHeader::unique_ptr_type updateHeader(
 	::libmaus::util::ArgInfo const & arginfo,
-	bool const verbose,
-	::libmaus::bambam::BamHeader const & bamheader,
-	uint64_t const maxrank,
-	uint64_t const mod,
-	int const level,
-	DupSetCallback const & DSC,
-	std::istream & in
+	::libmaus::bambam::BamHeader const & header
 )
 {
-	std::string const headertext(bamheader.text);
+	std::string const headertext(header.text);
 
 	// add PG line to header
 	std::string const upheadtext = ::libmaus::bambam::ProgramHeaderLineSet::addProgramLine(
@@ -458,7 +452,23 @@ void addBamDuplicateFlag(
 		std::string(PACKAGE_VERSION) // VN			
 	);
 	// construct new header
-	::libmaus::bambam::BamHeader uphead(upheadtext);
+	::libmaus::bambam::BamHeader::unique_ptr_type uphead(new ::libmaus::bambam::BamHeader(upheadtext));
+	
+	return UNIQUE_PTR_MOVE(uphead);
+}
+
+void addBamDuplicateFlag(
+	::libmaus::util::ArgInfo const & arginfo,
+	bool const verbose,
+	::libmaus::bambam::BamHeader const & bamheader,
+	uint64_t const maxrank,
+	uint64_t const mod,
+	int const level,
+	DupSetCallback const & DSC,
+	std::istream & in
+)
+{
+	::libmaus::bambam::BamHeader::unique_ptr_type uphead = UNIQUE_PTR_MOVE(updateHeader(arginfo,bamheader));
 
 	::libmaus::aio::CheckedOutputStream::unique_ptr_type pO;
 	std::ostream * poutputstr = 0;
@@ -482,7 +492,7 @@ void addBamDuplicateFlag(
 	/* write bam header */
 	{
 		libmaus::lz::BgzfDeflate<std::ostream> headout(outputstr);
-		uphead.serialise(headout);
+		uphead->serialise(headout);
 		headout.flush();
 	}
 
@@ -727,19 +737,7 @@ void addBamDuplicateFlagParallel(
 	uint64_t const numthreads
 )
 {
-	std::string const headertext(bamheader.text);
-
-	// add PG line to header
-	std::string const upheadtext = ::libmaus::bambam::ProgramHeaderLineSet::addProgramLine(
-		headertext,
-		"bammarkduplicates", // ID
-		"bammarkduplicates", // PN
-		arginfo.commandline, // CL
-		::libmaus::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
-		std::string(PACKAGE_VERSION) // VN			
-	);
-	// construct new header
-	::libmaus::bambam::BamHeader uphead(upheadtext);
+	::libmaus::bambam::BamHeader::unique_ptr_type uphead = UNIQUE_PTR_MOVE(updateHeader(arginfo,bamheader));
 
 	::libmaus::aio::CheckedOutputStream::unique_ptr_type pO;
 	std::ostream * poutputstr = 0;
@@ -763,7 +761,7 @@ void addBamDuplicateFlagParallel(
 	/* write bam header */
 	{
 		libmaus::lz::BgzfDeflate<std::ostream> headout(outputstr);
-		uphead.serialise(headout);
+		uphead->serialise(headout);
 		headout.flush();
 	}
 
@@ -939,19 +937,7 @@ static void markDuplicatesInFileTemplate(
 	decoder_type & decoder
 )
 {
-	std::string const headertext(bamheader.text);
-
-	// add PG line to header
-	std::string const upheadtext = ::libmaus::bambam::ProgramHeaderLineSet::addProgramLine(
-		headertext,
-		"bammarkduplicates", // ID
-		"bammarkduplicates", // PN
-		arginfo.commandline, // CL
-		::libmaus::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
-		std::string(PACKAGE_VERSION) // VN			
-	);
-	// construct new header
-	::libmaus::bambam::BamHeader uphead(upheadtext);
+	::libmaus::bambam::BamHeader::unique_ptr_type uphead = UNIQUE_PTR_MOVE(updateHeader(arginfo,bamheader));
 
 	::libmaus::aio::CheckedOutputStream::unique_ptr_type pO;
 	std::ostream * poutputstr = 0;
@@ -978,7 +964,7 @@ static void markDuplicatesInFileTemplate(
 	uint64_t const bmask = bmod-1;
 
 	// rewrite file and mark duplicates
-	::libmaus::bambam::BamWriter::unique_ptr_type writer(new ::libmaus::bambam::BamWriter(outputstr,uphead,level));
+	::libmaus::bambam::BamWriter::unique_ptr_type writer(new ::libmaus::bambam::BamWriter(outputstr,*uphead,level));
 	libmaus::bambam::BamAlignment & alignment = decoder.getAlignment();
 	for ( uint64_t r = 0; decoder.readAlignment(); ++r )
 	{
@@ -1011,63 +997,28 @@ static void markDuplicatesInFileTemplate(
 
 }
 
-template<typename decoder_type>
+
+template<typename decoder_type, typename writer_type>
 static void removeDuplicatesFromFileTemplate(
-	::libmaus::util::ArgInfo const & arginfo,
 	bool const verbose,
-	::libmaus::bambam::BamHeader const & bamheader,
 	uint64_t const maxrank,
 	uint64_t const mod,
-	int const level,
 	DupSetCallback const & DSC,
-	decoder_type & decoder
+	decoder_type & decoder,
+	writer_type & writer
 )
 {
-	std::string const headertext(bamheader.text);
-
-	// add PG line to header
-	std::string const upheadtext = ::libmaus::bambam::ProgramHeaderLineSet::addProgramLine(
-		headertext,
-		"bammarkduplicates", // ID
-		"bammarkduplicates", // PN
-		arginfo.commandline, // CL
-		::libmaus::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
-		std::string(PACKAGE_VERSION) // VN			
-	);
-	// construct new header
-	::libmaus::bambam::BamHeader uphead(upheadtext);
-
-	::libmaus::aio::CheckedOutputStream::unique_ptr_type pO;
-	std::ostream * poutputstr = 0;
-	
-	if ( arginfo.hasArg("O") && (arginfo.getValue<std::string>("O","") != "") )
-	{
-		pO = UNIQUE_PTR_MOVE(
-			::libmaus::aio::CheckedOutputStream::unique_ptr_type(
-				new ::libmaus::aio::CheckedOutputStream(arginfo.getValue<std::string>("O",std::string("O")))
-			)
-		);
-		poutputstr = pO.get();
-	}
-	else
-	{
-		poutputstr = & std::cout;
-	}
-
-	std::ostream & outputstr = *poutputstr;
-	
 	libmaus::timing::RealTimeClock globrtc, locrtc;
 	globrtc.start(); locrtc.start();
 	uint64_t const bmod = libmaus::math::nextTwoPow(mod);
 	uint64_t const bmask = bmod-1;
 
 	// rewrite file and mark duplicates
-	::libmaus::bambam::BamWriter::unique_ptr_type writer(new ::libmaus::bambam::BamWriter(outputstr,uphead,level));
 	libmaus::bambam::BamAlignment & alignment = decoder.getAlignment();
 	for ( uint64_t r = 0; decoder.readAlignment(); ++r )
 	{
 		if ( ! DSC.isMarked(r) )
-			alignment.serialise(writer->getStream());
+			alignment.serialise(writer.getStream());
 		
 		if ( verbose && ((r+1) & bmask) == 0 )
 		{
@@ -1080,11 +1031,7 @@ static void removeDuplicatesFromFileTemplate(
 			locrtc.start();
 		}
 	}
-	
-	writer.reset();
-	outputstr.flush();
-	pO.reset();
-	
+		
 	if ( verbose )
 		std::cerr << "[V] Filtered " << maxrank << "(" << maxrank/(1024*1024) << "," << 1 << ")" << " total for marking time " << globrtc.formatTime(globrtc.getElapsedSeconds()) 
 			<< " "
@@ -1092,6 +1039,22 @@ static void removeDuplicatesFromFileTemplate(
 			<< std::endl;
 
 }
+
+struct UpdateHeader : public libmaus::bambam::BamHeaderRewriteCallback
+{
+	libmaus::util::ArgInfo const & arginfo;
+
+	UpdateHeader(libmaus::util::ArgInfo const & rarginfo)
+	: arginfo(rarginfo)
+	{
+	
+	}
+
+	::libmaus::bambam::BamHeader::unique_ptr_type operator()(::libmaus::bambam::BamHeader const & header)  const
+	{
+		return UNIQUE_PTR_MOVE(updateHeader(arginfo,header));
+	}
+};
 
 static void markDuplicatesInFile(
 	::libmaus::util::ArgInfo const & arginfo,
@@ -1111,29 +1074,69 @@ static void markDuplicatesInFile(
 
 	if ( rmdup )
 	{
-		if ( arginfo.hasArg("I") && (arginfo.getValue<std::string>("I","") != "") )
+		::libmaus::bambam::BamHeader::unique_ptr_type uphead = UNIQUE_PTR_MOVE(updateHeader(arginfo,bamheader));
+		
+		bool const inputisbam =
+			(arginfo.hasArg("I") && (arginfo.getValue<std::string>("I","") != ""))
+			||
+			rewritebam;
+	
+		::libmaus::aio::CheckedOutputStream::unique_ptr_type pO;
+		std::ostream * poutputstr = 0;
+		
+		if ( arginfo.hasArg("O") && (arginfo.getValue<std::string>("O","") != "") )
 		{
-			std::string const inputfilename = arginfo.getValue<std::string>("I","I");
-			::libmaus::bambam::BamDecoder decoder(inputfilename);
-			decoder.disableValidation();
-			removeDuplicatesFromFileTemplate(arginfo,verbose,bamheader,maxrank,mod,level,DSC,decoder);
+			pO = UNIQUE_PTR_MOVE(
+				::libmaus::aio::CheckedOutputStream::unique_ptr_type(
+					new ::libmaus::aio::CheckedOutputStream(arginfo.getValue<std::string>("O",std::string("O")))
+				)
+			);
+			poutputstr = pO.get();
 		}
 		else
 		{
-			if ( rewritebam )
+			poutputstr = & std::cout;
+		}
+
+		std::ostream & outputstr = *poutputstr;
+		
+		if ( inputisbam )
+		{
+			std::string const inputfilename =
+				(arginfo.hasArg("I") && (arginfo.getValue<std::string>("I","") != ""))
+				?
+				arginfo.getValue<std::string>("I","I")
+				:
+				recompressedalignments;
+
+			if ( markthreads < 2 )
 			{
-				::libmaus::bambam::BamDecoder decoder(recompressedalignments);
+				::libmaus::bambam::BamDecoder decoder(inputfilename);
 				decoder.disableValidation();
-				removeDuplicatesFromFileTemplate(arginfo,verbose,bamheader,maxrank,mod,level,DSC,decoder);
+				::libmaus::bambam::BamWriter::unique_ptr_type writer(new ::libmaus::bambam::BamWriter(outputstr,*uphead,level));	
+				removeDuplicatesFromFileTemplate(verbose,maxrank,mod,DSC,decoder,*writer);
 			}
 			else
 			{
-				SnappyRewrittenInput decoder(recompressedalignments);
-				if ( verbose )
-					std::cerr << "[V] Reading snappy alignments from " << recompressedalignments << std::endl;
-				removeDuplicatesFromFileTemplate(arginfo,verbose,bamheader,maxrank,mod,level,DSC,decoder);
+				libmaus::aio::CheckedInputStream CIS(inputfilename);
+				UpdateHeader UH(arginfo);
+				libmaus::bambam::BamParallelRewrite BPR(CIS,UH,outputstr,level,markthreads,4 /* blocks per thread */);
+				libmaus::bambam::BamAlignmentDecoder & dec = BPR.getDecoder();
+				libmaus::bambam::BamParallelRewrite::writer_type & writer = BPR.getWriter();
+				removeDuplicatesFromFileTemplate(verbose,maxrank,mod,DSC,dec,writer);
 			}
 		}
+		else
+		{		
+			SnappyRewrittenInput decoder(recompressedalignments);
+			if ( verbose )
+				std::cerr << "[V] Reading snappy alignments from " << recompressedalignments << std::endl;
+			::libmaus::bambam::BamWriter::unique_ptr_type writer(new ::libmaus::bambam::BamWriter(outputstr,*uphead,level));
+			removeDuplicatesFromFileTemplate(verbose,maxrank,mod,DSC,decoder,*writer);
+		}
+
+		outputstr.flush();
+		pO.reset();
 	}
 	else
 	{

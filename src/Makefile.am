@@ -12,7 +12,7 @@ man_MANS = programs/bamtofastq.1 programs/bamsort.1 programs/bammarkduplicates.1
 	programs/bamcollate2.1 programs/bam12auxmerge.1 programs/bam12split.1 \
 	programs/bam12strip.1 programs/bamreset.1 programs/bamrank.1 \
 	programs/bamclipreinsert.1 programs/bamzztoname.1 \
-	programs/bamindex.1
+	programs/bamindex.1 programs/bamfilterflags.1
 
 bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamrecompress \
 	bamadapterfind \
@@ -28,7 +28,8 @@ bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamr
 	bamclipreinsert \
 	bamzztoname \
 	kmerprob \
-	bamindex
+	bamindex \
+	bamfilterflags
 	
 noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments bamtoname \
 	bamdisthist
@@ -167,3 +168,8 @@ bamindex_SOURCES = programs/bamindex.cpp biobambam/Licensing.cpp
 bamindex_LDADD = ${LIBMAUSLIBS}
 bamindex_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
 bamindex_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+bamfilterflags_SOURCES = programs/bamfilterflags.cpp biobambam/Licensing.cpp
+bamfilterflags_LDADD = ${LIBMAUSLIBS}
+bamfilterflags_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+bamfilterflags_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}

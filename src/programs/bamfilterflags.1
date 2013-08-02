@@ -1,0 +1,65 @@
+.TH BAMFILTERFLAGS 1 "August 2013" BIOBAMBAM
+.SH NAME
+bamfilterflags - remove entries from BAM files matching a given set of flags
+.SH SYNOPSIS
+.PP
+.B bamfilterflags
+[options]
+.SH DESCRIPTION
+bamfilterflags reads a BAM file from standard input, discards alignments
+matching a given set of flags and writes the remaining set of alignments
+to a BAM file on the standard output stream.
+.PP
+The following key=value pairs can be given:
+.PP
+.B level=<-1|0|1|9>:
+set compression level of the output BAM file. Valid
+values are
+.IP -1:
+zlib/gzip default compression level
+.IP 0:
+uncompressed
+.IP 1:
+zlib/gzip level 1 (fast) compression
+.IP 9:
+zlib/gzip level 9 (best) compression
+.PP
+.B numthreads=<1>: 
+Number of additional threads used for rewriting if markthreads > 1, otherwise no parallelism will be employed.
+.PP
+.B exclude=<>:
+Do not include reads in the output that have any of the given flags set. The
+flags are given separated by commas. Valid flags are:
+.IP PAIRED:
+read was paired in sequencing
+.IP PROPER_PAIR:
+read has been mapped as part of a proper pair
+.IP UNMAP:
+read was not mapped
+.IP MUNMAP:
+mate of read was not mapped
+.IP REVERSE:
+read was mapped to the reverse strand
+.IP MREVERSE:
+mate of read was mapped to the reverse strand
+.IP READ1:
+read was first read of a pair during sequencing
+.IP READ2:
+read was second read of a pair during sequencing
+.IP SECONDARY:
+alignment is secondary, i.e. an alternative mapping to the primary alignment in the same file
+.IP QCFAIL:
+read as marked as having failed quality control
+.IP DUP:
+read is marked as a duplicate of another read in the same file (see bammarkduplicates)
+
+.SH AUTHOR
+Written by German Tischler.
+.SH "REPORTING BUGS"
+Report bugs to <gt1@sanger.ac.uk>
+.SH COPYRIGHT
+Copyright \(co 2009-2013 German Tischler, \(co 2011-2013 Genome Research Limited.
+License GPLv3+: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
