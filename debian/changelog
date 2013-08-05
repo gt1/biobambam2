@@ -1,3 +1,9 @@
+biobambam (0.0.85-0) unstable; urgency=low
+
+  * no change version bump for libmaus update to version 0.0.66
+
+ -- German Tischler <gt1@sanger.ac.uk>  Mon, 05 Aug 2013 09:57:19 +0100
+
 biobambam (0.0.84-0) unstable; urgency=low
 
   * add parallel rmdup option for bammarkduplicates and new bamfilterflags program 
