@@ -44,6 +44,7 @@ static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; }
 static std::string getDefaultSortOrder() { return "coordinate"; }
 static uint64_t getDefaultBlockSize() { return 1024; }
+static bool getDefaultDisableValidation() { return false; }
 
 int bamsort(::libmaus::util::ArgInfo const & arginfo)
 {
@@ -67,6 +68,7 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 
 	int const level = arginfo.getValue<int>("level",getDefaultLevel());
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
+	bool const disablevalidation = arginfo.getValue<int>("disablevalidation",getDefaultDisableValidation());
 	
 	switch ( level )
 	{
@@ -98,6 +100,8 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 	std::string const sortorder = arginfo.getValue<std::string>("SO","coordinate");
 
 	::libmaus::bambam::BamDecoder dec(std::cin,false);
+	if ( disablevalidation )
+		dec.disableValidation();
 	::libmaus::bambam::BamHeader const & header = dec.getHeader();
 
 	std::string const headertext(header.text);
@@ -195,6 +199,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "SO=<["+getDefaultSortOrder()+"]>", "sorting order (coordinate or queryname)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "blockmb=<["+::biobambam::Licensing::formatNumber(getDefaultBlockSize())+"]>", "size of internal memory buffer used for sorting in MiB" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "disablevalidation=<["+::biobambam::Licensing::formatNumber(getDefaultDisableValidation())+"]>", "disable input validation (default is 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "tmpfile=<filename>", "prefix for temporary files, default: create files in current directory" ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);

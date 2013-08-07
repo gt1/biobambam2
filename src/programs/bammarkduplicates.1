@@ -80,6 +80,13 @@ arxiv.org/abs/1306.0836 for details).
 .B fragbufsize=<50331648>: 
 size of each fragment/pair file buffer in bytes (bammarkduplicates uses two
 such buffer for detecting duplicates)
+.PP
+.B rmdup=<0|1>:
+sets how duplicates are handled
+.IP 0:
+duplicates will be retained in the output file and have the duplication flag set
+.IP 1:
+duplicates will be remove when writing the output file
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"
