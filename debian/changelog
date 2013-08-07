@@ -1,3 +1,9 @@
+biobambam (0.0.87-0) unstable; urgency=low
+
+  * update for changed template length checking in libmaus 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Wed, 07 Aug 2013 12:44:55 +0100
+
 biobambam (0.0.86-0) unstable; urgency=low
 
   * update for changed BAM validity checking in libmaus 
