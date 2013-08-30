@@ -1,3 +1,9 @@
+biobambam (0.0.88-0) unstable; urgency=low
+
+  * add input range restriction for bamcollate2 and bamtofastq 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Fri, 30 Aug 2013 13:35:43 +0100
+
 biobambam (0.0.87-0) unstable; urgency=low
 
   * update for changed template length checking in libmaus 
