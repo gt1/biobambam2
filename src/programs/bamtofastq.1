@@ -105,6 +105,22 @@ arxiv.org/abs/1306.0836 for details).
 .PP
 .B T=<bamtofastq_hostname_pid_time>
 file name of temporary file used for collation
+.PP
+.B ranges=<>:
+coordinate ranges selected from input. This option is only available for
+input files in BAM format which have a corresponding index (.bai file) and
+if input is via file (i.e. the filename argument is set). 
+Valid ranges consist either of
+.IP "whole\ reference\ sequence:"
+a whole reference sequence (e.g. "chr1")
+.IP "half\ open\ interval\ on\ reference\ sequence:"
+an interval on a reference sequence half open on the right (e.g. "chr1:50000"
+which means alignments overlapping chr1 from position 50000 to the end of chr1)
+.IP "interval\ on\ reference\ sequence:"
+an interval on a reference sequence (e.g. "chr1:50000-60000" which means
+alignments overlapping positions 50000 to 60000 on chr1)
+.PP
+Multiple ranges are separated by space characters (e.g. ranges="chr1:10000-20000 chr1:30000-40000"). 
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"

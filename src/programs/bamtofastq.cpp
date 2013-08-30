@@ -29,6 +29,11 @@
 #include <libmaus/util/TempFileRemovalContainer.hpp>
 #include <libmaus/util/MemUsage.hpp>
 
+static std::string getDefaultInputFormat()
+{
+	return "bam";
+}
+
 struct BamToFastQInputFileStream
 {
 	std::string const fn;
@@ -90,22 +95,30 @@ void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::bam
 
 void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo)
 {
-	std::string const inputformat = arginfo.getValue<std::string>("inputformat","bam");
+	std::string const inputformat = arginfo.getValue<std::string>("inputformat",getDefaultInputFormat());
 	std::string const inputfilename = arginfo.getValue<std::string>("filename","-");
 	uint64_t const numthreads = arginfo.getValue<uint64_t>("threads",0);
 	
 	if ( inputformat == "bam" )
 	{
-		BamToFastQInputFileStream bamin(inputfilename);
-		if ( numthreads > 0 )
+		if ( arginfo.hasArg("ranges") )
 		{
-			libmaus::bambam::BamParallelDecoderWrapper bamdecwrap(bamin.in,numthreads);
-			bamtofastqNonCollating(arginfo,bamdecwrap.getDecoder());	
+			libmaus::bambam::BamRangeDecoder bamdec(inputfilename,arginfo.getUnparsedValue("ranges",""));
+			bamtofastqNonCollating(arginfo,bamdec);
 		}
 		else
 		{
-			libmaus::bambam::BamDecoder bamdec(bamin.in);
-			bamtofastqNonCollating(arginfo,bamdec);
+			BamToFastQInputFileStream bamin(inputfilename);
+			if ( numthreads > 0 )
+			{
+				libmaus::bambam::BamParallelDecoderWrapper bamdecwrap(bamin.in,numthreads);
+				bamtofastqNonCollating(arginfo,bamdecwrap.getDecoder());	
+			}
+			else
+			{
+				libmaus::bambam::BamDecoder bamdec(bamin.in);
+				bamtofastqNonCollating(arginfo,bamdec);
+			}
 		}
 	}
 	#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
@@ -246,7 +259,7 @@ void bamtofastqCollating(libmaus::util::ArgInfo const & arginfo)
 	libmaus::util::TempFileRemovalContainer::setup();
 	std::string const tmpfilename = arginfo.getValue<std::string>("T",arginfo.getDefaultTmpFileName());
 	libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilename);
-	std::string const inputformat = arginfo.getValue<std::string>("inputformat","bam");
+	std::string const inputformat = arginfo.getValue<std::string>("inputformat",getDefaultInputFormat());
 	std::string const inputfilename = arginfo.getValue<std::string>("filename","-");
 	uint64_t const numthreads = arginfo.getValue<uint64_t>("threads",0);
 
@@ -255,30 +268,38 @@ void bamtofastqCollating(libmaus::util::ArgInfo const & arginfo)
 
 	if ( inputformat == "bam" )
 	{
-		BamToFastQInputFileStream bamin(inputfilename);
-
-		if ( numthreads > 0 )
+		if ( arginfo.hasArg("ranges") )
 		{
-			libmaus::bambam::BamParallelCircularHashCollatingBamDecoder CHCBD(
-				bamin.in,
-				numthreads,
-				tmpfilename,excludeflags,
-				false, /* put rank */
-				hlog,
-				sbs
-				);
+			libmaus::bambam::BamRangeCircularHashCollatingBamDecoder CHCBD(inputfilename,arginfo.getUnparsedValue("ranges",""),tmpfilename,excludeflags,false,hlog,sbs);
 			bamtofastqCollating(arginfo,CHCBD);
 		}
 		else
 		{
-			libmaus::bambam::BamCircularHashCollatingBamDecoder CHCBD(
-				bamin.in,
-				tmpfilename,excludeflags,
-				false, /* put rank */
-				hlog,
-				sbs
-				);
-			bamtofastqCollating(arginfo,CHCBD);
+			BamToFastQInputFileStream bamin(inputfilename);
+
+			if ( numthreads > 0 )
+			{
+				libmaus::bambam::BamParallelCircularHashCollatingBamDecoder CHCBD(
+					bamin.in,
+					numthreads,
+					tmpfilename,excludeflags,
+					false, /* put rank */
+					hlog,
+					sbs
+					);
+				bamtofastqCollating(arginfo,CHCBD);
+			}
+			else
+			{
+				libmaus::bambam::BamCircularHashCollatingBamDecoder CHCBD(
+					bamin.in,
+					tmpfilename,excludeflags,
+					false, /* put rank */
+					hlog,
+					sbs
+					);
+				bamtofastqCollating(arginfo,CHCBD);
+			}
 		}
 	}
 	#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
@@ -410,7 +431,7 @@ void bamtofastqCollatingRanking(libmaus::util::ArgInfo const & arginfo)
 	libmaus::util::TempFileRemovalContainer::setup();
 	std::string const tmpfilename = arginfo.getValue<std::string>("T",arginfo.getDefaultTmpFileName());
 	libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilename);
-	std::string const inputformat = arginfo.getValue<std::string>("inputformat","bam");
+	std::string const inputformat = arginfo.getValue<std::string>("inputformat",getDefaultInputFormat());
 	std::string const inputfilename = arginfo.getValue<std::string>("filename","-");
 	uint64_t const numthreads = arginfo.getValue<uint64_t>("threads",0);
 
@@ -479,6 +500,30 @@ void bamtofastqCollatingRanking(libmaus::util::ArgInfo const & arginfo)
 
 void bamtofastq(libmaus::util::ArgInfo const & arginfo)
 {
+	if ( arginfo.hasArg("ranges") && arginfo.getValue("inputformat", getDefaultInputFormat()) != "bam" )
+	{
+		libmaus::exception::LibMausException se;
+		se.getStream() << "ranges are only supported for inputformat=bam" << std::endl;
+		se.finish();
+		throw se;
+	}
+
+	if ( arginfo.hasArg("ranges") && ((!arginfo.hasArg("filename")) || arginfo.getValue<std::string>("filename","-") == "-") )
+	{
+		libmaus::exception::LibMausException se;
+		se.getStream() << "ranges are not supported for reading via standard input" << std::endl;
+		se.finish();
+		throw se;
+	}
+
+	if ( arginfo.hasArg("ranges") && arginfo.getValue<uint64_t>("collate",1) > 1 )
+	{
+		libmaus::exception::LibMausException se;
+		se.getStream() << "ranges are not supported for collate > 1" << std::endl;
+		se.finish();
+		throw se;
+	}
+
 	switch ( arginfo.getValue<uint64_t>("collate",1) )
 	{
 		case 0:
@@ -539,11 +584,12 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "combs=<[0]>", "print some counts after collation based processing" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "filename=<[stdin]>", "input filename (default: read file from standard input)" ) );
 				#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
-				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<[bam]>", "input format: cram, bam or sam" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("inputformat=<[")+getDefaultInputFormat()+"]>", "input format: cram, bam or sam" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "reference=<[]>", "name of reference FastA in case of inputformat=cram" ) );
 				#else
 				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<[bam]>", "input format: bam" ) );
 				#endif
+				V.push_back ( std::pair<std::string,std::string> ( "ranges=<[]>", "input ranges (bam input only, default: read complete file)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "exclude=<[SECONDARY]>", "exclude alignments matching any of the given flags" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "disablevalidation=<[0]>", "disable validation of input data" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "colhlog=<[18]>", "base 2 logarithm of hash table size used for collation" ) );

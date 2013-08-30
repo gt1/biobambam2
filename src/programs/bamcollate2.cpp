@@ -34,6 +34,7 @@
 #include <libmaus/bambam/ProgramHeaderLineSet.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
+static std::string getDefaultInputFormat() { return "bam"; }
 
 static int getLevel(libmaus::util::ArgInfo const & arginfo)
 {
@@ -153,22 +154,30 @@ void bamcollate2NonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::ba
 
 void bamcollate2NonCollating(libmaus::util::ArgInfo const & arginfo)
 {
-	std::string const inputformat = arginfo.getValue<std::string>("inputformat","bam");
+	std::string const inputformat = arginfo.getValue<std::string>("inputformat",getDefaultInputFormat());
 	std::string const inputfilename = arginfo.getValue<std::string>("filename","-");
 	uint64_t const numthreads = arginfo.getValue<uint64_t>("threads",0);
 	
 	if ( inputformat == "bam" )
 	{
-		BamToFastQInputFileStream bamin(inputfilename);
-		if ( numthreads > 0 )
+		if ( arginfo.hasArg("ranges") )
 		{
-			libmaus::bambam::BamParallelDecoderWrapper bamdecwrap(bamin.in,numthreads);
-			bamcollate2NonCollating(arginfo,bamdecwrap.getDecoder());	
+			libmaus::bambam::BamRangeDecoder bamdec(inputfilename,arginfo.getUnparsedValue("ranges",""));
+			bamcollate2NonCollating(arginfo,bamdec);
 		}
 		else
 		{
-			libmaus::bambam::BamDecoder bamdec(bamin.in);
-			bamcollate2NonCollating(arginfo,bamdec);
+			BamToFastQInputFileStream bamin(inputfilename);
+			if ( numthreads > 0 )
+			{
+				libmaus::bambam::BamParallelDecoderWrapper bamdecwrap(bamin.in,numthreads);
+				bamcollate2NonCollating(arginfo,bamdecwrap.getDecoder());	
+			}
+			else
+			{
+				libmaus::bambam::BamDecoder bamdec(bamin.in);
+				bamcollate2NonCollating(arginfo,bamdec);
+			}
 		}
 	}
 	#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
@@ -202,8 +211,6 @@ void bamcollate2Collating(
 {
 	if ( arginfo.getValue<unsigned int>("disablevalidation",0) )
 		CHCBD.disableValidation();
-
-	libmaus::bambam::BamToFastqOutputFileSet OFS(arginfo);
 
 	libmaus::bambam::CircularHashCollatingBamDecoder::OutputBufferEntry const * ob = 0;
 	
@@ -281,7 +288,7 @@ void bamcollate2Collating(libmaus::util::ArgInfo const & arginfo)
 	libmaus::util::TempFileRemovalContainer::setup();
 	std::string const tmpfilename = arginfo.getValue<std::string>("T",arginfo.getDefaultTmpFileName());
 	libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilename);
-	std::string const inputformat = arginfo.getValue<std::string>("inputformat","bam");
+	std::string const inputformat = arginfo.getValue<std::string>("inputformat",getDefaultInputFormat());
 	std::string const inputfilename = arginfo.getValue<std::string>("filename","-");
 	uint64_t const numthreads = arginfo.getValue<uint64_t>("threads",0);
 
@@ -290,30 +297,38 @@ void bamcollate2Collating(libmaus::util::ArgInfo const & arginfo)
 
 	if ( inputformat == "bam" )
 	{
-		BamToFastQInputFileStream bamin(inputfilename);
-
-		if ( numthreads > 0 )
+		if ( arginfo.hasArg("ranges") )
 		{
-			libmaus::bambam::BamParallelCircularHashCollatingBamDecoder CHCBD(
-				bamin.in,
-				numthreads,
-				tmpfilename,excludeflags,
-				false, /* put rank */
-				hlog,
-				sbs
-				);
+			libmaus::bambam::BamRangeCircularHashCollatingBamDecoder CHCBD(inputfilename,arginfo.getUnparsedValue("ranges",""),tmpfilename,excludeflags,false,hlog,sbs);
 			bamcollate2Collating(arginfo,CHCBD);
 		}
 		else
 		{
-			libmaus::bambam::BamCircularHashCollatingBamDecoder CHCBD(
-				bamin.in,
-				tmpfilename,excludeflags,
-				false, /* put rank */
-				hlog,
-				sbs
-				);
-			bamcollate2Collating(arginfo,CHCBD);
+			BamToFastQInputFileStream bamin(inputfilename);
+
+			if ( numthreads > 0 )
+			{
+				libmaus::bambam::BamParallelCircularHashCollatingBamDecoder CHCBD(
+					bamin.in,
+					numthreads,
+					tmpfilename,excludeflags,
+					false, /* put rank */
+					hlog,
+					sbs
+					);
+				bamcollate2Collating(arginfo,CHCBD);
+			}
+			else
+			{
+				libmaus::bambam::BamCircularHashCollatingBamDecoder CHCBD(
+					bamin.in,
+					tmpfilename,excludeflags,
+					false, /* put rank */
+					hlog,
+					sbs
+					);
+				bamcollate2Collating(arginfo,CHCBD);
+			}
 		}
 	}
 	#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
@@ -355,8 +370,6 @@ void bamcollate2CollatingRanking(
 {
 	if ( arginfo.getValue<unsigned int>("disablevalidation",0) )
 		CHCBD.disableValidation();
-
-	libmaus::bambam::BamToFastqOutputFileSet OFS(arginfo);
 
 	libmaus::bambam::CircularHashCollatingBamDecoder::OutputBufferEntry const * ob = 0;
 	
@@ -491,7 +504,7 @@ void bamcollate2CollatingRanking(libmaus::util::ArgInfo const & arginfo)
 	libmaus::util::TempFileRemovalContainer::setup();
 	std::string const tmpfilename = arginfo.getValue<std::string>("T",arginfo.getDefaultTmpFileName());
 	libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilename);
-	std::string const inputformat = arginfo.getValue<std::string>("inputformat","bam");
+	std::string const inputformat = arginfo.getValue<std::string>("inputformat",getDefaultInputFormat());
 	std::string const inputfilename = arginfo.getValue<std::string>("filename","-");
 	uint64_t const numthreads = arginfo.getValue<uint64_t>("threads",0);
 
@@ -568,8 +581,6 @@ void bamcollate2CollatingPostRanking(
 
 	if ( arginfo.getValue<unsigned int>("disablevalidation",0) )
 		CHCBD.disableValidation();
-
-	libmaus::bambam::BamToFastqOutputFileSet OFS(arginfo);
 
 	libmaus::bambam::CircularHashCollatingBamDecoder::OutputBufferEntry const * ob = 0;
 	
@@ -774,7 +785,7 @@ void bamcollate2CollatingPostRanking(libmaus::util::ArgInfo const & arginfo)
 	libmaus::util::TempFileRemovalContainer::setup();
 	std::string const tmpfilename = arginfo.getValue<std::string>("T",arginfo.getDefaultTmpFileName());
 	libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilename);
-	std::string const inputformat = arginfo.getValue<std::string>("inputformat","bam");
+	std::string const inputformat = arginfo.getValue<std::string>("inputformat",getDefaultInputFormat());
 	std::string const inputfilename = arginfo.getValue<std::string>("filename","-");
 	uint64_t const numthreads = arginfo.getValue<uint64_t>("threads",0);
 
@@ -843,6 +854,30 @@ void bamcollate2CollatingPostRanking(libmaus::util::ArgInfo const & arginfo)
 
 void bamcollate2(libmaus::util::ArgInfo const & arginfo)
 {
+	if ( arginfo.hasArg("ranges") && arginfo.getValue("inputformat", getDefaultInputFormat()) != "bam" )
+	{
+		libmaus::exception::LibMausException se;
+		se.getStream() << "ranges are only supported for inputformat=bam" << std::endl;
+		se.finish();
+		throw se;
+	}
+
+	if ( arginfo.hasArg("ranges") && ((!arginfo.hasArg("filename")) || arginfo.getValue<std::string>("filename","-") == "-") )
+	{
+		libmaus::exception::LibMausException se;
+		se.getStream() << "ranges are not supported for reading via standard input" << std::endl;
+		se.finish();
+		throw se;
+	}
+
+	if ( arginfo.hasArg("ranges") && arginfo.getValue<uint64_t>("collate",1) > 1 )
+	{
+		libmaus::exception::LibMausException se;
+		se.getStream() << "ranges are not supported for collate > 1" << std::endl;
+		se.finish();
+		throw se;
+	}
+
 	switch ( arginfo.getValue<uint64_t>("collate",1) )
 	{
 		case 0:
@@ -901,10 +936,11 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "reset=<[1]>", "reset alignments and header like bamreset (for collate=3 only)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "filename=<[stdin]>", "input filename (default: read file from standard input)" ) );
 				#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
-				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<[bam]>", "input format: cram, bam or sam" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("inputformat=<[")+getDefaultInputFormat()+"]>", "input format: cram, bam or sam" ) );
 				#else
 				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<[bam]>", "input format: bam" ) );
 				#endif
+				V.push_back ( std::pair<std::string,std::string> ( "ranges=<[]>", "input ranges (bam input only, default: read complete file)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "exclude=<[SECONDARY]>", "exclude alignments matching any of the given flags" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "disablevalidation=<[0]>", "disable validation of input data" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "colhlog=<[18]>", "base 2 logarithm of hash table size used for collation" ) );
