@@ -113,6 +113,10 @@ an interval on a reference sequence (e.g. "chr1:50000-60000" which means
 alignments overlapping positions 50000 to 60000 on chr1)
 .PP
 Multiple ranges are separated by space characters (e.g. ranges="chr1:10000-20000 chr1:30000-40000"). 
+.PP
+.B reference=: 
+file name of the reference for CRAM input files. If this key is unset, then
+the CRAM file header will be scanned for obtaining a reference file name.
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"
