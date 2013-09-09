@@ -37,7 +37,7 @@ double kmerPoisson(
 	if ( K > L )
 		return 0.0;
 
-	double const lambda = (L+1-K) * ::std::pow(pA,KA) * ::std::pow(pC,KC) * ::std::pow(pG,KG) * ::std::pow(pT,KT);
+	double const lambda = (L+1-K) * ::std::pow(pA,static_cast<double>(KA)) * ::std::pow(pC,static_cast<double>(KC)) * ::std::pow(pG,static_cast<double>(KG)) * ::std::pow(pT,static_cast<double>(KT));
 	
 	double a = 1.0;
 	double b = 1.0;
