@@ -1,3 +1,9 @@
+biobambam (0.0.90-0) unstable; urgency=low
+
+  * fix compilation on Darwin 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Mon, 09 Sep 2013 14:51:42 +0100
+
 biobambam (0.0.89-0) unstable; urgency=low
 
   * add bamfilterrg tool 
