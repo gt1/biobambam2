@@ -6,7 +6,7 @@ noinst_HEADERS=biobambam/BamBamConfig.hpp biobambam/Licensing.hpp \
 	biobambam/ClipReinsert.hpp biobambam/zzToName.hpp \
 	biobambam/KmerProb.hpp
 
-man_MANS = programs/bamtofastq.1 programs/bamsort.1 programs/bammarkduplicates.1 programs/bamcollate.1 \
+MANPAGES = programs/bamtofastq.1 programs/bamsort.1 programs/bammarkduplicates.1 programs/bamcollate.1 \
 	programs/bammaskflags.1 programs/bamrecompress.1 programs/bamadapterfind.1 \
 	programs/bamfilteraux.1 programs/bamauxsort.1 programs/bamadapterclip.1 \
 	programs/bamcollate2.1 programs/bam12auxmerge.1 programs/bam12split.1 \
@@ -14,6 +14,10 @@ man_MANS = programs/bamtofastq.1 programs/bamsort.1 programs/bammarkduplicates.1
 	programs/bamclipreinsert.1 programs/bamzztoname.1 \
 	programs/bamindex.1 programs/bamfilterflags.1 \
 	programs/bamfilterrg.1
+
+man_MANS = ${MANPAGES}
+
+EXTRA_DIST = ${MANPAGES}
 
 bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamrecompress \
 	bamadapterfind \
