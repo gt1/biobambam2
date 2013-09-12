@@ -35,7 +35,7 @@
 
 #include <biobambam/Licensing.hpp>
 #include <biobambam/ClipAdapters.hpp>
-#include <biobambam/KmerProb.hpp>
+#include <biobambam/KmerPoisson.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; }

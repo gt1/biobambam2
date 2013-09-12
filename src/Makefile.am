@@ -4,7 +4,7 @@ noinst_HEADERS=biobambam/BamBamConfig.hpp biobambam/Licensing.hpp \
 	biobambam/ClipAdapters.hpp biobambam/AttachRank.hpp biobambam/ResetAlignment.hpp \
 	biobambam/Split12.hpp biobambam/Strip12.hpp \
 	biobambam/ClipReinsert.hpp biobambam/zzToName.hpp \
-	biobambam/KmerProb.hpp
+	biobambam/KmerPoisson.hpp
 
 MANPAGES = programs/bamtofastq.1 programs/bamsort.1 programs/bammarkduplicates.1 programs/bamcollate.1 \
 	programs/bammaskflags.1 programs/bamrecompress.1 programs/bamadapterfind.1 \
@@ -101,7 +101,7 @@ bamrecompress_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM
 bamrecompress_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
 
 bamadapterfind_SOURCES = programs/bamadapterfind.cpp biobambam/Licensing.cpp \
-	biobambam/ClipAdapters.cpp biobambam/KmerProb.cpp
+	biobambam/ClipAdapters.cpp biobambam/KmerPoisson.cpp
 bamadapterfind_LDADD = ${LIBMAUSLIBS}
 bamadapterfind_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
 bamadapterfind_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
@@ -165,7 +165,7 @@ bamzztoname_LDADD = ${LIBMAUSLIBS}
 bamzztoname_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
 bamzztoname_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
 
-kmerprob_SOURCES = programs/kmerprob.cpp biobambam/Licensing.cpp biobambam/KmerProb.cpp
+kmerprob_SOURCES = programs/kmerprob.cpp biobambam/Licensing.cpp biobambam/KmerPoisson.cpp
 kmerprob_LDADD = ${LIBMAUSLIBS}
 kmerprob_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
 kmerprob_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}

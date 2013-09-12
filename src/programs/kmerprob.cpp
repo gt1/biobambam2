@@ -29,7 +29,7 @@
 #include <libmaus/util/ArgInfo.hpp>
 
 #include <biobambam/Licensing.hpp>
-#include <biobambam/KmerProb.hpp>
+#include <biobambam/KmerPoisson.hpp>
 
 int main(int argc, char * argv[])
 {
