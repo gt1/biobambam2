@@ -468,18 +468,17 @@ void addBamDuplicateFlag(
 	std::istream & in
 )
 {
-	::libmaus::bambam::BamHeader::unique_ptr_type uphead = UNIQUE_PTR_MOVE(updateHeader(arginfo,bamheader));
+	::libmaus::bambam::BamHeader::unique_ptr_type uphead(updateHeader(arginfo,bamheader));
 
 	::libmaus::aio::CheckedOutputStream::unique_ptr_type pO;
 	std::ostream * poutputstr = 0;
 	
 	if ( arginfo.hasArg("O") && (arginfo.getValue<std::string>("O","") != "") )
 	{
-		pO = UNIQUE_PTR_MOVE(
-			::libmaus::aio::CheckedOutputStream::unique_ptr_type(
-				new ::libmaus::aio::CheckedOutputStream(arginfo.getValue<std::string>("O",std::string("O")))
-			)
-		);
+		::libmaus::aio::CheckedOutputStream::unique_ptr_type tpO(
+                                new ::libmaus::aio::CheckedOutputStream(arginfo.getValue<std::string>("O",std::string("O")))
+                        );
+		pO = UNIQUE_PTR_MOVE(tpO);
 		poutputstr = pO.get();
 	}
 	else
@@ -737,18 +736,17 @@ void addBamDuplicateFlagParallel(
 	uint64_t const numthreads
 )
 {
-	::libmaus::bambam::BamHeader::unique_ptr_type uphead = UNIQUE_PTR_MOVE(updateHeader(arginfo,bamheader));
+	::libmaus::bambam::BamHeader::unique_ptr_type uphead(updateHeader(arginfo,bamheader));
 
 	::libmaus::aio::CheckedOutputStream::unique_ptr_type pO;
 	std::ostream * poutputstr = 0;
 	
 	if ( arginfo.hasArg("O") && (arginfo.getValue<std::string>("O","") != "") )
 	{
-		pO = UNIQUE_PTR_MOVE(
-			::libmaus::aio::CheckedOutputStream::unique_ptr_type(
-				new ::libmaus::aio::CheckedOutputStream(arginfo.getValue<std::string>("O",std::string("O")))
-			)
-		);
+		::libmaus::aio::CheckedOutputStream::unique_ptr_type tpO(
+                                new ::libmaus::aio::CheckedOutputStream(arginfo.getValue<std::string>("O",std::string("O")))
+                        );
+		pO = UNIQUE_PTR_MOVE(tpO);
 		poutputstr = pO.get();
 	}
 	else
@@ -937,18 +935,17 @@ static void markDuplicatesInFileTemplate(
 	decoder_type & decoder
 )
 {
-	::libmaus::bambam::BamHeader::unique_ptr_type uphead = UNIQUE_PTR_MOVE(updateHeader(arginfo,bamheader));
+	::libmaus::bambam::BamHeader::unique_ptr_type uphead(updateHeader(arginfo,bamheader));
 
 	::libmaus::aio::CheckedOutputStream::unique_ptr_type pO;
 	std::ostream * poutputstr = 0;
 	
 	if ( arginfo.hasArg("O") && (arginfo.getValue<std::string>("O","") != "") )
 	{
-		pO = UNIQUE_PTR_MOVE(
-			::libmaus::aio::CheckedOutputStream::unique_ptr_type(
-				new ::libmaus::aio::CheckedOutputStream(arginfo.getValue<std::string>("O",std::string("O")))
-			)
-		);
+		::libmaus::aio::CheckedOutputStream::unique_ptr_type tpO(
+                                new ::libmaus::aio::CheckedOutputStream(arginfo.getValue<std::string>("O",std::string("O")))
+                        );
+		pO = UNIQUE_PTR_MOVE(tpO);
 		poutputstr = pO.get();
 	}
 	else
@@ -1052,7 +1049,8 @@ struct UpdateHeader : public libmaus::bambam::BamHeaderRewriteCallback
 
 	::libmaus::bambam::BamHeader::unique_ptr_type operator()(::libmaus::bambam::BamHeader const & header)  const
 	{
-		return UNIQUE_PTR_MOVE(updateHeader(arginfo,header));
+		::libmaus::bambam::BamHeader::unique_ptr_type ptr(updateHeader(arginfo,header));
+		return UNIQUE_PTR_MOVE(ptr);
 	}
 };
 
@@ -1074,7 +1072,7 @@ static void markDuplicatesInFile(
 
 	if ( rmdup )
 	{
-		::libmaus::bambam::BamHeader::unique_ptr_type uphead = UNIQUE_PTR_MOVE(updateHeader(arginfo,bamheader));
+		::libmaus::bambam::BamHeader::unique_ptr_type uphead(updateHeader(arginfo,bamheader));
 		
 		bool const inputisbam =
 			(arginfo.hasArg("I") && (arginfo.getValue<std::string>("I","") != ""))
@@ -1086,11 +1084,10 @@ static void markDuplicatesInFile(
 		
 		if ( arginfo.hasArg("O") && (arginfo.getValue<std::string>("O","") != "") )
 		{
-			pO = UNIQUE_PTR_MOVE(
-				::libmaus::aio::CheckedOutputStream::unique_ptr_type(
-					new ::libmaus::aio::CheckedOutputStream(arginfo.getValue<std::string>("O",std::string("O")))
-				)
-			);
+			::libmaus::aio::CheckedOutputStream::unique_ptr_type tpO(
+                                        new ::libmaus::aio::CheckedOutputStream(arginfo.getValue<std::string>("O",std::string("O")))
+                                );
+			pO = UNIQUE_PTR_MOVE(tpO);
 			poutputstr = pO.get();
 		}
 		else
@@ -1285,27 +1282,30 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	if ( arginfo.hasArg("I") && (arginfo.getValue<std::string>("I","") != "") )
 	{
 		std::string const inputfilename = arginfo.getValue<std::string>("I","I");
-		CIS = UNIQUE_PTR_MOVE(::libmaus::aio::CheckedInputStream::unique_ptr_type(new ::libmaus::aio::CheckedInputStream(inputfilename)));
+		::libmaus::aio::CheckedInputStream::unique_ptr_type tCIS(new ::libmaus::aio::CheckedInputStream(inputfilename));
+		CIS = UNIQUE_PTR_MOVE(tCIS);
 		
 		if ( markthreads > 1 )
 		{
-			CBD = UNIQUE_PTR_MOVE(col_base_ptr_type(new par_col_type(
-				*CIS,
-				markthreads,
-				tmpfilename,
-				/* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY	| libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL*/ 0,
-				true /* put rank */,
-				colhashbits,collistsize)));		
+			col_base_ptr_type tCBD(new par_col_type(
+                                *CIS,
+                                markthreads,
+                                tmpfilename,
+                                /* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY      | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL*/ 0,
+                                true /* put rank */,
+                                colhashbits,collistsize));
+			CBD = UNIQUE_PTR_MOVE(tCBD);
 		}
 		else
 		{
-			CBD = UNIQUE_PTR_MOVE(col_base_ptr_type(new col_type(
-				*CIS,
-				// numthreads
-				tmpfilename,
-				/* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY	| libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL*/ 0,
-				true /* put rank */,
-				colhashbits,collistsize)));
+			col_base_ptr_type tCBD(new col_type(
+                                *CIS,
+                                // numthreads
+                                tmpfilename,
+                                /* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY      | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL*/ 0,
+                                true /* put rank */,
+                                colhashbits,collistsize));	
+			CBD = UNIQUE_PTR_MOVE(tCBD);
 		}
 	}
 	// not a file, we are reading from standard input
@@ -1317,26 +1317,29 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 		{
 			if ( rewritebam > 1 )
 			{
-				copybamstr = UNIQUE_PTR_MOVE(libmaus::aio::CheckedOutputStream::unique_ptr_type(new libmaus::aio::CheckedOutputStream(tmpfilesnappyreads)));
+				libmaus::aio::CheckedOutputStream::unique_ptr_type tcopybamstr(new libmaus::aio::CheckedOutputStream(tmpfilesnappyreads));
+				copybamstr = UNIQUE_PTR_MOVE(tcopybamstr);
 
 				if ( markthreads > 1 )
 				{
-					CBD = UNIQUE_PTR_MOVE(col_base_ptr_type(new par_col_type(std::cin,
-						*copybamstr,
-						markthreads,
-						tmpfilename,
-						/* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY	| libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL */ 0,
-						true /* put rank */,
-						colhashbits,collistsize)));		
+					col_base_ptr_type tCBD(new par_col_type(std::cin,
+                                                *copybamstr,
+                                                markthreads,
+                                                tmpfilename,
+                                                /* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY      | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL */ 0,
+                                                true /* put rank */,
+                                                colhashbits,collistsize));
+					CBD = UNIQUE_PTR_MOVE(tCBD);
 				}
 				else
 				{
-					CBD = UNIQUE_PTR_MOVE(col_base_ptr_type(new col_type(std::cin,
-						*copybamstr,
-						tmpfilename,
-						/* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY	| libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL */ 0,
-						true /* put rank */,
-						colhashbits,collistsize)));		
+					col_base_ptr_type tCBD(new col_type(std::cin,
+                                                *copybamstr,
+                                                tmpfilename,
+                                                /* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY      | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL */ 0,
+                                                true /* put rank */,
+                                                colhashbits,collistsize));
+					CBD = UNIQUE_PTR_MOVE(tCBD);
 				}
 
 				if ( verbose )
@@ -1346,23 +1349,26 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 			{
 				if ( markthreads > 1 )
 				{
-					CBD = UNIQUE_PTR_MOVE(col_base_ptr_type(new par_col_type(std::cin,markthreads,
-						tmpfilename,
-						/* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY	| libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL */ 0,
-						true /* put rank */,
-						colhashbits,collistsize)));						
+					col_base_ptr_type tCBD(new par_col_type(std::cin,markthreads,
+                                                tmpfilename,
+                                                /* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY      | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL */ 0,
+                                                true /* put rank */,
+                                                colhashbits,collistsize));
+					CBD = UNIQUE_PTR_MOVE(tCBD);
 				}
 				else
 				{
-					CBD = UNIQUE_PTR_MOVE(col_base_ptr_type(new col_type(std::cin,
-						tmpfilename,
-						/* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY	| libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL */ 0,
-						true /* put rank */,
-						colhashbits,collistsize)));		
+					col_base_ptr_type tCBD(new col_type(std::cin,
+                                                tmpfilename,
+                                                /* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY      | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL */ 0,
+                                                true /* put rank */,
+                                                colhashbits,collistsize));
+					CBD = UNIQUE_PTR_MOVE(tCBD);
 				}
 
 				// rewrite file and mark duplicates
-				BWR = UNIQUE_PTR_MOVE(BamRewriteCallback::unique_ptr_type(new BamRewriteCallback(tmpfilesnappyreads,CBD->getHeader(),rewritebamlevel)));
+				BamRewriteCallback::unique_ptr_type tBWR(new BamRewriteCallback(tmpfilesnappyreads,CBD->getHeader(),rewritebamlevel));
+				BWR = UNIQUE_PTR_MOVE(tBWR);
 				CBD->setInputCallback(BWR.get());
 
 				if ( verbose )
@@ -1371,13 +1377,15 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 		}
 		else
 		{
-			CBD = UNIQUE_PTR_MOVE(col_base_ptr_type(new col_type(std::cin,
-				tmpfilename,
-				/* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY	| libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL */ 0,
-				true /* put rank */,
-				colhashbits,collistsize)));
+			col_base_ptr_type tCBD(new col_type(std::cin,
+                                tmpfilename,
+                                /* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY      | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL */ 0,
+                                true /* put rank */,
+                                colhashbits,collistsize));
+			CBD = UNIQUE_PTR_MOVE(tCBD);
 
-			SRC = UNIQUE_PTR_MOVE(SnappyRewriteCallback::unique_ptr_type(new SnappyRewriteCallback(tmpfilesnappyreads)));
+			SnappyRewriteCallback::unique_ptr_type tSRC(new SnappyRewriteCallback(tmpfilesnappyreads));
+			SRC = UNIQUE_PTR_MOVE(tSRC);
 			CBD->setInputCallback(SRC.get());
 			if ( verbose )
 				std::cerr << "[V] Writing snappy compressed alignments to file " << tmpfilesnappyreads << std::endl;
@@ -1589,7 +1597,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	if ( verbose )
 		std::cerr << "[V] Checking pairs...";
 	rtc.start();
-	::libmaus::bambam::SortedFragDecoder::unique_ptr_type pairDec = UNIQUE_PTR_MOVE(pairREC->getDecoder());
+	::libmaus::bambam::SortedFragDecoder::unique_ptr_type pairDec(pairREC->getDecoder());
 	pairREC.reset();
 	pairDec->getNext(lfrags);
 
@@ -1612,7 +1620,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	if ( verbose )
 		std::cerr << "[V] Checking single fragments...";
 	rtc.start();
-	::libmaus::bambam::SortedFragDecoder::unique_ptr_type fragDec = UNIQUE_PTR_MOVE(fragREC->getDecoder());
+	::libmaus::bambam::SortedFragDecoder::unique_ptr_type fragDec(fragREC->getDecoder());
 	fragREC.reset();
 	fragDec->getNext(lfrags);
 	while ( fragDec->getNext(nextfrag) )
@@ -1645,11 +1653,10 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	
 	if ( arginfo.hasArg("M") && (arginfo.getValue<std::string>("M","") != "") )
 	{
-		pM = UNIQUE_PTR_MOVE(
-			::libmaus::aio::CheckedOutputStream::unique_ptr_type(
-				new ::libmaus::aio::CheckedOutputStream(arginfo.getValue<std::string>("M",std::string("M")))
-			)
-		);
+		::libmaus::aio::CheckedOutputStream::unique_ptr_type tpM(
+                                new ::libmaus::aio::CheckedOutputStream(arginfo.getValue<std::string>("M",std::string("M")))
+                        );
+		pM = UNIQUE_PTR_MOVE(tpM);
 		pmetricstr = pM.get();
 	}
 	else

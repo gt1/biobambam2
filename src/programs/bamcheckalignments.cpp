@@ -197,7 +197,8 @@ int main(int argc, char * argv[])
 			
 			if ( bamheader.chromosomes.size() < 100 )
 				std::cerr << "Loading sequence " << bamchrname << " of length " << info[faid].seqlen << std::endl;
-			text [ i ] = UNIQUE_PTR_MOVE(::libmaus::autoarray::AutoArray<uint8_t>::unique_ptr_type(new ::libmaus::autoarray::AutoArray<uint8_t>(info[faid].seqlen,false)));
+			::libmaus::autoarray::AutoArray<uint8_t>::unique_ptr_type ttext(new ::libmaus::autoarray::AutoArray<uint8_t>(info[faid].seqlen,false));
+			text [ i ] = UNIQUE_PTR_MOVE(ttext);
 			::libmaus::aio::CheckedInputStream CIS(fatempfilename);
 			CIS.seekg(fapref[faid]);
 			CIS.read(reinterpret_cast<char *>(text[i]->begin()),info[faid].seqlen);

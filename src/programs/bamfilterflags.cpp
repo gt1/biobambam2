@@ -64,7 +64,8 @@ struct UpdateHeader : public libmaus::bambam::BamHeaderRewriteCallback
 
 	::libmaus::bambam::BamHeader::unique_ptr_type operator()(::libmaus::bambam::BamHeader const & header)  const
 	{
-		return UNIQUE_PTR_MOVE(updateHeader(arginfo,header));
+		::libmaus::bambam::BamHeader::unique_ptr_type ptr(updateHeader(arginfo,header));
+		return UNIQUE_PTR_MOVE(ptr);
 	}
 };
 

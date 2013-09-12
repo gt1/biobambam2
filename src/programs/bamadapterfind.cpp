@@ -182,21 +182,19 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 	if ( arginfo.hasArg("adaptersbam") )
 	{
 		libmaus::aio::CheckedInputStream adapterCIS(arginfo.getUnparsedValue("adaptersbam","adapters.bam"));
-		AF = UNIQUE_PTR_MOVE(
-			libmaus::bambam::AdapterFilter::unique_ptr_type(
-				new libmaus::bambam::AdapterFilter(adapterCIS,12 /* seed length */)
-			)
-		);	
+		libmaus::bambam::AdapterFilter::unique_ptr_type tAF(
+                                new libmaus::bambam::AdapterFilter(adapterCIS,12 /* seed length */)
+                        );
+		AF = UNIQUE_PTR_MOVE(tAF);
 	}
 	else
 	{
 		std::string const builtinAdapters = libmaus::bambam::BamDefaultAdapters::getDefaultAdapters();
 		std::istringstream builtinAdaptersStr(builtinAdapters);
-		AF = UNIQUE_PTR_MOVE(
-			libmaus::bambam::AdapterFilter::unique_ptr_type(
-				new libmaus::bambam::AdapterFilter(builtinAdaptersStr,12 /* seed length */)
-			)
-		);	
+		libmaus::bambam::AdapterFilter::unique_ptr_type tAF(
+                                new libmaus::bambam::AdapterFilter(builtinAdaptersStr,12 /* seed length */)
+                        );
+		AF = UNIQUE_PTR_MOVE(tAF);
 	}
 
 	libmaus::autoarray::AutoArray<char> Aread;

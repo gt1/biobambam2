@@ -63,7 +63,7 @@ int bamCollate(::libmaus::util::ArgInfo const & arginfo)
 		vreadgroups = std::vector<std::string>(qreadgroups.begin(),qreadgroups.end());
 		::libmaus::trie::Trie<char> trienofailure;
 		trienofailure.insertContainer(vreadgroups);
-		::libmaus::trie::LinearHashTrie<char,uint32_t>::unique_ptr_type LHTnofailure = UNIQUE_PTR_MOVE(trienofailure.toLinearHashTrie<uint32_t>());
+		::libmaus::trie::LinearHashTrie<char,uint32_t>::unique_ptr_type LHTnofailure(trienofailure.toLinearHashTrie<uint32_t>());
 		LHTsnofailure = ::libmaus::trie::LinearHashTrie<char,uint32_t>::shared_ptr_type(LHTnofailure.release());
 	}
 	

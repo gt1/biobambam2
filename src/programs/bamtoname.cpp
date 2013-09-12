@@ -36,18 +36,19 @@ struct BamToFastQInputFileStream
 	
 	static libmaus::aio::CheckedInputStream::unique_ptr_type openFile(std::string const & fn)
 	{
-		return UNIQUE_PTR_MOVE(libmaus::aio::CheckedInputStream::unique_ptr_type(new libmaus::aio::CheckedInputStream(fn)));
+		libmaus::aio::CheckedInputStream::unique_ptr_type ptr(new libmaus::aio::CheckedInputStream(fn));
+		return UNIQUE_PTR_MOVE(ptr);
 	}
 	
 	BamToFastQInputFileStream(libmaus::util::ArgInfo const & arginfo)
 	: fn(arginfo.getValue<std::string>("filename","-")),
 	  CIS(
-		(fn != "-") ? UNIQUE_PTR_MOVE(openFile(fn)) : UNIQUE_PTR_MOVE(libmaus::aio::CheckedInputStream::unique_ptr_type())
+		(fn != "-") ? (openFile(fn)) : (libmaus::aio::CheckedInputStream::unique_ptr_type())
 	), in((fn != "-") ? (*CIS) : std::cin) {}
 
 	BamToFastQInputFileStream(std::string const & rfn)
 	: fn(rfn), CIS(
-		(fn != "-") ? UNIQUE_PTR_MOVE(openFile(fn)) : UNIQUE_PTR_MOVE(libmaus::aio::CheckedInputStream::unique_ptr_type())
+		(fn != "-") ? (openFile(fn)) : (libmaus::aio::CheckedInputStream::unique_ptr_type())
 	), in((fn != "-") ? (*CIS) : std::cin) {}
 };
 
