@@ -1,46 +1,35 @@
-.TH BAMCOLLATE2 1 "July 2013" BIOBAMBAM
+.TH BAMDOWNSAMPLERANDOM 1 "July 2013" BIOBAMBAM
 .SH NAME
-bamcollate2 - collate reads in a SAM, BAM or CRAM file by name
+bamdownsamplerandom - downsample a SAM, BAM or CRAM file
 .SH SYNOPSIS
 .PP
-.B bamcollate2
+.B bamdownsamplerandom
 [options]
 .SH DESCRIPTION
-bamcollate2 reads a SAM, BAM or CRAM file from standard input, collates the contained
-reads/alignments by name and writes the resulting data to standard output in
-BAM format.
+bamdownsamplerandom reads a SAM, BAM or CRAM file from standard input,
+randomly discards reads and writes the remaining reads to standard output in
+BAM format. For a pair of reads either both ends are discarded or both ends
+are kept. The order of reads in the output file may be different from the
+order in the input if the reads in the input file are not collated by their read
+name.
 .PP
 The following key=value pairs can be given:
 .PP
-.B collate=<0|1|2|3>:
-Valid values are
-.IP 3:
-collate read pairs and attach post ranks (line numbers of alignments in output file)
-to each read. For pairs this add the prefix a_b_ to a pair when the first
-read of the pair appears in line a and the second one in line b of the
-output file, e.g. the name HS5 is changed to 20_21_HS5 for both ends if read
-1 appears in line 20 and read 2 in line 21. For single end reads it add the
-prefix a_ to the name where a is the rank (line number) of the read in the output file.
-The pre rank (line number in the input file) is attached to each read by
-putting it in the zz auxiliary field as an eight byte number array similar
-to the funcionality of bamrank.
-.IP 2:
-collate read pairs and attach ranks (line numbers of alignments in source file)
-to each read. For pairs this add the prefix a_b_ to a pair when the first
-read of the pair appears in line a and the second one in line b of the
-source file, e.g. the name HS5 is changed to 25_32_HS5 for both ends if read
-1 appears in line 25 and read 2 in line 32. For single end reads it add the
-prefix a_ to the name where a is the rank (line number) of the read in the source file.
-.IP 1:
-collate read pairs
-.IP 0:
-do not collate, keep reads in the original order
+.B p=<1>:
+probability for a pair of reads or a single end read to be kept. By default
+all reads are kept.
+.PP
+.B seed=<>:
+seed used for the random number generator. By default the current time is
+used, i.e. each run of the program will select a different subset of reads
+from an input file. If the behaviour of the program needs to be
+reproducible a fixed number can be used as the random seed.
 .PP
 .B filename=<stdin>: 
 input file name (data is read from standard input if this option is not given)
 .PP
 .B inputformat=<bam>: input file format
-All versions of bamcollate2 come with support for the BAM input format. If
+All versions of bamtofastq come with support for the BAM input format. If
 the program in addition is linked to the io_lib package, then the following
 options are valid:
 .IP bam:
@@ -49,6 +38,18 @@ BAM (see http://samtools.sourceforge.net/SAM1.pdf)
 SAM (see http://samtools.sourceforge.net/SAM1.pdf)
 .IP cram:
 CRAM (see http://www.ebi.ac.uk/ena/about/cram_toolkit)
+.PP
+.B level=<-1|0|1|9>:
+set compression level of the output BAM file. Valid
+values are
+.IP -1:
+zlib/gzip default compression level
+.IP 0:
+uncompressed
+.IP 1:
+zlib/gzip level 1 (fast) compression
+.IP 9:
+zlib/gzip level 9 (best) compression
 .PP
 .B exclude=<SECONDARY>:
 Do not include reads in the output that have any of the given flags set. The
@@ -95,7 +96,7 @@ size of hash table overflow list in bytes (the default is 128MB and should
 work reasonably well for most input files. Please see the biobambam paper at 
 arxiv.org/abs/1306.0836 for details).
 .PP
-.B T=<bamcollate2_hostname_pid_time>
+.B T=<bamdownsamplerandom_hostname_pid_time>
 file name of temporary file used for collation
 .PP
 .B ranges=<>:

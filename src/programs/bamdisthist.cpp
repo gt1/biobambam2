@@ -287,16 +287,22 @@ void bamdisthist(
 	hist.print(disthiststr);
 	disthiststr.flush();
 	disthiststr.close();
+	
+	std::cerr << "[D] median of dist hist " << hist.median() << std::endl;
 
 	libmaus::aio::CheckedOutputStream tlenhiststr("tlenhist.gpl");
 	tlenhist.print(tlenhiststr);
 	tlenhiststr.flush();
 	tlenhiststr.close();
 
+	std::cerr << "[D] median of tlen hist " << tlenhist.median() << std::endl;
+
 	libmaus::aio::CheckedOutputStream tlenhistproperstr("tlenhistproper.gpl");
 	tlenproperhist.print(tlenhistproperstr);
 	tlenhistproperstr.flush();
 	tlenhistproperstr.close();
+
+	std::cerr << "[D] median of tlen hist proper " << tlenproperhist.median() << std::endl;
 }
 
 void bamdisthist(libmaus::util::ArgInfo const & arginfo)
@@ -358,6 +364,8 @@ void bamdisthist(libmaus::util::ArgInfo const & arginfo)
 	dh.hist.print(depthhiststr);
 	depthhiststr.flush();
 	depthhiststr.close();
+	
+	std::cerr << "[D] median of depth hist " << dh.hist.median() << std::endl;
 }
 
 int main(int argc, char * argv[])
