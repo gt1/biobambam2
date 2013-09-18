@@ -1,3 +1,9 @@
+biobambam (0.0.92-0) unstable; urgency=low
+
+  * add random downsampling tool 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Wed, 18 Sep 2013 09:56:06 +0100
+
 biobambam (0.0.91-0) unstable; urgency=low
 
   * no change version bump fir libmaus update to version 0.0.71 
