@@ -1640,7 +1640,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 		std::cerr << "done, rate " << fragcnt/rtc.getElapsedSeconds() << std::endl;		
 
 	if ( verbose )
-		std::cerr << "[V] number of alignments marked as duplicates: " << DSCV.getNumDups() << std::endl;
+		std::cerr << "[V] number of alignments marked as duplicates: " << DSCV.getNumDups() << " time " << fragrtc.getElapsedSeconds() << " (" << fragrtc.formatTime(fragrtc.getElapsedSeconds()) << ")" << std::endl;
 	/*
 	 * end of fragment processing
 	 */
