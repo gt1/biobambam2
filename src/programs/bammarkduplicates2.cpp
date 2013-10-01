@@ -1119,6 +1119,9 @@ struct PositionTrackInterface
 		std::pair<int32_t,int32_t> pcoord(refid,coord);
 		active_count_type acomp(refid,coord,0,0);
 		
+		if ( coord == 143871785 )
+			std::cerr << "updatePosition " << refid << "," << pos << "," << coord << std::endl;
+		
 		/*
 		 * update fragment list
 		 */
@@ -1206,6 +1209,9 @@ struct PositionTrackInterface
 		assert ( activefrags.size() );
 	
 		active_count_type & AC = activefrags.front();
+		
+		if ( AC.coordinate == 143871785 )
+			std::cerr << "finish for " << AC << std::endl;
 
 		uint64_t lfincntfrags = 0;
 		for ( active_count_type::free_list_type::element_type * ptr = AC.root; ptr; ptr = ptr->next )
@@ -1324,8 +1330,20 @@ struct PositionTrackInterface
 		
 		excntpairs += lexcntpairs;
 		
-		expungepositionpairs.first = AC.refid;
-		expungepositionpairs.second = AC.coordinate;
+		if ( 
+			AC.refid > expungepositionpairs.first 
+			||
+			(
+				AC.refid == expungepositionpairs.first
+				&&
+				AC.coordinate > expungepositionpairs.second
+			)
+		)
+		{
+			expungepositionpairs.first = AC.refid;
+			expungepositionpairs.second = AC.coordinate;
+		}
+		
 		AC.freeAlignments(APFLpairs);
 
 		activepairs.pop_front();	
@@ -1336,6 +1354,9 @@ struct PositionTrackInterface
 		assert ( activefrags.size() );
 	
 		active_count_type & AC = activefrags.front();
+
+		if ( AC.coordinate == 143871785 )
+			std::cerr << "expunge for " << AC << std::endl;
 				
 		uint64_t lexcntfrags = 0;
 		for ( active_count_type::free_list_type::element_type * ptr = AC.root; ptr; ptr = ptr->next )
@@ -1345,9 +1366,20 @@ struct PositionTrackInterface
 		}
 		
 		excntfrags += lexcntfrags;
-		
-		expungepositionfrags.first = AC.refid;
-		expungepositionfrags.second = AC.coordinate;
+
+		if ( 
+			AC.refid > expungepositionfrags.first
+			||
+			(
+				AC.refid == expungepositionfrags.first
+				&&
+				AC.coordinate > expungepositionfrags.second
+			)
+		)
+		{
+			expungepositionfrags.first = AC.refid;
+			expungepositionfrags.second = AC.coordinate;
+		}
 		AC.freeAlignments(APFLfrags);
 
 		activefrags.pop_front();	
@@ -1699,6 +1731,8 @@ struct PositionTrackInterface
 					active_count_type const bkey(B.getRefID(),B.getCoordinate(),0,0);
 					std::deque<active_count_type>::iterator const ita = std::lower_bound(activefrags.begin(),activefrags.end(),bkey);
 					assert ( ita != activefrags.end() );
+					if ( ita->refid != bkey.refid || ita->coordinate != bkey.coordinate )
+						std::cerr << "Failing assertion for " << B.formatAlignment(header) << " coord " << bkey.coordinate << std::endl;
 					assert ( ita->refid == bkey.refid && ita->coordinate == bkey.coordinate );
 					
 					// copy alignments
@@ -3069,11 +3103,15 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 		
 		if ( P.first )
 		{
+			if ( P.first->getCoordinate() == 143871785 )
+				std::cerr << P.first->formatAlignment(bamheader) << std::endl;
 			PTI->addAlignmentFrag(*(P.first),fragREC.get(),bamheader);
 			fragcnt++;
 		}
 		if ( P.second )
 		{
+			if ( P.second->getCoordinate() == 143871785 )
+				std::cerr << P.second->formatAlignment(bamheader) << std::endl;
 			PTI->addAlignmentFrag(*(P.second),fragREC.get(),bamheader);
 			fragcnt++;
 		}	
