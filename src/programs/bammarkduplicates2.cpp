@@ -52,6 +52,7 @@ static unsigned int getDefaultColHashBits() { return 20; }
 static uint64_t getDefaultColListSize() { return 32*1024*1024; }
 static uint64_t getDefaultFragBufSize() { return 48*1024*1024; }
 static uint64_t getDefaultMarkThreads() { return 1; }
+static uint64_t getDefaultMaxReadLength() { return 500; }
 static bool getDefaultRmDup() { return 0; }
 
 struct DupSetCallback
@@ -427,6 +428,111 @@ static uint64_t markDuplicatePairs(
 	return lfragssize ? 2*(lfragssize - 1) : 0;
 }
 
+template<typename iterator>
+static uint64_t markDuplicatePairsPointers(
+	iterator const lfrags_a,
+	iterator const lfrags_e,
+	DupSetCallback & DSC,
+	unsigned int const optminpixeldif = 100
+)
+{
+	if ( lfrags_e-lfrags_a > 1 )
+	{
+		#if defined(MARKDUPLICATEPAIRSDEBUG)
+		std::cerr << "[V] --- checking for duplicate pairs ---" << std::endl;
+		for ( iterator lfrags_c = lfrags_a; lfrags_c != lfrags_e; ++lfrags_c )
+			std::cerr << "[V] " << (**lfrags_c) << std::endl;
+		#endif
+	
+		uint64_t maxscore = (*lfrags_a)->getScore();
+		
+		iterator lfrags_m = lfrags_a;
+		for ( iterator lfrags_c = lfrags_a+1; lfrags_c != lfrags_e; ++lfrags_c )
+			if ( (*lfrags_c)->getScore() > maxscore )
+			{
+				maxscore = (*lfrags_c)->getScore();
+				lfrags_m = lfrags_c;
+			}
+
+		for ( iterator lfrags_c = lfrags_a; lfrags_c != lfrags_e; ++lfrags_c )
+			if ( lfrags_c != lfrags_m )
+				DSC(**lfrags_c);
+	
+		// check for optical duplicates
+		std::sort ( lfrags_a, lfrags_e, ::libmaus::bambam::OpticalComparator() );
+		
+		for ( iterator low = lfrags_a; low != lfrags_e; )
+		{
+			iterator high = low+1;
+			
+			// search top end of tile
+			while ( 
+				high != lfrags_e && 
+				(*high)->getReadGroup() == (*low)->getReadGroup() &&
+				(*high)->getTile() == (*low)->getTile() )
+			{
+				++high;
+			}
+			
+			if ( high-low > 1 && (*low)->getTile() )
+			{
+				#if defined(DEBUG)
+				std::cerr << "[D] Range " << high-low << " for " << (*(lfrags[low])) << std::endl;
+				#endif
+			
+				std::vector<bool> opt(high-low,false);
+				bool haveoptdup = false;
+				
+				for ( iterator i = low; i+1 != high; ++i )
+				{
+					for ( 
+						iterator j = i+1; 
+						j != high && (*j)->getX() - (*low)->getX() <= optminpixeldif;
+						++j 
+					)
+						if ( 
+							::libmaus::math::iabs(
+								static_cast<int64_t>((*i)->getY())
+								-
+								static_cast<int64_t>((*j)->getY())
+							)
+							<= optminpixeldif
+						)
+					{	
+						opt [ j - low ] = true;
+						haveoptdup = true;
+					}
+				}
+				
+				if ( haveoptdup )
+				{
+					unsigned int const lib = (*low)->getLibraryId();
+					uint64_t numopt = 0;
+					for ( uint64_t i = 0; i < opt.size(); ++i )
+						if ( opt[i] )
+							numopt++;
+							
+					DSC.addOpticalDuplicates(lib,numopt);	
+				}
+			}
+			
+			low = high;
+		}	
+	}
+	else
+	{
+		#if defined(MARKDUPLICATEPAIRSDEBUG)
+		std::cerr << "[V] --- singleton pair set ---" << std::endl;
+		for ( iterator i = lfrags_a; i != lfrags_e; ++i )
+			std::cerr << "[V] " << (**i) << std::endl;
+		#endif
+	
+	}
+	
+	uint64_t const lfragssize = lfrags_e-lfrags_a;
+	// all but one are duplicates
+	return lfragssize ? 2*(lfragssize - 1) : 0;
+}
 
 static uint64_t markDuplicateFrags(
 	std::vector< ::libmaus::bambam::ReadEnds > const & lfrags, DupSetCallback & DSC
@@ -510,6 +616,180 @@ static uint64_t markDuplicateFrags(
 	}
 }
 
+template<typename iterator>
+static uint64_t markDuplicateFrags(
+	iterator const lfrags_a,
+	iterator const lfrags_e,
+	DupSetCallback & DSC
+)
+{
+	uint64_t const lfragssize = lfrags_e - lfrags_a;
+
+	if ( lfragssize > 1 )
+	{
+		#if defined(MARKDUPLICATEFRAGSDEBUG)
+		std::cerr << "[V] --- frag set --- " << std::endl;
+		for ( iterator lfrags_c = lfrags_a; lfrags_c != lfrags_e; ++lfrags_c )
+			std::cerr << "[V] " << (*lfrags_c) << std::endl;
+		#endif
+	
+		bool containspairs = false;
+		bool containsfrags = false;
+		
+		for ( iterator lfrags_c = lfrags_a; lfrags_c != lfrags_e; ++lfrags_c )
+			if ( lfrags_c->isPaired() )
+				containspairs = true;
+			else
+				containsfrags = true;
+		
+		// if there are any single fragments
+		if ( containsfrags )
+		{
+			// mark single ends as duplicates if there are pairs
+			if ( containspairs )
+			{
+				#if defined(MARKDUPLICATEFRAGSDEBUG)
+				std::cerr << "[V] there are pairs, marking single ends as duplicates" << std::endl;
+				#endif
+			
+				uint64_t dupcnt = 0;
+				// std::cerr << "Contains pairs." << std::endl;
+				for ( iterator lfrags_c = lfrags_a; lfrags_c != lfrags_e; ++lfrags_c )
+					if ( ! (lfrags_c->isPaired()) )
+					{
+						DSC((*lfrags_c));
+						dupcnt++;
+					}
+					
+				return dupcnt;	
+			}
+			// if all are single keep highest score only
+			else
+			{
+				#if defined(MARKDUPLICATEFRAGSDEBUG)
+				std::cerr << "[V] there are only fragments, keeping best one" << std::endl;
+				#endif
+				// std::cerr << "Frags only." << std::endl;
+			
+				uint64_t maxscore = lfrags_a->getScore();
+				iterator lfrags_m = lfrags_a;
+				
+				for ( iterator lfrags_c = lfrags_a+1; lfrags_c != lfrags_e; ++lfrags_c )
+					if ( lfrags_c->getScore() > maxscore )
+					{
+						maxscore = (lfrags_c)->getScore();
+						lfrags_m = lfrags_c;
+					}
+
+				for ( iterator lfrags_c = lfrags_a; lfrags_c != lfrags_e; ++lfrags_c )
+					if ( lfrags_c != lfrags_m )
+						DSC((*lfrags_c));
+
+				return lfragssize-1;
+			}			
+		}
+		else
+		{
+			#if defined(MARKDUPLICATEFRAGSDEBUG)
+			std::cerr << "[V] group does not contain unpaired reads." << std::endl;
+			#endif
+		
+			return 0;
+		}
+	}	
+	else
+	{
+		return 0;
+	}
+}
+
+template<typename iterator>
+static uint64_t markDuplicateFragsPointers(
+	iterator const lfrags_a,
+	iterator const lfrags_e,
+	DupSetCallback & DSC
+)
+{
+	uint64_t const lfragssize = lfrags_e - lfrags_a;
+
+	if ( lfragssize > 1 )
+	{
+		#if defined(MARKDUPLICATEFRAGSDEBUG)
+		std::cerr << "[V] --- frag set --- " << std::endl;
+		for ( iterator lfrags_c = lfrags_a; lfrags_c != lfrags_e; ++lfrags_c )
+			std::cerr << "[V] " << (**lfrags_c) << " coord " << (*lfrags_c)->getRead1Coordinate() << std::endl;
+		#endif
+	
+		bool containspairs = false;
+		bool containsfrags = false;
+		
+		for ( iterator lfrags_c = lfrags_a; lfrags_c != lfrags_e; ++lfrags_c )
+			if ( (*lfrags_c)->isPaired() )
+				containspairs = true;
+			else
+				containsfrags = true;
+		
+		// if there are any single fragments
+		if ( containsfrags )
+		{
+			// mark single ends as duplicates if there are pairs
+			if ( containspairs )
+			{
+				#if defined(MARKDUPLICATEFRAGSDEBUG)
+				std::cerr << "[V] there are pairs, marking single ends as duplicates" << std::endl;
+				#endif
+			
+				uint64_t dupcnt = 0;
+				// std::cerr << "Contains pairs." << std::endl;
+				for ( iterator lfrags_c = lfrags_a; lfrags_c != lfrags_e; ++lfrags_c )
+					if ( ! ((*lfrags_c)->isPaired()) )
+					{
+						DSC((**lfrags_c));
+						dupcnt++;
+					}
+					
+				return dupcnt;	
+			}
+			// if all are single keep highest score only
+			else
+			{
+				#if defined(MARKDUPLICATEFRAGSDEBUG)
+				std::cerr << "[V] there are only fragments, keeping best one" << std::endl;
+				#endif
+				// std::cerr << "Frags only." << std::endl;
+			
+				uint64_t maxscore = (*lfrags_a)->getScore();
+				iterator lfrags_m = lfrags_a;
+				
+				for ( iterator lfrags_c = lfrags_a+1; lfrags_c != lfrags_e; ++lfrags_c )
+					if ( (*lfrags_c)->getScore() > maxscore )
+					{
+						maxscore = (*lfrags_c)->getScore();
+						lfrags_m = lfrags_c;
+					}
+
+				for ( iterator lfrags_c = lfrags_a; lfrags_c != lfrags_e; ++lfrags_c )
+					if ( lfrags_c != lfrags_m )
+						DSC((**lfrags_c));
+
+				return lfragssize-1;
+			}			
+		}
+		else
+		{
+			#if defined(MARKDUPLICATEFRAGSDEBUG)
+			std::cerr << "[V] group does not contain unpaired reads." << std::endl;
+			#endif
+		
+			return 0;
+		}
+	}	
+	else
+	{
+		return 0;
+	}
+}
+
 static bool isDupPair(::libmaus::bambam::ReadEnds const & A, ::libmaus::bambam::ReadEnds const & B)
 {
 	bool const notdup = 
@@ -556,6 +836,17 @@ struct AlignmentListNode
 	AlignmentListNode * next;
 	
 	AlignmentListNode() : next(0) {}
+};
+
+struct ReadEndsListNode
+{
+	typedef ReadEndsListNode this_type;
+	typedef libmaus::util::unique_ptr<this_type>::type unique_ptr_type;
+
+	libmaus::bambam::ReadEnds A;
+	ReadEndsListNode * next;
+	
+	ReadEndsListNode() : next(0) {}
 };
 
 template<typename _element_type>
@@ -622,18 +913,24 @@ struct FreeList
 
 typedef FreeList<AlignmentPairListNode> AlignmentPairFreeList;
 typedef FreeList<AlignmentListNode> AlignmentFreeList;
+typedef FreeList<ReadEndsListNode> ReadEndsFreeList;
 
-struct PairActiveCount
+template<typename _free_list_type>
+struct PairActiveCountTemplate
 {
+	typedef _free_list_type free_list_type;
+	typedef typename free_list_type::element_type list_node_type;
+	typedef PairActiveCountTemplate<free_list_type> this_type;
+
 	int32_t refid;
 	int32_t coordinate;
 	uint64_t incnt;
 	uint64_t outcnt;	
-	AlignmentPairListNode * root;
+	list_node_type * root;
 	bool expunge;
 	
-	PairActiveCount() : refid(-1), coordinate(-1), incnt(0), outcnt(0), root(0), expunge(false) {}
-	PairActiveCount(
+	PairActiveCountTemplate() : refid(-1), coordinate(-1), incnt(0), outcnt(0), root(0), expunge(false) {}
+	PairActiveCountTemplate(
 		int32_t const rrefid,
 		int32_t const rcoordinate,
 		uint64_t const rincnt,
@@ -641,7 +938,7 @@ struct PairActiveCount
 	) : refid(rrefid), coordinate(rcoordinate), incnt(rincnt), outcnt(routcnt), root(0), expunge(false)
 	{	
 	}
-	~PairActiveCount()
+	~PairActiveCountTemplate()
 	{
 	}
 	
@@ -660,7 +957,7 @@ struct PairActiveCount
 		return o.first == refid && o.second == coordinate;
 	}
 	
-	bool operator<(PairActiveCount const & o) const
+	bool operator<(this_type const & o) const
 	{
 		if ( refid != o.refid )
 			return refid < o.refid;
@@ -680,13 +977,13 @@ struct PairActiveCount
 		++outcnt;
 	}
 	
-	void freeAlignments(AlignmentPairFreeList & list)
+	void freeAlignments(free_list_type & list)
 	{
-		AlignmentPairListNode * p = root;
+		list_node_type * p = root;
 		
 		while ( p )
 		{
-			AlignmentPairListNode * q = p->next;
+			list_node_type * q = p->next;
 			p->next = 0;
 			list.put(p);
 			p = q;
@@ -695,14 +992,18 @@ struct PairActiveCount
 		root = 0;
 	}
 
-	void addAlignmentPair(AlignmentPairListNode * ptr)
+	void addAlignmentPair(list_node_type * ptr)
 	{
 		ptr->next = root;
 		root = ptr;
 	}
 };
 
-std::ostream & operator<<(std::ostream & out, PairActiveCount const & A)
+typedef PairActiveCountTemplate<AlignmentPairFreeList> PairActiveCount;
+typedef PairActiveCountTemplate<ReadEndsFreeList> ReadEndsActiveCount;
+
+template<typename free_list_type>
+std::ostream & operator<<(std::ostream & out, PairActiveCountTemplate<free_list_type> const & A)
 {
 	out << "PairActiveCount(" << A.refid << "," << A.coordinate << "," << A.incnt << "," << A.outcnt << ")";
 	return out;
@@ -710,36 +1011,68 @@ std::ostream & operator<<(std::ostream & out, PairActiveCount const & A)
 
 struct PositionTrackInterface
 {
+	static int const default_maxreadlength = 250;
+	
+	#define POS_READ_ENDS
+
+	#if defined(POS_READ_ENDS)
+	typedef ReadEndsActiveCount active_count_type;
+	#else
+	typedef PairActiveCount active_count_type;
+	#endif
+
 	static unsigned int const freelistsize = 16*1024;
 
 	libmaus::bambam::BamHeader const & bamheader;
+
+	libmaus::bambam::ReadEndsBasePointerComparator const REcomp;
+
 	std::pair<int32_t,int32_t> position;
 
 	std::pair<int32_t,int32_t> expungepositionpairs;
-	std::deque<PairActiveCount> activepairs;
+	std::deque<active_count_type> activepairs;
 	int64_t totalactivepairs;
-	AlignmentPairFreeList APFLpairs;
+	active_count_type::free_list_type APFLpairs;
 	uint64_t excntpairs;
 	uint64_t fincntpairs;
 	uint64_t strcntpairs;
+	#if defined(POS_READ_ENDS)
+	std::vector<libmaus::bambam::ReadEnds *> REpairs;
+	#else
 	std::vector<libmaus::bambam::ReadEnds> REpairs;
-	
+	#endif
+
 	std::pair<int32_t,int32_t> expungepositionfrags;
+	std::deque<active_count_type> activefrags;
+	int64_t totalactivefrags;
+	active_count_type::free_list_type APFLfrags;
+	uint64_t excntfrags;
+	uint64_t fincntfrags;
+	uint64_t strcntfrags;
+	std::vector<libmaus::bambam::ReadEnds *> REfrags;
 
 	DupSetCallback * DSC;
+	
+	int maxreadlength;
 
 	PositionTrackInterface(libmaus::bambam::BamHeader const & rbamheader)
 	: 
-		bamheader(rbamheader), position(-1,-1), 
-		expungepositionpairs(-1,-1), totalactivepairs(0), APFLpairs(freelistsize), excntpairs(0), fincntpairs(0), strcntpairs(0),
-		expungepositionfrags(-1,-1),
-		DSC(0)
+		bamheader(rbamheader), REcomp(), position(-1,-1), 
+		expungepositionpairs(-1,-1), activepairs(), totalactivepairs(0), APFLpairs(freelistsize), excntpairs(0), fincntpairs(0), strcntpairs(0), REpairs(),
+		expungepositionfrags(-1,-1), activefrags(), totalactivefrags(0), APFLfrags(freelistsize), excntfrags(0), fincntfrags(0), strcntfrags(0), REfrags(),
+		DSC(0),
+		maxreadlength(default_maxreadlength)
 	{
 	}
 	
 	void setDupSetCallback(DupSetCallback * rDSC)
 	{
 		DSC = rDSC;
+	}
+	
+	void setMaxReadLength(int const rmaxreadlength)
+	{
+		maxreadlength = rmaxreadlength;
 	}
 
 	virtual ~PositionTrackInterface() {}
@@ -781,17 +1114,61 @@ struct PositionTrackInterface
 	
 		position.first = refid;
 		position.second = pos;
+
+		int32_t const coord = A.getCoordinate();
+		std::pair<int32_t,int32_t> pcoord(refid,coord);
+		active_count_type acomp(refid,coord,0,0);
 		
-		if ( isSimplePair(A) && A.isReverse() )
+		/*
+		 * update fragment list
+		 */
+		if ( ! activefrags.size() || activefrags.back() < acomp )
 		{
-			int32_t const coord = A.getCoordinate();
-			std::pair<int32_t,int32_t> pcoord(refid,coord);
-			PairActiveCount acomp(refid,coord,0,0);
+			// insert at back of list
+			activefrags.push_back(active_count_type(refid,coord,1,0));		
+		}
+		else if ( activefrags.back().refid == refid && activefrags.back().coordinate == coord )
+		{
+			// increment at back of list
+			activefrags.back().incIn();
+		}
+		else
+		{
+			// find position
+			std::deque<active_count_type>::iterator it = 
+				std::lower_bound(activefrags.begin(),activefrags.end(),acomp);
+
+			if ( it != activefrags.end() && *it == pcoord )
+			{
+				// increment existing
+				it->incIn();
+			}
+			else
+			{			
+				// insert inside list	
+				uint64_t const tomove = activefrags.end()-it;
+					
+				activefrags.push_back(active_count_type());
+				
+				for ( uint64_t j = 0; j < tomove; ++j )
+					activefrags [ activefrags.size()-j-1 ] = activefrags[activefrags.size()-j-2];
+					
+				activefrags [ activefrags.size() - tomove - 1 ] = active_count_type(refid,coord,1,0);
+			}
 			
+		}
+
+		totalactivefrags++;
+
+		/*
+		 * update pair list
+		 */
+		if ( isSimplePair(A) && A.isReverse() )
+		{	
 			// we have not seen the coordinate before
 			if ( ! activepairs.size() || activepairs.back() < acomp )
 			{
-				activepairs.push_back(PairActiveCount(refid,coord,1,0));
+				activepairs.push_back(active_count_type(refid,coord,1,0));
 			}
 			// increment at end
 			else if ( activepairs.back().refid == refid && activepairs.back().coordinate == coord )
@@ -800,7 +1177,7 @@ struct PositionTrackInterface
 			}
 			else
 			{
-				std::deque<PairActiveCount>::iterator it = 
+				std::deque<active_count_type>::iterator it = 
 					std::lower_bound(activepairs.begin(),activepairs.end(),acomp);
 
 				if ( it != activepairs.end() && *it == pcoord )
@@ -811,12 +1188,12 @@ struct PositionTrackInterface
 				{				
 					uint64_t const tomove = activepairs.end()-it;
 					
-					activepairs.push_back(PairActiveCount());
+					activepairs.push_back(active_count_type());
 					
 					for ( uint64_t j = 0; j < tomove; ++j )
 						activepairs [ activepairs.size()-j-1 ] = activepairs[activepairs.size()-j-2];
 						
-					activepairs [ activepairs.size() - tomove - 1 ] = PairActiveCount(refid,coord,1,0);
+					activepairs [ activepairs.size() - tomove - 1 ] = active_count_type(refid,coord,1,0);
 				}
 			}
 
@@ -824,28 +1201,82 @@ struct PositionTrackInterface
 		}
 	}
 
-	void finishActiveFront()
+	void finishActiveFrontFrags()
+	{	
+		assert ( activefrags.size() );
+	
+		active_count_type & AC = activefrags.front();
+
+		uint64_t lfincntfrags = 0;
+		for ( active_count_type::free_list_type::element_type * ptr = AC.root; ptr; ptr = ptr->next )
+		{
+			if ( lfincntfrags < REfrags.size() )
+				REfrags[lfincntfrags] = &(ptr->A);
+			else
+				REfrags.push_back(&(ptr->A));
+
+			lfincntfrags += 1;
+		}
+
+		std::sort(REfrags.begin(),REfrags.begin()+lfincntfrags,REcomp);
+		
+		fincntfrags += lfincntfrags;
+		
+		uint64_t l = 0;
+		while ( l != lfincntfrags )
+		{
+			uint64_t h = l+1;
+			while ( h != lfincntfrags && isDupFrag(*REfrags[l],*REfrags[h]) )
+				++h;
+				
+			if ( h-l > 1 )
+				markDuplicateFragsPointers(REfrags.begin()+l,REfrags.begin()+h,*DSC);
+			
+			l = h;
+		}
+		
+		AC.freeAlignments(APFLfrags);
+		totalactivefrags -= AC.incnt;
+		assert ( totalactivefrags >= 0 );
+		activefrags.pop_front();	
+	}
+
+	void finishActiveFrontPairs()
 	{	
 		assert ( activepairs.size() );
 	
-		PairActiveCount & AC = activepairs.front();
+		active_count_type & AC = activepairs.front();
 
 		uint64_t lfincntpairs = 0;
-		for ( AlignmentPairListNode * ptr = AC.root; ptr; ptr = ptr->next )
+		for ( active_count_type::free_list_type::element_type * ptr = AC.root; ptr; ptr = ptr->next )
 		{
 			if ( lfincntpairs < REpairs.size() )
+				#if defined(POS_READ_ENDS)
+				REpairs[lfincntpairs] = &(ptr->A);
+				#else
 				libmaus::bambam::ReadEndsBase::fillFragPair(
 					ptr->A[0],
 					ptr->A[1],
 					bamheader,
 					REpairs[lfincntpairs]);
+				#endif
 			else
+			{
+				#if defined(POS_READ_ENDS)
+				REpairs.push_back(&(ptr->A));
+				#else
 				REpairs.push_back(libmaus::bambam::ReadEnds(ptr->A[0],ptr->A[1],bamheader));
+				#endif
+			}
 
 			lfincntpairs += 1;
 		}
 
-		std::sort(REpairs.begin(),REpairs.begin()+lfincntpairs);
+		#if defined(POS_READ_ENDS)
+		std::sort(REpairs.begin(),REpairs.begin()+lfincntpairs,REcomp);
+		#else
+		std::sort(REpairs.begin(),REpairs.begin()+lfincntpairs);		
+		#endif
 		
 		fincntpairs += lfincntpairs;
 		
@@ -853,30 +1284,16 @@ struct PositionTrackInterface
 		while ( l != lfincntpairs )
 		{
 			uint64_t h = l+1;
-			while ( h != lfincntpairs && isDupPair(REpairs[l],REpairs[h]) )
+			while ( h != lfincntpairs && isDupPair(*REpairs[l],*REpairs[h]) )
 				++h;
 				
 			if ( h-l > 1 )
 			{
+				#if defined(POS_READ_ENDS)
+				markDuplicatePairsPointers(REpairs.begin()+l,REpairs.begin()+h,*DSC);
+				#else
 				markDuplicatePairs(REpairs.begin()+l,REpairs.begin()+h,*DSC);
-			
-				#if 0
-				DupSetCallbackSet S0, S1;
-				markDuplicatePairs(REpairs.begin()+l,REpairs.begin()+h,S0);
-				std::vector < libmaus::bambam::ReadEnds > VV(REpairs.begin()+l,REpairs.begin()+h);
-				markDuplicatePairsRef(VV,S1);
-				
-				assert ( S0.S == S1.S );
-				#endif
-			
-				#if 0
-				std::cerr << std::string(80,'-') << std::endl;
-				for ( uint64_t i = l; i < h; ++i )
-				{
-					std::cerr << REpairs[i] << std::endl;
-				}
-				std::cerr << std::string(80,'-') << std::endl;
-				#endif
+				#endif			
 			}
 			
 			l = h;
@@ -888,16 +1305,20 @@ struct PositionTrackInterface
 		activepairs.pop_front();	
 	}
 
-	void expungeActiveFront(::libmaus::bambam::ReadEndsContainer * pairREC, ::libmaus::bambam::BamHeader const & header)
+	void expungeActiveFrontPairs(::libmaus::bambam::ReadEndsContainer * pairREC, ::libmaus::bambam::BamHeader const & header)
 	{
 		assert ( activepairs.size() );
 	
-		PairActiveCount & AC = activepairs.front();
+		active_count_type & AC = activepairs.front();
 		
 		uint64_t lexcntpairs = 0;
-		for ( AlignmentPairListNode * ptr = AC.root; ptr; ptr = ptr->next )
+		for ( active_count_type::free_list_type::element_type * ptr = AC.root; ptr; ptr = ptr->next )
 		{
+			#if defined(POS_READ_ENDS)
+			pairREC->put(ptr->A);
+			#else
 			pairREC->putPair(ptr->A[0],ptr->A[1],header);
+			#endif
 			lexcntpairs += 1;
 		}
 		
@@ -910,7 +1331,29 @@ struct PositionTrackInterface
 		activepairs.pop_front();	
 	}
 
-	bool isActive(::libmaus::bambam::BamAlignment const & B)
+	void expungeActiveFrontFrags(::libmaus::bambam::ReadEndsContainer * fragREC, ::libmaus::bambam::BamHeader const & header)
+	{
+		assert ( activefrags.size() );
+	
+		active_count_type & AC = activefrags.front();
+				
+		uint64_t lexcntfrags = 0;
+		for ( active_count_type::free_list_type::element_type * ptr = AC.root; ptr; ptr = ptr->next )
+		{
+			fragREC->put(ptr->A);
+			lexcntfrags += 1;
+		}
+		
+		excntfrags += lexcntfrags;
+		
+		expungepositionfrags.first = AC.refid;
+		expungepositionfrags.second = AC.coordinate;
+		AC.freeAlignments(APFLfrags);
+
+		activefrags.pop_front();	
+	}
+
+	bool isActivePair(::libmaus::bambam::BamAlignment const & B)
 	{
 		bool const isactivepairs = 
 			B.getRefID() > expungepositionpairs.first
@@ -924,12 +1367,27 @@ struct PositionTrackInterface
 	
 		return isactivepairs;
 	}
-	
-	void setExpunge(libmaus::bambam::BamAlignment const & B)
+
+	bool isActiveFrag(::libmaus::bambam::BamAlignment const & B)
 	{
-		if ( isActive(B) )
+		bool const isactivefrag = 
+			B.getRefID() > expungepositionfrags.first
+			||
+			(
+				B.getRefID() == expungepositionfrags.first
+				&&
+				B.getCoordinate() > expungepositionfrags.second
+			)
+		;
+	
+		return isactivefrag;
+	}
+	
+	void setExpungePairs(libmaus::bambam::BamAlignment const & B)
+	{
+		if ( isActivePair(B) )
 		{
-			PairActiveCount const bkey(B.getRefID(),B.getCoordinate(),0,0);
+			active_count_type const bkey(B.getRefID(),B.getCoordinate(),0,0);
 
 			// key is not there or we can insert at the end, insert it
 			if ( ! activepairs.size() || activepairs.back() < bkey )
@@ -939,7 +1397,7 @@ struct PositionTrackInterface
 			}
 			else 
 			{
-				std::deque<PairActiveCount>::iterator const it = std::lower_bound(activepairs.begin(),activepairs.end(),bkey);
+				std::deque<active_count_type>::iterator const it = std::lower_bound(activepairs.begin(),activepairs.end(),bkey);
 			
 				// key is already there	
 				if ( 
@@ -954,7 +1412,7 @@ struct PositionTrackInterface
 				{
 					uint64_t const tomove = activepairs.end()-it;
 						
-					activepairs.push_back(PairActiveCount());
+					activepairs.push_back(active_count_type());
 								
 					for ( uint64_t j = 0; j < tomove; ++j )
 					activepairs [ activepairs.size()-j-1 ] = activepairs[activepairs.size()-j-2];
@@ -965,14 +1423,55 @@ struct PositionTrackInterface
 			}
 		}
 	}
+
+	void setExpungeFrag(libmaus::bambam::BamAlignment const & B)
+	{
+		if ( isActiveFrag(B) )
+		{
+			active_count_type const bkey(B.getRefID(),B.getCoordinate(),0,0);
+
+			// key is not there or we can insert at the end, insert it
+			if ( ! activefrags.size() || activefrags.back() < bkey )
+			{
+				activefrags.push_back(bkey);
+				activefrags.back().setExpunge(true);
+			}
+			else 
+			{
+				std::deque<active_count_type>::iterator const it = std::lower_bound(activefrags.begin(),activefrags.end(),bkey);
+			
+				// key is already there	
+				if ( 
+					it != activefrags.end() &&
+					it->refid == bkey.refid &&
+					it->coordinate == bkey.coordinate )
+				{
+					it->setExpunge(true);
+				}
+				// key is not there and needs to be inserted ahead of the end
+				else
+				{
+					uint64_t const tomove = activefrags.end()-it;
+						
+					activefrags.push_back(active_count_type());
+								
+					for ( uint64_t j = 0; j < tomove; ++j )
+					activefrags [ activefrags.size()-j-1 ] = activefrags[activefrags.size()-j-2];
+								
+					activefrags [ activefrags.size() - tomove - 1 ] = bkey;
+					activefrags [ activefrags.size() - tomove - 1 ].setExpunge(true);
+				}
+			}
+		}
+	}
 	
-	void expungeUntil(
+	void expungeUntilPairs(
 		libmaus::bambam::BamAlignment const & A,
 		::libmaus::bambam::ReadEndsContainer * pairREC, 
 		::libmaus::bambam::BamHeader const & header
 	)
 	{
-		if ( isActive(A) )
+		if ( isActivePair(A) )
 		{
 			while ( 
 				activepairs.size()
@@ -990,18 +1489,47 @@ struct PositionTrackInterface
 				)
 			)
 			{
-				expungeActiveFront(pairREC,header);
+				expungeActiveFrontPairs(pairREC,header);
 			}
 
 			expungepositionpairs.first = A.getRefID();
 			expungepositionpairs.second = A.getCoordinate();
 		}
 	}
+
+	void expungeUntilFrag(
+		libmaus::bambam::BamAlignment const & A,
+		::libmaus::bambam::ReadEndsContainer * fragREC, 
+		::libmaus::bambam::BamHeader const & header
+	)
+	{
+		if ( isActiveFrag(A) )
+		{
+			while ( 
+				activefrags.size()
+				&&
+				(
+					(
+						activefrags.front().refid < A.getRefID()
+					)
+					||
+					(
+						activefrags.front().refid == A.getRefID()
+						&&
+						activefrags.front().coordinate <= A.getCoordinate()
+					)
+				)
+			)
+			{
+				expungeActiveFrontFrags(fragREC,header);
+			}
+
+			expungepositionfrags.first = A.getRefID();
+			expungepositionfrags.second = A.getCoordinate();
+		}
+	}
 	
-	/**
-	 * flush lists
-	 **/
-	void flush(::libmaus::bambam::ReadEndsContainer * pairREC, ::libmaus::bambam::BamHeader const & header)
+	void flushPairs(::libmaus::bambam::ReadEndsContainer * pairREC, ::libmaus::bambam::BamHeader const & header)
 	{
 		while ( activepairs.size() )
 		{
@@ -1009,21 +1537,56 @@ struct PositionTrackInterface
 			{
 				if ( activepairs.front().getExpunge() )
 				{
-					expungeActiveFront(pairREC,header);			
+					expungeActiveFrontPairs(pairREC,header);			
 				}
 				else
 				{
-					finishActiveFront();
+					finishActiveFrontPairs();
 				}
 			}
 			else
 			{
 				std::cerr << "WARNING: expunge on flush (this should not happen)" << std::endl;
-				expungeActiveFront(pairREC,header);
+				expungeActiveFrontPairs(pairREC,header);
+			}
+		}
+	}
+
+	void flushFrags(::libmaus::bambam::ReadEndsContainer * fragREC, ::libmaus::bambam::BamHeader const & header)
+	{
+		while ( activefrags.size() )
+		{
+			if ( activefrags.front().incnt == activefrags.front().outcnt )
+			{
+				if ( activefrags.front().getExpunge() )
+				{
+					expungeActiveFrontFrags(fragREC,header);			
+				}
+				else
+				{
+					finishActiveFrontFrags();
+				}
+			}
+			else
+			{
+				std::cerr << "WARNING: expunge on flush (this should not happen)" << std::endl;
+				expungeActiveFrontFrags(fragREC,header);
 			}
 		}
 	}
 	
+	/**
+	 * flush lists
+	 **/
+	void flush(
+		::libmaus::bambam::ReadEndsContainer * pairREC,
+		::libmaus::bambam::ReadEndsContainer * fragREC,
+		::libmaus::bambam::BamHeader const & header
+	)
+	{
+		flushPairs(pairREC,header);
+		flushFrags(fragREC,header);
+	}
 	
 	/**
 	 * add a pair
@@ -1034,15 +1597,13 @@ struct PositionTrackInterface
 		::libmaus::bambam::BamHeader const & header
 	)
 	{
-		PairActiveCount const bkey(B.getRefID(),B.getCoordinate(),0,0);
+		active_count_type const bkey(B.getRefID(),B.getCoordinate(),0,0);
 		
 		bool done = false;
 		
 		while ( ! done )
 		{
-			bool const isactivepairs = isActive(B);
-					
-			if ( isactivepairs )
+			if ( isActivePair(B) )
 			{
 				// expunge front element
 				if ( APFLpairs.empty() )
@@ -1050,25 +1611,30 @@ struct PositionTrackInterface
 					assert ( activepairs.size() );
 				
 					// std::cerr << "Expunging " << activepairs.front() << " because free list is empty." << std::endl;	
-					expungeActiveFront(pairREC,header);
+					expungeActiveFrontPairs(pairREC,header);
 					
 					// check if this made any finished elements visible at the
 					// front of the queue
-					checkFinished(pairREC,bamheader);
+					checkFinishedPairs(pairREC,bamheader);
 				}
 				//
 				else
 				{
-					// find PairActiveCount object
-					PairActiveCount const bkey(B.getRefID(),B.getCoordinate(),0,0);
-					std::deque<PairActiveCount>::iterator const ita = std::lower_bound(activepairs.begin(),activepairs.end(),bkey);
+					// find active_count_type object
+					active_count_type const bkey(B.getRefID(),B.getCoordinate(),0,0);
+					std::deque<active_count_type>::iterator const ita = std::lower_bound(activepairs.begin(),activepairs.end(),bkey);
 					assert ( ita != activepairs.end() );
 					assert ( ita->refid == bkey.refid && ita->coordinate == bkey.coordinate );
 					
 					// copy alignments
-					AlignmentPairListNode * ptr = APFLpairs.get();
+					// AlignmentPairListNode * ptr = APFLpairs.get();
+					active_count_type::list_node_type * ptr = APFLpairs.get();
+					#if defined(POS_READ_ENDS)
+					libmaus::bambam::ReadEndsBase::fillFragPair(A,B,header,ptr->A);
+					#else
 					ptr->A[0].copyFrom(A);
 					ptr->A[1].copyFrom(B);
+					#endif
 					ita->addAlignmentPair(ptr);
 					ita->incOut();
 										
@@ -1086,8 +1652,78 @@ struct PositionTrackInterface
 			}
 		}		
 	}
+
+	/**
+	 * add a pair
+	 **/
+	void addAlignmentFrag(
+		::libmaus::bambam::BamAlignment const & B,
+		::libmaus::bambam::ReadEndsContainer * fragREC,
+		::libmaus::bambam::BamHeader const & header
+	)
+	{
+		if ( B.getLseq() > maxreadlength )
+		{
+			libmaus::exception::LibMausException se;
+			se.getStream() << "PositionTrackInterface::addAlignmentFrag(): maximum allowed read length is " <<
+				maxreadlength << " but input contains read of length " << B.getLseq() << "." << std::endl
+				<< "Please set the maxreadlength parameter to a sufficiently high value." << std::endl;
+			se.finish();
+			throw se;
+		}
 	
-	void checkFinished(
+		active_count_type const bkey(B.getRefID(),B.getCoordinate(),0,0);
+		
+		bool done = false;
+		
+		while ( ! done )
+		{
+			if ( isActiveFrag(B) )
+			{
+				// expunge front element
+				if ( APFLfrags.empty() )
+				{
+					assert ( activefrags.size() );
+				
+					// std::cerr << "Expunging " << activefrags.front() << " because free list is empty." << std::endl;	
+					expungeActiveFrontFrags(fragREC,header);
+					
+					// check if this made any finished elements visible at the
+					// front of the queue
+					checkFinishedFrags(fragREC,bamheader);
+				}
+				//
+				else
+				{
+					// find active_count_type object
+					active_count_type const bkey(B.getRefID(),B.getCoordinate(),0,0);
+					std::deque<active_count_type>::iterator const ita = std::lower_bound(activefrags.begin(),activefrags.end(),bkey);
+					assert ( ita != activefrags.end() );
+					assert ( ita->refid == bkey.refid && ita->coordinate == bkey.coordinate );
+					
+					// copy alignments
+					active_count_type::list_node_type * ptr = APFLfrags.get();
+					ptr->A.reset();
+					libmaus::bambam::ReadEndsBase::fillFrag(B,header,ptr->A);
+					ita->addAlignmentPair(ptr);
+					ita->incOut();
+
+					// done inserting this one
+					done = true;
+				}
+			}
+			else
+			{
+				// interval was already handled and this frag
+				// is too late, handle it by writing it out
+				fragREC->putFrag(B,header);
+				excntfrags += 1;
+				done = true;
+			}
+		}		
+	}
+	
+	void checkFinishedPairs(
 		::libmaus::bambam::ReadEndsContainer * pairREC,
 		::libmaus::bambam::BamHeader const & header
 	)
@@ -1114,13 +1750,49 @@ struct PositionTrackInterface
 		{
 			if ( activepairs.front().getExpunge() )
 			{
-				expungeActiveFront(pairREC,header);			
+				expungeActiveFrontPairs(pairREC,header);			
 			}
 			else
 			{
-				finishActiveFront();
+				finishActiveFrontPairs();
 			}
-			// finishActiveFront();
+		}	
+	}
+
+	void checkFinishedFrags(
+		::libmaus::bambam::ReadEndsContainer * fragREC,
+		::libmaus::bambam::BamHeader const & header
+	)
+	{
+	
+		// check for finished pair intervals
+		while ( 
+			activefrags.size()
+			&&
+			// input position is beyond end of activefrags front interval
+			(
+				position.first > activefrags.front().refid
+				||
+				(
+					position.first == activefrags.front().refid &&
+					position.second > activefrags.front().coordinate + maxreadlength
+				)
+			)
+			&&
+			// we have seen all frags in the interval
+			(
+				activefrags.front().outcnt == activefrags.front().incnt
+			)
+		)
+		{
+			if ( activefrags.front().getExpunge() )
+			{
+				expungeActiveFrontFrags(fragREC,header);			
+			}
+			else
+			{
+				finishActiveFrontFrags();
+			}
 		}	
 	}
 };
@@ -2019,6 +2691,9 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	unsigned int const rewritebam = arginfo.getValue<unsigned int>("rewritebam",getDefaultRewriteBam());
 	int const rewritebamlevel = arginfo.getValue<int>("rewritebamlevel",getDefaultRewriteBamLevel());
 
+	// buffer size for fragment and pair data
+	uint64_t const maxreadlength = arginfo.getValueUnsignedNumeric<uint64_t>("maxreadlength",getDefaultMaxReadLength());
+
 	// prefix for tmp files
 	std::string const tmpfilenamebase = arginfo.getValue<std::string>("tmpfile",arginfo.getDefaultTmpFileName());
 	std::string const tmpfilename = tmpfilenamebase + "_bamcollate";
@@ -2262,6 +2937,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	// DupSetCallbackSet DSCV(metrics);
 	
 	PTI->setDupSetCallback(&DSCV);
+	PTI->setMaxReadLength(maxreadlength);
 	
 	while ( CBD->tryPair(P) )
 	{
@@ -2378,27 +3054,27 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 			if (  PositionTrackInterface::isSimplePair(*(P.second)) )
 			{
 				PTI->addAlignmentPair(*(P.first),*(P.second),pairREC.get(),bamheader);
-				PTI->checkFinished(pairREC.get(),bamheader);
+				PTI->checkFinishedPairs(pairREC.get(),bamheader);
 			}
 			// strangely mapped pairs, mark right coordinate as expunged
 			else
 			{
-				PTI->setExpunge(*(P.second));
-				pairREC->putPair(*(P.first),*(P.second),bamheader);
+				PTI->setExpungePairs(*(P.second));
 				PTI->strcntpairs += 1;
+				pairREC->putPair(*(P.first),*(P.second),bamheader);
 			}
 
 			paircnt++;
 		}
-	
+		
 		if ( P.first )
 		{
-			fragREC->putFrag(*(P.first),bamheader);				
+			PTI->addAlignmentFrag(*(P.first),fragREC.get(),bamheader);
 			fragcnt++;
 		}
 		if ( P.second )
 		{
-			fragREC->putFrag(*(P.second),bamheader);
+			PTI->addAlignmentFrag(*(P.second),fragREC.get(),bamheader);
 			fragcnt++;
 		}	
 		
@@ -2421,10 +3097,12 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 		}		
 	}
 
-	PTI->flush(pairREC.get(),bamheader);
+	PTI->flush(pairREC.get(),fragREC.get(),bamheader);
 	std::cerr << "excntpairs=" << PTI->excntpairs << " fincntpairs=" << PTI->fincntpairs << " strcntpairs=" << PTI->strcntpairs << std::endl;
+	std::cerr << "excntfrags=" << PTI->excntfrags << " fincntfrags=" << PTI->fincntfrags << " strcntfrags=" << PTI->strcntfrags << std::endl;
 	
 	assert ( PTI->excntpairs + PTI->fincntpairs + PTI->strcntpairs == paircnt );
+	assert ( PTI->excntfrags + PTI->fincntfrags + PTI->strcntfrags == fragcnt );
 	
 	if ( copybamstr )
 	{
@@ -2516,7 +3194,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	lfrags.resize(0);
 	fragDec.reset();
 	if ( verbose )
-		std::cerr << "done, rate " << fragcnt/rtc.getElapsedSeconds() << std::endl;		
+		std::cerr << "done, rate " << (PTI->excntfrags)/rtc.getElapsedSeconds() << std::endl;		
 
 	DSCV.flush(numranks);
 
@@ -2625,6 +3303,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "colhashbits=<["+::biobambam::Licensing::formatNumber(getDefaultColHashBits())+"]>", "log_2 of size of hash table used for collation" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "collistsize=<["+::biobambam::Licensing::formatNumber(getDefaultColListSize())+"]>", "output list size for collation" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "fragbufsize=<["+::biobambam::Licensing::formatNumber(getDefaultFragBufSize())+"]>", "size of each fragment/pair file buffer in bytes" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "maxreadlength=<["+::biobambam::Licensing::formatNumber(getDefaultMaxReadLength())+"]>", "maximum allowed read length" ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 
