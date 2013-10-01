@@ -39,7 +39,7 @@ bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamr
 	bamdownsamplerandom
 	
 noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments bamtoname \
-	bamdisthist
+	bamdisthist bammarkduplicates2
 
 bamcollate_SOURCES = programs/bamcollate.cpp biobambam/Licensing.cpp
 bamcollate_LDADD = ${LIBMAUSLIBS}
@@ -65,6 +65,11 @@ bammarkduplicates_SOURCES = programs/bammarkduplicates.cpp biobambam/Licensing.c
 bammarkduplicates_LDADD = ${LIBMAUSLIBS}
 bammarkduplicates_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
 bammarkduplicates_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+bammarkduplicates2_SOURCES = programs/bammarkduplicates2.cpp biobambam/Licensing.cpp
+bammarkduplicates2_LDADD = ${LIBMAUSLIBS}
+bammarkduplicates2_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+bammarkduplicates2_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
 
 bammaskflags_SOURCES = programs/bammaskflags.cpp biobambam/Licensing.cpp
 bammaskflags_LDADD = ${LIBMAUSLIBS}
