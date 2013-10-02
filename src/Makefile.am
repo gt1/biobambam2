@@ -13,7 +13,8 @@ MANPAGES = programs/bamtofastq.1 programs/bamsort.1 programs/bammarkduplicates.1
 	programs/bam12strip.1 programs/bamreset.1 programs/bamrank.1 \
 	programs/bamclipreinsert.1 programs/bamzztoname.1 \
 	programs/bamindex.1 programs/bamfilterflags.1 \
-	programs/bamfilterrg.1 programs/bamdownsamplerandom.1
+	programs/bamfilterrg.1 programs/bamdownsamplerandom.1 \
+	programs/bammarkduplicates2.1
 
 man_MANS = ${MANPAGES}
 
@@ -36,10 +37,11 @@ bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamr
 	bamindex \
 	bamfilterflags \
 	bamfilterrg \
-	bamdownsamplerandom
+	bamdownsamplerandom \
+	bammarkduplicates2
 	
 noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments bamtoname \
-	bamdisthist bammarkduplicates2
+	bamdisthist
 
 bamcollate_SOURCES = programs/bamcollate.cpp biobambam/Licensing.cpp
 bamcollate_LDADD = ${LIBMAUSLIBS}

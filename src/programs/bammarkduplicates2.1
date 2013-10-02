@@ -1,0 +1,103 @@
+.TH BAMMARKDUPLICATES2 1 "July 2013" BIOBAMBAM
+.SH NAME
+bammarkduplicates2 - mark duplicate reads/alignments in BAM files
+.SH SYNOPSIS
+.PP
+.B bammarkduplicates2
+[options]
+.SH DESCRIPTION
+bammarkduplicates reads a BAM file containing alignments computed by an
+aligner, marks duplicate reads/alignments using the coordinates of the alignments and writes the
+marked alignments to a BAM file. By default input is via standard input and
+output via standard output. Duplication metrics are provided on the standard
+error channel by default. bammarkduplicates scans the input BAM file twice,
+it is thus of benefit to set the I key (described below) to give the name of
+an input file. If the input BAM file is given via standard input, then a
+copy of the input will be stored in a temporary file during the first run
+for processing in a second run.
+.PP
+The following key=value pairs can be given:
+.PP
+.B I=<stdin>: 
+name of the input file (input is read from standard input if not set)
+.PP
+.B O=<stdout>: 
+name of the output file (output is written to standard output if not set)
+.PP
+.B M=<stdout>: 
+name of the metrics file (metrics are written to standard error if not set)
+.PP
+.B tmpfile=<filename>: 
+prefix for temporary files. By default the temporary files are created in the current directory
+.PP
+.B level=<-1|0|1|9>:
+set compression level of the output BAM file. Valid
+values are
+.IP -1:
+zlib/gzip default compression level
+.IP 0:
+uncompressed
+.IP 1:
+zlib/gzip level 1 (fast) compression
+.IP 9:
+zlib/gzip level 9 (best) compression
+.PP
+.B markthreads=<1>: 
+Number of threads used during marking duplicate alignments.
+.PP
+.B verbose=<1>:
+Valid values are
+.IP 1:
+print progress report on standard error
+.IP 0:
+do not print progress report
+.PP
+.B mod=<1048576>:
+print progress after processing every mod'th input read/alignment (default is 1M)
+.PP
+.B rewritebam=<0|1|2>:
+compression type of the temporary file stored if I key is not given (input is via standard input). Valid values are
+.IP 0:
+temporary data is compressed using snappy (if available, see http://code.google.com/p/snappy/)
+.IP 1:
+gzip/BAM, recompress input and store it as a BAM file
+.IP 2:
+copy, produce a 1/1 copy of the input stream as a temporary file
+.PP
+.B rewritebamlevel=<-1|0|1|9>:
+compression level of temporary BAM file if rewritebam is 1 (see level key for possible values).
+.PP
+.B colhashbits=<20>:
+base two logarithm of the size of the hash table used for collation (the
+default value is 18 and should work reasonably well for most input files.
+Please see the biobambam paper at arxiv.org/abs/1306.0836 for details).
+.PP
+.B collistsize=<33554432>:
+size of hash table overflow list in bytes (the default is 128MB and should
+work reasonably well for most input files. Please see the biobambam paper at 
+arxiv.org/abs/1306.0836 for details).
+.PP
+.B fragbufsize=<50331648>: 
+size of each fragment/pair file buffer in bytes (bammarkduplicates uses two
+such buffer for detecting duplicates)
+.PP
+.B rmdup=<0|1>:
+sets how duplicates are handled
+.IP 0:
+duplicates will be retained in the output file and have the duplication flag set
+.IP 1:
+duplicates will be remove when writing the output file
+.PP
+.B maxreadlength=<[500]>:
+maximum read length in input. This value can be set higher than the actual
+maximum in the file but not lower.
+.SH AUTHOR
+Written by German Tischler.
+.SH "REPORTING BUGS"
+Report bugs to <gt1@sanger.ac.uk>
+.SH COPYRIGHT
+Copyright \(co 2009-2013 German Tischler, \(co 2011-2013 Genome Research Limited.
+License GPLv3+: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
