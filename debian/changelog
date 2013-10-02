@@ -1,3 +1,9 @@
+biobambam (0.0.93-0) unstable; urgency=low
+
+  * add bammarkduplicates2 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Wed, 02 Oct 2013 09:05:56 +0100
+
 biobambam (0.0.92-0) unstable; urgency=low
 
   * add random downsampling tool 
