@@ -57,6 +57,7 @@ static bool getDefaultRmDup() { return 0; }
 
 struct DupSetCallback
 {
+	virtual ~DupSetCallback() {}
 	virtual void operator()(::libmaus::bambam::ReadEnds const & A) = 0;
 	virtual uint64_t getNumDups() const = 0;
 	virtual void addOpticalDuplicates(uint64_t const libid, uint64_t const count) = 0;
@@ -1825,6 +1826,7 @@ struct PositionTrackCallback :
 	public PositionTrackInterface
 {
 	PositionTrackCallback(libmaus::bambam::BamHeader const & bamheader) : PositionTrackInterface(bamheader) {}
+	virtual ~PositionTrackCallback() {}
 	
 	void operator()(::libmaus::bambam::BamAlignment const & A)
 	{
@@ -3121,8 +3123,10 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	}
 
 	PTI->flush(pairREC.get(),fragREC.get(),bamheader);
-	std::cerr << "excntpairs=" << PTI->excntpairs << " fincntpairs=" << PTI->fincntpairs << " strcntpairs=" << PTI->strcntpairs << std::endl;
-	std::cerr << "excntfrags=" << PTI->excntfrags << " fincntfrags=" << PTI->fincntfrags << " strcntfrags=" << PTI->strcntfrags << std::endl;
+	std::cerr << "[D] " << "excntpairs=" << PTI->excntpairs << " fincntpairs=" << PTI->fincntpairs << " strcntpairs=" << PTI->strcntpairs << std::endl;
+	uint64_t const diskpairs = PTI->excntpairs + PTI->strcntpairs;
+	std::cerr << "[D] " << "excntfrags=" << PTI->excntfrags << " fincntfrags=" << PTI->fincntfrags << " strcntfrags=" << PTI->strcntfrags << std::endl;
+	uint64_t const diskfrags = PTI->excntfrags + PTI->strcntfrags;
 	
 	assert ( PTI->excntpairs + PTI->fincntpairs + PTI->strcntpairs == paircnt );
 	assert ( PTI->excntfrags + PTI->fincntfrags + PTI->strcntfrags == fragcnt );
@@ -3195,7 +3199,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	lfrags.resize(0);
 	pairDec.reset();
 	if ( verbose )
-		std::cerr << "done, rate " << (PTI->excntpairs+PTI->strcntpairs)/rtc.getElapsedSeconds() << std::endl;
+		std::cerr << "done, rate " << (diskpairs)/rtc.getElapsedSeconds() << std::endl;
 
 	if ( verbose )
 		std::cerr << "[V] Checking single fragments...";
@@ -3217,7 +3221,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	lfrags.resize(0);
 	fragDec.reset();
 	if ( verbose )
-		std::cerr << "done, rate " << (PTI->excntfrags)/rtc.getElapsedSeconds() << std::endl;		
+		std::cerr << "done, rate " << (diskfrags)/rtc.getElapsedSeconds() << std::endl;		
 
 	DSCV.flush(numranks);
 

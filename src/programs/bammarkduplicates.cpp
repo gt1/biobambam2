@@ -55,6 +55,7 @@ static bool getDefaultRmDup() { return 0; }
 
 struct DupSetCallback
 {
+	virtual ~DupSetCallback() {}
 	virtual void operator()(::libmaus::bambam::ReadEnds const & A) = 0;
 	virtual uint64_t getNumDups() const = 0;
 	virtual void addOpticalDuplicates(uint64_t const libid, uint64_t const count) = 0;
