@@ -1,3 +1,9 @@
+biobambam (0.0.94-0) unstable; urgency=low
+
+  * fix crashes of bammarkduplicates and bammarkduplicates2 due to wrong pointer typedefs in libmaus 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Thu, 03 Oct 2013 22:29:39 +0100
+
 biobambam (0.0.93-0) unstable; urgency=low
 
   * add bammarkduplicates2 
