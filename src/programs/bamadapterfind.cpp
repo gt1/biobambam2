@@ -139,7 +139,7 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 
 	int const level = arginfo.getValue<int>("level",getDefaultLevel());
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
-	int const clip = arginfo.getValue<int>("clip",getDefaultVerbose());
+	int const clip = arginfo.getValue<int>("clip",getDefaultClip());
 	uint64_t const mod = arginfo.getValue<int>("mod",getDefaultMod());
 	// length of seed
 	uint64_t const seedlength = 
