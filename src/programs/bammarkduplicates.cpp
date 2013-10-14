@@ -506,33 +506,18 @@ void addBamDuplicateFlag(
 	
 	bool haveheader = false;
 	uint64_t blockskip = 0;
-	std::vector<uint8_t> headerstr;
-	uint64_t preblocksizes = 0;
 	
-	/* read and copy blocks until we have reached the end of the BAM header */
+	libmaus::bambam::BamHeader::BamHeaderParserState bhps;
+	
+	std::cerr << "[D] using incremental BAM header parser on serial decoder." << std::endl;
+	
+	/* read  blocks until we have reached the end of the BAM header */
 	while ( (!haveheader) && rec.getBlock() )
 	{
-		std::copy ( rec.deflatebase.pa, rec.deflatebase.pa + rec.P.second,
-			std::back_insert_iterator < std::vector<uint8_t> > (headerstr) );
-		
-		try
-		{
-			libmaus::util::ContainerGetObject< std::vector<uint8_t> > CGO(headerstr);
-			libmaus::bambam::BamHeader header;
-			header.init(CGO);
-			haveheader = true;
-			blockskip = CGO.i - preblocksizes;
-		}
-		catch(std::exception const & ex)
-		{
-			#if 0
-			std::cerr << "[D] " << ex.what() << std::endl;
-			#endif
-		}
-	
-		// need to read another block to get header, remember size of current block
-		if ( ! haveheader )
-			preblocksizes += rec.P.second;
+		libmaus::util::GetObject<uint8_t const *> G(rec.deflatebase.pa);
+		std::pair<bool,uint64_t> const ps = libmaus::bambam::BamHeader::parseHeader(G,bhps,rec.P.second);
+		haveheader = ps.first;		
+		blockskip = ps.second; // bytes used for header in this block
 	}
 	
 	if ( blockskip )
@@ -774,33 +759,18 @@ void addBamDuplicateFlagParallel(
 	
 	bool haveheader = false;
 	uint64_t blockskip = 0;
-	std::vector<uint8_t> headerstr;
-	uint64_t preblocksizes = 0;
+
+	libmaus::bambam::BamHeader::BamHeaderParserState bhps;
 	
-	/* read and copy blocks until we have reached the end of the BAM header */
+	std::cerr << "[D] using incremental BAM header parser on parallel recoder." << std::endl;
+	
+	/* read  blocks until we have reached the end of the BAM header */
 	while ( (!haveheader) && rec.getBlock() )
 	{
-		std::copy ( rec.deflatebase.pa, rec.deflatebase.pa + rec.P.second,
-			std::back_insert_iterator < std::vector<uint8_t> > (headerstr) );
-		
-		try
-		{
-			libmaus::util::ContainerGetObject< std::vector<uint8_t> > CGO(headerstr);
-			libmaus::bambam::BamHeader header;
-			header.init(CGO);
-			haveheader = true;
-			blockskip = CGO.i - preblocksizes;
-		}
-		catch(std::exception const & ex)
-		{
-			#if 0
-			std::cerr << "[D] " << ex.what() << std::endl;
-			#endif
-		}
-	
-		// need to read another block to get header, remember size of current block
-		if ( ! haveheader )
-			preblocksizes += rec.P.second;
+		libmaus::util::GetObject<uint8_t const *> G(rec.deflatebase.pa);
+		std::pair<bool,uint64_t> const ps = libmaus::bambam::BamHeader::parseHeader(G,bhps,rec.P.second);
+		haveheader = ps.first;		
+		blockskip = ps.second; // bytes used for header in this block
 	}
 	
 	if ( blockskip )
