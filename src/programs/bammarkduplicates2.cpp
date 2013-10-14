@@ -1113,7 +1113,7 @@ struct PositionTrackInterface
 		int32_t const refid = A.getRefID();
 		int32_t const pos = A.getPos();
 		
-		std::cerr << "refid=" << refid << ",pos=" << pos << std::endl;
+		// std::cerr << "refid=" << refid << ",pos=" << pos << std::endl;
 	
 		position.first = refid;
 		position.second = pos;
