@@ -1112,6 +1112,8 @@ struct PositionTrackInterface
 	{
 		int32_t const refid = A.getRefID();
 		int32_t const pos = A.getPos();
+		
+		std::cerr << "refid=" << refid << ",pos=" << pos << std::endl;
 	
 		position.first = refid;
 		position.second = pos;
@@ -1255,6 +1257,22 @@ struct PositionTrackInterface
 		AC.freeAlignments(APFLfrags);
 		totalactivefrags -= AC.incnt;
 		assert ( totalactivefrags >= 0 );
+
+		// set new frag expunge position
+		if ( 
+			AC.refid > expungepositionfrags.first
+			||
+			(
+				AC.refid == expungepositionfrags.first
+				&&
+				AC.coordinate > expungepositionfrags.second
+			)
+		)
+		{
+			expungepositionfrags.first = AC.refid;
+			expungepositionfrags.second = AC.coordinate;
+		}
+
 		activefrags.pop_front();	
 	}
 
@@ -1319,7 +1337,23 @@ struct PositionTrackInterface
 		AC.freeAlignments(APFLpairs);
 		totalactivepairs -= AC.incnt;
 		assert ( totalactivepairs >= 0 );
-		activepairs.pop_front();	
+
+		// set new pair expunge position
+		if ( 
+			AC.refid > expungepositionpairs.first 
+			||
+			(
+				AC.refid == expungepositionpairs.first
+				&&
+				AC.coordinate > expungepositionpairs.second
+			)
+		)
+		{
+			expungepositionpairs.first = AC.refid;
+			expungepositionpairs.second = AC.coordinate;
+		}
+		
+		activepairs.pop_front();		
 	}
 
 	void expungeActiveFrontPairs(
