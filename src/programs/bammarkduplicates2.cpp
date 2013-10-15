@@ -1664,6 +1664,32 @@ struct PositionTrackInterface
 		flushFrags(fragREC,header);
 	}
 	
+	static bool isMatchingPair(
+		::libmaus::bambam::BamAlignment const & A,
+		::libmaus::bambam::BamAlignment const & B
+	)
+	{
+		bool ok = true;
+		
+		ok = ok && A.isPaired();
+		ok = ok && B.isPaired();
+
+		int const a1 = A.isRead1();
+		int const a2 = A.isRead2();
+		int const b1 = B.isRead1();
+		int const b2 = B.isRead2();
+		
+		ok = ok && (a1+b1 == 1);
+		ok = ok && (a2+b2 == 1);
+		
+		ok = ok && (A.getRefID() == B.getNextRefID());
+		ok = ok && (B.getRefID() == A.getNextRefID());
+		ok = ok && (A.getPos() == B.getNextPos());
+		ok = ok && (B.getPos() == A.getNextPos());
+		
+		return ok;
+	}
+	
 	/**
 	 * add a pair
 	 **/
@@ -1699,20 +1725,53 @@ struct PositionTrackInterface
 					// find active_count_type object
 					active_count_type const bkey(B.getRefID(),B.getCoordinate(),0,0);
 					std::deque<active_count_type>::iterator const ita = std::lower_bound(activepairs.begin(),activepairs.end(),bkey);
-					assert ( ita != activepairs.end() );
-					assert ( ita->refid == bkey.refid && ita->coordinate == bkey.coordinate );
 					
-					// copy alignments
-					// AlignmentPairListNode * ptr = APFLpairs.get();
-					active_count_type::list_node_type * ptr = APFLpairs.get();
-					#if defined(POS_READ_ENDS)
-					libmaus::bambam::ReadEndsBase::fillFragPair(A,B,header,ptr->A);
-					#else
-					ptr->A[0].copyFrom(A);
-					ptr->A[1].copyFrom(B);
-					#endif
-					ita->addAlignmentPair(ptr);
-					ita->incOut();
+					bool const activeok = 
+						(ita != activepairs.end())
+						&&
+						(ita->refid == bkey.refid && ita->coordinate == bkey.coordinate);
+						
+					if ( ! activeok )
+					{
+						if ( isMatchingPair(A,B) )
+						{
+							libmaus::exception::LibMausException se;
+							se.getStream() 
+								<< "Unable to find active object for B=\n" <<  B.formatAlignment(header) << '\n' 
+								<< "mate A=\n" << A.formatAlignment(header) << '\n'
+								<< "refid=" << B.getRefID() << " coordinate=" << B.getCoordinate() << std::endl;
+							se.finish();
+							throw se;
+						}
+						else
+						{
+							#if 0
+							std::cerr 
+								<< "Non matching pair\n"
+								<< A.formatAlignment(header) << "\n"
+								<< B.formatAlignment(header) << "\n";
+							#endif
+							expungeUntilPairs(B,pairREC,header);
+							pairREC->putPair(A,B,header);
+							excntpairs += 1;
+						}
+					}
+					else
+					{
+						assert ( activeok );
+						
+						// copy alignments
+						// AlignmentPairListNode * ptr = APFLpairs.get();
+						active_count_type::list_node_type * ptr = APFLpairs.get();
+						#if defined(POS_READ_ENDS)
+						libmaus::bambam::ReadEndsBase::fillFragPair(A,B,header,ptr->A);
+						#else
+						ptr->A[0].copyFrom(A);
+						ptr->A[1].copyFrom(B);
+						#endif
+						ita->addAlignmentPair(ptr);
+						ita->incOut();
+					}
 										
 					// done inserting this one
 					done = true;
