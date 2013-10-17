@@ -1,4 +1,4 @@
-.TH BAMMARKDUPLICATES2 1 "July 2013" BIOBAMBAM
+.TH BAMMARKDUPLICATES2 1 "October 2013" BIOBAMBAM
 .SH NAME
 bammarkduplicates2 - mark duplicate reads/alignments in BAM files
 .SH SYNOPSIS
@@ -6,15 +6,16 @@ bammarkduplicates2 - mark duplicate reads/alignments in BAM files
 .B bammarkduplicates2
 [options]
 .SH DESCRIPTION
-bammarkduplicates reads a BAM file containing alignments computed by an
+bammarkduplicates2 reads a coordinate sorted BAM file containing alignments computed by an
 aligner, marks duplicate reads/alignments using the coordinates of the alignments and writes the
 marked alignments to a BAM file. By default input is via standard input and
 output via standard output. Duplication metrics are provided on the standard
-error channel by default. bammarkduplicates scans the input BAM file twice,
+error channel by default. bammarkduplicates2 scans the input BAM file twice,
 it is thus of benefit to set the I key (described below) to give the name of
 an input file. If the input BAM file is given via standard input, then a
 copy of the input will be stored in a temporary file during the first run
-for processing in a second run.
+for processing in a second run. bammarkduplicates2 assumes that each read
+end of a pair occurs in exactly one entry in the file.
 .PP
 The following key=value pairs can be given:
 .PP
@@ -78,7 +79,7 @@ work reasonably well for most input files. Please see the biobambam paper at
 arxiv.org/abs/1306.0836 for details).
 .PP
 .B fragbufsize=<50331648>: 
-size of each fragment/pair file buffer in bytes (bammarkduplicates uses two
+size of each fragment/pair file buffer in bytes (bammarkduplicates2 uses two
 such buffer for detecting duplicates)
 .PP
 .B rmdup=<0|1>:
