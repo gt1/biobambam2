@@ -1,3 +1,10 @@
+biobambam (0.0.96-0) unstable; urgency=low
+
+  * add bamcat, bammerge and bamsplit
+  * add supplementary alignment flag 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Tue, 22 Oct 2013 14:54:14 +0100
+
 biobambam (0.0.95-0) unstable; urgency=low
 
   * use incremental BAM header parser in libmaus 
