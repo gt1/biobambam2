@@ -1,0 +1,46 @@
+.TH BAMCAT 1 "October 2013" BIOBAMBAM
+.SH NAME
+bamcat - concatenate BAM files
+.SH SYNOPSIS
+.PP
+.B bamcat
+[options]
+.SH DESCRIPTION
+bamcat reads a set of input BAM files, merges the headers, concatenates the
+alignment data and writes the output on standard output in BAM format. The
+input files can be specified via the I key. Any none key=value arguments
+given after the key=value pairs will also be considered as input files.
+.PP
+The following key=value pairs can be given:
+.PP
+.B I=<stdin>: 
+name of the input file. This key can be used multiple times
+.PP
+.B level=<-1|0|1|9>:
+set compression level of the output BAM file. Default value is -1. Valid
+values are
+.IP -1:
+zlib/gzip default compression level
+.IP 0:
+uncompressed
+.IP 1:
+zlib/gzip level 1 (fast) compression
+.IP 9:
+zlib/gzip level 9 (best) compression
+.PP
+.B verbose=<1>:
+Valid values are
+.IP 1:
+print progress report on standard error
+.IP 0:
+do not print progress report
+.SH AUTHOR
+Written by German Tischler.
+.SH "REPORTING BUGS"
+Report bugs to <gt1@sanger.ac.uk>
+.SH COPYRIGHT
+Copyright \(co 2009-2013 German Tischler, \(co 2011-2013 Genome Research Limited.
+License GPLv3+: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.

@@ -1,0 +1,61 @@
+.TH BAMMERGE 1 "October 2013" BIOBAMBAM
+.SH NAME
+bammerge - merge BAM files
+.SH SYNOPSIS
+.PP
+.B bammerge
+[options]
+.SH DESCRIPTION
+bammerge reads a set of input BAM files, merges the contained headers and
+alignment data and writes the output on standard output in BAM format. The
+input files can be specified via the I key. Any none key=value arguments
+given after the key=value pairs will also be considered as input files. The
+input files need to be sorted by coordinate or query name. The set of
+reference sequences in the files does not need to be identical. For merging
+coordinate sorted files however the order of the reference sequences in the 
+headers needs to be consistent among the files, i.e. if reference sequence 
+A appears before reference sequence B in any input file, then this needs 
+to hold for all other files as well. If the order is not consistent then
+bammerge cannot be used for merging. In this case the merging can be done
+by concatenating the files using bamcat and running bamsort afterwards.
+.PP
+The following key=value pairs can be given:
+.PP
+.B I=<stdin>: 
+name of the input file. This key can be used multiple times
+.PP
+.B SO=<coordinate>:
+Sort order. By default the sort order is coordinate.
+.IP coordinate:
+input files are sorted by coordinate. The created output file will be sorted by coordinate as well.
+.IP queryname:
+input files are sorted by query name. The created output file will be sorted by query name as well.
+.PP
+.B level=<-1|0|1|9>:
+set compression level of the output BAM file. Default value is -1. Valid
+values are
+.IP -1:
+zlib/gzip default compression level
+.IP 0:
+uncompressed
+.IP 1:
+zlib/gzip level 1 (fast) compression
+.IP 9:
+zlib/gzip level 9 (best) compression
+.PP
+.B verbose=<1>:
+Valid values are
+.IP 1:
+print progress report on standard error
+.IP 0:
+do not print progress report
+.SH AUTHOR
+Written by German Tischler.
+.SH "REPORTING BUGS"
+Report bugs to <gt1@sanger.ac.uk>
+.SH COPYRIGHT
+Copyright \(co 2009-2013 German Tischler, \(co 2011-2013 Genome Research Limited.
+License GPLv3+: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
