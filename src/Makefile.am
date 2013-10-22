@@ -38,10 +38,13 @@ bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamr
 	bamfilterflags \
 	bamfilterrg \
 	bamdownsamplerandom \
-	bammarkduplicates2
+	bammarkduplicates2 \
+	bamcat \
+	bammerge \
+	bamsplit
 	
 noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments bamtoname \
-	bamdisthist
+	bamdisthist 
 
 bamcollate_SOURCES = programs/bamcollate.cpp biobambam/Licensing.cpp
 bamcollate_LDADD = ${LIBMAUSLIBS}
@@ -197,3 +200,18 @@ bamdownsamplerandom_SOURCES = programs/bamdownsamplerandom.cpp biobambam/Licensi
 bamdownsamplerandom_LDADD = ${LIBMAUSLIBS}
 bamdownsamplerandom_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
 bamdownsamplerandom_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+bamcat_SOURCES = programs/bamcat.cpp biobambam/Licensing.cpp
+bamcat_LDADD = ${LIBMAUSLIBS}
+bamcat_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+bamcat_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+bammerge_SOURCES = programs/bammerge.cpp biobambam/Licensing.cpp
+bammerge_LDADD = ${LIBMAUSLIBS}
+bammerge_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+bammerge_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+bamsplit_SOURCES = programs/bamsplit.cpp biobambam/Licensing.cpp
+bamsplit_LDADD = ${LIBMAUSLIBS}
+bamsplit_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+bamsplit_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
