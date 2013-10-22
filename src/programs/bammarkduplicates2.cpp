@@ -2070,8 +2070,8 @@ struct SnappyRewrittenInput
 	// add PG line to header
 	std::string const upheadtext = ::libmaus::bambam::ProgramHeaderLineSet::addProgramLine(
 		headertext,
-		"bammarkduplicates", // ID
-		"bammarkduplicates", // PN
+		"bammarkduplicates2", // ID
+		"bammarkduplicates2", // PN
 		arginfo.commandline, // CL
 		::libmaus::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
 		std::string(PACKAGE_VERSION) // VN			
