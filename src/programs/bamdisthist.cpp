@@ -307,7 +307,7 @@ void bamdisthist(
 
 void bamdisthist(libmaus::util::ArgInfo const & arginfo)
 {
-	uint32_t const excludeflags = libmaus::bambam::BamFlagBase::stringToFlags(arginfo.getValue<std::string>("exclude","SECONDARY"));
+	uint32_t const excludeflags = libmaus::bambam::BamFlagBase::stringToFlags(arginfo.getValue<std::string>("exclude","SECONDARY,SUPPLEMENTARY"));
 	libmaus::util::TempFileRemovalContainer::setup();
 	std::string const tmpfilename = arginfo.getValue<std::string>("T",arginfo.getDefaultTmpFileName());
 	libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilename);
@@ -402,13 +402,13 @@ int main(int argc, char * argv[])
 				#else
 				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<[bam]>", "input format, bam" ) );
 				#endif
-				V.push_back ( std::pair<std::string,std::string> ( "exclude=<[SECONDARY]>", "exclude alignments matching any of the given flags" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "exclude=<[SECONDARY,SUPPLEMENTARY]>", "exclude alignments matching any of the given flags" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("T=<[") + arginfo.getDefaultTmpFileName() + "]>" , "temporary file name" ) );
 				
 				::biobambam::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
-				std::cerr << "Alignment flags: PAIRED,PROPER_PAIR,UNMAP,MUNMAP,REVERSE,MREVERSE,READ1,READ2,SECONDARY,QCFAIL,DUP" << std::endl;
+				std::cerr << "Alignment flags: PAIRED,PROPER_PAIR,UNMAP,MUNMAP,REVERSE,MREVERSE,READ1,READ2,SECONDARY,QCFAIL,DUP,SUPPLEMENTARY" << std::endl;
 
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;

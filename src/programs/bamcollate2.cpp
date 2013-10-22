@@ -125,7 +125,7 @@ void bamcollate2NonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::ba
 		bamdec.disableValidation();
 
 	libmaus::timing::RealTimeClock rtc; rtc.start();
-	uint32_t const excludeflags = libmaus::bambam::BamFlagBase::stringToFlags(arginfo.getValue<std::string>("exclude","SECONDARY"));
+	uint32_t const excludeflags = libmaus::bambam::BamFlagBase::stringToFlags(arginfo.getValue<std::string>("exclude","SECONDARY,SUPPLEMENTARY"));
 	libmaus::bambam::BamAlignment const & algn = bamdec.getAlignment();
 	::libmaus::autoarray::AutoArray<uint8_t> T;
 	uint64_t cnt = 0;
@@ -285,7 +285,7 @@ void bamcollate2Collating(
 
 void bamcollate2Collating(libmaus::util::ArgInfo const & arginfo)
 {
-	uint32_t const excludeflags = libmaus::bambam::BamFlagBase::stringToFlags(arginfo.getValue<std::string>("exclude","SECONDARY"));
+	uint32_t const excludeflags = libmaus::bambam::BamFlagBase::stringToFlags(arginfo.getValue<std::string>("exclude","SECONDARY,SUPPLEMENTARY"));
 	libmaus::util::TempFileRemovalContainer::setup();
 	std::string const tmpfilename = arginfo.getValue<std::string>("T",arginfo.getDefaultTmpFileName());
 	libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilename);
@@ -501,7 +501,7 @@ void bamcollate2CollatingRanking(
 
 void bamcollate2CollatingRanking(libmaus::util::ArgInfo const & arginfo)
 {
-	uint32_t const excludeflags = libmaus::bambam::BamFlagBase::stringToFlags(arginfo.getValue<std::string>("exclude","SECONDARY"));
+	uint32_t const excludeflags = libmaus::bambam::BamFlagBase::stringToFlags(arginfo.getValue<std::string>("exclude","SECONDARY,SUPPLEMENTARY"));
 	libmaus::util::TempFileRemovalContainer::setup();
 	std::string const tmpfilename = arginfo.getValue<std::string>("T",arginfo.getDefaultTmpFileName());
 	libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilename);
@@ -782,7 +782,7 @@ void bamcollate2CollatingPostRanking(
 
 void bamcollate2CollatingPostRanking(libmaus::util::ArgInfo const & arginfo)
 {
-	uint32_t const excludeflags = libmaus::bambam::BamFlagBase::stringToFlags(arginfo.getValue<std::string>("exclude","SECONDARY"));
+	uint32_t const excludeflags = libmaus::bambam::BamFlagBase::stringToFlags(arginfo.getValue<std::string>("exclude","SECONDARY,SUPPLEMENTARY"));
 	libmaus::util::TempFileRemovalContainer::setup();
 	std::string const tmpfilename = arginfo.getValue<std::string>("T",arginfo.getDefaultTmpFileName());
 	libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilename);
@@ -943,7 +943,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<[bam]>", "input format: bam" ) );
 				#endif
 				V.push_back ( std::pair<std::string,std::string> ( "ranges=<[]>", "input ranges (bam input only, default: read complete file)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "exclude=<[SECONDARY]>", "exclude alignments matching any of the given flags" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "exclude=<[SECONDARY,SUPPLEMENTARY]>", "exclude alignments matching any of the given flags" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "disablevalidation=<[0]>", "disable validation of input data" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "colhlog=<[18]>", "base 2 logarithm of hash table size used for collation" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("colsbs=<[")+libmaus::util::NumberSerialisation::formatNumber(128ull*1024*1024,0)+"]>", "size of hash table overflow list in bytes" ) );
@@ -952,7 +952,7 @@ int main(int argc, char * argv[])
 				::biobambam::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
-				std::cerr << "Alignment flags: PAIRED,PROPER_PAIR,UNMAP,MUNMAP,REVERSE,MREVERSE,READ1,READ2,SECONDARY,QCFAIL,DUP" << std::endl;
+				std::cerr << "Alignment flags: PAIRED,PROPER_PAIR,UNMAP,MUNMAP,REVERSE,MREVERSE,READ1,READ2,SECONDARY,QCFAIL,DUP,SUPPLEMENTARY" << std::endl;
 
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;

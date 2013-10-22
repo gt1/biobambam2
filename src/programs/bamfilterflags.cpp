@@ -187,7 +187,7 @@ int main(int argc, char * argv[])
 				::biobambam::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
-				std::cerr << "Alignment flags: PAIRED,PROPER_PAIR,UNMAP,MUNMAP,REVERSE,MREVERSE,READ1,READ2,SECONDARY,QCFAIL,DUP" << std::endl;
+				std::cerr << "Alignment flags: PAIRED,PROPER_PAIR,UNMAP,MUNMAP,REVERSE,MREVERSE,READ1,READ2,SECONDARY,QCFAIL,DUP,SUPPLEMENTARY" << std::endl;
 
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;
