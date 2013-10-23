@@ -42,10 +42,12 @@ bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamr
 	bammarkduplicates2 \
 	bamcat \
 	bammerge \
-	bamsplit
+	bamsplit \
+	bamsplitdiv \
+	bamchecksort
 	
 noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments bamtoname \
-	bamdisthist bamsplitdiv bamchecksort
+	bamdisthist 
 
 bamcollate_SOURCES = programs/bamcollate.cpp biobambam/Licensing.cpp
 bamcollate_LDADD = ${LIBMAUSLIBS}
