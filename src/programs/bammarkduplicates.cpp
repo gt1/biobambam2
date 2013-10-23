@@ -1127,7 +1127,7 @@ static void markDuplicatesInFile(
 			decoder.disableValidation();
 			markDuplicatesInFileTemplate(arginfo,verbose,bamheader,maxrank,mod,level,DSC,decoder);
 		}
-		if ( arginfo.hasArg("I") && (arginfo.getValue<std::string>("I","") != "") )
+		else if ( arginfo.hasArg("I") && (arginfo.getValue<std::string>("I","") != "") )
 		{
 			std::string const inputfilename = arginfo.getValue<std::string>("I","I");
 			libmaus::aio::CheckedInputStream CIS(inputfilename);
