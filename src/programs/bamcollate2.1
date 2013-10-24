@@ -50,6 +50,18 @@ SAM (see http://samtools.sourceforge.net/SAM1.pdf)
 .IP cram:
 CRAM (see http://www.ebi.ac.uk/ena/about/cram_toolkit)
 .PP
+.B level=<-1|0|1|9>:
+set compression level of the output BAM file. Valid
+values are
+.IP -1:
+zlib/gzip default compression level
+.IP 0:
+uncompressed
+.IP 1:
+zlib/gzip level 1 (fast) compression
+.IP 9:
+zlib/gzip level 9 (best) compression
+.PP
 .B exclude=<SECONDARY>:
 Do not include reads in the output that have any of the given flags set. The
 flags are given separated by commas. Valid flags are:
