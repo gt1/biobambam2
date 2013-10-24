@@ -21,6 +21,7 @@ compile
 config.h
 config.log
 config.status
+doconfig48.sh
 doconfig49.sh
 libtool
 m4/libtool.m4
