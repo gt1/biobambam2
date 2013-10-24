@@ -247,7 +247,6 @@ struct BamIndexGenerator
 	
 	bool haveheader;
 	
-	uint64_t gcnt; // uncompressed bytes
 	uint64_t cacct; // accumulated compressed bytes we have read from file
 	std::pair<uint64_t,uint64_t> rinfo;
 
@@ -296,7 +295,7 @@ struct BamIndexGenerator
 		bool const rvalidate = true, bool const rdebug = false
 	)
 	: header(), haveheader(false),
-	  gcnt(0), cacct(0), rinfo(), bamheaderparsestate(), state(state_reading_blocklen), blocklenred(0),
+	  cacct(0), rinfo(), bamheaderparsestate(), state(state_reading_blocklen), blocklenred(0),
 	  blocklen(0), alcnt(0), alcmpstart(0), alstart(0), binalcmpstart(0), binalstart(0), algn(),
 	  copyptr(0), prevrefid(-1), prevpos(-1), prevbin(-1), prevcheckrefid(-1), prevcheckpos(-1),
 	  binchunktmpfilename(tmpfileprefix+".bin"), linchunktmpfilename(tmpfileprefix+".lin"),
@@ -552,244 +551,6 @@ struct BamIndexGenerator
 		}
 	}
 	
-	template<typename bgzf_input_type>
-	void process(bgzf_input_type & rec)
-	{
-		uint8_t const * pa = 0; // buffer current pointer
-		uint8_t const * pc = 0; // buffer end pointer
-		libmaus::autoarray::AutoArray<uint8_t> B(libmaus::lz::BgzfConstants::getBgzfMaxBlockSize());
-
-		while ( 
-			(!haveheader) 
-			&& 
-			(gcnt=(rinfo=rec.readPlusInfo(reinterpret_cast<char *>(B.begin()),B.size())).second) 
-		)
-		{
-			// accu for compressed bytes read
-			cacct += rinfo.first;
-			
-			libmaus::util::GetObject<uint8_t const *> G(B.begin());
-			std::pair<bool,uint64_t> const P = libmaus::bambam::BamHeader::parseHeader(G,bamheaderparsestate,gcnt);
-
-			// header complete?
-			if ( P.first )
-			{
-				haveheader = true;
-				pa = B.begin() + P.second;
-				pc = B.begin() + gcnt;
-				header.init(bamheaderparsestate);
-			}
-		}
-		
-		if ( ! haveheader )
-		{
-			libmaus::exception::LibMausException se;
-			se.getStream() << "EOF while reading BAM header." << std::endl;
-			se.finish();
-			throw se;
-		}
-
-		header.init(bamheaderparsestate);
-
-		// if header ends on a block boundary, then read the next block
-		if ( pa == pc )
-		{
-			gcnt=(rinfo=rec.readPlusInfo(reinterpret_cast<char *>(B.begin()),B.size())).second;
-			cacct += rinfo.first;
-			pa = B.begin();
-			pc = pa + gcnt;
-		}
-
-		alcmpstart = cacct - rinfo.first;
-		alstart = pa - B.begin();
-		
-		binalcmpstart = alcmpstart;
-		binalstart = alstart;
-
-		/* while we have alignment data blocks */
-		while ( gcnt )
-		{
-			while ( pa != pc )
-			{
-				switch ( state )
-				{
-					/* read length of next alignment block */
-					case state_reading_blocklen:
-						/* if this is a little endian machine allowing unaligned access */
-						#if defined(LIBMAUS_HAVE_i386)
-						if ( (!blocklenred) && ((pc-pa) >= static_cast<ptrdiff_t>(sizeof(uint32_t))) )
-						{
-							blocklen = *(reinterpret_cast<uint32_t const *>(pa));
-							blocklenred = sizeof(uint32_t);
-							pa += sizeof(uint32_t);
-							
-							state = state_post_skip;
-							
-							if ( algn.D.size() < blocklen )
-								algn.D = libmaus::bambam::BamAlignment::D_array_type(blocklen,false);
-							algn.blocksize = blocklen;
-							copyptr = algn.D.begin();
-						}
-						else
-						#endif
-						{
-							while ( pa != pc && blocklenred < sizeof(uint32_t) )
-								blocklen |= static_cast<uint32_t>(*(pa++)) << ((blocklenred++)*8);
-
-							if ( blocklenred == sizeof(uint32_t) )
-							{
-								state = state_post_skip;
-
-								if ( algn.D.size() < blocklen )
-									algn.D = libmaus::bambam::BamAlignment::D_array_type(blocklen,false);
-								algn.blocksize = blocklen;
-								copyptr = algn.D.begin();
-							}
-						}
-						
-						break;
-					/* skip data after part we modify */
-					case state_post_skip:
-					{
-						uint32_t const skip = std::min(pc-pa,static_cast<ptrdiff_t>(blocklen));
-						std::copy(pa,pa+skip,copyptr);
-						copyptr += skip;
-						pa += skip;
-						blocklen -= skip;
-						
-						if ( ! blocklen )
-						{
-							if ( validate )
-								algn.checkAlignment();
-						
-							int64_t const thisrefid = algn.getRefID();
-							int64_t const thispos = algn.getPos();
-							int64_t const thisbin = 
-								(thisrefid >= 0 && thispos >= 0) ? algn.computeBin() : -1;
-
-							int64_t const thischeckrefid = (thisrefid >= 0) ? thisrefid : std::numeric_limits<int64_t>::max();
-							int64_t const thischeckpos   = (thispos >= 0) ? thispos : std::numeric_limits<int64_t>::max();
-							
-							bool const orderok =
-								(thischeckrefid > prevcheckrefid)
-								||
-								(thischeckrefid == prevcheckrefid && thischeckpos >= prevcheckpos);
-								
-							if ( ! orderok )
-							{
-								libmaus::exception::LibMausException se;
-								se.getStream() << "File is not sorted by coordinate." << std::endl;
-								se.finish();
-								throw se;
-							}
-								
-							if ( 
-								thisrefid != prevrefid ||
-								(
-									(thisrefid == prevrefid) && (thispos>>14)!=(prevpos>>14)
-								)
-							)
-							{
-								if ( thisrefid >= 0 && thispos >= 0 )
-								{
-									libmaus::bambam::BamIndexLinearChunk LC(thisrefid,thispos,alcmpstart,alstart);
-									if ( BLC.put(LC) )
-										linearchunkfrags.push_back(BLC.flush(*linCOS));
-								}
-
-								if ( debug )
-								{
-									std::cerr << "new lin: " << thisrefid << "," << thispos 
-										<< " alcmpstart=" << alcmpstart
-										<< " alstart=" << alstart
-										<< std::endl;
-								}
-							}	
-
-							if ( 
-								thisbin != prevbin 
-								||
-								thisrefid != prevrefid
-							)
-							{
-								if ( prevbin >= 0 )
-								{
-									uint64_t binalcmpend = alcmpstart;
-									uint64_t binalend = alstart;
-								
-									if ( debug )
-									{
-										std::cerr << "end of bin " << prevbin
-											<< " on ref id " << prevrefid
-											<< " binalcmpstart=" << binalcmpstart
-											<< " binalstart=" << binalstart
-											<< " binalcmpend=" << binalcmpend
-											<< " binalend=" << binalend
-											<< std::endl;
-									}
-
-									libmaus::bambam::BamIndexBinChunk BC(prevrefid,prevbin,binalcmpstart,binalstart,binalcmpend,binalend);
-									
-									if ( debug )
-									{
-										std::cerr << BC << std::endl;
-									}
-									
-									if ( BCB.put(BC) )
-										binchunkfrags.push_back(BCB.flush(*chunkCOS));
-								}
-
-								binalcmpstart = alcmpstart;
-								binalstart = alstart;
-							}
-							
-							if ( debug )
-							{
-								std::cerr 
-									<< "alcnt=" << alcnt
-									<< " alcmpstart=" << alcmpstart
-									<< " alstart=" << alstart
-									<< " refid=" << thisrefid
-									<< " pos=" << thispos
-									<< " bin=" << thisbin
-									<< std::endl;
-							}
-						
-							// finished an alignment, set up for next one
-							state = state_reading_blocklen;
-							
-							blocklenred = 0;
-							blocklen = 0;
-
-							uint64_t const nextalcmpstart = cacct - rinfo.first;
-							uint64_t const nextalstart = pa - B.begin();
-
-							alcnt++;
-							alcmpstart = nextalcmpstart;
-							alstart = nextalstart;
-
-							prevrefid = thisrefid;
-							prevpos = thispos;
-							prevbin = thisbin;
-
-							prevcheckrefid = thischeckrefid;
-							prevcheckpos = thischeckpos;
-		       
-							if ( verbose && (alcnt % (1024*1024) == 0) )
-								std::cerr << "[V] " << alcnt/(1024*1024) << std::endl;
-						}
-						break;
-					}
-				}
-			}
-
-			gcnt=(rinfo=rec.readPlusInfo(reinterpret_cast<char *>(B.begin()),B.size())).second;
-			cacct += rinfo.first;
-			pa = B.begin();
-			pc = pa + gcnt;
-		}
-	}
-	
 	template<typename output_stream_type>
 	void flush(output_stream_type & out)
 	{
@@ -970,7 +731,6 @@ int bamindex(libmaus::util::ArgInfo const & arginfo, std::istream & in, std::ost
 	while ((rinfo=rec.readPlusInfo(reinterpret_cast<char *>(B.begin()),B.size())).second)
 		BIG.addBlock(B.begin(),rinfo.first,rinfo.second);
 
-	// BIG.process(rec);
 	BIG.flush(out);
 	
 	return EXIT_SUCCESS;
