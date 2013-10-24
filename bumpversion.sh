@@ -23,5 +23,6 @@ git add configure.in
 git commit
 git push
 
-git tag -a biobambam_${FIRST}_${SECOND}_${NEXTTHIRD} -m "biobambam version ${FIRST}_${SECOND}_${NEXTTHIRD}"
-git push origin biobambam_${FIRST}_${SECOND}_${NEXTTHIRD}
+TAG=biobambam_experimental_${FIRST}_${SECOND}_${NEXTTHIRD}
+git tag -a ${TAG} -m "biobambam experimental version ${FIRST}_${SECOND}_${NEXTTHIRD}"
+git push origin ${TAG}

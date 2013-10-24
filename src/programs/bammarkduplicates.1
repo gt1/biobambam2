@@ -19,7 +19,10 @@ for processing in a second run.
 The following key=value pairs can be given:
 .PP
 .B I=<stdin>: 
-name of the input file (input is read from standard input if not set)
+name of the input file (input is read from standard input if not set). This
+key can be given multiple times. If it is given multiple times, then the
+input files need to be in coordinate sorted order and will be merged for
+output such that the output will be coordinate sorted.
 .PP
 .B O=<stdout>: 
 name of the output file (output is written to standard output if not set)

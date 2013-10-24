@@ -1,0 +1,32 @@
+.TH BAMCHECKSORT 1 "October 2013" BIOBAMBAM
+.SH NAME
+bamchecksort - split BAM file into a set of BAM files
+.SH SYNOPSIS
+.PP
+.B bamchecksort
+[options]
+.SH DESCRIPTION
+bamchecksort reads a BAM file via standard input and creates a set of output
+BAM files containing the alignments in the input. For query name sorted
+files the program strictly checks the order used by the bamsort program,
+i.e. it requires reads marked as read 1 to appear before such marked as
+read 2 for lines with equal names.
+.PP
+The following key=value pairs can be given:
+.PP
+.B verbose=<1>:
+Valid values are
+.IP 1:
+print progress report on standard error
+.IP 0:
+do not print progress report
+.SH AUTHOR
+Written by German Tischler.
+.SH "REPORTING BUGS"
+Report bugs to <gt1@sanger.ac.uk>
+.SH COPYRIGHT
+Copyright \(co 2009-2013 German Tischler, \(co 2011-2013 Genome Research Limited.
+License GPLv3+: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.

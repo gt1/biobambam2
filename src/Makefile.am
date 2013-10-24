@@ -15,7 +15,8 @@ MANPAGES = programs/bamtofastq.1 programs/bamsort.1 programs/bammarkduplicates.1
 	programs/bamindex.1 programs/bamfilterflags.1 \
 	programs/bamfilterrg.1 programs/bamdownsamplerandom.1 \
 	programs/bammarkduplicates2.1 \
-	programs/bamcat.1 programs/bammerge.1 programs/bamsplit.1
+	programs/bamcat.1 programs/bammerge.1 programs/bamsplit.1 \
+	programs/bamsplitdiv.1 programs/bamchecksort.1
 
 man_MANS = ${MANPAGES}
 
@@ -42,7 +43,9 @@ bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamr
 	bammarkduplicates2 \
 	bamcat \
 	bammerge \
-	bamsplit
+	bamsplit \
+	bamsplitdiv \
+	bamchecksort
 	
 noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments bamtoname \
 	bamdisthist 
@@ -216,3 +219,13 @@ bamsplit_SOURCES = programs/bamsplit.cpp biobambam/Licensing.cpp
 bamsplit_LDADD = ${LIBMAUSLIBS}
 bamsplit_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
 bamsplit_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+bamsplitdiv_SOURCES = programs/bamsplitdiv.cpp biobambam/Licensing.cpp
+bamsplitdiv_LDADD = ${LIBMAUSLIBS}
+bamsplitdiv_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+bamsplitdiv_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+bamchecksort_SOURCES = programs/bamchecksort.cpp biobambam/Licensing.cpp
+bamchecksort_LDADD = ${LIBMAUSLIBS}
+bamchecksort_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+bamchecksort_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}

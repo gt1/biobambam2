@@ -1,3 +1,11 @@
+biobambam (0.0.97-0) unstable; urgency=low
+
+  * add multiple input file option for bammarkduplicates and bammarkduplicates2
+  * add support for supplementary alignment flag in bammaskflags
+  * add bamsplitdiv and bamchecksort programs 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Thu, 24 Oct 2013 09:44:34 +0100
+
 biobambam (0.0.96-0) unstable; urgency=low
 
   * add bamcat, bammerge and bamsplit

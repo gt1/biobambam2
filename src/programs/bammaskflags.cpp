@@ -43,12 +43,12 @@ int bammaskflags(::libmaus::util::ArgInfo const & arginfo)
 	if ( mask )
 	{
 		std::cerr << "Keeping flags ";
-		for ( uint64_t i = 1; i <= ::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FDUP; i <<= 1 )
+		for ( uint64_t i = 1; i <= ::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSUPPLEMENTARY; i <<= 1 )
 			if ( mask & i )
 				std::cerr << static_cast< ::libmaus::bambam::BamFlagBase::bam_flags >(i) << ";";
 		std::cerr << std::endl;
 		std::cerr << "Erasing flags ";
-		for ( uint64_t i = 1; i <= ::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FDUP; i <<= 1 )
+		for ( uint64_t i = 1; i <= ::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSUPPLEMENTARY; i <<= 1 )
 			if ( !(mask & i) )
 				std::cerr << static_cast< ::libmaus::bambam::BamFlagBase::bam_flags >(i) << ";";
 		std::cerr << std::endl;

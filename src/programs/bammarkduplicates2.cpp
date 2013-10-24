@@ -2693,28 +2693,40 @@ static void markDuplicatesInFile(
 		
 		if ( inputisbam )
 		{
-			std::string const inputfilename =
-				(arginfo.hasArg("I") && (arginfo.getValue<std::string>("I","") != ""))
-				?
-				arginfo.getValue<std::string>("I","I")
-				:
-				recompressedalignments;
-
-			if ( markthreads < 2 )
+			// multiple input files
+			if ( arginfo.getPairCount("I") > 1 )
 			{
-				::libmaus::bambam::BamDecoder decoder(inputfilename);
+				std::vector<std::string> const inputfilenames = arginfo.getPairValues("I");
+				libmaus::bambam::BamMergeCoordinate decoder(inputfilenames);
 				decoder.disableValidation();
 				::libmaus::bambam::BamWriter::unique_ptr_type writer(new ::libmaus::bambam::BamWriter(outputstr,*uphead,level));	
 				removeDuplicatesFromFileTemplate(verbose,maxrank,mod,DSC,decoder,*writer);
 			}
 			else
 			{
-				libmaus::aio::CheckedInputStream CIS(inputfilename);
-				UpdateHeader UH(arginfo);
-				libmaus::bambam::BamParallelRewrite BPR(CIS,UH,outputstr,level,markthreads,4 /* blocks per thread */);
-				libmaus::bambam::BamAlignmentDecoder & dec = BPR.getDecoder();
-				libmaus::bambam::BamParallelRewrite::writer_type & writer = BPR.getWriter();
-				removeDuplicatesFromFileTemplate(verbose,maxrank,mod,DSC,dec,writer);
+				std::string const inputfilename =
+					(arginfo.hasArg("I") && (arginfo.getValue<std::string>("I","") != ""))
+					?
+					arginfo.getValue<std::string>("I","I")
+					:
+					recompressedalignments;
+
+				if ( markthreads < 2 )
+				{
+					::libmaus::bambam::BamDecoder decoder(inputfilename);
+					decoder.disableValidation();
+					::libmaus::bambam::BamWriter::unique_ptr_type writer(new ::libmaus::bambam::BamWriter(outputstr,*uphead,level));	
+					removeDuplicatesFromFileTemplate(verbose,maxrank,mod,DSC,decoder,*writer);
+				}
+				else
+				{
+					libmaus::aio::CheckedInputStream CIS(inputfilename);
+					UpdateHeader UH(arginfo);
+					libmaus::bambam::BamParallelRewrite BPR(CIS,UH,outputstr,level,markthreads,4 /* blocks per thread */);
+					libmaus::bambam::BamAlignmentDecoder & dec = BPR.getDecoder();
+					libmaus::bambam::BamParallelRewrite::writer_type & writer = BPR.getWriter();
+					removeDuplicatesFromFileTemplate(verbose,maxrank,mod,DSC,dec,writer);
+				}
 			}
 		}
 		else
@@ -2731,7 +2743,15 @@ static void markDuplicatesInFile(
 	}
 	else
 	{
-		if ( arginfo.hasArg("I") && (arginfo.getValue<std::string>("I","") != "") )
+		// multiple input files
+		if ( arginfo.getPairCount("I") > 1 )
+		{
+			std::vector<std::string> const inputfilenames = arginfo.getPairValues("I");
+			libmaus::bambam::BamMergeCoordinate decoder(inputfilenames);
+			decoder.disableValidation();
+			markDuplicatesInFileTemplate(arginfo,verbose,bamheader,maxrank,mod,level,DSC,decoder);
+		}
+		else if ( arginfo.hasArg("I") && (arginfo.getValue<std::string>("I","") != "") )
 		{
 			std::string const inputfilename = arginfo.getValue<std::string>("I","I");
 			libmaus::aio::CheckedInputStream CIS(inputfilename);
@@ -2873,14 +2893,21 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	typedef ::libmaus::bambam::BamCircularHashCollatingBamDecoder col_type;
 	typedef ::libmaus::bambam::BamParallelCircularHashCollatingBamDecoder par_col_type;
 	typedef ::libmaus::bambam::CircularHashCollatingBamDecoder col_base_type;
+	typedef ::libmaus::bambam::BamMergeCoordinateCircularHashCollatingBamDecoder merge_col_type;
 	typedef col_base_type::unique_ptr_type col_base_ptr_type;	
 	col_base_ptr_type CBD;
 
 	uint64_t const markthreads = 
 		std::max(static_cast<uint64_t>(1),arginfo.getValue<uint64_t>("markthreads",getDefaultMarkThreads()));
 	
+	if ( arginfo.getPairCount("I") > 1 )
+	{
+		std::vector<std::string> const inputfilenames = arginfo.getPairValues("I");
+		col_base_ptr_type tCBD(new merge_col_type(inputfilenames,tmpfilename,0/* exclude */,true,colhashbits,collistsize));
+		CBD = UNIQUE_PTR_MOVE(tCBD);
+	}
 	// if we are reading the input from a file
-	if ( arginfo.hasArg("I") && (arginfo.getValue<std::string>("I","") != "") )
+	else if ( arginfo.hasArg("I") && (arginfo.getValue<std::string>("I","") != "") )
 	{
 		std::string const inputfilename = arginfo.getValue<std::string>("I","I");
 		::libmaus::aio::CheckedInputStream::unique_ptr_type tCIS(new ::libmaus::aio::CheckedInputStream(inputfilename));
