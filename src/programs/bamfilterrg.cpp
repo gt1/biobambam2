@@ -172,9 +172,7 @@ int main(int argc, char * argv[])
 				::biobambam::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
-				
-				std::cerr << "The keep and remove keys are mutually exclusive. Tags are given by their two character ids. Multiple ids are separated by commas." << std::endl;
-				
+								
 				return EXIT_SUCCESS;
 			}
 			
