@@ -54,6 +54,8 @@ static uint64_t getDefaultColListSize() { return 32*1024*1024; }
 static uint64_t getDefaultFragBufSize() { return 48*1024*1024; }
 static uint64_t getDefaultMarkThreads() { return 1; }
 static bool getDefaultRmDup() { return 0; }
+static int getDefaultMD5() { return 0; }
+static int getDefaultIndex() { return 0; }
 
 struct DupSetCallback
 {
@@ -1042,6 +1044,7 @@ struct UpdateHeader : public libmaus::bambam::BamHeaderRewriteCallback
 	}
 };
 
+
 static void markDuplicatesInFile(
 	::libmaus::util::ArgInfo const & arginfo,
 	bool const verbose,
@@ -1066,7 +1069,7 @@ static void markDuplicatesInFile(
 
 	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > cbs;
 	::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
-	if ( arginfo.getValue<unsigned int>("md5",0) )
+	if ( arginfo.getValue<unsigned int>("md5",getDefaultMD5()) )
 	{
 		if ( arginfo.hasArg("md5filename") &&  arginfo.getUnparsedValue("md5filename","") != "" )
 			md5filename = arginfo.getUnparsedValue("md5filename","");
@@ -1083,7 +1086,7 @@ static void markDuplicatesInFile(
 		}
 	}
 	libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Pindex;
-	if ( arginfo.getValue<unsigned int>("index",0) )
+	if ( arginfo.getValue<unsigned int>("index",getDefaultIndex()) )
 	{
 		if ( arginfo.hasArg("indexfilename") &&  arginfo.getUnparsedValue("indexfilename","") != "" )
 			indexfilename = arginfo.getUnparsedValue("indexfilename","");
@@ -1814,6 +1817,10 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "rewritebam=<["+::biobambam::Licensing::formatNumber(getDefaultRewriteBam())+"]>", "compression of temporary alignment file when input is via stdin (0=snappy,1=gzip/bam,2=copy)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "rewritebamlevel=<["+::biobambam::Licensing::formatNumber(getDefaultRewriteBamLevel())+"]>", "compression settings for temporary alignment file if rewritebam=1" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "rmdup=<["+::biobambam::Licensing::formatNumber(getDefaultRmDup())+"]>", "remove duplicates (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "md5filename=<filename>", "file name for md5 check sum (default: extend output file name)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "indexfilename=<filename>", "file name for BAM index file (default: extend output file name)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "colhashbits=<["+::biobambam::Licensing::formatNumber(getDefaultColHashBits())+"]>", "log_2 of size of hash table used for collation" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "collistsize=<["+::biobambam::Licensing::formatNumber(getDefaultColListSize())+"]>", "output list size for collation" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "fragbufsize=<["+::biobambam::Licensing::formatNumber(getDefaultFragBufSize())+"]>", "size of each fragment/pair file buffer in bytes" ) );

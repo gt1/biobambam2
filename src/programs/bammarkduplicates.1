@@ -27,7 +27,7 @@ output such that the output will be coordinate sorted.
 .B O=<stdout>: 
 name of the output file (output is written to standard output if not set)
 .PP
-.B M=<stdout>: 
+.B M=<stderr>: 
 name of the metrics file (metrics are written to standard error if not set)
 .PP
 .B tmpfile=<filename>: 
@@ -90,6 +90,32 @@ sets how duplicates are handled
 duplicates will be retained in the output file and have the duplication flag set
 .IP 1:
 duplicates will be remove when writing the output file
+.PP
+.B md5=<0|1>:
+md5 checksum creation for output file. Valid values are
+.IP 0:
+do not compute checksum. This is the default.
+.IP 1:
+compute checksum. If the md5filename key is set, then the checksum is
+written to the given file. If the md5filename key is not given but set O key
+is set the checksum will be written as output file name with .md5 appended.
+If md5filename and O are unset, then no checksum will be computed.
+.PP
+.B md5filename
+file name for md5 checksum if md5=1.
+.PP
+.B index=<0|1>:
+compute BAM index for output file. Valid values are
+.IP 0:
+do not compute BAM index. This is the default.
+.IP 1:
+compute BAM index. If the indexfilename key is set, then the BAM index is
+written to the given file. If the indexfilename key is not given but set O key
+is set the checksum will be written as output file name with .bai appended.
+If indexfilename and O are unset, then no BAM index will be computed.
+.PP
+.B indexfilename
+file name for BAM index if index=1.
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"
