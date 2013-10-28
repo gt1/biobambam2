@@ -22,11 +22,26 @@
 #include <libmaus/aio/CheckedInputStream.hpp>
 #include <libmaus/aio/CheckedOutputStream.hpp>
 #include <libmaus/aio/SynchronousGenericInput.hpp>
+#include <libmaus/bambam/BamAlignmentFreeList.hpp>
+#include <libmaus/bambam/BamAlignmentPairFreeList.hpp>
+#include <libmaus/bambam/ReadEndsFreeList.hpp>
+#include <libmaus/bambam/BamAlignmentSnappyInput.hpp>
+#include <libmaus/bambam/BamAlignmentInputCallbackBam.hpp>
+#include <libmaus/bambam/BamAlignmentInputCallbackSnappy.hpp>
+#include <libmaus/bambam/BamAlignmentInputPositionCallbackNull.hpp>
+#include <libmaus/bambam/BamAlignmentInputCallbackSnappy.hpp>
+#include <libmaus/bambam/BamAlignmentInputCallbackBam.hpp>
 #include <libmaus/bambam/BamParallelRewrite.hpp>
 #include <libmaus/bambam/BamWriter.hpp>
+#include <libmaus/bambam/BamHeaderUpdate.hpp>
+#include <libmaus/bambam/BamAlignmentInputPositionUpdateCallback.hpp>
 #include <libmaus/bambam/CircularHashCollatingBamDecoder.hpp>
 #include <libmaus/bambam/CollatingBamDecoder.hpp>
 #include <libmaus/bambam/DuplicationMetrics.hpp>
+#include <libmaus/bambam/DupMarkBase.hpp>
+#include <libmaus/bambam/DupSetCallbackStream.hpp>
+#include <libmaus/bambam/DupSetCallbackSet.hpp>
+#include <libmaus/bambam/DupSetCallbackVector.hpp>
 #include <libmaus/bambam/OpticalComparator.hpp>
 #include <libmaus/bambam/ProgramHeaderLineSet.hpp>
 #include <libmaus/bambam/ReadEndsContainer.hpp>
@@ -34,6 +49,7 @@
 #include <libmaus/bitio/BitVector.hpp>
 #include <libmaus/lz/BgzfInflateDeflateParallel.hpp>
 #include <libmaus/lz/BgzfRecode.hpp>
+#include <libmaus/lz/BgzfRecodeParallel.hpp>
 #include <libmaus/math/iabs.hpp>
 #include <libmaus/math/numbits.hpp>
 #include <libmaus/timing/RealTimeClock.hpp>
@@ -42,7 +58,6 @@
 #include <libmaus/util/MemUsage.hpp>
 #include <biobambam/Licensing.hpp>
 
-// static std::string formatNumber(int64_t const n) { std::ostringstream ostr; ostr << n; return ostr.str(); }
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static unsigned int getDefaultVerbose() { return 1; }
 static uint64_t getDefaultMod() { return 1048576;  }
@@ -54,868 +69,13 @@ static uint64_t getDefaultFragBufSize() { return 48*1024*1024; }
 static uint64_t getDefaultMarkThreads() { return 1; }
 static uint64_t getDefaultMaxReadLength() { return 500; }
 static bool getDefaultRmDup() { return 0; }
+static std::string getProgId() { return "bammarkduplicates2"; }
+static int getDefaultMD5() { return 0; }
+static int getDefaultIndex() { return 0; }
 
-struct DupSetCallback
-{
-	virtual ~DupSetCallback() {}
-	virtual void operator()(::libmaus::bambam::ReadEnds const & A) = 0;
-	virtual uint64_t getNumDups() const = 0;
-	virtual void addOpticalDuplicates(uint64_t const libid, uint64_t const count) = 0;
-	virtual bool isMarked(uint64_t const i) const = 0;
-	virtual void flush(uint64_t const n) = 0;
-};
-
-struct DupSetCallbackSet : public DupSetCallback
-{
-	std::set<uint64_t> S;
-
-	virtual void operator()(::libmaus::bambam::ReadEnds const & A)
-	{
-		S.insert(A.getRead1IndexInFile());
-		
-		if ( A.isPaired() )
-			S.insert(A.getRead2IndexInFile());
-	}
-	virtual uint64_t getNumDups() const
-	{
-		return S.size();
-	}
-	virtual void addOpticalDuplicates(uint64_t const, uint64_t const)
-	{
-	
-	}
-	virtual bool isMarked(uint64_t const i) const
-	{
-		return S.find(i) != S.end();
-	}
-	virtual void flush(uint64_t const)
-	{
-	
-	}
-};
-
-struct DupSetCallbackVector : public DupSetCallback
-{
-	::libmaus::bitio::BitVector B;
-
-	std::map<uint64_t,::libmaus::bambam::DuplicationMetrics> & metrics;
-
-	DupSetCallbackVector(
-		uint64_t const n,
-		std::map<uint64_t,::libmaus::bambam::DuplicationMetrics> & rmetrics
-	) : B(n), metrics(rmetrics) /* unpairedreadduplicates(), readpairduplicates(), metrics(rmetrics) */ {}
-	
-	void operator()(::libmaus::bambam::ReadEnds const & A)
-	{
-		B.set(A.getRead1IndexInFile(),true);
-		
-		if ( A.isPaired() )
-		{
-			B.set(A.getRead2IndexInFile(),true);
-			metrics[A.getLibraryId()].readpairduplicates++;
-		}
-		else
-		{
-			metrics[A.getLibraryId()].unpairedreadduplicates++;
-		}
-	}	
-
-	uint64_t getNumDups() const
-	{
-		uint64_t dups = 0;
-		for ( uint64_t i = 0; i < B.size(); ++i )
-			if ( B.get(i) )
-				dups++;
-		
-		return dups;
-	}
-	void addOpticalDuplicates(uint64_t const libid, uint64_t const count)
-	{
-		metrics[libid].opticalduplicates += count;
-	}
-
-	bool isMarked(uint64_t const i) const
-	{
-		return B[i];
-	}
-	
-	void flush(uint64_t const)
-	{
-	
-	}
-};
-
-struct DupSetCallbackStream : public DupSetCallback
-{
-	std::string const filename;
-	libmaus::aio::SynchronousGenericOutput<uint64_t>::unique_ptr_type SGO;
-	std::map<uint64_t,::libmaus::bambam::DuplicationMetrics> & metrics;
-	uint64_t numdup;
-	::libmaus::bitio::BitVector::unique_ptr_type B;
-
-	DupSetCallbackStream(
-		std::string const & rfilename,
-		std::map<uint64_t,::libmaus::bambam::DuplicationMetrics> & rmetrics
-	) : filename(rfilename), SGO(new libmaus::aio::SynchronousGenericOutput<uint64_t>(filename,8*1024)), metrics(rmetrics), numdup(0) /* unpairedreadduplicates(), readpairduplicates(), metrics(rmetrics) */ {}
-	
-	void operator()(::libmaus::bambam::ReadEnds const & A)
-	{
-		SGO->put(A.getRead1IndexInFile());
-		numdup++;
-		
-		if ( A.isPaired() )
-		{
-			SGO->put(A.getRead2IndexInFile());
-			numdup++;
-			metrics[A.getLibraryId()].readpairduplicates++;
-		}
-		else
-		{
-			metrics[A.getLibraryId()].unpairedreadduplicates++;
-		}
-	}	
-
-	uint64_t getNumDups() const
-	{
-		return numdup;
-	}
-	void addOpticalDuplicates(uint64_t const libid, uint64_t const count)
-	{
-		metrics[libid].opticalduplicates += count;
-	}
-
-	bool isMarked(uint64_t const i) const
-	{
-		return (*B)[i];
-	}
-	
-	void flush(uint64_t const n)
-	{
-		SGO->flush();
-		SGO.reset();
-		
-		::libmaus::bitio::BitVector::unique_ptr_type tB(new ::libmaus::bitio::BitVector(n));
-		B = UNIQUE_PTR_MOVE(tB);
-		for ( uint64_t i = 0; i < n; ++i )
-			B->set(i,false);
-			
-		libmaus::aio::SynchronousGenericInput<uint64_t> SGI(filename,8*1024);
-		uint64_t v;
-		numdup = 0;
-		while ( SGI.getNext(v) )
-		{
-			if ( ! B->get(v) )
-				numdup++;
-			B->set(v,true);			
-		}
-	}
-};
-
-// #define DEBUG
-
-#if defined(DEBUG)
-#define MARKDUPLICATEPAIRSDEBUG
-#define MARKDUPLICATEFRAGSDEBUG
-#define MARKDUPLICATECOPYALIGNMENTS
-#endif
-
-static uint64_t markDuplicatePairsRef(
-	std::vector< ::libmaus::bambam::ReadEnds > & lfrags, 
-	DupSetCallback & DSC,
-	unsigned int const optminpixeldif = 100
-)
-{
-	if ( lfrags.size() > 1 )
-	{
-		#if defined(MARKDUPLICATEPAIRSDEBUG)
-		std::cerr << "[V] --- checking for duplicate pairs ---" << std::endl;
-		for ( uint64_t i = 0; i < lfrags.size(); ++i )
-			std::cerr << "[V] " << lfrags[i] << std::endl;
-		#endif
-	
-		uint64_t maxscore = lfrags[0].getScore();
-		uint64_t maxindex = 0;
-		
-		for ( uint64_t i = 1 ; i < lfrags.size(); ++i )
-			if ( lfrags[i].getScore() > maxscore )
-			{
-				maxscore = lfrags[i].getScore();
-				maxindex = i;
-			}
-
-		for ( uint64_t i = 0; i < lfrags.size(); ++i )
-			if ( i != maxindex )
-				DSC(lfrags[i]);
-	
-		// check for optical duplicates
-		std::sort ( lfrags.begin(), lfrags.end(), ::libmaus::bambam::OpticalComparator() );
-		
-		for ( uint64_t low = 0; low < lfrags.size(); )
-		{
-			uint64_t high = low+1;
-			
-			// search top end of tile
-			while ( 
-				high < lfrags.size() && 
-				lfrags[high].getReadGroup() == lfrags[low].getReadGroup() &&
-				lfrags[high].getTile() == lfrags[low].getTile() )
-			{
-				high++;
-			}
-			
-			if ( high-low > 1 && lfrags[low].getTile() )
-			{
-				#if defined(DEBUG)
-				std::cerr << "[D] Range " << high-low << " for " << lfrags[low] << std::endl;
-				#endif
-			
-				std::vector<bool> opt(high-low,false);
-				bool haveoptdup = false;
-				
-				for ( uint64_t i = low; i+1 < high; ++i )
-				{
-					for ( 
-						uint64_t j = i+1; 
-						j < high && lfrags[j].getX() - lfrags[low].getX() <= optminpixeldif;
-						++j 
-					)
-						if ( 
-							::libmaus::math::iabs(
-								static_cast<int64_t>(lfrags[i].getY())
-								-
-								static_cast<int64_t>(lfrags[j].getY())
-							)
-							<= optminpixeldif
-						)
-					{	
-						opt [ j - low ] = true;
-						haveoptdup = true;
-					}
-				}
-				
-				if ( haveoptdup )
-				{
-					unsigned int const lib = lfrags[low].getLibraryId();
-					uint64_t numopt = 0;
-					for ( uint64_t i = 0; i < opt.size(); ++i )
-						if ( opt[i] )
-							numopt++;
-							
-					DSC.addOpticalDuplicates(lib,numopt);	
-				}
-			}
-			
-			low = high;
-		}	
-	}
-	else
-	{
-		#if defined(MARKDUPLICATEPAIRSDEBUG)
-		std::cerr << "[V] --- singleton pair set ---" << std::endl;
-		for ( uint64_t i = 0; i < lfrags.size(); ++i )
-			std::cerr << "[V] " << lfrags[i] << std::endl;
-		#endif
-	
-	}
-	
-	// all but one are duplicates
-	return lfrags.size() ? 2*(lfrags.size() - 1) : 0;
-}
-
-
-template<typename iterator>
-static uint64_t markDuplicatePairs(
-	iterator const lfrags_a,
-	iterator const lfrags_e,
-	DupSetCallback & DSC,
-	unsigned int const optminpixeldif = 100
-)
-{
-	if ( lfrags_e-lfrags_a > 1 )
-	{
-		#if defined(MARKDUPLICATEPAIRSDEBUG)
-		std::cerr << "[V] --- checking for duplicate pairs ---" << std::endl;
-		for ( iterator lfrags_c = lfrags_a; lfrags_c != lfrags_e; ++lfrags_c )
-			std::cerr << "[V] " << (*lfrags_c) << std::endl;
-		#endif
-	
-		uint64_t maxscore = lfrags_a->getScore();
-		
-		iterator lfrags_m = lfrags_a;
-		for ( iterator lfrags_c = lfrags_a+1; lfrags_c != lfrags_e; ++lfrags_c )
-			if ( lfrags_c->getScore() > maxscore )
-			{
-				maxscore = lfrags_c->getScore();
-				lfrags_m = lfrags_c;
-			}
-
-		for ( iterator lfrags_c = lfrags_a; lfrags_c != lfrags_e; ++lfrags_c )
-			if ( lfrags_c != lfrags_m )
-				DSC(*lfrags_c);
-	
-		// check for optical duplicates
-		std::sort ( lfrags_a, lfrags_e, ::libmaus::bambam::OpticalComparator() );
-		
-		for ( iterator low = lfrags_a; low != lfrags_e; )
-		{
-			iterator high = low+1;
-			
-			// search top end of tile
-			while ( 
-				high != lfrags_e && 
-				high->getReadGroup() == low->getReadGroup() &&
-				high->getTile() == low->getTile() )
-			{
-				++high;
-			}
-			
-			if ( high-low > 1 && low->getTile() )
-			{
-				#if defined(DEBUG)
-				std::cerr << "[D] Range " << high-low << " for " << lfrags[low] << std::endl;
-				#endif
-			
-				std::vector<bool> opt(high-low,false);
-				bool haveoptdup = false;
-				
-				for ( iterator i = low; i+1 != high; ++i )
-				{
-					for ( 
-						iterator j = i+1; 
-						j != high && j->getX() - low->getX() <= optminpixeldif;
-						++j 
-					)
-						if ( 
-							::libmaus::math::iabs(
-								static_cast<int64_t>(i->getY())
-								-
-								static_cast<int64_t>(j->getY())
-							)
-							<= optminpixeldif
-						)
-					{	
-						opt [ j - low ] = true;
-						haveoptdup = true;
-					}
-				}
-				
-				if ( haveoptdup )
-				{
-					unsigned int const lib = low->getLibraryId();
-					uint64_t numopt = 0;
-					for ( uint64_t i = 0; i < opt.size(); ++i )
-						if ( opt[i] )
-							numopt++;
-							
-					DSC.addOpticalDuplicates(lib,numopt);	
-				}
-			}
-			
-			low = high;
-		}	
-	}
-	else
-	{
-		#if defined(MARKDUPLICATEPAIRSDEBUG)
-		std::cerr << "[V] --- singleton pair set ---" << std::endl;
-		for ( iterator i = lfrags_a; i != lfrags_e; ++i )
-			std::cerr << "[V] " << (*i) << std::endl;
-		#endif
-	
-	}
-	
-	uint64_t const lfragssize = lfrags_e-lfrags_a;
-	// all but one are duplicates
-	return lfragssize ? 2*(lfragssize - 1) : 0;
-}
-
-template<typename iterator>
-static uint64_t markDuplicatePairsPointers(
-	iterator const lfrags_a,
-	iterator const lfrags_e,
-	DupSetCallback & DSC,
-	unsigned int const optminpixeldif = 100
-)
-{
-	if ( lfrags_e-lfrags_a > 1 )
-	{
-		#if defined(MARKDUPLICATEPAIRSDEBUG)
-		std::cerr << "[V] --- checking for duplicate pairs ---" << std::endl;
-		for ( iterator lfrags_c = lfrags_a; lfrags_c != lfrags_e; ++lfrags_c )
-			std::cerr << "[V] " << (**lfrags_c) << std::endl;
-		#endif
-	
-		uint64_t maxscore = (*lfrags_a)->getScore();
-		
-		iterator lfrags_m = lfrags_a;
-		for ( iterator lfrags_c = lfrags_a+1; lfrags_c != lfrags_e; ++lfrags_c )
-			if ( (*lfrags_c)->getScore() > maxscore )
-			{
-				maxscore = (*lfrags_c)->getScore();
-				lfrags_m = lfrags_c;
-			}
-
-		for ( iterator lfrags_c = lfrags_a; lfrags_c != lfrags_e; ++lfrags_c )
-			if ( lfrags_c != lfrags_m )
-				DSC(**lfrags_c);
-	
-		// check for optical duplicates
-		std::sort ( lfrags_a, lfrags_e, ::libmaus::bambam::OpticalComparator() );
-		
-		for ( iterator low = lfrags_a; low != lfrags_e; )
-		{
-			iterator high = low+1;
-			
-			// search top end of tile
-			while ( 
-				high != lfrags_e && 
-				(*high)->getReadGroup() == (*low)->getReadGroup() &&
-				(*high)->getTile() == (*low)->getTile() )
-			{
-				++high;
-			}
-			
-			if ( high-low > 1 && (*low)->getTile() )
-			{
-				#if defined(DEBUG)
-				std::cerr << "[D] Range " << high-low << " for " << (*(lfrags[low])) << std::endl;
-				#endif
-			
-				std::vector<bool> opt(high-low,false);
-				bool haveoptdup = false;
-				
-				for ( iterator i = low; i+1 != high; ++i )
-				{
-					for ( 
-						iterator j = i+1; 
-						j != high && (*j)->getX() - (*low)->getX() <= optminpixeldif;
-						++j 
-					)
-						if ( 
-							::libmaus::math::iabs(
-								static_cast<int64_t>((*i)->getY())
-								-
-								static_cast<int64_t>((*j)->getY())
-							)
-							<= optminpixeldif
-						)
-					{	
-						opt [ j - low ] = true;
-						haveoptdup = true;
-					}
-				}
-				
-				if ( haveoptdup )
-				{
-					unsigned int const lib = (*low)->getLibraryId();
-					uint64_t numopt = 0;
-					for ( uint64_t i = 0; i < opt.size(); ++i )
-						if ( opt[i] )
-							numopt++;
-							
-					DSC.addOpticalDuplicates(lib,numopt);	
-				}
-			}
-			
-			low = high;
-		}	
-	}
-	else
-	{
-		#if defined(MARKDUPLICATEPAIRSDEBUG)
-		std::cerr << "[V] --- singleton pair set ---" << std::endl;
-		for ( iterator i = lfrags_a; i != lfrags_e; ++i )
-			std::cerr << "[V] " << (**i) << std::endl;
-		#endif
-	
-	}
-	
-	uint64_t const lfragssize = lfrags_e-lfrags_a;
-	// all but one are duplicates
-	return lfragssize ? 2*(lfragssize - 1) : 0;
-}
-
-static uint64_t markDuplicateFrags(
-	std::vector< ::libmaus::bambam::ReadEnds > const & lfrags, DupSetCallback & DSC
-)
-{
-	if ( lfrags.size() > 1 )
-	{
-		#if defined(MARKDUPLICATEFRAGSDEBUG)
-		std::cerr << "[V] --- frag set --- " << std::endl;
-		for ( uint64_t i = 0; i < lfrags.size(); ++i )
-			std::cerr << "[V] " << lfrags[i] << std::endl;
-		#endif
-	
-		bool containspairs = false;
-		bool containsfrags = false;
-		
-		for ( uint64_t i = 0; i < lfrags.size(); ++i )
-			if ( lfrags[i].isPaired() )
-				containspairs = true;
-			else
-				containsfrags = true;
-		
-		// if there are any single fragments
-		if ( containsfrags )
-		{
-			// mark single ends as duplicates if there are pairs
-			if ( containspairs )
-			{
-				#if defined(MARKDUPLICATEFRAGSDEBUG)
-				std::cerr << "[V] there are pairs, marking single ends as duplicates" << std::endl;
-				#endif
-			
-				uint64_t dupcnt = 0;
-				// std::cerr << "Contains pairs." << std::endl;
-				for ( uint64_t i = 0; i < lfrags.size(); ++i )
-					if ( !lfrags[i].isPaired() )
-					{
-						DSC(lfrags[i]);
-						dupcnt++;
-					}
-					
-				return dupcnt;	
-			}
-			// if all are single keep highest score only
-			else
-			{
-				#if defined(MARKDUPLICATEFRAGSDEBUG)
-				std::cerr << "[V] there are only fragments, keeping best one" << std::endl;
-				#endif
-				// std::cerr << "Frags only." << std::endl;
-			
-				uint64_t maxscore = lfrags[0].getScore();
-				uint64_t maxindex = 0;
-				
-				for ( uint64_t i = 1; i < lfrags.size(); ++i )
-					if ( lfrags[i].getScore() > maxscore )
-					{
-						maxscore = lfrags[i].getScore();
-						maxindex = i;
-					}
-
-				for ( uint64_t i = 0; i < lfrags.size(); ++i )
-					if ( i != maxindex )
-						DSC(lfrags[i]);
-
-				return  lfrags.size()-1;
-			}			
-		}
-		else
-		{
-			#if defined(MARKDUPLICATEFRAGSDEBUG)
-			std::cerr << "[V] group does not contain unpaired reads." << std::endl;
-			#endif
-		
-			return 0;
-		}
-	}	
-	else
-	{
-		return 0;
-	}
-}
-
-template<typename iterator>
-static uint64_t markDuplicateFrags(
-	iterator const lfrags_a,
-	iterator const lfrags_e,
-	DupSetCallback & DSC
-)
-{
-	uint64_t const lfragssize = lfrags_e - lfrags_a;
-
-	if ( lfragssize > 1 )
-	{
-		#if defined(MARKDUPLICATEFRAGSDEBUG)
-		std::cerr << "[V] --- frag set --- " << std::endl;
-		for ( iterator lfrags_c = lfrags_a; lfrags_c != lfrags_e; ++lfrags_c )
-			std::cerr << "[V] " << (*lfrags_c) << std::endl;
-		#endif
-	
-		bool containspairs = false;
-		bool containsfrags = false;
-		
-		for ( iterator lfrags_c = lfrags_a; lfrags_c != lfrags_e; ++lfrags_c )
-			if ( lfrags_c->isPaired() )
-				containspairs = true;
-			else
-				containsfrags = true;
-		
-		// if there are any single fragments
-		if ( containsfrags )
-		{
-			// mark single ends as duplicates if there are pairs
-			if ( containspairs )
-			{
-				#if defined(MARKDUPLICATEFRAGSDEBUG)
-				std::cerr << "[V] there are pairs, marking single ends as duplicates" << std::endl;
-				#endif
-			
-				uint64_t dupcnt = 0;
-				// std::cerr << "Contains pairs." << std::endl;
-				for ( iterator lfrags_c = lfrags_a; lfrags_c != lfrags_e; ++lfrags_c )
-					if ( ! (lfrags_c->isPaired()) )
-					{
-						DSC((*lfrags_c));
-						dupcnt++;
-					}
-					
-				return dupcnt;	
-			}
-			// if all are single keep highest score only
-			else
-			{
-				#if defined(MARKDUPLICATEFRAGSDEBUG)
-				std::cerr << "[V] there are only fragments, keeping best one" << std::endl;
-				#endif
-				// std::cerr << "Frags only." << std::endl;
-			
-				uint64_t maxscore = lfrags_a->getScore();
-				iterator lfrags_m = lfrags_a;
-				
-				for ( iterator lfrags_c = lfrags_a+1; lfrags_c != lfrags_e; ++lfrags_c )
-					if ( lfrags_c->getScore() > maxscore )
-					{
-						maxscore = (lfrags_c)->getScore();
-						lfrags_m = lfrags_c;
-					}
-
-				for ( iterator lfrags_c = lfrags_a; lfrags_c != lfrags_e; ++lfrags_c )
-					if ( lfrags_c != lfrags_m )
-						DSC((*lfrags_c));
-
-				return lfragssize-1;
-			}			
-		}
-		else
-		{
-			#if defined(MARKDUPLICATEFRAGSDEBUG)
-			std::cerr << "[V] group does not contain unpaired reads." << std::endl;
-			#endif
-		
-			return 0;
-		}
-	}	
-	else
-	{
-		return 0;
-	}
-}
-
-template<typename iterator>
-static uint64_t markDuplicateFragsPointers(
-	iterator const lfrags_a,
-	iterator const lfrags_e,
-	DupSetCallback & DSC
-)
-{
-	uint64_t const lfragssize = lfrags_e - lfrags_a;
-
-	if ( lfragssize > 1 )
-	{
-		#if defined(MARKDUPLICATEFRAGSDEBUG)
-		std::cerr << "[V] --- frag set --- " << std::endl;
-		for ( iterator lfrags_c = lfrags_a; lfrags_c != lfrags_e; ++lfrags_c )
-			std::cerr << "[V] " << (**lfrags_c) << " coord " << (*lfrags_c)->getRead1Coordinate() << std::endl;
-		#endif
-	
-		bool containspairs = false;
-		bool containsfrags = false;
-		
-		for ( iterator lfrags_c = lfrags_a; lfrags_c != lfrags_e; ++lfrags_c )
-			if ( (*lfrags_c)->isPaired() )
-				containspairs = true;
-			else
-				containsfrags = true;
-		
-		// if there are any single fragments
-		if ( containsfrags )
-		{
-			// mark single ends as duplicates if there are pairs
-			if ( containspairs )
-			{
-				#if defined(MARKDUPLICATEFRAGSDEBUG)
-				std::cerr << "[V] there are pairs, marking single ends as duplicates" << std::endl;
-				#endif
-			
-				uint64_t dupcnt = 0;
-				// std::cerr << "Contains pairs." << std::endl;
-				for ( iterator lfrags_c = lfrags_a; lfrags_c != lfrags_e; ++lfrags_c )
-					if ( ! ((*lfrags_c)->isPaired()) )
-					{
-						DSC((**lfrags_c));
-						dupcnt++;
-					}
-					
-				return dupcnt;	
-			}
-			// if all are single keep highest score only
-			else
-			{
-				#if defined(MARKDUPLICATEFRAGSDEBUG)
-				std::cerr << "[V] there are only fragments, keeping best one" << std::endl;
-				#endif
-				// std::cerr << "Frags only." << std::endl;
-			
-				uint64_t maxscore = (*lfrags_a)->getScore();
-				iterator lfrags_m = lfrags_a;
-				
-				for ( iterator lfrags_c = lfrags_a+1; lfrags_c != lfrags_e; ++lfrags_c )
-					if ( (*lfrags_c)->getScore() > maxscore )
-					{
-						maxscore = (*lfrags_c)->getScore();
-						lfrags_m = lfrags_c;
-					}
-
-				for ( iterator lfrags_c = lfrags_a; lfrags_c != lfrags_e; ++lfrags_c )
-					if ( lfrags_c != lfrags_m )
-						DSC((**lfrags_c));
-
-				return lfragssize-1;
-			}			
-		}
-		else
-		{
-			#if defined(MARKDUPLICATEFRAGSDEBUG)
-			std::cerr << "[V] group does not contain unpaired reads." << std::endl;
-			#endif
-		
-			return 0;
-		}
-	}	
-	else
-	{
-		return 0;
-	}
-}
-
-static bool isDupPair(::libmaus::bambam::ReadEnds const & A, ::libmaus::bambam::ReadEnds const & B)
-{
-	bool const notdup = 
-		A.getLibraryId()       != B.getLibraryId()       ||
-		A.getRead1Sequence()   != B.getRead1Sequence()   ||
-		A.getRead1Coordinate() != B.getRead1Coordinate() ||
-		A.getOrientation()     != B.getOrientation()     ||
-		A.getRead2Sequence()   != B.getRead2Sequence()   ||
-		A.getRead2Coordinate() != B.getRead2Coordinate()
-	;
-	
-	return ! notdup;
-}
-
-static bool isDupFrag(::libmaus::bambam::ReadEnds const & A, ::libmaus::bambam::ReadEnds const & B)
-{
-	bool const notdup = 
-		A.getLibraryId()      != B.getLibraryId()       ||
-		A.getRead1Sequence()   != B.getRead1Sequence()   ||
-		A.getRead1Coordinate() != B.getRead1Coordinate() ||
-		A.getOrientation()     != B.getOrientation()
-	;
-	
-	return ! notdup;
-}
-
-struct AlignmentPairListNode
-{
-	typedef AlignmentPairListNode this_type;
-	typedef libmaus::util::unique_ptr<this_type>::type unique_ptr_type;
-
-	libmaus::bambam::BamAlignment A[2];
-	AlignmentPairListNode * next;
-	
-	AlignmentPairListNode() : next(0) {}
-};
-
-struct AlignmentListNode
-{
-	typedef AlignmentListNode this_type;
-	typedef libmaus::util::unique_ptr<this_type>::type unique_ptr_type;
-
-	libmaus::bambam::BamAlignment A;
-	AlignmentListNode * next;
-	
-	AlignmentListNode() : next(0) {}
-};
-
-struct ReadEndsListNode
-{
-	typedef ReadEndsListNode this_type;
-	typedef libmaus::util::unique_ptr<this_type>::type unique_ptr_type;
-
-	libmaus::bambam::ReadEnds A;
-	ReadEndsListNode * next;
-	
-	ReadEndsListNode() : next(0) {}
-};
-
-template<typename _element_type>
-struct FreeList
-{
-	typedef _element_type element_type;
-	typedef FreeList<element_type> this_type;
-	typedef typename libmaus::util::unique_ptr<this_type>::type unique_ptr_type;
-
-	libmaus::autoarray::AutoArray< element_type * > freelist;
-	uint64_t freecnt;
-	
-	void cleanup()
-	{
-		for ( uint64_t i = 0; i < freelist.size(); ++i )
-		{
-			delete freelist[i];
-			freelist[i] = 0;
-		}	
-	}
-	
-	FreeList(uint64_t const numel) : freelist(numel), freecnt(numel)
-	{
-		try
-		{
-			for ( uint64_t i = 0; i < numel; ++i )
-				freelist[i] = 0;
-			for ( uint64_t i = 0; i < numel; ++i )
-				freelist[i] = new element_type;
-		}
-		catch(...)
-		{
-			cleanup();
-			throw;
-		}
-	}
-	
-	~FreeList()
-	{
-		cleanup();
-	}
-	
-	bool empty() const
-	{
-		return freecnt == 0;
-	}
-	
-	element_type * get()
-	{
-		element_type * p = 0;
-		assert ( ! empty() );
-
-		p = freelist[--freecnt];
-		freelist[freecnt] = 0;
-
-		return p;
-	}
-	
-	void put(element_type * ptr)
-	{
-		freelist[freecnt++] = ptr;
-	}
-};
-
-typedef FreeList<AlignmentPairListNode> AlignmentPairFreeList;
-typedef FreeList<AlignmentListNode> AlignmentFreeList;
-typedef FreeList<ReadEndsListNode> ReadEndsFreeList;
-
+/**
+ * class storing elements for a given coordinate
+ **/
 template<typename _free_list_type>
 struct PairActiveCountTemplate
 {
@@ -1000,9 +160,6 @@ struct PairActiveCountTemplate
 	}
 };
 
-typedef PairActiveCountTemplate<AlignmentPairFreeList> PairActiveCount;
-typedef PairActiveCountTemplate<ReadEndsFreeList> ReadEndsActiveCount;
-
 template<typename free_list_type>
 std::ostream & operator<<(std::ostream & out, PairActiveCountTemplate<free_list_type> const & A)
 {
@@ -1010,16 +167,20 @@ std::ostream & operator<<(std::ostream & out, PairActiveCountTemplate<free_list_
 	return out;
 }
 
-struct PositionTrackInterface
+typedef PairActiveCountTemplate<libmaus::bambam::BamAlignmentPairFreeList> BamPairActiveCount;
+typedef PairActiveCountTemplate<libmaus::bambam::ReadEndsFreeList> ReadEndsActiveCount;
+
+struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAlignmentInputPositionUpdateCallback
 {
-	static int const default_maxreadlength = 250;
+	// static int const default_maxreadlength = 250;
+	static int getDefaultMaxReadLength() { return 250; }
 	
 	#define POS_READ_ENDS
 
 	#if defined(POS_READ_ENDS)
 	typedef ReadEndsActiveCount active_count_type;
 	#else
-	typedef PairActiveCount active_count_type;
+	typedef BamPairActiveCount active_count_type;
 	#endif
 
 	static unsigned int const freelistsize = 16*1024;
@@ -1052,21 +213,21 @@ struct PositionTrackInterface
 	uint64_t strcntfrags;
 	std::vector<libmaus::bambam::ReadEnds *> REfrags;
 
-	DupSetCallback * DSC;
+	::libmaus::bambam::DupSetCallback * DSC;
 	
 	int maxreadlength;
 
-	PositionTrackInterface(libmaus::bambam::BamHeader const & rbamheader)
+	BamAlignmentInputPositionCallbackDupMark(libmaus::bambam::BamHeader const & rbamheader)
 	: 
 		bamheader(rbamheader), REcomp(), position(-1,-1), 
 		expungepositionpairs(-1,-1), activepairs(), totalactivepairs(0), APFLpairs(freelistsize), excntpairs(0), fincntpairs(0), strcntpairs(0), REpairs(),
 		expungepositionfrags(-1,-1), activefrags(), totalactivefrags(0), APFLfrags(freelistsize), excntfrags(0), fincntfrags(0), strcntfrags(0), REfrags(),
 		DSC(0),
-		maxreadlength(default_maxreadlength)
+		maxreadlength(getDefaultMaxReadLength())
 	{
 	}
 	
-	void setDupSetCallback(DupSetCallback * rDSC)
+	void setDupSetCallback(::libmaus::bambam::DupSetCallback * rDSC)
 	{
 		DSC = rDSC;
 	}
@@ -1076,7 +237,7 @@ struct PositionTrackInterface
 		maxreadlength = rmaxreadlength;
 	}
 
-	virtual ~PositionTrackInterface() {}
+	virtual ~BamAlignmentInputPositionCallbackDupMark() {}
 
 	/**
 	 * check whether this alignment is part of an innie pair
@@ -1245,11 +406,11 @@ struct PositionTrackInterface
 		while ( l != lfincntfrags )
 		{
 			uint64_t h = l+1;
-			while ( h != lfincntfrags && isDupFrag(*REfrags[l],*REfrags[h]) )
+			while ( h != lfincntfrags && libmaus::bambam::DupMarkBase::isDupFrag(*REfrags[l],*REfrags[h]) )
 				++h;
 				
 			if ( h-l > 1 )
-				markDuplicateFragsPointers(REfrags.begin()+l,REfrags.begin()+h,*DSC);
+				libmaus::bambam::DupMarkBase::markDuplicateFragsPointers(REfrags.begin()+l,REfrags.begin()+h,*DSC);
 			
 			l = h;
 		}
@@ -1319,15 +480,15 @@ struct PositionTrackInterface
 		while ( l != lfincntpairs )
 		{
 			uint64_t h = l+1;
-			while ( h != lfincntpairs && isDupPair(*REpairs[l],*REpairs[h]) )
+			while ( h != lfincntpairs && libmaus::bambam::DupMarkBase::isDupPair(*REpairs[l],*REpairs[h]) )
 				++h;
 				
 			if ( h-l > 1 )
 			{
 				#if defined(POS_READ_ENDS)
-				markDuplicatePairsPointers(REpairs.begin()+l,REpairs.begin()+h,*DSC);
+				libmaus::bambam::DupMarkBase::markDuplicatePairsPointers(REpairs.begin()+l,REpairs.begin()+h,*DSC);
 				#else
-				markDuplicatePairs(REpairs.begin()+l,REpairs.begin()+h,*DSC);
+				libmaus::bambam::DupMarkBase::markDuplicatePairs(REpairs.begin()+l,REpairs.begin()+h,*DSC);
 				#endif			
 			}
 			
@@ -1761,7 +922,7 @@ struct PositionTrackInterface
 						assert ( activeok );
 						
 						// copy alignments
-						// AlignmentPairListNode * ptr = APFLpairs.get();
+						// BamAlignmentPairListNode * ptr = APFLpairs.get();
 						active_count_type::list_node_type * ptr = APFLpairs.get();
 						#if defined(POS_READ_ENDS)
 						libmaus::bambam::ReadEndsBase::fillFragPair(A,B,header,ptr->A);
@@ -1800,7 +961,7 @@ struct PositionTrackInterface
 		if ( B.getLseq() > maxreadlength )
 		{
 			libmaus::exception::LibMausException se;
-			se.getStream() << "PositionTrackInterface::addAlignmentFrag(): maximum allowed read length is " <<
+			se.getStream() << "BamAlignmentInputPositionCallbackDupMark::addAlignmentFrag(): maximum allowed read length is " <<
 				maxreadlength << " but input contains read of length " << B.getLseq() << "." << std::endl
 				<< "Please set the maxreadlength parameter to a sufficiently high value." << std::endl;
 			se.finish();
@@ -1934,9 +1095,13 @@ struct PositionTrackInterface
 
 struct PositionTrackCallback : 
 	public ::libmaus::bambam::CollatingBamDecoderAlignmentInputCallback,
-	public PositionTrackInterface
+	public BamAlignmentInputPositionCallbackDupMark
 {
-	PositionTrackCallback(libmaus::bambam::BamHeader const & bamheader) : PositionTrackInterface(bamheader) {}
+	PositionTrackCallback(libmaus::bambam::BamHeader const & bamheader) 
+	: BamAlignmentInputPositionCallbackDupMark(bamheader) 
+	{
+	
+	}
 	virtual ~PositionTrackCallback() {}
 	
 	void operator()(::libmaus::bambam::BamAlignment const & A)
@@ -1944,844 +1109,6 @@ struct PositionTrackCallback :
 		updatePosition(A);
 	}
 };
-
-struct SnappyRewriteCallback : 
-	public ::libmaus::bambam::CollatingBamDecoderAlignmentInputCallback,
-	public PositionTrackInterface
-{
-	typedef SnappyRewriteCallback this_type;
-	typedef ::libmaus::util::unique_ptr<this_type>::type unique_ptr_type;
-	typedef ::libmaus::util::shared_ptr<this_type>::type shared_ptr_type;
-
-	uint64_t als;
-	::libmaus::lz::SnappyFileOutputStream::unique_ptr_type SFOS;
-
-	SnappyRewriteCallback(std::string const & filename, libmaus::bambam::BamHeader const & bamheader)
-	: PositionTrackInterface(bamheader), als(0), SFOS(new ::libmaus::lz::SnappyFileOutputStream(filename))
-	{
-		
-	}
-	
-	~SnappyRewriteCallback()
-	{
-		flush();
-	}
-
-	void operator()(::libmaus::bambam::BamAlignment const & A)
-	{
-		// std::cerr << "Callback." << std::endl;
-		als++;
-		updatePosition(A);
-		A.serialise(*SFOS);
-	}
-	
-	void flush()
-	{
-		SFOS->flush();
-	}
-};
-
-struct BamRewriteCallback : 
-	public ::libmaus::bambam::CollatingBamDecoderAlignmentInputCallback,
-	public PositionTrackInterface
-{
-	typedef BamRewriteCallback this_type;
-	typedef ::libmaus::util::unique_ptr<this_type>::type unique_ptr_type;
-	typedef ::libmaus::util::shared_ptr<this_type>::type shared_ptr_type;
-
-	uint64_t als;
-	::libmaus::bambam::BamWriter::unique_ptr_type BWR;
-	
-	BamRewriteCallback(
-		std::string const & filename,
-		::libmaus::bambam::BamHeader const & bamheader,
-		int const rewritebamlevel
-	)
-	: PositionTrackInterface(bamheader), als(0), BWR(new ::libmaus::bambam::BamWriter(filename,bamheader,rewritebamlevel))
-	{
-		
-	}
-	
-	~BamRewriteCallback()
-	{
-	}
-
-	void operator()(::libmaus::bambam::BamAlignment const & A)
-	{
-		// std::cerr << "Callback." << std::endl;
-		als++;
-		updatePosition(A);
-		A.serialise(BWR->getStream());
-	}	
-};
-
-struct SnappyRewrittenInput
-{
-	::libmaus::lz::SnappyFileInputStream GZ;
-	::libmaus::bambam::BamAlignment alignment;
-	
-	SnappyRewrittenInput(std::string const & filename)
-	: GZ(filename)
-	{
-	
-	}
-	
-	::libmaus::bambam::BamAlignment & getAlignment()
-	{
-		return alignment;
-	}
-
-	::libmaus::bambam::BamAlignment const & getAlignment() const
-	{
-		return alignment;
-	}
-	
-	bool readAlignment()
-	{
-		/* read alignment block size */
-		int64_t const bs0 = GZ.get();
-		int64_t const bs1 = GZ.get();
-		int64_t const bs2 = GZ.get();
-		int64_t const bs3 = GZ.get();
-		if ( bs3 < 0 )
-			// reached end of file
-			return false;
-		
-		/* assemble block size as LE integer */
-		alignment.blocksize = (bs0 << 0) | (bs1 << 8) | (bs2 << 16) | (bs3 << 24) ;
-
-		/* read alignment block */
-		if ( alignment.blocksize > alignment.D.size() )
-			alignment.D = ::libmaus::bambam::BamAlignment::D_array_type(alignment.blocksize);
-		GZ.read(reinterpret_cast<char *>(alignment.D.begin()),alignment.blocksize);
-		// assert ( static_cast<int64_t>(GZ.gcount()) == static_cast<int64_t>(alignment.blocksize) );
-	
-		return true;
-	}
-};
-
-::libmaus::bambam::BamHeader::unique_ptr_type updateHeader(
-	::libmaus::util::ArgInfo const & arginfo,
-	::libmaus::bambam::BamHeader const & header
-)
-{
-	std::string const headertext(header.text);
-
-	// add PG line to header
-	std::string const upheadtext = ::libmaus::bambam::ProgramHeaderLineSet::addProgramLine(
-		headertext,
-		"bammarkduplicates2", // ID
-		"bammarkduplicates2", // PN
-		arginfo.commandline, // CL
-		::libmaus::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
-		std::string(PACKAGE_VERSION) // VN			
-	);
-	// construct new header
-	::libmaus::bambam::BamHeader::unique_ptr_type uphead(new ::libmaus::bambam::BamHeader(upheadtext));
-	
-	return UNIQUE_PTR_MOVE(uphead);
-}
-
-void addBamDuplicateFlag(
-	::libmaus::util::ArgInfo const & arginfo,
-	bool const verbose,
-	::libmaus::bambam::BamHeader const & bamheader,
-	uint64_t const maxrank,
-	uint64_t const mod,
-	int const level,
-	DupSetCallback const & DSC,
-	std::istream & in
-)
-{
-	::libmaus::bambam::BamHeader::unique_ptr_type uphead(updateHeader(arginfo,bamheader));
-
-	::libmaus::aio::CheckedOutputStream::unique_ptr_type pO;
-	std::ostream * poutputstr = 0;
-	
-	if ( arginfo.hasArg("O") && (arginfo.getValue<std::string>("O","") != "") )
-	{
-		::libmaus::aio::CheckedOutputStream::unique_ptr_type tpO(
-                                new ::libmaus::aio::CheckedOutputStream(arginfo.getValue<std::string>("O",std::string("O")))
-                        );
-		pO = UNIQUE_PTR_MOVE(tpO);
-		poutputstr = pO.get();
-	}
-	else
-	{
-		poutputstr = & std::cout;
-	}
-
-	std::ostream & outputstr = *poutputstr;
-
-	/* write bam header */
-	{
-		libmaus::lz::BgzfDeflate<std::ostream> headout(outputstr);
-		uphead->serialise(headout);
-		headout.flush();
-	}
-
-	uint64_t const bmod = libmaus::math::nextTwoPow(mod);
-	uint64_t const bmask = bmod-1;
-
-	libmaus::timing::RealTimeClock globrtc; globrtc.start();
-	libmaus::timing::RealTimeClock locrtc; locrtc.start();
-	libmaus::lz::BgzfRecode rec(in,outputstr,level);
-	
-	bool haveheader = false;
-	uint64_t blockskip = 0;
-
-	libmaus::bambam::BamHeader::BamHeaderParserState bhps;
-	
-	std::cerr << "[D] using incremental BAM header parser on serial decoder." << std::endl;
-	
-	/* read  blocks until we have reached the end of the BAM header */
-	while ( (!haveheader) && rec.getBlock() )
-	{
-		libmaus::util::GetObject<uint8_t const *> G(rec.deflatebase.pa);
-		std::pair<bool,uint64_t> const ps = libmaus::bambam::BamHeader::parseHeader(G,bhps,rec.P.second);
-		haveheader = ps.first;		
-		blockskip = ps.second; // bytes used for header in this block
-	}
-	
-	if ( blockskip )
-	{
-		uint64_t const bytesused = (rec.deflatebase.pc - rec.deflatebase.pa) - blockskip;
-		memmove ( rec.deflatebase.pa, rec.deflatebase.pa + blockskip, bytesused );
-		rec.deflatebase.pc = rec.deflatebase.pa + bytesused;
-		rec.P.second = bytesused;
-		blockskip = 0;
-		
-		if ( ! bytesused )
-			rec.getBlock();
-	}
-
-	/* parser state types and variables */
-	enum parsestate { state_reading_blocklen, state_pre_skip, state_marking, state_post_skip };
-	parsestate state = state_reading_blocklen;
-	unsigned int blocklenred = 0;
-	uint32_t blocklen = 0;
-	uint32_t preskip = 0;
-	uint64_t alcnt = 0;
-	unsigned int const dupflagskip = 15;
-	// uint8_t const dupflagmask = static_cast<uint8_t>(~(4u));
-			
-	/* while we have alignment data blocks */
-	while ( rec.P.second )
-	{
-		uint8_t * pa       = rec.deflatebase.pa;
-		uint8_t * const pc = rec.deflatebase.pc;
-
-		while ( pa != pc )
-			switch ( state )
-			{
-				/* read length of next alignment block */
-				case state_reading_blocklen:
-					/* if this is a little endian machine allowing unaligned access */
-					#if defined(LIBMAUS_HAVE_i386)
-					if ( (!blocklenred) && ((pc-pa) >= static_cast<ptrdiff_t>(sizeof(uint32_t))) )
-					{
-						blocklen = *(reinterpret_cast<uint32_t const *>(pa));
-						blocklenred = sizeof(uint32_t);
-						pa += sizeof(uint32_t);
-						
-						state = state_pre_skip;
-						preskip = dupflagskip;
-					}
-					else
-					#endif
-					{
-						while ( pa != pc && blocklenred < sizeof(uint32_t) )
-							blocklen |= static_cast<uint32_t>(*(pa++)) << ((blocklenred++)*8);
-
-						if ( blocklenred == sizeof(uint32_t) )
-						{
-							state = state_pre_skip;
-							preskip = dupflagskip;
-						}
-					}
-					break;
-				/* skip data before the part we modify */
-				case state_pre_skip:
-					{
-						uint32_t const skip = std::min(pc-pa,static_cast<ptrdiff_t>(preskip));
-						pa += skip;
-						preskip -= skip;
-						blocklen -= skip;
-						
-						if ( ! skip )
-							state = state_marking;
-					}
-					break;
-				/* change data */
-				case state_marking:
-					assert ( pa != pc );
-					if ( DSC.isMarked(alcnt) )
-						*pa |= 4;
-					state = state_post_skip;
-					// intended fall through to post_skip case
-				/* skip data after part we modify */
-				case state_post_skip:
-				{
-					uint32_t const skip = std::min(pc-pa,static_cast<ptrdiff_t>(blocklen));
-					pa += skip;
-					blocklen -= skip;
-
-					if ( ! blocklen )
-					{
-						state = state_reading_blocklen;
-						blocklenred = 0;
-						blocklen = 0;
-						alcnt++;
-						
-						if ( verbose && ((alcnt & (bmask)) == 0) )
-						{
-							std::cerr << "[V] Marked " << (alcnt+1) << " (" << (alcnt+1)/(1024*1024) << "," << static_cast<double>(alcnt+1)/maxrank << ")"
-								<< " time " << locrtc.getElapsedSeconds()
-								<< " total " << globrtc.formatTime(globrtc.getElapsedSeconds())
-								<< " "
-								<< libmaus::util::MemUsage()
-								<< std::endl;
-							locrtc.start();
-						}
-					}
-					break;
-				}
-			}
-
-		rec.putBlock();			
-		rec.getBlock();
-	}
-			
-	rec.addEOFBlock();
-	outputstr.flush();
-	
-	if ( verbose )
-		std::cerr << "[V] Marked " << 1.0 << " total for marking time "
-			<< globrtc.formatTime(globrtc.getElapsedSeconds()) 
-			<< " "
-			<< libmaus::util::MemUsage()
-			<< std::endl;
-}
-
-namespace libmaus
-{
-	namespace lz
-	{
-		struct BgzfParallelRecodeDeflateBase : public ::libmaus::lz::BgzfConstants
-		{
-			libmaus::autoarray::AutoArray<uint8_t> B;
-			
-			uint8_t * const pa;
-			uint8_t * pc;
-			uint8_t * const pe;
-			
-			BgzfParallelRecodeDeflateBase()
-			: B(getBgzfMaxBlockSize(),false), 
-			  pa(B.begin()), 
-			  pc(B.begin()), 
-			  pe(B.end())
-			{
-			
-			}
-		};
-	}
-}
-
-namespace libmaus
-{
-	namespace lz
-	{
-		struct BgzfRecodeParallel : public ::libmaus::lz::BgzfConstants
-		{
-			libmaus::lz::BgzfInflateDeflateParallel BIDP; // (std::cin,std::cout,Z_DEFAULT_COMPRESSION,32,128);
-			libmaus::lz::BgzfParallelRecodeDeflateBase deflatebase;
-			std::pair<uint64_t,uint64_t> P;
-
-			BgzfRecodeParallel(
-				std::istream & in, std::ostream & out,
-				int const level, // = Z_DEFAULT_COMPRESSION,
-				uint64_t const numthreads,
-				uint64_t const numbuffers
-			) : BIDP(in,out,level,numthreads,numbuffers), deflatebase(), P(0,0)
-			{
-			
-			}
-			
-			~BgzfRecodeParallel()
-			{
-				BIDP.flush();
-			}
-			
-			bool getBlock()
-			{
-				P.second = BIDP.read(reinterpret_cast<char *>(deflatebase.B.begin()),deflatebase.B.size());
-				deflatebase.pc = deflatebase.pa + P.second;
-				
-				return P.second != 0;
-			}
-			
-			void putBlock()
-			{
-				BIDP.write(reinterpret_cast<char const *>(deflatebase.B.begin()),P.second);
-			}
-			
-			void addEOFBlock()
-			{
-				BIDP.flush();
-			}
-		};
-	}
-}
-
-void addBamDuplicateFlagParallel(
-	::libmaus::util::ArgInfo const & arginfo,
-	bool const verbose,
-	::libmaus::bambam::BamHeader const & bamheader,
-	uint64_t const maxrank,
-	uint64_t const mod,
-	int const level,
-	DupSetCallback const & DSC,
-	std::istream & in,
-	uint64_t const numthreads
-)
-{
-	::libmaus::bambam::BamHeader::unique_ptr_type uphead(updateHeader(arginfo,bamheader));
-
-	::libmaus::aio::CheckedOutputStream::unique_ptr_type pO;
-	std::ostream * poutputstr = 0;
-	
-	if ( arginfo.hasArg("O") && (arginfo.getValue<std::string>("O","") != "") )
-	{
-		::libmaus::aio::CheckedOutputStream::unique_ptr_type tpO(
-                                new ::libmaus::aio::CheckedOutputStream(arginfo.getValue<std::string>("O",std::string("O")))
-                        );
-		pO = UNIQUE_PTR_MOVE(tpO);
-		poutputstr = pO.get();
-	}
-	else
-	{
-		poutputstr = & std::cout;
-	}
-
-	std::ostream & outputstr = *poutputstr;
-
-	/* write bam header */
-	{
-		libmaus::lz::BgzfDeflate<std::ostream> headout(outputstr);
-		uphead->serialise(headout);
-		headout.flush();
-	}
-
-	libmaus::lz::BgzfRecodeParallel rec(in,outputstr,level,numthreads,numthreads*4);
-
-	uint64_t const bmod = libmaus::math::nextTwoPow(mod);
-	uint64_t const bmask = bmod-1;
-
-	libmaus::timing::RealTimeClock globrtc; globrtc.start();
-	libmaus::timing::RealTimeClock locrtc; locrtc.start();
-	
-	bool haveheader = false;
-	uint64_t blockskip = 0;
-
-	libmaus::bambam::BamHeader::BamHeaderParserState bhps;
-
-	std::cerr << "[D] using incremental BAM header parser on parallel recoder." << std::endl;
-	
-	/* read  blocks until we have reached the end of the BAM header */
-	while ( (!haveheader) && rec.getBlock() )
-	{
-		libmaus::util::GetObject<uint8_t const *> G(rec.deflatebase.pa);
-		std::pair<bool,uint64_t> const ps = libmaus::bambam::BamHeader::parseHeader(G,bhps,rec.P.second);
-		haveheader = ps.first;		
-		blockskip = ps.second; // bytes used for header in this block
-	}
-	
-	if ( blockskip )
-	{
-		uint64_t const bytesused = (rec.deflatebase.pc - rec.deflatebase.pa) - blockskip;
-		memmove ( rec.deflatebase.pa, rec.deflatebase.pa + blockskip, bytesused );
-		rec.deflatebase.pc = rec.deflatebase.pa + bytesused;
-		rec.P.second = bytesused;
-		blockskip = 0;
-		
-		if ( ! bytesused )
-			rec.getBlock();
-	}
-
-	/* parser state types and variables */
-	enum parsestate { state_reading_blocklen, state_pre_skip, state_marking, state_post_skip };
-	parsestate state = state_reading_blocklen;
-	unsigned int blocklenred = 0;
-	uint32_t blocklen = 0;
-	uint32_t preskip = 0;
-	uint64_t alcnt = 0;
-	unsigned int const dupflagskip = 15;
-	// uint8_t const dupflagmask = static_cast<uint8_t>(~(4u));
-			
-	/* while we have alignment data blocks */
-	while ( rec.P.second )
-	{
-		uint8_t * pa       = rec.deflatebase.pa;
-		uint8_t * const pc = rec.deflatebase.pc;
-
-		while ( pa != pc )
-			switch ( state )
-			{
-				/* read length of next alignment block */
-				case state_reading_blocklen:
-					/* if this is a little endian machine allowing unaligned access */
-					#if defined(LIBMAUS_HAVE_i386)
-					if ( (!blocklenred) && ((pc-pa) >= static_cast<ptrdiff_t>(sizeof(uint32_t))) )
-					{
-						blocklen = *(reinterpret_cast<uint32_t const *>(pa));
-						blocklenred = sizeof(uint32_t);
-						pa += sizeof(uint32_t);
-						
-						state = state_pre_skip;
-						preskip = dupflagskip;
-					}
-					else
-					#endif
-					{
-						while ( pa != pc && blocklenred < sizeof(uint32_t) )
-							blocklen |= static_cast<uint32_t>(*(pa++)) << ((blocklenred++)*8);
-
-						if ( blocklenred == sizeof(uint32_t) )
-						{
-							state = state_pre_skip;
-							preskip = dupflagskip;
-						}
-					}
-					break;
-				/* skip data before the part we modify */
-				case state_pre_skip:
-					{
-						uint32_t const skip = std::min(pc-pa,static_cast<ptrdiff_t>(preskip));
-						pa += skip;
-						preskip -= skip;
-						blocklen -= skip;
-						
-						if ( ! skip )
-							state = state_marking;
-					}
-					break;
-				/* change data */
-				case state_marking:
-					assert ( pa != pc );
-					if ( DSC.isMarked(alcnt) )
-						*pa |= 4;
-					state = state_post_skip;
-					// intended fall through to post_skip case
-				/* skip data after part we modify */
-				case state_post_skip:
-				{
-					uint32_t const skip = std::min(pc-pa,static_cast<ptrdiff_t>(blocklen));
-					pa += skip;
-					blocklen -= skip;
-
-					if ( ! blocklen )
-					{
-						state = state_reading_blocklen;
-						blocklenred = 0;
-						blocklen = 0;
-						alcnt++;
-						
-						if ( verbose && ((alcnt & (bmask)) == 0) )
-						{
-							std::cerr << "[V] Marked " << (alcnt+1) << " (" << (alcnt+1)/(1024*1024) << "," << static_cast<double>(alcnt+1)/maxrank << ")"
-								<< " time " << locrtc.getElapsedSeconds()
-								<< " total " << globrtc.formatTime(globrtc.getElapsedSeconds())
-								<< " "
-								<< libmaus::util::MemUsage()
-								<< std::endl;
-							locrtc.start();
-						}
-					}
-					break;
-				}
-			}
-
-		rec.putBlock();			
-		rec.getBlock();
-	}
-			
-	rec.addEOFBlock();
-	outputstr.flush();
-	
-	if ( verbose )
-		std::cerr << "[V] Marked " << 1.0 << " total for marking time "
-			<< globrtc.formatTime(globrtc.getElapsedSeconds()) 
-			<< " "
-			<< libmaus::util::MemUsage()
-			<< std::endl;
-}
-
-
-template<typename decoder_type>
-static void markDuplicatesInFileTemplate(
-	::libmaus::util::ArgInfo const & arginfo,
-	bool const verbose,
-	::libmaus::bambam::BamHeader const & bamheader,
-	uint64_t const maxrank,
-	uint64_t const mod,
-	int const level,
-	DupSetCallback const & DSC,
-	decoder_type & decoder
-)
-{
-	::libmaus::bambam::BamHeader::unique_ptr_type uphead(updateHeader(arginfo,bamheader));
-
-	::libmaus::aio::CheckedOutputStream::unique_ptr_type pO;
-	std::ostream * poutputstr = 0;
-	
-	if ( arginfo.hasArg("O") && (arginfo.getValue<std::string>("O","") != "") )
-	{
-		::libmaus::aio::CheckedOutputStream::unique_ptr_type tpO(
-                                new ::libmaus::aio::CheckedOutputStream(arginfo.getValue<std::string>("O",std::string("O")))
-                        );
-		pO = UNIQUE_PTR_MOVE(tpO);
-		poutputstr = pO.get();
-	}
-	else
-	{
-		poutputstr = & std::cout;
-	}
-
-	std::ostream & outputstr = *poutputstr;
-	
-	libmaus::timing::RealTimeClock globrtc, locrtc;
-	globrtc.start(); locrtc.start();
-	uint64_t const bmod = libmaus::math::nextTwoPow(mod);
-	uint64_t const bmask = bmod-1;
-
-	// rewrite file and mark duplicates
-	::libmaus::bambam::BamWriter::unique_ptr_type writer(new ::libmaus::bambam::BamWriter(outputstr,*uphead,level));
-	libmaus::bambam::BamAlignment & alignment = decoder.getAlignment();
-	for ( uint64_t r = 0; decoder.readAlignment(); ++r )
-	{
-		if ( DSC.isMarked(r) )
-			alignment.putFlags(alignment.getFlags() | ::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FDUP);
-		
-		alignment.serialise(writer->getStream());
-		
-		if ( verbose && ((r+1) & bmask) == 0 )
-		{
-			std::cerr << "[V] Marked " << (r+1) << " (" << (r+1)/(1024*1024) << "," << static_cast<double>(r+1)/maxrank << ")"
-				<< " time " << locrtc.getElapsedSeconds()
-				<< " total " << globrtc.formatTime(globrtc.getElapsedSeconds())
-				<< " "
-				<< libmaus::util::MemUsage()
-				<< std::endl;
-			locrtc.start();
-		}
-	}
-	
-	writer.reset();
-	outputstr.flush();
-	pO.reset();
-	
-	if ( verbose )
-		std::cerr << "[V] Marked " << maxrank << "(" << maxrank/(1024*1024) << "," << 1 << ")" << " total for marking time " << globrtc.formatTime(globrtc.getElapsedSeconds()) 
-			<< " "
-			<< libmaus::util::MemUsage()
-			<< std::endl;
-
-}
-
-
-template<typename decoder_type, typename writer_type>
-static void removeDuplicatesFromFileTemplate(
-	bool const verbose,
-	uint64_t const maxrank,
-	uint64_t const mod,
-	DupSetCallback const & DSC,
-	decoder_type & decoder,
-	writer_type & writer
-)
-{
-	libmaus::timing::RealTimeClock globrtc, locrtc;
-	globrtc.start(); locrtc.start();
-	uint64_t const bmod = libmaus::math::nextTwoPow(mod);
-	uint64_t const bmask = bmod-1;
-
-	// rewrite file and mark duplicates
-	libmaus::bambam::BamAlignment & alignment = decoder.getAlignment();
-	for ( uint64_t r = 0; decoder.readAlignment(); ++r )
-	{
-		if ( ! DSC.isMarked(r) )
-			alignment.serialise(writer.getStream());
-		
-		if ( verbose && ((r+1) & bmask) == 0 )
-		{
-			std::cerr << "[V] Filtered " << (r+1) << " (" << (r+1)/(1024*1024) << "," << static_cast<double>(r+1)/maxrank << ")"
-				<< " time " << locrtc.getElapsedSeconds()
-				<< " total " << globrtc.formatTime(globrtc.getElapsedSeconds())
-				<< " "
-				<< libmaus::util::MemUsage()
-				<< std::endl;
-			locrtc.start();
-		}
-	}
-		
-	if ( verbose )
-		std::cerr << "[V] Filtered " << maxrank << "(" << maxrank/(1024*1024) << "," << 1 << ")" << " total for marking time " << globrtc.formatTime(globrtc.getElapsedSeconds()) 
-			<< " "
-			<< libmaus::util::MemUsage()
-			<< std::endl;
-
-}
-
-struct UpdateHeader : public libmaus::bambam::BamHeaderRewriteCallback
-{
-	libmaus::util::ArgInfo const & arginfo;
-
-	UpdateHeader(libmaus::util::ArgInfo const & rarginfo)
-	: arginfo(rarginfo)
-	{
-	
-	}
-
-	::libmaus::bambam::BamHeader::unique_ptr_type operator()(::libmaus::bambam::BamHeader const & header)  const
-	{
-		::libmaus::bambam::BamHeader::unique_ptr_type ptr(updateHeader(arginfo,header));
-		return UNIQUE_PTR_MOVE(ptr);
-	}
-};
-
-static void markDuplicatesInFile(
-	::libmaus::util::ArgInfo const & arginfo,
-	bool const verbose,
-	::libmaus::bambam::BamHeader const & bamheader,
-	uint64_t const maxrank,
-	uint64_t const mod,
-	int const level,
-	DupSetCallback const & DSC,
-	std::string const & recompressedalignments,
-	bool const rewritebam
-)
-{
-	bool const rmdup = arginfo.getValue<int>("rmdup",getDefaultRmDup());
-	uint64_t const markthreads = 
-		std::max(static_cast<uint64_t>(1),arginfo.getValue<uint64_t>("markthreads",getDefaultMarkThreads()));
-
-	if ( rmdup )
-	{
-		::libmaus::bambam::BamHeader::unique_ptr_type uphead(updateHeader(arginfo,bamheader));
-		
-		bool const inputisbam =
-			(arginfo.hasArg("I") && (arginfo.getValue<std::string>("I","") != ""))
-			||
-			rewritebam;
-	
-		::libmaus::aio::CheckedOutputStream::unique_ptr_type pO;
-		std::ostream * poutputstr = 0;
-		
-		if ( arginfo.hasArg("O") && (arginfo.getValue<std::string>("O","") != "") )
-		{
-			::libmaus::aio::CheckedOutputStream::unique_ptr_type tpO(
-                                        new ::libmaus::aio::CheckedOutputStream(arginfo.getValue<std::string>("O",std::string("O")))
-                                );
-			pO = UNIQUE_PTR_MOVE(tpO);
-			poutputstr = pO.get();
-		}
-		else
-		{
-			poutputstr = & std::cout;
-		}
-
-		std::ostream & outputstr = *poutputstr;
-		
-		if ( inputisbam )
-		{
-			// multiple input files
-			if ( arginfo.getPairCount("I") > 1 )
-			{
-				std::vector<std::string> const inputfilenames = arginfo.getPairValues("I");
-				libmaus::bambam::BamMergeCoordinate decoder(inputfilenames);
-				decoder.disableValidation();
-				::libmaus::bambam::BamWriter::unique_ptr_type writer(new ::libmaus::bambam::BamWriter(outputstr,*uphead,level));	
-				removeDuplicatesFromFileTemplate(verbose,maxrank,mod,DSC,decoder,*writer);
-			}
-			else
-			{
-				std::string const inputfilename =
-					(arginfo.hasArg("I") && (arginfo.getValue<std::string>("I","") != ""))
-					?
-					arginfo.getValue<std::string>("I","I")
-					:
-					recompressedalignments;
-
-				if ( markthreads < 2 )
-				{
-					::libmaus::bambam::BamDecoder decoder(inputfilename);
-					decoder.disableValidation();
-					::libmaus::bambam::BamWriter::unique_ptr_type writer(new ::libmaus::bambam::BamWriter(outputstr,*uphead,level));	
-					removeDuplicatesFromFileTemplate(verbose,maxrank,mod,DSC,decoder,*writer);
-				}
-				else
-				{
-					libmaus::aio::CheckedInputStream CIS(inputfilename);
-					UpdateHeader UH(arginfo);
-					libmaus::bambam::BamParallelRewrite BPR(CIS,UH,outputstr,level,markthreads,4 /* blocks per thread */);
-					libmaus::bambam::BamAlignmentDecoder & dec = BPR.getDecoder();
-					libmaus::bambam::BamParallelRewrite::writer_type & writer = BPR.getWriter();
-					removeDuplicatesFromFileTemplate(verbose,maxrank,mod,DSC,dec,writer);
-				}
-			}
-		}
-		else
-		{		
-			SnappyRewrittenInput decoder(recompressedalignments);
-			if ( verbose )
-				std::cerr << "[V] Reading snappy alignments from " << recompressedalignments << std::endl;
-			::libmaus::bambam::BamWriter::unique_ptr_type writer(new ::libmaus::bambam::BamWriter(outputstr,*uphead,level));
-			removeDuplicatesFromFileTemplate(verbose,maxrank,mod,DSC,decoder,*writer);
-		}
-
-		outputstr.flush();
-		pO.reset();
-	}
-	else
-	{
-		// multiple input files
-		if ( arginfo.getPairCount("I") > 1 )
-		{
-			std::vector<std::string> const inputfilenames = arginfo.getPairValues("I");
-			libmaus::bambam::BamMergeCoordinate decoder(inputfilenames);
-			decoder.disableValidation();
-			markDuplicatesInFileTemplate(arginfo,verbose,bamheader,maxrank,mod,level,DSC,decoder);
-		}
-		else if ( arginfo.hasArg("I") && (arginfo.getValue<std::string>("I","") != "") )
-		{
-			std::string const inputfilename = arginfo.getValue<std::string>("I","I");
-			libmaus::aio::CheckedInputStream CIS(inputfilename);
-		
-			if ( markthreads == 1 )
-				addBamDuplicateFlag(arginfo,verbose,bamheader,maxrank,mod,level,DSC,CIS);
-			else
-				addBamDuplicateFlagParallel(arginfo,verbose,bamheader,maxrank,mod,level,DSC,CIS,markthreads);
-		}
-		else
-		{
-			if ( rewritebam )
-			{
-				libmaus::aio::CheckedInputStream CIS(recompressedalignments);
-				
-				if ( markthreads == 1 )
-					addBamDuplicateFlag(arginfo,verbose,bamheader,maxrank,mod,level,DSC,CIS);		
-				else
-					addBamDuplicateFlagParallel(arginfo,verbose,bamheader,maxrank,mod,level,DSC,CIS,markthreads);
-			}
-			else
-			{
-				SnappyRewrittenInput decoder(recompressedalignments);
-				if ( verbose )
-					std::cerr << "[V] Reading snappy alignments from " << recompressedalignments << std::endl;
-				markDuplicatesInFileTemplate(arginfo,verbose,bamheader,maxrank,mod,level,DSC,decoder);
-			}
-		}
-	}
-}
 
 static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 {
@@ -2830,6 +1157,8 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilenamereadpairs);
 	std::string const tmpfilesnappyreads = tmpfilenamebase + "_alignments";
 	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilesnappyreads);
+	std::string const tmpfileindex = tmpfilenamebase + "_index";
+	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
 
 	std::string const tmpfiledupset = tmpfilenamebase + "_dupset";
 	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfiledupset);
@@ -2884,9 +1213,9 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 
 	::libmaus::timing::RealTimeClock fragrtc; fragrtc.start();
 
-	SnappyRewriteCallback::unique_ptr_type SRC;
-	BamRewriteCallback::unique_ptr_type BWR;
-	PositionTrackInterface * PTI = 0;
+	libmaus::bambam::BamAlignmentInputCallbackSnappy<BamAlignmentInputPositionCallbackDupMark>::unique_ptr_type SRC;
+	libmaus::bambam::BamAlignmentInputCallbackBam<BamAlignmentInputPositionCallbackDupMark>::unique_ptr_type BWR;
+	BamAlignmentInputPositionCallbackDupMark * PTI = 0;
 	::libmaus::aio::CheckedInputStream::unique_ptr_type CIS;
 	libmaus::aio::CheckedOutputStream::unique_ptr_type copybamstr;
 
@@ -2995,7 +1324,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 				}
 
 				// rewrite file and mark duplicates
-				BamRewriteCallback::unique_ptr_type tBWR(new BamRewriteCallback(tmpfilesnappyreads,CBD->getHeader(),rewritebamlevel));
+				libmaus::bambam::BamAlignmentInputCallbackBam<BamAlignmentInputPositionCallbackDupMark>::unique_ptr_type tBWR(new libmaus::bambam::BamAlignmentInputCallbackBam<BamAlignmentInputPositionCallbackDupMark>(tmpfilesnappyreads,CBD->getHeader(),rewritebamlevel));
 				BWR = UNIQUE_PTR_MOVE(tBWR);
 				CBD->setInputCallback(BWR.get());
 
@@ -3012,7 +1341,8 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
                                 colhashbits,collistsize));
 			CBD = UNIQUE_PTR_MOVE(tCBD);
 
-			SnappyRewriteCallback::unique_ptr_type tSRC(new SnappyRewriteCallback(tmpfilesnappyreads,CBD->getHeader()));
+			libmaus::bambam::BamAlignmentInputCallbackSnappy<BamAlignmentInputPositionCallbackDupMark>::unique_ptr_type 
+				tSRC(new libmaus::bambam::BamAlignmentInputCallbackSnappy<BamAlignmentInputPositionCallbackDupMark>(tmpfilesnappyreads,CBD->getHeader()));
 			SRC = UNIQUE_PTR_MOVE(tSRC);
 			CBD->setInputCallback(SRC.get());
 			if ( verbose )
@@ -3066,7 +1396,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	
 	libmaus::timing::RealTimeClock readinrtc; readinrtc.start();
 
-	DupSetCallbackStream DSCV(tmpfiledupset,metrics);
+	::libmaus::bambam::DupSetCallbackStream DSCV(tmpfiledupset,metrics);
 	// DupSetCallbackSet DSCV(metrics);
 	
 	PTI->setDupSetCallback(&DSCV);
@@ -3184,7 +1514,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 			}
 			
 			// simple one, register it
-			if (  PositionTrackInterface::isSimplePair(*(P.second)) )
+			if (  BamAlignmentInputPositionCallbackDupMark::isSimplePair(*(P.second)) )
 			{
 				PTI->addAlignmentPair(*(P.first),*(P.second),pairREC.get(),bamheader);
 				PTI->checkFinishedPairs(pairREC.get(),bamheader);
@@ -3293,17 +1623,17 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 
 	while ( pairDec->getNext(nextfrag) )
 	{
-		if ( ! isDupPair(nextfrag,lfrags.front()) )
+		if ( ! libmaus::bambam::DupMarkBase::isDupPair(nextfrag,lfrags.front()) )
 		{
 			// dupcnt += markDuplicatePairs(lfrags.begin(),lfrags.end(),DSCV);
-			dupcnt += markDuplicatePairsRef(lfrags,DSCV);
+			dupcnt += libmaus::bambam::DupMarkBase::markDuplicatePairsVector(lfrags,DSCV);
 			lfrags.resize(0);
 		}
 
 		lfrags.push_back(nextfrag);
 	}
 	// dupcnt += markDuplicatePairs(lfrags.begin(),lfrags.end(),DSCV);
-	dupcnt += markDuplicatePairsRef(lfrags,DSCV);
+	dupcnt += libmaus::bambam::DupMarkBase::markDuplicatePairsVector(lfrags,DSCV);
 	lfrags.resize(0);
 	pairDec.reset();
 	if ( verbose )
@@ -3317,15 +1647,15 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	fragDec->getNext(lfrags);
 	while ( fragDec->getNext(nextfrag) )
 	{
-		if ( !isDupFrag(nextfrag,lfrags.front()) )
+		if ( !libmaus::bambam::DupMarkBase::isDupFrag(nextfrag,lfrags.front()) )
 		{
-			dupcnt += markDuplicateFrags(lfrags,DSCV);
+			dupcnt += libmaus::bambam::DupMarkBase::markDuplicateFrags(lfrags,DSCV);
 			lfrags.resize(0);
 		}
 
 		lfrags.push_back(nextfrag);
 	}
-	dupcnt += markDuplicateFrags(lfrags,DSCV);
+	dupcnt += libmaus::bambam::DupMarkBase::markDuplicateFrags(lfrags,DSCV);
 	lfrags.resize(0);
 	fragDec.reset();
 	if ( verbose )
@@ -3382,7 +1712,15 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	/*
 	 * mark the duplicates
 	 */
-	markDuplicatesInFile(arginfo,verbose,bamheader,maxrank,mod,level,DSCV,tmpfilesnappyreads,rewritebam);
+	libmaus::bambam::DupMarkBase::markDuplicatesInFile(
+		arginfo,verbose,bamheader,maxrank,mod,level,DSCV,tmpfilesnappyreads,rewritebam,tmpfileindex,
+		getProgId(),
+		std::string(PACKAGE_VERSION),
+		getDefaultRmDup(),
+		getDefaultMD5(),
+		getDefaultIndex(),
+		getDefaultMarkThreads()
+	);
 		
 	if ( verbose )
 		std::cerr << "[V] " << ::libmaus::util::MemUsage() << " " 
@@ -3439,6 +1777,10 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "collistsize=<["+::biobambam::Licensing::formatNumber(getDefaultColListSize())+"]>", "output list size for collation" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "fragbufsize=<["+::biobambam::Licensing::formatNumber(getDefaultFragBufSize())+"]>", "size of each fragment/pair file buffer in bytes" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "maxreadlength=<["+::biobambam::Licensing::formatNumber(getDefaultMaxReadLength())+"]>", "maximum allowed read length" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "md5filename=<filename>", "file name for md5 check sum (default: extend output file name)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "indexfilename=<filename>", "file name for BAM index file (default: extend output file name)" ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 
