@@ -1,3 +1,9 @@
+biobambam (0.0.99-0) unstable; urgency=low
+
+  * add index/md5 options in bammarkduplicates and bammarkduplicates2 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Mon, 28 Oct 2013 12:26:34 +0000
+
 biobambam (0.0.98-0) unstable; urgency=low
 
   * fix read group processing in merging 
