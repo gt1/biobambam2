@@ -36,6 +36,11 @@
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static std::string getDefaultInputFormat() { return "bam"; }
 
+#include <libmaus/lz/BgzfDeflateOutputCallbackMD5.hpp>
+#include <libmaus/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
+static int getDefaultMD5() { return 0; }
+static int getDefaultIndex() { return 0; }
+
 static int getLevel(libmaus::util::ArgInfo const & arginfo)
 {
 	int const level = arginfo.getValue<int>("level",getDefaultLevel());
@@ -134,21 +139,81 @@ void bamcollate2NonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::ba
 	// construct new header
 	::libmaus::bambam::BamHeader uphead(getModifiedHeaderText(bamdec,arginfo));
 	uphead.changeSortOrder("unknown");
+
+	/*
+	 * start index/md5 callbacks
+	 */
+	std::string const tmpfilenamebase = arginfo.getValue<std::string>("T",arginfo.getDefaultTmpFileName());
+	std::string const tmpfileindex = tmpfilenamebase + "_index";
+	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
+
+	std::string md5filename;
+	std::string indexfilename;
+
+	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > cbs;
+	::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
+	if ( arginfo.getValue<unsigned int>("md5",getDefaultMD5()) )
+	{
+		if ( arginfo.hasArg("md5filename") &&  arginfo.getUnparsedValue("md5filename","") != "" )
+			md5filename = arginfo.getUnparsedValue("md5filename","");
+		else
+			std::cerr << "[V] no filename for md5 given, not creating hash" << std::endl;
+
+		if ( md5filename.size() )
+		{
+			::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5cb(new ::libmaus::lz::BgzfDeflateOutputCallbackMD5);
+			Pmd5cb = UNIQUE_PTR_MOVE(Tmd5cb);
+			cbs.push_back(Pmd5cb.get());
+		}
+	}
+	libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Pindex;
+	if ( arginfo.getValue<unsigned int>("index",getDefaultIndex()) )
+	{
+		if ( arginfo.hasArg("indexfilename") &&  arginfo.getUnparsedValue("indexfilename","") != "" )
+			indexfilename = arginfo.getUnparsedValue("indexfilename","");
+		else
+			std::cerr << "[V] no filename for index given, not creating index" << std::endl;
+
+		if ( indexfilename.size() )
+		{
+			libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Tindex(new libmaus::bambam::BgzfDeflateOutputCallbackBamIndex(tmpfileindex));
+			Pindex = UNIQUE_PTR_MOVE(Tindex);
+			cbs.push_back(Pindex.get());
+		}
+	}
+	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
+	if ( cbs.size() )
+		Pcbs = &cbs;
+	/*
+	 * end md5/index callbacks
+	 */
+
 	// construct writer
-	libmaus::bambam::BamWriter bamwriter(std::cout,uphead,getLevel(arginfo));
+	::libmaus::bambam::BamWriter::unique_ptr_type writer(new ::libmaus::bambam::BamWriter(std::cout,uphead,getLevel(arginfo),Pcbs));
 		
 	while ( bamdec.readAlignment() )
 	{
 		uint64_t const precnt = cnt++;
 		
 		if ( ! (algn.getFlags() & excludeflags) )
-			algn.serialise(bamwriter.getStream());
+			algn.serialise(writer->getStream());
 
 		if ( precnt >> verbshift != cnt >> verbshift )
 			std::cerr 
 				<< (cnt >> 20) 
 				<< "\t"
 				<< "\t" << static_cast<double>(cnt)/rtc.getElapsedSeconds() << std::endl;
+	}
+	
+	writer.reset();
+
+	if ( Pmd5cb )
+	{
+		Pmd5cb->saveDigestAsFile(md5filename);
+	}
+	if ( Pindex )
+	{
+		Pindex->flush(std::string(indexfilename));
 	}
 
 }
@@ -225,10 +290,60 @@ void bamcollate2Collating(
 	// construct new header
 	::libmaus::bambam::BamHeader uphead(getModifiedHeaderText(CHCBD,arginfo));
 	uphead.changeSortOrder("unknown");
+
+
+	/*
+	 * start index/md5 callbacks
+	 */
+	std::string const tmpfilenamebase = arginfo.getValue<std::string>("T",arginfo.getDefaultTmpFileName());
+	std::string const tmpfileindex = tmpfilenamebase + "_index";
+	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
+
+	std::string md5filename;
+	std::string indexfilename;
+
+	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > cbs;
+	::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
+	if ( arginfo.getValue<unsigned int>("md5",getDefaultMD5()) )
+	{
+		if ( arginfo.hasArg("md5filename") &&  arginfo.getUnparsedValue("md5filename","") != "" )
+			md5filename = arginfo.getUnparsedValue("md5filename","");
+		else
+			std::cerr << "[V] no filename for md5 given, not creating hash" << std::endl;
+
+		if ( md5filename.size() )
+		{
+			::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5cb(new ::libmaus::lz::BgzfDeflateOutputCallbackMD5);
+			Pmd5cb = UNIQUE_PTR_MOVE(Tmd5cb);
+			cbs.push_back(Pmd5cb.get());
+		}
+	}
+	libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Pindex;
+	if ( arginfo.getValue<unsigned int>("index",getDefaultIndex()) )
+	{
+		if ( arginfo.hasArg("indexfilename") &&  arginfo.getUnparsedValue("indexfilename","") != "" )
+			indexfilename = arginfo.getUnparsedValue("indexfilename","");
+		else
+			std::cerr << "[V] no filename for index given, not creating index" << std::endl;
+
+		if ( indexfilename.size() )
+		{
+			libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Tindex(new libmaus::bambam::BgzfDeflateOutputCallbackBamIndex(tmpfileindex));
+			Pindex = UNIQUE_PTR_MOVE(Tindex);
+			cbs.push_back(Pindex.get());
+		}
+	}
+	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
+	if ( cbs.size() )
+		Pcbs = &cbs;
+	/*
+	 * end md5/index callbacks
+	 */
+
 	// construct writer
-	libmaus::bambam::BamWriter bamwriter(std::cout,uphead,getLevel(arginfo));
+	::libmaus::bambam::BamWriter::unique_ptr_type writer(new ::libmaus::bambam::BamWriter(std::cout,uphead,getLevel(arginfo),Pcbs));
 	typedef libmaus::bambam::BamWriter::stream_type out_stream_type;
-	out_stream_type & bgzfos = bamwriter.getStream();
+	out_stream_type & bgzfos = writer->getStream();
 	
 	while ( (ob = CHCBD.process()) )
 	{
@@ -281,6 +396,18 @@ void bamcollate2Collating(
 	}
 	
 	std::cerr << "[V] " << cnt << std::endl;
+
+	writer.reset();
+
+	if ( Pmd5cb )
+	{
+		Pmd5cb->saveDigestAsFile(md5filename);
+	}
+	if ( Pindex )
+	{
+		Pindex->flush(std::string(indexfilename));
+	}
+
 }
 
 void bamcollate2Collating(libmaus::util::ArgInfo const & arginfo)
@@ -386,10 +513,59 @@ void bamcollate2CollatingRanking(
 	// construct new header
 	::libmaus::bambam::BamHeader uphead(getModifiedHeaderText(CHCBD,arginfo));
 	uphead.changeSortOrder("unknown");
+
+	/*
+	 * start index/md5 callbacks
+	 */
+	std::string const tmpfilenamebase = arginfo.getValue<std::string>("T",arginfo.getDefaultTmpFileName());
+	std::string const tmpfileindex = tmpfilenamebase + "_index";
+	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
+
+	std::string md5filename;
+	std::string indexfilename;
+
+	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > cbs;
+	::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
+	if ( arginfo.getValue<unsigned int>("md5",getDefaultMD5()) )
+	{
+		if ( arginfo.hasArg("md5filename") &&  arginfo.getUnparsedValue("md5filename","") != "" )
+			md5filename = arginfo.getUnparsedValue("md5filename","");
+		else
+			std::cerr << "[V] no filename for md5 given, not creating hash" << std::endl;
+
+		if ( md5filename.size() )
+		{
+			::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5cb(new ::libmaus::lz::BgzfDeflateOutputCallbackMD5);
+			Pmd5cb = UNIQUE_PTR_MOVE(Tmd5cb);
+			cbs.push_back(Pmd5cb.get());
+		}
+	}
+	libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Pindex;
+	if ( arginfo.getValue<unsigned int>("index",getDefaultIndex()) )
+	{
+		if ( arginfo.hasArg("indexfilename") &&  arginfo.getUnparsedValue("indexfilename","") != "" )
+			indexfilename = arginfo.getUnparsedValue("indexfilename","");
+		else
+			std::cerr << "[V] no filename for index given, not creating index" << std::endl;
+
+		if ( indexfilename.size() )
+		{
+			libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Tindex(new libmaus::bambam::BgzfDeflateOutputCallbackBamIndex(tmpfileindex));
+			Pindex = UNIQUE_PTR_MOVE(Tindex);
+			cbs.push_back(Pindex.get());
+		}
+	}
+	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
+	if ( cbs.size() )
+		Pcbs = &cbs;
+	/*
+	 * end md5/index callbacks
+	 */
+
 	// construct writer
-	libmaus::bambam::BamWriter bamwriter(std::cout,uphead,getLevel(arginfo));
+	::libmaus::bambam::BamWriter::unique_ptr_type writer(new ::libmaus::bambam::BamWriter(std::cout,uphead,getLevel(arginfo),Pcbs));
 	typedef libmaus::bambam::BamWriter::stream_type out_stream_type;
-	out_stream_type & bgzfos = bamwriter.getStream();
+	out_stream_type & bgzfos = writer->getStream();
 
 	libmaus::bambam::BamAuxFilterVector zrtag;
 	zrtag.set('Z','R');
@@ -497,6 +673,17 @@ void bamcollate2CollatingRanking(
 	}
 	
 	std::cerr << "[V] " << cnt << std::endl;
+	
+	writer.reset();
+
+	if ( Pmd5cb )
+	{
+		Pmd5cb->saveDigestAsFile(md5filename);
+	}
+	if ( Pindex )
+	{
+		Pindex->flush(std::string(indexfilename));
+	}
 }
 
 void bamcollate2CollatingRanking(libmaus::util::ArgInfo const & arginfo)
@@ -595,10 +782,59 @@ void bamcollate2CollatingPostRanking(
 	// construct new header
 	::libmaus::bambam::BamHeader uphead(getModifiedHeaderText(CHCBD,arginfo,reset));
 	uphead.changeSortOrder("unknown");
+
+	/*
+	 * start index/md5 callbacks
+	 */
+	std::string const tmpfilenamebase = arginfo.getValue<std::string>("T",arginfo.getDefaultTmpFileName());
+	std::string const tmpfileindex = tmpfilenamebase + "_index";
+	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
+
+	std::string md5filename;
+	std::string indexfilename;
+
+	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > cbs;
+	::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
+	if ( arginfo.getValue<unsigned int>("md5",getDefaultMD5()) )
+	{
+		if ( arginfo.hasArg("md5filename") &&  arginfo.getUnparsedValue("md5filename","") != "" )
+			md5filename = arginfo.getUnparsedValue("md5filename","");
+		else
+			std::cerr << "[V] no filename for md5 given, not creating hash" << std::endl;
+
+		if ( md5filename.size() )
+		{
+			::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5cb(new ::libmaus::lz::BgzfDeflateOutputCallbackMD5);
+			Pmd5cb = UNIQUE_PTR_MOVE(Tmd5cb);
+			cbs.push_back(Pmd5cb.get());
+		}
+	}
+	libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Pindex;
+	if ( arginfo.getValue<unsigned int>("index",getDefaultIndex()) )
+	{
+		if ( arginfo.hasArg("indexfilename") &&  arginfo.getUnparsedValue("indexfilename","") != "" )
+			indexfilename = arginfo.getUnparsedValue("indexfilename","");
+		else
+			std::cerr << "[V] no filename for index given, not creating index" << std::endl;
+
+		if ( indexfilename.size() )
+		{
+			libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Tindex(new libmaus::bambam::BgzfDeflateOutputCallbackBamIndex(tmpfileindex));
+			Pindex = UNIQUE_PTR_MOVE(Tindex);
+			cbs.push_back(Pindex.get());
+		}
+	}
+	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
+	if ( cbs.size() )
+		Pcbs = &cbs;
+	/*
+	 * end md5/index callbacks
+	 */
+
 	// construct writer
-	libmaus::bambam::BamWriter bamwriter(std::cout,uphead,getLevel(arginfo));
+	::libmaus::bambam::BamWriter::unique_ptr_type writer(new ::libmaus::bambam::BamWriter(std::cout,uphead,getLevel(arginfo),Pcbs));
 	typedef libmaus::bambam::BamWriter::stream_type out_stream_type;
-	out_stream_type & bgzfos = bamwriter.getStream();
+	out_stream_type & bgzfos = writer->getStream();
 	uint64_t r = 0;
 
 	libmaus::bambam::BamAuxFilterVector zrtag;
@@ -778,6 +1014,17 @@ void bamcollate2CollatingPostRanking(
 	}
 	
 	std::cerr << "[V] " << cnt << std::endl;
+
+	writer.reset();
+
+	if ( Pmd5cb )
+	{
+		Pmd5cb->saveDigestAsFile(md5filename);
+	}
+	if ( Pindex )
+	{
+		Pindex->flush(std::string(indexfilename));
+	}
 }
 
 void bamcollate2CollatingPostRanking(libmaus::util::ArgInfo const & arginfo)
@@ -949,6 +1196,10 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "colhlog=<[18]>", "base 2 logarithm of hash table size used for collation" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("colsbs=<[")+libmaus::util::NumberSerialisation::formatNumber(128ull*1024*1024,0)+"]>", "size of hash table overflow list in bytes" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("T=<[") + arginfo.getDefaultTmpFileName() + "]>" , "temporary file name" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "md5filename=<filename>", "file name for md5 check sum (default: extend output file name)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "indexfilename=<filename>", "file name for BAM index file (default: extend output file name)" ) );
 				
 				::biobambam::Licensing::printMap(std::cerr,V);
 

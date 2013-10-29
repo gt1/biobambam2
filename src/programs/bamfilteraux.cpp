@@ -43,6 +43,11 @@
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; }
 
+#include <libmaus/lz/BgzfDeflateOutputCallbackMD5.hpp>
+#include <libmaus/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
+static int getDefaultMD5() { return 0; }
+static int getDefaultIndex() { return 0; }
+
 int bamfilteraux(::libmaus::util::ArgInfo const & arginfo)
 {
 	::libmaus::util::TempFileRemovalContainer::setup();
@@ -112,7 +117,56 @@ int bamfilteraux(::libmaus::util::ArgInfo const & arginfo)
 	);
 	// construct new header
 	libmaus::bambam::BamHeader const uphead(upheadtext);
- 	libmaus::bambam::BamWriter writer(std::cout,uphead,level);
+
+	/*
+	 * start index/md5 callbacks
+	 */
+	std::string const tmpfilenamebase = arginfo.getValue<std::string>("tmpfile",arginfo.getDefaultTmpFileName());
+	std::string const tmpfileindex = tmpfilenamebase + "_index";
+	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
+
+	std::string md5filename;
+	std::string indexfilename;
+
+	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > cbs;
+	::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
+	if ( arginfo.getValue<unsigned int>("md5",getDefaultMD5()) )
+	{
+		if ( arginfo.hasArg("md5filename") &&  arginfo.getUnparsedValue("md5filename","") != "" )
+			md5filename = arginfo.getUnparsedValue("md5filename","");
+		else
+			std::cerr << "[V] no filename for md5 given, not creating hash" << std::endl;
+
+		if ( md5filename.size() )
+		{
+			::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5cb(new ::libmaus::lz::BgzfDeflateOutputCallbackMD5);
+			Pmd5cb = UNIQUE_PTR_MOVE(Tmd5cb);
+			cbs.push_back(Pmd5cb.get());
+		}
+	}
+	libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Pindex;
+	if ( arginfo.getValue<unsigned int>("index",getDefaultIndex()) )
+	{
+		if ( arginfo.hasArg("indexfilename") &&  arginfo.getUnparsedValue("indexfilename","") != "" )
+			indexfilename = arginfo.getUnparsedValue("indexfilename","");
+		else
+			std::cerr << "[V] no filename for index given, not creating index" << std::endl;
+
+		if ( indexfilename.size() )
+		{
+			libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Tindex(new libmaus::bambam::BgzfDeflateOutputCallbackBamIndex(tmpfileindex));
+			Pindex = UNIQUE_PTR_MOVE(Tindex);
+			cbs.push_back(Pindex.get());
+		}
+	}
+	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
+	if ( cbs.size() )
+		Pcbs = &cbs;
+	/*
+	 * end md5/index callbacks
+	 */
+
+	::libmaus::bambam::BamWriter::unique_ptr_type writer(new ::libmaus::bambam::BamWriter(std::cout,uphead,level,Pcbs));
  	libmaus::bambam::BamAuxFilterVector bafv;
  	
  	std::string const filterlist = arginfo.hasArg("keep") ? arginfo.getUnparsedValue("keep","") : arginfo.getUnparsedValue("remove","");
@@ -147,7 +201,7 @@ int bamfilteraux(::libmaus::util::ArgInfo const & arginfo)
  		while ( dec.readAlignment() )
  		{
  			algn.filterOutAux(bafv);
- 			algn.serialise(writer.getStream());
+ 			algn.serialise(writer->getStream());
  			
  			if ( verbose && (++c & (1024*1024-1)) == 0 )
  				std::cerr << "[V] " << c/(1024*1024) << std::endl;
@@ -158,12 +212,23 @@ int bamfilteraux(::libmaus::util::ArgInfo const & arginfo)
  		while ( dec.readAlignment() )
  		{
  			algn.filterAux(bafv);
- 			algn.serialise(writer.getStream());
+ 			algn.serialise(writer->getStream());
 
  			if ( verbose && (++c & (1024*1024-1)) == 0 )
  				std::cerr << "[V] " << c/(1024*1024) << std::endl;
  		} 		
  	}
+ 	
+ 	writer.reset();
+
+	if ( Pmd5cb )
+	{
+		Pmd5cb->saveDigestAsFile(md5filename);
+	}
+	if ( Pindex )
+	{
+		Pindex->flush(std::string(indexfilename));
+	}
 
 	return EXIT_SUCCESS;
 }
@@ -201,6 +266,11 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress information" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "keep=<[]>", "keep these tags (default: keep all)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "remove=<[]>","remove these tags (default: remove none)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "md5filename=<filename>", "file name for md5 check sum (default: extend output file name)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "indexfilename=<filename>", "file name for BAM index file (default: extend output file name)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "tmpfile=<filename>", "prefix for temporary files, default: create files in current directory" ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 
