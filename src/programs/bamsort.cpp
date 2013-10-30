@@ -38,6 +38,17 @@
 #include <libmaus/util/PutObject.hpp>
 #include <libmaus/util/TempFileRemovalContainer.hpp>
 
+#include <libmaus/lz/BgzfDeflateOutputCallbackMD5.hpp>
+#include <libmaus/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
+static int getDefaultMD5() { return 0; }
+static int getDefaultIndex() { return 0; }
+
+#include <biobambam/BamBamConfig.hpp>
+
+#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
+#include <libmaus/bambam/ScramDecoder.hpp>
+#endif
+
 #include <biobambam/Licensing.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
@@ -45,6 +56,7 @@ static int getDefaultVerbose() { return 1; }
 static std::string getDefaultSortOrder() { return "coordinate"; }
 static uint64_t getDefaultBlockSize() { return 1024; }
 static bool getDefaultDisableValidation() { return false; }
+static std::string getDefaultInputFormat() { return "bam"; }
 
 int bamsort(::libmaus::util::ArgInfo const & arginfo)
 {
@@ -99,9 +111,35 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 	uint64_t blockmem = arginfo.getValue<uint64_t>("blockmb",getDefaultBlockSize())*1024*1024;
 	std::string const sortorder = arginfo.getValue<std::string>("SO","coordinate");
 
-	::libmaus::bambam::BamDecoder::unique_ptr_type pdec(new ::libmaus::bambam::BamDecoder(std::cin,false /* put rank */));
+	std::string const inputformat = arginfo.getUnparsedValue("inputformat",getDefaultInputFormat());
 
-	::libmaus::bambam::BamAlignmentDecoder & dec = *pdec;
+	::libmaus::bambam::BamDecoder::unique_ptr_type pdec;
+	::libmaus::bambam::ScramDecoder::unique_ptr_type sdec;
+	::libmaus::bambam::BamAlignmentDecoder * ppdec = 0;
+	
+	if ( inputformat == "bam" )
+	{
+		::libmaus::bambam::BamDecoder::unique_ptr_type tdec(new ::libmaus::bambam::BamDecoder(std::cin,false /* put rank */));
+		pdec = UNIQUE_PTR_MOVE(tdec);
+		ppdec = pdec.get();
+	}
+	#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
+	else if ( inputformat == "sam" )
+	{
+		libmaus::bambam::ScramDecoder::unique_ptr_type tdec(new libmaus::bambam::ScramDecoder("-","rs",""));
+		sdec = UNIQUE_PTR_MOVE(tdec);
+		ppdec = sdec.get();
+	}
+	#endif
+	else
+	{
+		::libmaus::exception::LibMausException se;
+		se.getStream() << "Unsupported input format: " << inputformat << std::endl;
+		se.finish();
+		throw se;	
+	}
+
+	::libmaus::bambam::BamAlignmentDecoder & dec = *ppdec;
 	if ( disablevalidation )
 		dec.disableValidation();
 	::libmaus::bambam::BamHeader const & header = dec.getHeader();
@@ -119,7 +157,54 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 	);
 	// construct new header
 	::libmaus::bambam::BamHeader uphead(upheadtext);
-	
+
+	/*
+	 * start index/md5 callbacks
+	 */
+	std::string const tmpfileindex = tmpfilenamebase + "_index";
+	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
+
+	std::string md5filename;
+	std::string indexfilename;
+
+	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > cbs;
+	::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
+	if ( arginfo.getValue<unsigned int>("md5",getDefaultMD5()) )
+	{
+		if ( arginfo.hasArg("md5filename") &&  arginfo.getUnparsedValue("md5filename","") != "" )
+			md5filename = arginfo.getUnparsedValue("md5filename","");
+		else
+			std::cerr << "[V] no filename for md5 given, not creating hash" << std::endl;
+
+		if ( md5filename.size() )
+		{
+			::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5cb(new ::libmaus::lz::BgzfDeflateOutputCallbackMD5);
+			Pmd5cb = UNIQUE_PTR_MOVE(Tmd5cb);
+			cbs.push_back(Pmd5cb.get());
+		}
+	}
+	libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Pindex;
+	if ( arginfo.getValue<unsigned int>("index",getDefaultIndex()) )
+	{
+		if ( arginfo.hasArg("indexfilename") &&  arginfo.getUnparsedValue("indexfilename","") != "" )
+			indexfilename = arginfo.getUnparsedValue("indexfilename","");
+		else
+			std::cerr << "[V] no filename for index given, not creating index" << std::endl;
+
+		if ( indexfilename.size() )
+		{
+			libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Tindex(new libmaus::bambam::BgzfDeflateOutputCallbackBamIndex(tmpfileindex));
+			Pindex = UNIQUE_PTR_MOVE(Tindex);
+			cbs.push_back(Pindex.get());
+		}
+	}
+	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
+	if ( cbs.size() )
+		Pcbs = &cbs;
+	/*
+	 * end md5/index callbacks
+	 */
+
 	if ( sortorder != "queryname" )
 	{
 		uphead.changeSortOrder("coordinate");
@@ -140,7 +225,7 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 		if ( verbose )
 			std::cerr << "[V] read " << incnt << " alignments" << std::endl;
 
-		BEC.createOutput(std::cout, uphead, level, verbose);
+		BEC.createOutput(std::cout, uphead, level, verbose, Pcbs);
 	}
 	else
 	{
@@ -162,7 +247,16 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 		if ( verbose )
 			std::cerr << "[V] read " << incnt << " alignments" << std::endl;
 
-		BEC.createOutput(std::cout, uphead, level, verbose);
+		BEC.createOutput(std::cout, uphead, level, verbose, Pcbs);
+	}
+
+	if ( Pmd5cb )
+	{
+		Pmd5cb->saveDigestAsFile(md5filename);
+	}
+	if ( Pindex )
+	{
+		Pindex->flush(std::string(indexfilename));
 	}
 
 	return EXIT_SUCCESS;
@@ -203,6 +297,15 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "blockmb=<["+::biobambam::Licensing::formatNumber(getDefaultBlockSize())+"]>", "size of internal memory buffer used for sorting in MiB" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "disablevalidation=<["+::biobambam::Licensing::formatNumber(getDefaultDisableValidation())+"]>", "disable input validation (default is 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "tmpfile=<filename>", "prefix for temporary files, default: create files in current directory" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "md5filename=<filename>", "file name for md5 check sum (default: extend output file name)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "indexfilename=<filename>", "file name for BAM index file (default: extend output file name)" ) );
+				#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
+				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<["+getDefaultInputFormat()+"]>", "input format (bam,sam)" ) );
+				#else
+				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<["+getDefaultInputFormat()+"]>", "input format ("+getDefaultInputFormat()+")" ) );
+				#endif
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 
