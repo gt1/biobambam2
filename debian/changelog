@@ -1,3 +1,10 @@
+biobambam (0.0.102-0) unstable; urgency=low
+
+  * add SAM input format for bamsort
+  * add index and md5 options for bamsort
+
+ -- German Tischler <gt1@sanger.ac.uk>  Wed, 30 Oct 2013 10:26:46 +0000
+
 biobambam (0.0.101-0) unstable; urgency=low
 
   * add md5 and index options for all programs producing BAM output (with the exception of bamsort)
