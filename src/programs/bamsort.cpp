@@ -99,7 +99,9 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 	uint64_t blockmem = arginfo.getValue<uint64_t>("blockmb",getDefaultBlockSize())*1024*1024;
 	std::string const sortorder = arginfo.getValue<std::string>("SO","coordinate");
 
-	::libmaus::bambam::BamDecoder dec(std::cin,false);
+	::libmaus::bambam::BamDecoder::unique_ptr_type pdec(new ::libmaus::bambam::BamDecoder(std::cin,false /* put rank */));
+
+	::libmaus::bambam::BamAlignmentDecoder & dec = *pdec;
 	if ( disablevalidation )
 		dec.disableValidation();
 	::libmaus::bambam::BamHeader const & header = dec.getHeader();
