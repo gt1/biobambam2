@@ -114,7 +114,9 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 	std::string const inputformat = arginfo.getUnparsedValue("inputformat",getDefaultInputFormat());
 
 	::libmaus::bambam::BamDecoder::unique_ptr_type pdec;
+	#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
 	::libmaus::bambam::ScramDecoder::unique_ptr_type sdec;
+	#endif
 	::libmaus::bambam::BamAlignmentDecoder * ppdec = 0;
 	
 	if ( inputformat == "bam" )
