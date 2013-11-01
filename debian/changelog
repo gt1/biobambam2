@@ -1,3 +1,10 @@
+biobambam (0.0.103-0) unstable; urgency=low
+
+  * fix compilation without support for io_lib in libmaus
+  * do not erase sort order in bamcollate2 if collation is switched off 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Fri, 01 Nov 2013 09:10:29 +0000
+
 biobambam (0.0.102-0) unstable; urgency=low
 
   * add SAM input format for bamsort
