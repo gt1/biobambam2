@@ -26,6 +26,7 @@
 #include <libmaus/bambam/BamAlignment.hpp>
 #include <libmaus/bambam/BamAlignmentNameComparator.hpp>
 #include <libmaus/bambam/BamAlignmentPosComparator.hpp>
+#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
 #include <libmaus/bambam/BamDecoder.hpp>
 #include <libmaus/bambam/BamEntryContainer.hpp>
 #include <libmaus/bambam/BamWriter.hpp>
@@ -205,6 +206,8 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 	 * end md5/index callbacks
 	 */
 
+	libmaus::bambam::BamBlockWriterBase::unique_ptr_type Pout ( libmaus::bambam::BamBlockWriterBaseFactory::construct(uphead, arginfo, Pcbs) );
+
 	if ( sortorder != "queryname" )
 	{
 		uphead.changeSortOrder("coordinate");
@@ -225,7 +228,8 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 		if ( verbose )
 			std::cerr << "[V] read " << incnt << " alignments" << std::endl;
 
-		BEC.createOutput(std::cout, uphead, level, verbose, Pcbs);
+		// BEC.createOutput(std::cout, uphead, level, verbose, Pcbs);
+		BEC.createOutput(*Pout, verbose);
 	}
 	else
 	{
@@ -247,7 +251,8 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 		if ( verbose )
 			std::cerr << "[V] read " << incnt << " alignments" << std::endl;
 
-		BEC.createOutput(std::cout, uphead, level, verbose, Pcbs);
+		// BEC.createOutput(std::cout, uphead, level, verbose, Pcbs);
+		BEC.createOutput(*Pout, verbose);
 	}
 
 	if ( Pmd5cb )
