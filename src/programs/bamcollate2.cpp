@@ -138,7 +138,6 @@ void bamcollate2NonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::ba
 
 	// construct new header
 	::libmaus::bambam::BamHeader uphead(getModifiedHeaderText(bamdec,arginfo));
-	uphead.changeSortOrder("unknown");
 
 	/*
 	 * start index/md5 callbacks
