@@ -101,9 +101,6 @@ uint64_t bamrecompress(libmaus::util::ArgInfo const & arginfo)
 			cbs.push_back(Pindex.get());
 		}
 	}
-	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
-	if ( cbs.size() )
-		Pcbs = &cbs;
 	/*
 	 * end md5/index callbacks
 	 */
