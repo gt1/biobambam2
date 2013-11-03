@@ -144,6 +144,8 @@ int bamfilter(libmaus::util::ArgInfo const & arginfo)
 	{
 		Pindex->flush(std::string(indexfilename));
 	}
+	
+	return EXIT_SUCCESS;
 }
 
 int main(int argc, char * argv[])
