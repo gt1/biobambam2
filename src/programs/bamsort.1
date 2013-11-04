@@ -6,9 +6,9 @@ bamsort - sort BAM files by coordinate or query name
 .B bamsort
 [options]
 .SH DESCRIPTION
-bamsort reads a BAM file from standard input, sorts it by coordinate
+bamsort reads a BAM, SAM or CRAM file, sorts it by coordinate
 (lexicographical by reference sequence id and position on reference sequence)
-or query name and writes the sorted file to standard output.
+or query name and writes the sorted file in BAM, SAM or CRAM format.
 .PP
 Lexicographical order denotes that pairs (a,b) and (c,d) will be ordered
 such that (a,b) < (c,d) if either a < c or a = c and b < d. For coordinates
@@ -68,7 +68,8 @@ validation is enabled (default)
 validation is disabled
 .PP
 .B md5=<0|1>:
-md5 checksum creation for output file. Valid values are
+md5 checksum creation for output file. This option can only be given if
+outputformat=bam. Then valid values are
 .IP 0:
 do not compute checksum. This is the default.
 .IP 1:
@@ -79,7 +80,8 @@ written to the given file. If md5filename is unset, then no checksum will be com
 file name for md5 checksum if md5=1.
 .PP
 .B index=<0|1>:
-compute BAM index for output file. Valid values are
+compute BAM index for output file. This option can only be given if
+outputformat=bam. Then valid values are
 .IP 0:
 do not compute BAM index. This is the default.
 .IP 1:
@@ -87,7 +89,7 @@ compute BAM index. If the indexfilename key is set, then the BAM index is
 written to the given file. If indexfilename is unset, then no BAM index will be computed.
 .PP
 .B indexfilename
-file name for BAM index if index=1.
+file name for output BAM index if index=1.
 .PP
 .B inputformat=<bam>: input file format.
 All versions of bamsort come with support for the BAM input format. If
@@ -97,6 +99,37 @@ options are valid:
 BAM (see http://samtools.sourceforge.net/SAM1.pdf)
 .IP sam:
 SAM (see http://samtools.sourceforge.net/SAM1.pdf)
+.IP cram:
+CRAM (see http://www.ebi.ac.uk/ena/about/cram_toolkit)
+.PP
+.B outputformat=<bam>: output file format.
+All versions of bamsort come with support for the BAM output format. If
+the program in addition is linked to the io_lib package, then the following
+options are valid:
+.IP bam:
+BAM (see http://samtools.sourceforge.net/SAM1.pdf)
+.IP sam:
+SAM (see http://samtools.sourceforge.net/SAM1.pdf)
+.IP cram:
+CRAM (see http://www.ebi.ac.uk/ena/about/cram_toolkit). This format is not advisable for data sorted by query name.
+.PP
+.B I=<[stdin]>: 
+input filename, standard input if unset.
+.PP
+.B O=<[stdout]>: 
+output filename, standard output if unset.
+.PP
+.B inputthreads=<[1]>:
+input helper threads, only valid for inputformat=bam.
+.PP
+.B outputthreads=<[1]>:
+output helper threads, only valid for outputformat=bam.
+.PP
+.B reference=<[]>:
+reference FastA file for inputformat=cram and outputformat=cram. An index file (.fai) is required. 
+.PP
+.B range=<>:
+input range to be processed. This option is only valid if the input is a coordinate sorted and indexed BAM file
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"
