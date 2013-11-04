@@ -1,3 +1,9 @@
+biobambam (0.0.104-0) unstable; urgency=low
+
+  * add output formats in bamsort 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Mon, 04 Nov 2013 21:02:34 +0000
+
 biobambam (0.0.103-0) unstable; urgency=low
 
   * fix compilation without support for io_lib in libmaus
