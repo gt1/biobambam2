@@ -63,8 +63,11 @@ static std::string getDefaultInputFormat() { return "bam"; }
 int bamsort(::libmaus::util::ArgInfo const & arginfo)
 {
 	::libmaus::util::TempFileRemovalContainer::setup();
+	
+	bool const inputisstdin = (!arginfo.hasArg("I")) || (arginfo.getUnparsedValue("I","-") == "-");
+	bool const outputisstdout = (!arginfo.hasArg("O")) || (arginfo.getUnparsedValue("O","-") == "-");
 
-	if ( isatty(STDIN_FILENO) && (arginfo.getValue<std::string>("inputformat","bam") != "sam") )
+	if ( isatty(STDIN_FILENO) && inputisstdin && (arginfo.getValue<std::string>("inputformat","bam") != "sam") )
 	{
 		::libmaus::exception::LibMausException se;
 		se.getStream() << "Refusing to read binary data from terminal, please redirect standard input to pipe or file." << std::endl;
@@ -72,7 +75,7 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 		throw se;
 	}
 
-	if ( isatty(STDOUT_FILENO) && (arginfo.getValue<std::string>("outputformat","bam") != "sam") )
+	if ( isatty(STDOUT_FILENO) && outputisstdout && (arginfo.getValue<std::string>("outputformat","bam") != "sam") )
 	{
 		::libmaus::exception::LibMausException se;
 		se.getStream() << "Refusing write binary data to terminal, please redirect standard output to pipe or file." << std::endl;
@@ -235,6 +238,9 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 		// BEC.createOutput(std::cout, uphead, level, verbose, Pcbs);
 		BEC.createOutput(*Pout, verbose);
 	}
+
+	// flush encoder so callbacks see all output data
+	Pout.reset();
 
 	if ( Pmd5cb )
 	{
