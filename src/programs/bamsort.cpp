@@ -29,6 +29,7 @@
 #include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
 #include <libmaus/bambam/BamDecoder.hpp>
 #include <libmaus/bambam/BamEntryContainer.hpp>
+#include <libmaus/bambam/BamMultiAlignmentDecoderFactory.hpp>
 #include <libmaus/bambam/BamWriter.hpp>
 #include <libmaus/bambam/ProgramHeaderLineSet.hpp>
 
@@ -63,7 +64,7 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 {
 	::libmaus::util::TempFileRemovalContainer::setup();
 
-	if ( isatty(STDIN_FILENO) )
+	if ( isatty(STDIN_FILENO) && (arginfo.getValue<std::string>("inputformat","bam") != "sam") )
 	{
 		::libmaus::exception::LibMausException se;
 		se.getStream() << "Refusing to read binary data from terminal, please redirect standard input to pipe or file." << std::endl;
@@ -71,7 +72,7 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 		throw se;
 	}
 
-	if ( isatty(STDOUT_FILENO) )
+	if ( isatty(STDOUT_FILENO) && (arginfo.getValue<std::string>("outputformat","bam") != "sam") )
 	{
 		::libmaus::exception::LibMausException se;
 		se.getStream() << "Refusing write binary data to terminal, please redirect standard output to pipe or file." << std::endl;
@@ -79,10 +80,11 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 		throw se;
 	}
 
-	int const level = arginfo.getValue<int>("level",getDefaultLevel());
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
 	bool const disablevalidation = arginfo.getValue<int>("disablevalidation",getDefaultDisableValidation());
-	
+
+	std::string const inputformat = arginfo.getUnparsedValue("inputformat",getDefaultInputFormat());
+	int const level = arginfo.getValue<int>("level",getDefaultLevel());
 	switch ( level )
 	{
 		case Z_NO_COMPRESSION:
@@ -112,36 +114,13 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 	uint64_t blockmem = arginfo.getValue<uint64_t>("blockmb",getDefaultBlockSize())*1024*1024;
 	std::string const sortorder = arginfo.getValue<std::string>("SO","coordinate");
 
-	std::string const inputformat = arginfo.getUnparsedValue("inputformat",getDefaultInputFormat());
-
-	::libmaus::bambam::BamDecoder::unique_ptr_type pdec;
-	#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
-	::libmaus::bambam::ScramDecoder::unique_ptr_type sdec;
-	#endif
-	::libmaus::bambam::BamAlignmentDecoder * ppdec = 0;
-	
-	if ( inputformat == "bam" )
-	{
-		::libmaus::bambam::BamDecoder::unique_ptr_type tdec(new ::libmaus::bambam::BamDecoder(std::cin,false /* put rank */));
-		pdec = UNIQUE_PTR_MOVE(tdec);
-		ppdec = pdec.get();
-	}
-	#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
-	else if ( inputformat == "sam" )
-	{
-		libmaus::bambam::ScramDecoder::unique_ptr_type tdec(new libmaus::bambam::ScramDecoder("-","rs",""));
-		sdec = UNIQUE_PTR_MOVE(tdec);
-		ppdec = sdec.get();
-	}
-	#endif
-	else
-	{
-		::libmaus::exception::LibMausException se;
-		se.getStream() << "Unsupported input format: " << inputformat << std::endl;
-		se.finish();
-		throw se;	
-	}
-
+	// input decoder wrapper
+	libmaus::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
+		libmaus::bambam::BamMultiAlignmentDecoderFactory::construct(
+			arginfo,false // put rank
+		)
+	);
+	::libmaus::bambam::BamAlignmentDecoder * ppdec = &(decwrapper->getDecoder());
 	::libmaus::bambam::BamAlignmentDecoder & dec = *ppdec;
 	if ( disablevalidation )
 		dec.disableValidation();
@@ -309,10 +288,11 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "indexfilename=<filename>", "file name for BAM index file (default: extend output file name)" ) );
 				#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
-				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<["+getDefaultInputFormat()+"]>", "input format (bam,sam)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<["+getDefaultInputFormat()+"]>", std::string("input format (") + "sam,bam" + ")" ) );
 				#else
-				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<["+getDefaultInputFormat()+"]>", "input format ("+getDefaultInputFormat()+")" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<["+getDefaultInputFormat()+"]>", std::string("input format (") + "bam" + ")" ) );				
 				#endif
+				V.push_back ( std::pair<std::string,std::string> ( std::string("outputformat=<[")+libmaus::bambam::BamBlockWriterBaseFactory::getDefaultOutputFormat()+"]>", std::string("input format (") + libmaus::bambam::BamBlockWriterBaseFactory::getValidOutputFormats() + ")" ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 
