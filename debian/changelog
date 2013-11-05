@@ -1,3 +1,9 @@
+biobambam (0.0.106-0) unstable; urgency=low
+
+  * fix sort order field output in bamsort 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Tue, 05 Nov 2013 13:27:27 +0000
+
 biobambam (0.0.105-0) unstable; urgency=low
 
   * fixes for bamsort 
