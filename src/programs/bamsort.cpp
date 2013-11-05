@@ -189,12 +189,15 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 	/*
 	 * end md5/index callbacks
 	 */
+	if ( sortorder != "queryname" )
+		uphead.changeSortOrder("coordinate");
+	else
+		uphead.changeSortOrder("queryname");
 
 	libmaus::bambam::BamBlockWriterBase::unique_ptr_type Pout ( libmaus::bambam::BamBlockWriterBaseFactory::construct(uphead, arginfo, Pcbs) );
 
 	if ( sortorder != "queryname" )
 	{
-		uphead.changeSortOrder("coordinate");
 		::libmaus::bambam::BamEntryContainer< ::libmaus::bambam::BamAlignmentPosComparator > BEC(blockmem,tmpfilenameout);
 
 		if ( verbose )
@@ -217,7 +220,6 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 	}
 	else
 	{
-		uphead.changeSortOrder("queryname");
 		::libmaus::bambam::BamEntryContainer< ::libmaus::bambam::BamAlignmentNameComparator > BEC(blockmem,tmpfilenameout);
 		
 		if ( verbose )
