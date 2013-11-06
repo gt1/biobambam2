@@ -1,3 +1,9 @@
+biobambam (0.0.107-0) unstable; urgency=low
+
+  * libmaus update for fixing BAM indexing 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Wed, 06 Nov 2013 12:45:16 +0000
+
 biobambam (0.0.106-0) unstable; urgency=low
 
   * fix sort order field output in bamsort 
