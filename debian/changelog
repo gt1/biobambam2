@@ -1,3 +1,9 @@
+biobambam (0.0.109-0) unstable; urgency=low
+
+  * add gzip compression for bamtofastq output channels 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Thu, 14 Nov 2013 20:42:00 +0000
+
 biobambam (0.0.108-0) unstable; urgency=low
 
   * fix BAM merging 
