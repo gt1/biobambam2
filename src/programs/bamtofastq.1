@@ -11,7 +11,7 @@ format. The output can be split into multiple files according to the pair
 flags of the reads involved. bamtofastq can collate the source reads
 according to their read names, i.e. place pairs of reads next to each other
 in the output. bamtofastq writes its output to the standard output channel
-by default.
+by default. All output channels can be compressed using gzip.
 .PP
 The following key=value pairs can be given:
 .PP
@@ -123,6 +123,21 @@ an interval on a reference sequence (e.g. "chr1:50000-60000" which means
 alignments overlapping positions 50000 to 60000 on chr1)
 .PP
 Multiple ranges are separated by space characters (e.g. ranges="chr1:10000-20000 chr1:30000-40000"). 
+.PP
+.B gz=<[0|1]>: 
+compress output files using gzip. By default output is uncompressed.
+.PP
+.B level=<-1|0|1|9>:
+set compression level of the compressed output files if gz=1. Valid
+values are
+.IP -1:
+zlib/gzip default compression level
+.IP 0:
+uncompressed (data is still wrapped in gzip format)
+.IP 1:
+zlib/gzip level 1 (fast) compression
+.IP 9:
+zlib/gzip level 9 (best) compression
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"

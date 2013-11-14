@@ -28,6 +28,7 @@
 #include <libmaus/bambam/BamToFastqOutputFileSet.hpp>
 #include <libmaus/util/TempFileRemovalContainer.hpp>
 #include <libmaus/util/MemUsage.hpp>
+#include <libmaus/lz/GzipOutputStream.hpp>
 
 static std::string getDefaultInputFormat()
 {
@@ -64,12 +65,23 @@ void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::bam
 		bamdec.disableValidation();
 
 	libmaus::timing::RealTimeClock rtc; rtc.start();
+	bool const gz = arginfo.getValue<int>("gz",0);
+	int const level = std::min(9,std::max(-1,arginfo.getValue<int>("level",Z_DEFAULT_COMPRESSION)));
 	uint32_t const excludeflags = libmaus::bambam::BamFlagBase::stringToFlags(arginfo.getValue<std::string>("exclude","SECONDARY,SUPPLEMENTARY"));
 	libmaus::bambam::BamAlignment const & algn = bamdec.getAlignment();
 	::libmaus::autoarray::AutoArray<uint8_t> T;
 	uint64_t cnt = 0;
 	uint64_t bcnt = 0;
 	unsigned int const verbshift = 20;
+	libmaus::lz::GzipOutputStream::unique_ptr_type Pgzos;
+	
+	if ( gz )
+	{
+		libmaus::lz::GzipOutputStream::unique_ptr_type tPgzos(new libmaus::lz::GzipOutputStream(std::cout,libmaus::bambam::BamToFastqOutputFileSet::getGzipBufferSize(),level));
+		Pgzos = UNIQUE_PTR_MOVE(tPgzos);
+	}
+	
+	std::ostream & outputstream = gz ? *Pgzos : std::cout;
 		
 	while ( bamdec.readAlignment() )
 	{
@@ -78,7 +90,7 @@ void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::bam
 		if ( ! (algn.getFlags() & excludeflags) )
 		{
 			uint64_t la = libmaus::bambam::BamAlignmentDecoderBase::putFastQ(algn.D.begin(),T);
-			std::cout.write(reinterpret_cast<char const *>(T.begin()),la);
+			outputstream.write(reinterpret_cast<char const *>(T.begin()),la);
 			bcnt += la;
 		}
 
@@ -92,6 +104,10 @@ void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::bam
 		}
 	}
 
+	outputstream.flush();
+	if ( Pgzos )
+		Pgzos.reset();
+	std::cout.flush();
 }
 
 void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo)
