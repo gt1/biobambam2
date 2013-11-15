@@ -612,6 +612,8 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "colhlog=<[18]>", "base 2 logarithm of hash table size used for collation" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("colsbs=<[")+libmaus::util::NumberSerialisation::formatNumber(128ull*1024*1024,0)+"]>", "size of hash table overflow list in bytes" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("T=<[") + arginfo.getDefaultTmpFileName() + "]>" , "temporary file name" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "gz=<[0]>", "compress output streams in gzip format (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "level=<[-1]>", "compression setting if gz=1 (default: -1, zlib default settings)" ) );
 				
 				::biobambam::Licensing::printMap(std::cerr,V);
 
