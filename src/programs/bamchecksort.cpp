@@ -45,6 +45,8 @@ int bamchecksort(libmaus::util::ArgInfo const & arginfo)
 		
 		if ( sortorder == "coordinate" )
 		{
+			uint64_t c = 0;
+		
 			while ( bamdec.readAlignment() )
 			{
 				bool const ok =
@@ -73,12 +75,20 @@ int bamchecksort(libmaus::util::ArgInfo const & arginfo)
 				}
 				
 				prevalgn.swap(algn);
+
+				if ( verbose && ( ((++c) & ((1ull<<20)-1)) == 0 ) )
+					std::cerr << "[V] " << c << std::endl;
 			}
+			
+			if ( verbose )
+				std::cerr << "[V] " << c << std::endl;
 			
 			std::cerr << "Alignments sorted by coordinate." << std::endl;
 		}
 		else if ( sortorder == "queryname" )
 		{
+			uint64_t c = 0;
+			
 			while ( bamdec.readAlignment() )
 			{
 				// bool const ok = libmaus::bambam::BamAlignmentNameComparator::compareInt(prevalgn,algn) <= 0;
@@ -97,7 +107,13 @@ int bamchecksort(libmaus::util::ArgInfo const & arginfo)
 				}
 
 				prevalgn.swap(algn);
+
+				if ( verbose && ( ((++c) & ((1ull<<20)-1)) == 0 ) )
+					std::cerr << "[V] " << c << std::endl;
 			}
+
+			if ( verbose )
+				std::cerr << "[V] " << c << std::endl;
 
 			std::cerr << "Alignments sorted by query name." << std::endl;
 		}

@@ -153,8 +153,22 @@ int bamcat(libmaus::util::ArgInfo const & arginfo)
 
 	::libmaus::bambam::BamWriter::unique_ptr_type writer(new ::libmaus::bambam::BamWriter(std::cout,*uphead,level,Pcbs));
 	libmaus::bambam::BamWriter::stream_type & bamoutstr = writer->getStream();
-	while ( bamdec.readAlignment() )
-		algn.serialise(bamoutstr);
+	if ( verbose )
+	{
+		uint64_t c = 0;
+		while ( bamdec.readAlignment() )
+		{
+			algn.serialise(bamoutstr);
+			
+			if ( ((++c) & ((1ull<<20)-1)) == 0 )
+				std::cerr << "[V] " << c << std::endl;
+		}
+		
+		std::cerr << "[V] " << c << std::endl;
+	}
+	else
+		while ( bamdec.readAlignment() )
+			algn.serialise(bamoutstr);
 
 	writer.reset();
 

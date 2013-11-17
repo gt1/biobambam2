@@ -119,8 +119,22 @@ int bamsplitmod(libmaus::util::ArgInfo const & arginfo)
 	}
 
 	uint64_t c = 0;
-	while ( bamdec.readAlignment() )
-		algn.serialise ( writers [ (c++) % div ] -> getStream() );
+	if ( verbose )
+	{
+		while ( bamdec.readAlignment() )
+		{
+			algn.serialise ( writers [ (c++) % div ] -> getStream() );
+			
+			if ( ((++c) & ((1ull<<20)-1)) == 0 )
+				std::cerr << "[V] " << c << std::endl;
+		}
+		std::cerr << "[V] " << c << std::endl;
+	}
+	else
+	{
+		while ( bamdec.readAlignment() )
+			algn.serialise ( writers [ (c++) % div ] -> getStream() );
+	}
 
 	for ( uint64_t i = 0; i < div; ++i )		
 	{

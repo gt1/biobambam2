@@ -155,8 +155,23 @@ int bammerge(libmaus::util::ArgInfo const & arginfo)
 		::libmaus::bambam::BamHeader::unique_ptr_type uphead(updateHeader(arginfo,header));
 		libmaus::bambam::BamWriter writer(std::cout,*uphead,level,Pcbs);
 		libmaus::bambam::BamWriter::stream_type & bamoutstr = writer.getStream();
-		while ( bamdec.readAlignment() )
-			algn.serialise(bamoutstr);
+		
+		if ( verbose )
+		{
+			uint64_t c = 0;
+			while ( bamdec.readAlignment() )
+			{
+				algn.serialise(bamoutstr);
+	
+				if ( ((++c) & ((1ull<<20)-1)) == 0 )
+					std::cerr << "[V] " << c << std::endl;
+			}
+		
+			std::cerr << "[V] " << c << std::endl;
+		}
+		else
+			while ( bamdec.readAlignment() )
+				algn.serialise(bamoutstr);
 	}
 	else
 	{
