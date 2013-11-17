@@ -173,7 +173,7 @@ int bamCollate(::libmaus::util::ArgInfo const & arginfo)
 	alignment_ptr_type a;
 	if ( pairsonly )
 	{
-		while ( a = CBD.getPair() )
+		while ( (a = CBD.getPair()) )
 		{
 			alignment_ptr_type b = CBD.getPair();
 			assert ( b );
@@ -193,7 +193,7 @@ int bamCollate(::libmaus::util::ArgInfo const & arginfo)
 	}
 	else
 	{
-		while ( a = CBD.get() )
+		while ( (a = CBD.get()) )
 			if ( !readgroups.size() || LHTsnofailure->searchCompleteNoFailure(std::string(a->getReadGroup())) != -1 )
 				a->serialise(writer->getStream());
 	}
