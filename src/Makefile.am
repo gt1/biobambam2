@@ -48,7 +48,9 @@ bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamr
 	bamchecksort
 	
 noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments bamtoname \
-	bamdisthist bamrefdepth
+	bamdisthist bamrefdepth @BAMREFDEPTHPEAKS@
+	
+EXTRA_PROGRAMS = bamrefdepthpeaks
 
 bamcollate_SOURCES = programs/bamcollate.cpp biobambam/Licensing.cpp
 bamcollate_LDADD = ${LIBMAUSLIBS}
@@ -234,3 +236,8 @@ bamrefdepth_SOURCES = programs/bamrefdepth.cpp biobambam/Licensing.cpp
 bamrefdepth_LDADD = ${LIBMAUSLIBS}
 bamrefdepth_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
 bamrefdepth_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+bamrefdepthpeaks_SOURCES = programs/bamrefdepthpeaks.cpp biobambam/Licensing.cpp
+bamrefdepthpeaks_LDADD = ${LIBMAUSLIBS}
+bamrefdepthpeaks_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+bamrefdepthpeaks_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}

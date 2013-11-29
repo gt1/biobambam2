@@ -188,6 +188,32 @@ CPPFLAGS="${CPPFLAGS_SAVE}"
 LDFLAGS="${LDFLAGS_SAVE}"
 LIBS="${LIBS_SAVE}"
 
+AC_ARG_WITH([liftingwavelettransform],
+            [AS_HELP_STRING([--with-liftingwavelettransform@<:@=PATH@:>@], [path to installed LiftingWaveletTransform library @<:@default=no@:>@])],
+            [with_liftingwavelettransform=${withval}],
+            [with_liftingwavelettransform=no])
+
+if test ! -z "${with_liftingwavelettransform}" ; then
+	PKGCONFIGPATHSAVE="${PKG_CONFIG_PATH}"
+	if test -z "${PKG_CONFIG_PATH}" ; then
+		export PKG_CONFIG_PATH="${with_liftingwavelettransform}/lib/pkgconfig"
+	else
+		export PKG_CONFIG_PATH="${with_liftingwavelettransform}/lib/pkgconfig:${PKG_CONFIG_PATH}"
+	fi
+fi
+
+if test "${with_liftingwavelettransform}" != "no" ; then
+	PKG_CHECK_MODULES([liftingwavelettransform],[liftingwavelettransform >= 0.0.0])
+	LIFTINGWAVELETTRANSFORMDEFINE="#define BIOBAMBAM_HAVE_LIFTINGWAVELETTRANSFORM"
+	BAMREFDEPTHPEAKS="bamrefdepthpeaks"
+
+	LIFTINGWAVELETTRANSFORMCPPFLAGS="${liftingwavelettransform_CFLAGS}"
+	LIFTINGWAVELETTRANSFORMLIBS="${liftingwavelettransform_LIBS}"
+
+	CPPFLAGS="${CPPFLAGS} ${LIFTINGWAVELETTRANSFORMCPPFLAGS}"
+	LIBS="${LIBS} ${LIFTINGWAVELETTRANSFORMLIBS}"
+fi
+
 AC_MSG_NOTICE([Using flags ${CFLAGS} for C compiler ${CC}])
 AC_MSG_NOTICE([Using flags ${CXXFLAGS} for C++ compiler ${CXX}])
 
@@ -204,5 +230,8 @@ AC_SUBST([LIBMAUSCPPFLAGS])
 AC_SUBST([LIBMAUSLIBS])
 # 
 AC_SUBST([LIBMAUSIOLIBDEFINE])
+#
+AC_SUBST([LIFTINGWAVELETTRANSFORMDEFINE])
+AC_SUBST([BAMREFDEPTHPEAKS])
 # 
 AC_OUTPUT(Makefile src/Makefile src/biobambam/BamBamConfig.hpp)
