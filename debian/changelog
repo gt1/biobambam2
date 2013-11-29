@@ -1,3 +1,9 @@
+biobambam (0.0.110-0) unstable; urgency=low
+
+  * add read group filtering in bamcollate2 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Fri, 29 Nov 2013 14:17:58 +0000
+
 biobambam (0.0.109-0) unstable; urgency=low
 
   * add gzip compression for bamtofastq output channels 
