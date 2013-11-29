@@ -1,3 +1,9 @@
+biobambam (0.0.111-0) unstable; urgency=low
+
+  * no change version bump after fix in libmaus 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Fri, 29 Nov 2013 15:40:45 +0000
+
 biobambam (0.0.110-0) unstable; urgency=low
 
   * add read group filtering in bamcollate2 
