@@ -153,6 +153,11 @@ written to the given file. If indexfilename is unset, then no BAM index will be 
 .PP
 .B indexfilename
 file name for BAM index if index=1.
+.PP
+.B readgroups
+comma separated list of read group identifiers to be kept. If not given all records will be kept.
+Read group filtering is only available if collate=0 and collate=1 (i.e. this
+key is ignored for collate=2 and collate=3).
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"

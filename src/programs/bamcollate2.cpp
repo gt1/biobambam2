@@ -124,6 +124,25 @@ std::string getModifiedHeaderText(decoder_type const & bamdec, libmaus::util::Ar
 	return upheadtext;
 }
 
+::libmaus::trie::LinearHashTrie<char,uint32_t>::shared_ptr_type getRGTrie(libmaus::util::ArgInfo const & arginfo)
+{
+	std::vector < std::string > vreadgroups;
+	std::string const readgroups = arginfo.getValue<std::string>("readgroups",std::string());
+	::libmaus::trie::LinearHashTrie<char,uint32_t>::shared_ptr_type LHTsnofailure;
+	
+	if ( readgroups.size() )
+	{
+		std::deque<std::string> qreadgroups = ::libmaus::util::stringFunctions::tokenize(readgroups,std::string(","));
+		vreadgroups = std::vector<std::string>(qreadgroups.begin(),qreadgroups.end());
+		::libmaus::trie::Trie<char> trienofailure;
+		trienofailure.insertContainer(vreadgroups);
+		::libmaus::trie::LinearHashTrie<char,uint32_t>::unique_ptr_type LHTnofailure(trienofailure.toLinearHashTrie<uint32_t>());
+		LHTsnofailure = ::libmaus::trie::LinearHashTrie<char,uint32_t>::shared_ptr_type(LHTnofailure.release());
+	}
+	
+	return LHTsnofailure;
+}
+
 void bamcollate2NonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::bambam::BamAlignmentDecoder & bamdec)
 {
 	if ( arginfo.getValue<unsigned int>("disablevalidation",0) )
@@ -187,14 +206,23 @@ void bamcollate2NonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::ba
 	 * end md5/index callbacks
 	 */
 
+	 // searchCompleteNoFailureZ
+
 	// construct writer
 	::libmaus::bambam::BamWriter::unique_ptr_type writer(new ::libmaus::bambam::BamWriter(std::cout,uphead,getLevel(arginfo),Pcbs));
+
+	// read group trie
+	::libmaus::trie::LinearHashTrie<char,uint32_t>::shared_ptr_type const rgtrie = getRGTrie(arginfo);
 		
 	while ( bamdec.readAlignment() )
 	{
 		uint64_t const precnt = cnt++;
 		
-		if ( ! (algn.getFlags() & excludeflags) )
+		if ( 
+			(! (algn.getFlags() & excludeflags)) 
+			&&
+			( (!rgtrie) || (algn.getReadGroup() && rgtrie->searchCompleteNoFailureZ(algn.getReadGroup()) != -1) )
+		)
 			algn.serialise(writer->getStream());
 
 		if ( precnt >> verbshift != cnt >> verbshift )
@@ -343,6 +371,9 @@ void bamcollate2Collating(
 	::libmaus::bambam::BamWriter::unique_ptr_type writer(new ::libmaus::bambam::BamWriter(std::cout,uphead,getLevel(arginfo),Pcbs));
 	typedef libmaus::bambam::BamWriter::stream_type out_stream_type;
 	out_stream_type & bgzfos = writer->getStream();
+
+	// read group trie
+	::libmaus::trie::LinearHashTrie<char,uint32_t>::shared_ptr_type rgtrie = getRGTrie(arginfo);
 	
 	while ( (ob = CHCBD.process()) )
 	{
@@ -350,37 +381,86 @@ void bamcollate2Collating(
 		
 		if ( ob->fpair )
 		{
-			::libmaus::bambam::EncoderBase::putLE<out_stream_type,uint32_t>(bgzfos,ob->blocksizea);
-			bgzfos.write(reinterpret_cast<char const *>(ob->Da),ob->blocksizea);
-			::libmaus::bambam::EncoderBase::putLE<out_stream_type,uint32_t>(bgzfos,ob->blocksizeb);
-			bgzfos.write(reinterpret_cast<char const *>(ob->Db),ob->blocksizeb);
+			bool pass = true;
+			
+			if ( rgtrie )
+			{
+				char const * rga = libmaus::bambam::BamAlignmentDecoderBase::getReadGroup(ob->Da,ob->blocksizea);
+				char const * rgb = libmaus::bambam::BamAlignmentDecoderBase::getReadGroup(ob->Db,ob->blocksizeb);
+				
+				pass = 
+					rga && rgb &&
+					(rgtrie->searchCompleteNoFailureZ(rga) != -1) &&
+					(rgtrie->searchCompleteNoFailureZ(rgb) != -1);
+			}
+			
+			if ( pass )
+			{
+				::libmaus::bambam::EncoderBase::putLE<out_stream_type,uint32_t>(bgzfos,ob->blocksizea);
+				bgzfos.write(reinterpret_cast<char const *>(ob->Da),ob->blocksizea);
+				::libmaus::bambam::EncoderBase::putLE<out_stream_type,uint32_t>(bgzfos,ob->blocksizeb);
+				bgzfos.write(reinterpret_cast<char const *>(ob->Db),ob->blocksizeb);
 
-			cnt += 2;
-			bcnt += (ob->blocksizea+ob->blocksizeb);
+				cnt += 2;
+				bcnt += (ob->blocksizea+ob->blocksizeb);
+			}
 		}
 		else if ( ob->fsingle )
 		{
-			::libmaus::bambam::EncoderBase::putLE<out_stream_type,uint32_t>(bgzfos,ob->blocksizea);
-			bgzfos.write(reinterpret_cast<char const *>(ob->Da),ob->blocksizea);
+			bool pass = true;
+			
+			if ( rgtrie )
+			{
+				char const * rga = libmaus::bambam::BamAlignmentDecoderBase::getReadGroup(ob->Da,ob->blocksizea);
+				pass = rga && (rgtrie->searchCompleteNoFailureZ(rga) != -1);
+			}
+			
+			if ( pass )
+			{
+				::libmaus::bambam::EncoderBase::putLE<out_stream_type,uint32_t>(bgzfos,ob->blocksizea);
+				bgzfos.write(reinterpret_cast<char const *>(ob->Da),ob->blocksizea);
 
-			cnt += 1;
-			bcnt += (ob->blocksizea);
+				cnt += 1;
+				bcnt += (ob->blocksizea);
+			}
 		}
 		else if ( ob->forphan1 )
 		{
-			::libmaus::bambam::EncoderBase::putLE<out_stream_type,uint32_t>(bgzfos,ob->blocksizea);
-			bgzfos.write(reinterpret_cast<char const *>(ob->Da),ob->blocksizea);
+			bool pass = true;
+			
+			if ( rgtrie )
+			{
+				char const * rga = libmaus::bambam::BamAlignmentDecoderBase::getReadGroup(ob->Da,ob->blocksizea);
+				pass = rga && (rgtrie->searchCompleteNoFailureZ(rga) != -1);
+			}
+			
+			if ( pass )
+			{
+				::libmaus::bambam::EncoderBase::putLE<out_stream_type,uint32_t>(bgzfos,ob->blocksizea);
+				bgzfos.write(reinterpret_cast<char const *>(ob->Da),ob->blocksizea);
 
-			cnt += 1;
-			bcnt += (ob->blocksizea);
+				cnt += 1;
+				bcnt += (ob->blocksizea);
+			}
 		}
 		else if ( ob->forphan2 )
 		{
-			::libmaus::bambam::EncoderBase::putLE<out_stream_type,uint32_t>(bgzfos,ob->blocksizea);
-			bgzfos.write(reinterpret_cast<char const *>(ob->Da),ob->blocksizea);
+			bool pass = true;
+			
+			if ( rgtrie )
+			{
+				char const * rgb = libmaus::bambam::BamAlignmentDecoderBase::getReadGroup(ob->Db,ob->blocksizeb);
+				pass = rgb && (rgtrie->searchCompleteNoFailureZ(rgb) != -1);
+			}
+			
+			if ( pass )
+			{
+				::libmaus::bambam::EncoderBase::putLE<out_stream_type,uint32_t>(bgzfos,ob->blocksizea);
+				bgzfos.write(reinterpret_cast<char const *>(ob->Da),ob->blocksizea);
 
-			cnt += 1;
-			bcnt += (ob->blocksizea);
+				cnt += 1;
+				bcnt += (ob->blocksizea);
+			}
 		}
 		
 		if ( precnt >> verbshift != cnt >> verbshift )
@@ -577,8 +657,7 @@ void bamcollate2CollatingRanking(
 		{
 			uint64_t const ranka = libmaus::bambam::BamAlignmentDecoderBase::getRank(ob->Da,ob->blocksizea);
 			uint64_t const rankb = libmaus::bambam::BamAlignmentDecoderBase::getRank(ob->Db,ob->blocksizeb);
-			
-				
+							
 			std::ostringstream nameostr;
 			nameostr << ranka << "_" << rankb << "_" << libmaus::bambam::BamAlignmentDecoderBase::getReadName(ob->Da);
 			std::string const name = nameostr.str();
