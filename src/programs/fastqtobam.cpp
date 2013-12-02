@@ -186,7 +186,7 @@ void fastqtobamSingle(std::istream & in, writer_type & bamwr, int const verbose,
 {
 	typedef ::libmaus::fastx::StreamFastQReaderWrapper reader_type;
 	typedef reader_type::pattern_type pattern_type;
-	::libmaus::fastx::StreamFastQReaderWrapper fqin(std::cin);	
+	::libmaus::fastx::StreamFastQReaderWrapper fqin(in);	
 	pattern_type element;
 	libmaus::fastx::SpaceTable ST;
 	uint64_t proc = 0;
