@@ -1,3 +1,9 @@
+biobambam (0.0.114) unstable; urgency=low
+
+  * fix fastqtobam for input via single file by name 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Mon, 02 Dec 2013 23:20:58 +0000
+
 biobambam (0.0.113) unstable; urgency=low
 
   * add fastqtobam program 
