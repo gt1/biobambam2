@@ -280,6 +280,7 @@ void fastqtobam(libmaus::util::ArgInfo const & arginfo)
 	int const level = getLevel(arginfo);
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
 	bool const gz = arginfo.getValue<int>("gz",getDefaultGz());
+	unsigned int const threads = arginfo.getValue<unsigned int>("threads",1);
 
 	::libmaus::bambam::BamHeader bamheader;
 	std::ostringstream headerostr;
@@ -322,59 +323,119 @@ void fastqtobam(libmaus::util::ArgInfo const & arginfo)
 	 * end md5 callbacks
 	 */
 
-	::libmaus::bambam::BamWriter::unique_ptr_type bamwr(
-		new ::libmaus::bambam::BamWriter(
-			std::cout,bamheader,level,Pcbs
-		)
-	);
+	if ( threads <= 1 )
+	{
+		::libmaus::bambam::BamWriter::unique_ptr_type bamwr(
+			new ::libmaus::bambam::BamWriter(
+				std::cout,bamheader,level,Pcbs
+			)
+		);
 
-	if ( filenames.size() == 0 )
-	{
-		if ( gz )
+		if ( filenames.size() == 0 )
 		{
-			libmaus::lz::BufferedGzipStream BGS(std::cin);
-			fastqtobamSingle(BGS,*bamwr);
+			if ( gz )
+			{
+				libmaus::lz::BufferedGzipStream BGS(std::cin);
+				fastqtobamSingle(BGS,*bamwr);
+			}
+			else
+			{
+				fastqtobamSingle(std::cin,*bamwr);		
+			}
+		}
+		else if ( filenames.size() == 1 )
+		{
+			libmaus::aio::CheckedInputStream CIS(filenames[0]);		
+			
+			if ( gz )
+			{
+				libmaus::lz::BufferedGzipStream BGS(CIS);
+				fastqtobamSingle(BGS,*bamwr);			
+			}
+			else
+			{
+				fastqtobamSingle(CIS,*bamwr);		
+			}
 		}
 		else
 		{
-			fastqtobamSingle(std::cin,*bamwr);		
-		}
-	}
-	else if ( filenames.size() == 1 )
-	{
-		libmaus::aio::CheckedInputStream CIS(filenames[0]);		
+			if ( filenames.size() > 2 )
+				std::cerr << "[D] warning, ignoring additional input files past first two" << std::endl;
 		
-		if ( gz )
-		{
-			libmaus::lz::BufferedGzipStream BGS(CIS);
-			fastqtobamSingle(BGS,*bamwr);			
+			libmaus::aio::CheckedInputStream CIS_1(filenames[0]);
+			libmaus::aio::CheckedInputStream CIS_2(filenames[1]);
+
+			if ( gz )
+			{
+				libmaus::lz::BufferedGzipStream BGS_1(CIS_1);
+				libmaus::lz::BufferedGzipStream BGS_2(CIS_2);
+				fastqtobamPair(BGS_1,BGS_2,*bamwr);			
+			}
+			else
+			{
+				fastqtobamPair(CIS_1,CIS_2,*bamwr);		
+			}
 		}
-		else
-		{
-			fastqtobamSingle(CIS,*bamwr);		
-		}
+
+		bamwr.reset();
 	}
 	else
 	{
-		if ( filenames.size() > 2 )
-			std::cerr << "[D] warning, ignoring additional input files past first two" << std::endl;
-	
-		libmaus::aio::CheckedInputStream CIS_1(filenames[0]);
-		libmaus::aio::CheckedInputStream CIS_2(filenames[1]);
+		::libmaus::bambam::BamParallelWriter::unique_ptr_type bamwr(
+			new ::libmaus::bambam::BamParallelWriter(
+				std::cout,threads,bamheader,level,Pcbs
+			)
+		);
 
-		if ( gz )
+		if ( filenames.size() == 0 )
 		{
-			libmaus::lz::BufferedGzipStream BGS_1(CIS_1);
-			libmaus::lz::BufferedGzipStream BGS_2(CIS_2);
-			fastqtobamPair(BGS_1,BGS_2,*bamwr);			
+			if ( gz )
+			{
+				libmaus::lz::BufferedGzipStream BGS(std::cin);
+				fastqtobamSingle(BGS,*bamwr);
+			}
+			else
+			{
+				fastqtobamSingle(std::cin,*bamwr);		
+			}
+		}
+		else if ( filenames.size() == 1 )
+		{
+			libmaus::aio::CheckedInputStream CIS(filenames[0]);		
+			
+			if ( gz )
+			{
+				libmaus::lz::BufferedGzipStream BGS(CIS);
+				fastqtobamSingle(BGS,*bamwr);			
+			}
+			else
+			{
+				fastqtobamSingle(CIS,*bamwr);		
+			}
 		}
 		else
 		{
-			fastqtobamPair(CIS_1,CIS_2,*bamwr);		
-		}
-	}
+			if ( filenames.size() > 2 )
+				std::cerr << "[D] warning, ignoring additional input files past first two" << std::endl;
+		
+			libmaus::aio::CheckedInputStream CIS_1(filenames[0]);
+			libmaus::aio::CheckedInputStream CIS_2(filenames[1]);
 
-	bamwr.reset();
+			if ( gz )
+			{
+				libmaus::lz::BufferedGzipStream BGS_1(CIS_1);
+				libmaus::lz::BufferedGzipStream BGS_2(CIS_2);
+				fastqtobamPair(BGS_1,BGS_2,*bamwr);			
+			}
+			else
+			{
+				fastqtobamPair(CIS_1,CIS_2,*bamwr);		
+			}
+		}
+
+		bamwr.reset();
+	
+	}
 
 	if ( Pmd5cb )
 	{
@@ -418,6 +479,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "md5filename=<filename>", "file name for md5 check sum (default: extend output file name)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "I=<[input file name]>", "input file names (standard input if unset)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "threads=<[1]>", "additional BAM encoding helper threads (default: serial encoding)" ) );
 				
 				::biobambam::Licensing::printMap(std::cerr,V);
 

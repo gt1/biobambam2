@@ -1,0 +1,65 @@
+.TH FASTQTOBAM 1 "July 2013" BIOBAMBAM
+.SH NAME
+fastqtobam - convert FastQ to unmapped BAM
+.SH SYNOPSIS
+.PP
+.B fastqtobam
+[options]
+.SH DESCRIPTION
+fastqtobam reads one or two FastQ files and converts them to a BAM file in
+which each read is marked as unmapped. If no input file name is given, then
+a single FastQ file is read from standard input. If one file name is given,
+then a single FastQ file is read from the given file. In both cases the read
+names in the file are parsed to determine whether the contained reads are
+paired or not. If two file names are given, then the program assumes to find
+two FastQ files which are synchronous, i.e. where the first read in the
+first file is the mate of the first read in the second file etc. Input file
+names can be given either via the I key or after the key=value pairs on the
+command line.
+.PP
+The following key=value pairs can be given:
+.PP
+.B verbose=<[0|1]>
+print progress report. By default progress is not reported.
+.PP
+.B I=<filename>: 
+input file name (data is read from standard input if this option is not given). This key can be given twice.
+.PP
+.B level=<-1|0|1|9>:
+set compression level of the output BAM file. Valid
+values are
+.IP -1:
+zlib/gzip default compression level
+.IP 0:
+uncompressed
+.IP 1:
+zlib/gzip level 1 (fast) compression
+.IP 9:
+zlib/gzip level 9 (best) compression
+.PP
+.B md5=<0|1>:
+md5 checksum creation for output file. Valid values are
+.IP 0:
+do not compute checksum. This is the default.
+.IP 1:
+compute checksum. If the md5filename key is set, then the checksum is
+written to the given file. If md5filename is unset, then no checksum will be computed.
+.PP
+.B md5filename
+file name for md5 checksum if md5=1.
+.PP
+.B gz=<[0|1]>
+input is gzip compressed FastQ. By default input is assumed to be uncompressed FastQ.
+.PP
+.B threads=<1>
+additional BAM encoding helper threads.
+.SH AUTHOR
+Written by German Tischler.
+.SH "REPORTING BUGS"
+Report bugs to <gt1@sanger.ac.uk>
+.SH COPYRIGHT
+Copyright \(co 2009-2013 German Tischler, \(co 2011-2013 Genome Research Limited.
+License GPLv3+: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
