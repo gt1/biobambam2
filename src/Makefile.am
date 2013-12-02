@@ -45,7 +45,8 @@ bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamr
 	bammerge \
 	bamsplit \
 	bamsplitdiv \
-	bamchecksort
+	bamchecksort \
+	fastqtobam
 	
 noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments bamtoname \
 	bamdisthist bamrefdepth @BAMREFDEPTHPEAKS@
@@ -241,3 +242,8 @@ bamrefdepthpeaks_SOURCES = programs/bamrefdepthpeaks.cpp biobambam/Licensing.cpp
 bamrefdepthpeaks_LDADD = ${LIBMAUSLIBS}
 bamrefdepthpeaks_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
 bamrefdepthpeaks_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+fastqtobam_SOURCES = programs/fastqtobam.cpp biobambam/Licensing.cpp
+fastqtobam_LDADD = ${LIBMAUSLIBS}
+fastqtobam_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+fastqtobam_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
