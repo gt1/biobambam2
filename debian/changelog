@@ -1,3 +1,9 @@
+biobambam (0.0.113) unstable; urgency=low
+
+  * add fastqtobam program 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Mon, 02 Dec 2013 21:25:08 +0000
+
 biobambam (0.0.112) unstable; urgency=low
 
   * add help message for readgroups key in bamcollate2 
