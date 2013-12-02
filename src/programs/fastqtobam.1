@@ -53,6 +53,12 @@ input is gzip compressed FastQ. By default input is assumed to be uncompressed F
 .PP
 .B threads=<1>
 additional BAM encoding helper threads.
+.PP
+.B PGID=<>
+read group identifier for reads. By default no read group identifer is set.
+The fields CN, DS, DT, FO, KS, LB, PG, PI, PL, PU and SM of the
+corresponding @RG header line can be set by using the keys RGCN, RGDS, etc.
+respectively.
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"

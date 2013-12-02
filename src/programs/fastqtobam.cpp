@@ -79,6 +79,67 @@ static int getLevel(libmaus::util::ArgInfo const & arginfo)
 	return level;
 }
 
+struct RgInfo
+{
+	std::string ID;
+	std::string CN;
+	std::string DS;
+	std::string DT;
+	std::string FO;
+	std::string KS;
+	std::string LB;
+	std::string PG; // = fastqtobam
+	std::string PI;
+	std::string PL;
+	std::string PU;
+	std::string SM;
+	
+	RgInfo() {}
+	RgInfo(libmaus::util::ArgInfo const & arginfo)
+	:
+		ID(arginfo.getUnparsedValue("RGID","")),
+		CN(arginfo.getUnparsedValue("RGCN","")),
+		DS(arginfo.getUnparsedValue("RGDS","")),
+		DT(arginfo.getUnparsedValue("RGDT","")),
+		FO(arginfo.getUnparsedValue("RGFO","")),
+		KS(arginfo.getUnparsedValue("RGKS","")),
+		LB(arginfo.getUnparsedValue("RGLB","")),
+		PG(arginfo.getUnparsedValue("RGPG","fastqtobam")),
+		PI(arginfo.getUnparsedValue("RGPI","")),
+		PL(arginfo.getUnparsedValue("RGPL","")),
+		PU(arginfo.getUnparsedValue("RGPU","")),
+		SM(arginfo.getUnparsedValue("RGSM",""))
+	{
+		
+	}
+	
+	std::string toString() const
+	{
+		std::ostringstream ostr;
+		
+		if ( ID.size() )
+		{
+			ostr << "@RG\tID:" << ID;
+			
+			if ( CN.size() ) ostr << "\tCN:" << CN;
+			if ( DS.size() ) ostr << "\tDS:" << DS;
+			if ( DT.size() ) ostr << "\tDT:" << DT;
+			if ( FO.size() ) ostr << "\tFO:" << FO;
+			if ( KS.size() ) ostr << "\tKS:" << KS;
+			if ( LB.size() ) ostr << "\tLB:" << LB;
+			if ( PG.size() ) ostr << "\tPG:" << PG;
+			if ( PI.size() ) ostr << "\tPI:" << PI;
+			if ( PL.size() ) ostr << "\tPL:" << PL;
+			if ( PU.size() ) ostr << "\tPU:" << PU;
+			if ( SM.size() ) ostr << "\tSM:" << SM;
+			
+			ostr << "\n";
+		}
+		
+		return ostr.str();
+	}
+};
+
 struct NameInfo
 {
 	bool ispair;
@@ -121,7 +182,7 @@ struct NameInfo
 };
 
 template<typename writer_type>
-void fastqtobamSingle(std::istream & in, writer_type & bamwr, int const verbose = 0)
+void fastqtobamSingle(std::istream & in, writer_type & bamwr, int const verbose, std::string const & rgid)
 {
 	typedef ::libmaus::fastx::StreamFastQReaderWrapper reader_type;
 	typedef reader_type::pattern_type pattern_type;
@@ -153,6 +214,8 @@ void fastqtobamSingle(std::istream & in, writer_type & bamwr, int const verbose 
 				element.spattern,
 				element.quality
 			);
+			if ( rgid.size() )
+				bamwr.putAuxString("RG",rgid.c_str());
 			bamwr.commit();
 		}
 		else
@@ -170,8 +233,9 @@ void fastqtobamSingle(std::istream & in, writer_type & bamwr, int const verbose 
 				element.spattern,
 				element.quality
 			);
-			bamwr.commit();
-		
+			if ( rgid.size() )
+				bamwr.putAuxString("RG",rgid.c_str());
+			bamwr.commit();		
 		}
 
 		proc += 1;
@@ -183,7 +247,7 @@ void fastqtobamSingle(std::istream & in, writer_type & bamwr, int const verbose 
 }
 
 template<typename writer_type>
-void fastqtobamPair(std::istream & in_1, std::istream & in_2, writer_type & bamwr, int const verbose = 0)
+void fastqtobamPair(std::istream & in_1, std::istream & in_2, writer_type & bamwr, int const verbose, std::string const & rgid)
 {
 	typedef ::libmaus::fastx::StreamFastQReaderWrapper reader_type;
 	typedef reader_type::pattern_type pattern_type;
@@ -241,6 +305,8 @@ void fastqtobamPair(std::istream & in_1, std::istream & in_2, writer_type & bamw
 			element_1.spattern,
 			element_1.quality
 		);
+		if ( rgid.size() )
+			bamwr.putAuxString("RG",rgid.c_str());
 		bamwr.commit();
 
 		bamwr.encodeAlignment(
@@ -259,6 +325,8 @@ void fastqtobamPair(std::istream & in_1, std::istream & in_2, writer_type & bamw
 			element_2.spattern,
 			element_2.quality
 		);
+		if ( rgid.size() )
+			bamwr.putAuxString("RG",rgid.c_str());
 		bamwr.commit();
 		
 		proc += 2;
@@ -281,6 +349,8 @@ void fastqtobam(libmaus::util::ArgInfo const & arginfo)
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
 	bool const gz = arginfo.getValue<int>("gz",getDefaultGz());
 	unsigned int const threads = arginfo.getValue<unsigned int>("threads",1);
+	RgInfo const rginfo(arginfo);
+	std::string const rgid = rginfo.ID; // ;arginfo.getUnparsedValue("RG","");
 
 	::libmaus::bambam::BamHeader bamheader;
 	std::ostringstream headerostr;
@@ -292,6 +362,7 @@ void fastqtobam(libmaus::util::ArgInfo const & arginfo)
 		<< "CL:" << arginfo.commandline << "\t"
 		<< "VN:" << std::string(PACKAGE_VERSION)
 		<< std::endl;
+	headerostr << rginfo.toString();
 
 	bamheader.text = headerostr.str();		
 
@@ -336,11 +407,11 @@ void fastqtobam(libmaus::util::ArgInfo const & arginfo)
 			if ( gz )
 			{
 				libmaus::lz::BufferedGzipStream BGS(std::cin);
-				fastqtobamSingle(BGS,*bamwr);
+				fastqtobamSingle(BGS,*bamwr,verbose,rgid);
 			}
 			else
 			{
-				fastqtobamSingle(std::cin,*bamwr);		
+				fastqtobamSingle(std::cin,*bamwr,verbose,rgid);
 			}
 		}
 		else if ( filenames.size() == 1 )
@@ -350,11 +421,11 @@ void fastqtobam(libmaus::util::ArgInfo const & arginfo)
 			if ( gz )
 			{
 				libmaus::lz::BufferedGzipStream BGS(CIS);
-				fastqtobamSingle(BGS,*bamwr);			
+				fastqtobamSingle(BGS,*bamwr,verbose,rgid);
 			}
 			else
 			{
-				fastqtobamSingle(CIS,*bamwr);		
+				fastqtobamSingle(CIS,*bamwr,verbose,rgid);
 			}
 		}
 		else
@@ -369,11 +440,11 @@ void fastqtobam(libmaus::util::ArgInfo const & arginfo)
 			{
 				libmaus::lz::BufferedGzipStream BGS_1(CIS_1);
 				libmaus::lz::BufferedGzipStream BGS_2(CIS_2);
-				fastqtobamPair(BGS_1,BGS_2,*bamwr);			
+				fastqtobamPair(BGS_1,BGS_2,*bamwr,verbose,rgid);
 			}
 			else
 			{
-				fastqtobamPair(CIS_1,CIS_2,*bamwr);		
+				fastqtobamPair(CIS_1,CIS_2,*bamwr,verbose,rgid);
 			}
 		}
 
@@ -392,11 +463,11 @@ void fastqtobam(libmaus::util::ArgInfo const & arginfo)
 			if ( gz )
 			{
 				libmaus::lz::BufferedGzipStream BGS(std::cin);
-				fastqtobamSingle(BGS,*bamwr);
+				fastqtobamSingle(BGS,*bamwr,verbose,rgid);
 			}
 			else
 			{
-				fastqtobamSingle(std::cin,*bamwr);		
+				fastqtobamSingle(std::cin,*bamwr,verbose,rgid);
 			}
 		}
 		else if ( filenames.size() == 1 )
@@ -406,11 +477,11 @@ void fastqtobam(libmaus::util::ArgInfo const & arginfo)
 			if ( gz )
 			{
 				libmaus::lz::BufferedGzipStream BGS(CIS);
-				fastqtobamSingle(BGS,*bamwr);			
+				fastqtobamSingle(BGS,*bamwr,verbose,rgid);			
 			}
 			else
 			{
-				fastqtobamSingle(CIS,*bamwr);		
+				fastqtobamSingle(CIS,*bamwr,verbose,rgid);		
 			}
 		}
 		else
@@ -425,11 +496,11 @@ void fastqtobam(libmaus::util::ArgInfo const & arginfo)
 			{
 				libmaus::lz::BufferedGzipStream BGS_1(CIS_1);
 				libmaus::lz::BufferedGzipStream BGS_2(CIS_2);
-				fastqtobamPair(BGS_1,BGS_2,*bamwr);			
+				fastqtobamPair(BGS_1,BGS_2,*bamwr,verbose,rgid);			
 			}
 			else
 			{
-				fastqtobamPair(CIS_1,CIS_2,*bamwr);		
+				fastqtobamPair(CIS_1,CIS_2,*bamwr,verbose,rgid);		
 			}
 		}
 
@@ -480,6 +551,19 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "md5filename=<filename>", "file name for md5 check sum (default: extend output file name)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "I=<[input file name]>", "input file names (standard input if unset)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "threads=<[1]>", "additional BAM encoding helper threads (default: serial encoding)" ) );
+
+				V.push_back ( std::pair<std::string,std::string> ( "RGID=<>", "read group id for reads (default: do not set a read group id)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "RGCN=<>", "CN field of RG header line if RGID is set (default: not present)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "RGDS=<>", "DS field of RG header line if RGID is set (default: not present)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "RGDT=<>", "DT field of RG header line if RGID is set (default: not present)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "RGFO=<>", "FO field of RG header line if RGID is set (default: not present)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "RGKS=<>", "KS field of RG header line if RGID is set (default: not present)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "RGLB=<>", "LB field of RG header line if RGID is set (default: not present)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "RGPG=<fastqtobam>", "CN field of RG header line if RGID is set (default: fastqtobam)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "RGPI=<>", "PI field of RG header line if RGID is set (default: not present)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "RGPL=<>", "PL field of RG header line if RGID is set (default: not present)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "RGPU=<>", "PU field of RG header line if RGID is set (default: not present)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "RGSM=<>", "SM field of RG header line if RGID is set (default: not present)" ) );
 				
 				::biobambam::Licensing::printMap(std::cerr,V);
 
