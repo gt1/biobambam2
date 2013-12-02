@@ -1,3 +1,9 @@
+biobambam (0.0.112) unstable; urgency=low
+
+  * add help message for readgroups key in bamcollate2 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Mon, 02 Dec 2013 10:20:03 +0000
+
 biobambam (0.0.111) unstable; urgency=low
 
   * no change version bump after fix in libmaus 
