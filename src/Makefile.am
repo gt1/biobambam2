@@ -46,7 +46,8 @@ bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamr
 	bamsplit \
 	bamsplitdiv \
 	bamchecksort \
-	fastqtobam
+	fastqtobam \
+	bamfixmateinformation
 	
 noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments bamtoname \
 	bamdisthist bamrefdepth @BAMREFDEPTHPEAKS@
@@ -247,3 +248,8 @@ fastqtobam_SOURCES = programs/fastqtobam.cpp biobambam/Licensing.cpp
 fastqtobam_LDADD = ${LIBMAUSLIBS}
 fastqtobam_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
 fastqtobam_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+bamfixmateinformation_SOURCES = programs/bamfixmateinformation.cpp biobambam/Licensing.cpp
+bamfixmateinformation_LDADD = ${LIBMAUSLIBS}
+bamfixmateinformation_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+bamfixmateinformation_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
