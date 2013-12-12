@@ -64,6 +64,7 @@ int bammaskflags(::libmaus::util::ArgInfo const & arginfo)
 	}
 
 	int const level = arginfo.getValue<int>("level",getDefaultLevel());
+	int const resetmatecoord = arginfo.getValue<int>("resetmatecoord",0);
 	
 	switch ( level )
 	{
@@ -159,6 +160,11 @@ int bammaskflags(::libmaus::util::ArgInfo const & arginfo)
 	while ( BD.readAlignment() )
 	{
 		alignment.putFlags(alignment.getFlags() & mask);
+		if ( resetmatecoord )
+		{
+			alignment.putNextRefId(-1);
+			alignment.putNextPos(-1);
+		}
 		alignment.serialise(writer->getStream());
 	}	
 
