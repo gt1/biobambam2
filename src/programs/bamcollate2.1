@@ -158,6 +158,12 @@ file name for BAM index if index=1.
 comma separated list of read group identifiers to be kept. If not given all records will be kept.
 Read group filtering is only available if collate=0 and collate=1 (i.e. this
 key is ignored for collate=2 and collate=3).
+.PP
+.B mapqthres
+mapping quality threshold. This option is only available for collate=1 (i.e. it is ignored for collate=0 and
+collate>1). If this key is set, reads are kept if the mapping quality field
+is at least the given value. For paired end reads it is sufficient for a
+read or its mate to have a mapping quality above the threshold.
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"

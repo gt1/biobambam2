@@ -40,6 +40,7 @@ static std::string getDefaultInputFormat() { return "bam"; }
 #include <libmaus/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
 static int getDefaultMD5() { return 0; }
 static int getDefaultIndex() { return 0; }
+static int getDefaultMapQThreshold() { return -1; }
 
 static int getLevel(libmaus::util::ArgInfo const & arginfo)
 {
@@ -374,6 +375,7 @@ void bamcollate2Collating(
 
 	// read group trie
 	::libmaus::trie::LinearHashTrie<char,uint32_t>::shared_ptr_type rgtrie = getRGTrie(arginfo);
+	int const mapqthres = arginfo.getValue<int>("mapqthres",getDefaultMapQThreshold());
 	
 	while ( (ob = CHCBD.process()) )
 	{
@@ -392,6 +394,17 @@ void bamcollate2Collating(
 					rga && rgb &&
 					(rgtrie->searchCompleteNoFailureZ(rga) != -1) &&
 					(rgtrie->searchCompleteNoFailureZ(rgb) != -1);
+			}
+			
+			if ( mapqthres >= 0 )
+			{
+				bool const amapped = !libmaus::bambam::BamAlignmentDecoderBase::isUnmap(libmaus::bambam::BamAlignmentDecoderBase::getFlags(ob->Da));
+				bool const aok = amapped && static_cast<int>(libmaus::bambam::BamAlignmentDecoderBase::getMapQ(ob->Da)) >= mapqthres;
+
+				bool const bmapped = !libmaus::bambam::BamAlignmentDecoderBase::isUnmap(libmaus::bambam::BamAlignmentDecoderBase::getFlags(ob->Db));
+				bool const bok = bmapped && static_cast<int>(libmaus::bambam::BamAlignmentDecoderBase::getMapQ(ob->Db)) >= mapqthres;
+				
+				pass = pass && (aok || bok);
 			}
 			
 			if ( pass )
@@ -414,6 +427,14 @@ void bamcollate2Collating(
 				char const * rga = libmaus::bambam::BamAlignmentDecoderBase::getReadGroup(ob->Da,ob->blocksizea);
 				pass = rga && (rgtrie->searchCompleteNoFailureZ(rga) != -1);
 			}
+
+			if ( mapqthres >= 0 )
+			{
+				bool const amapped = !libmaus::bambam::BamAlignmentDecoderBase::isUnmap(libmaus::bambam::BamAlignmentDecoderBase::getFlags(ob->Da));
+				bool const aok = amapped && static_cast<int>(libmaus::bambam::BamAlignmentDecoderBase::getMapQ(ob->Da)) >= mapqthres;
+				
+				pass = pass && aok;
+			}
 			
 			if ( pass )
 			{
@@ -433,6 +454,14 @@ void bamcollate2Collating(
 				char const * rga = libmaus::bambam::BamAlignmentDecoderBase::getReadGroup(ob->Da,ob->blocksizea);
 				pass = rga && (rgtrie->searchCompleteNoFailureZ(rga) != -1);
 			}
+
+			if ( mapqthres >= 0 )
+			{
+				bool const amapped = !libmaus::bambam::BamAlignmentDecoderBase::isUnmap(libmaus::bambam::BamAlignmentDecoderBase::getFlags(ob->Da));
+				bool const aok = amapped && static_cast<int>(libmaus::bambam::BamAlignmentDecoderBase::getMapQ(ob->Da)) >= mapqthres;
+				
+				pass = pass && aok;
+			}
 			
 			if ( pass )
 			{
@@ -451,6 +480,14 @@ void bamcollate2Collating(
 			{
 				char const * rgb = libmaus::bambam::BamAlignmentDecoderBase::getReadGroup(ob->Db,ob->blocksizeb);
 				pass = rgb && (rgtrie->searchCompleteNoFailureZ(rgb) != -1);
+			}
+
+			if ( mapqthres >= 0 )
+			{
+				bool const bmapped = !libmaus::bambam::BamAlignmentDecoderBase::isUnmap(libmaus::bambam::BamAlignmentDecoderBase::getFlags(ob->Db));
+				bool const bok = bmapped && static_cast<int>(libmaus::bambam::BamAlignmentDecoderBase::getMapQ(ob->Db)) >= mapqthres;
+				
+				pass = pass && bok;
 			}
 			
 			if ( pass )
@@ -1279,6 +1316,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "indexfilename=<filename>", "file name for BAM index file (default: extend output file name)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "readgroups=[<>]", "read group filter (default: keep all)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("mapqthres=<[")+::biobambam::Licensing::formatNumber(getDefaultMapQThreshold())+"]>", "mapping quality threshold (collate=1 only, default: keep all)" ) );
 				
 				::biobambam::Licensing::printMap(std::cerr,V);
 
