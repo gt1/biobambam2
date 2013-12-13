@@ -59,6 +59,7 @@ static std::string getDefaultSortOrder() { return "coordinate"; }
 static uint64_t getDefaultBlockSize() { return 1024; }
 static bool getDefaultDisableValidation() { return false; }
 static std::string getDefaultInputFormat() { return "bam"; }
+static int getDefaultFixMates() { return 0; }
 
 int bamsort(::libmaus::util::ArgInfo const & arginfo)
 {
@@ -116,6 +117,7 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilenameout);
 	uint64_t blockmem = arginfo.getValue<uint64_t>("blockmb",getDefaultBlockSize())*1024*1024;
 	std::string const sortorder = arginfo.getValue<std::string>("SO","coordinate");
+	bool const fixmates = arginfo.getValue<int>("fixmates",getDefaultFixMates());
 
 	// input decoder wrapper
 	libmaus::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
@@ -196,49 +198,181 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 
 	libmaus::bambam::BamBlockWriterBase::unique_ptr_type Pout ( libmaus::bambam::BamBlockWriterBaseFactory::construct(uphead, arginfo, Pcbs) );
 
-	if ( sortorder != "queryname" )
+	if ( fixmates )
 	{
-		::libmaus::bambam::BamEntryContainer< ::libmaus::bambam::BamAlignmentPosComparator > BEC(blockmem,tmpfilenameout);
-
-		if ( verbose )
-			std::cerr << "[V] Reading alignments from source." << std::endl;
-		uint64_t incnt = 0;
-		
-		while ( dec.readAlignment() )
+		if ( sortorder != "queryname" )
 		{
-			BEC.putAlignment(dec.getAlignment());
-			incnt++;
-			if ( verbose && (incnt % (1024*1024) == 0) )
-				std::cerr << "[V] " << incnt/(1024*1024) << "M" << std::endl;
+			::libmaus::bambam::BamEntryContainer< ::libmaus::bambam::BamAlignmentPosComparator > BEC(blockmem,tmpfilenameout);
+
+			if ( verbose )
+				std::cerr << "[V] Reading alignments from source." << std::endl;
+			uint64_t incnt = 0;
+
+			// current alignment
+			libmaus::bambam::BamAlignment & curalgn = dec.getAlignment();
+			// previous alignment
+			libmaus::bambam::BamAlignment prevalgn;
+			// previous alignment valid
+			bool prevalgnvalid = false;
+			// MQ field filter
+			libmaus::bambam::BamAuxFilterVector MQfilter;
+			MQfilter.set("MQ");
+			
+			while ( dec.readAlignment() )
+			{
+				if ( curalgn.isSecondary() || curalgn.isSupplementary() )
+				{
+					BEC.putAlignment(curalgn);
+				}
+				else if ( prevalgnvalid )
+				{
+					// different name
+					if ( strcmp(curalgn.getName(),prevalgn.getName()) )
+					{
+						BEC.putAlignment(prevalgn);
+						curalgn.swap(prevalgn);
+					}
+					// same name
+					else
+					{
+						libmaus::bambam::BamAlignment::fixMateInformation(prevalgn,curalgn,MQfilter);
+						BEC.putAlignment(prevalgn);
+						BEC.putAlignment(curalgn);
+						prevalgnvalid = false;
+					}
+				}
+				else
+				{
+					prevalgn.swap(curalgn);
+					prevalgnvalid = true;
+				}
+				
+				if ( verbose && ( ( ++incnt & ((1ull<<20)-1) ) == 0 ) )
+					std::cerr << "[V] " << incnt << std::endl;
+			}
+			
+			if ( prevalgnvalid )
+			{
+				BEC.putAlignment(prevalgn);
+				prevalgnvalid = false;
+			}
+
+			if ( verbose )
+				std::cerr << "[V] read " << incnt << " alignments" << std::endl;
+
+			// BEC.createOutput(std::cout, uphead, level, verbose, Pcbs);
+			BEC.createOutput(*Pout, verbose);
 		}
+		else
+		{
+			::libmaus::bambam::BamEntryContainer< ::libmaus::bambam::BamAlignmentNameComparator > BEC(blockmem,tmpfilenameout);
+			
+			if ( verbose )
+				std::cerr << "[V] Reading alignments from source." << std::endl;
+			uint64_t incnt = 0;
+			
+			// current alignment
+			libmaus::bambam::BamAlignment & curalgn = dec.getAlignment();
+			// previous alignment
+			libmaus::bambam::BamAlignment prevalgn;
+			// previous alignment valid
+			bool prevalgnvalid = false;
+			// MQ field filter
+			libmaus::bambam::BamAuxFilterVector MQfilter;
+			MQfilter.set("MQ");
+			
+			while ( dec.readAlignment() )
+			{
+				if ( curalgn.isSecondary() || curalgn.isSupplementary() )
+				{
+					BEC.putAlignment(curalgn);
+				}
+				else if ( prevalgnvalid )
+				{
+					// different name
+					if ( strcmp(curalgn.getName(),prevalgn.getName()) )
+					{
+						BEC.putAlignment(prevalgn);
+						curalgn.swap(prevalgn);
+					}
+					// same name
+					else
+					{
+						libmaus::bambam::BamAlignment::fixMateInformation(prevalgn,curalgn,MQfilter);
+						BEC.putAlignment(prevalgn);
+						BEC.putAlignment(curalgn);
+						prevalgnvalid = false;
+					}
+				}
+				else
+				{
+					prevalgn.swap(curalgn);
+					prevalgnvalid = true;
+				}
+				
+				if ( verbose && ( ( ++incnt & ((1ull<<20)-1) ) == 0 ) )
+					std::cerr << "[V] " << incnt << std::endl;
+			}
+			
+			if ( prevalgnvalid )
+			{
+				BEC.putAlignment(prevalgn);
+				prevalgnvalid = false;
+			}
+			
+			if ( verbose )
+				std::cerr << "[V] read " << incnt << " alignments" << std::endl;
 
-		if ( verbose )
-			std::cerr << "[V] read " << incnt << " alignments" << std::endl;
-
-		// BEC.createOutput(std::cout, uphead, level, verbose, Pcbs);
-		BEC.createOutput(*Pout, verbose);
+			// BEC.createOutput(std::cout, uphead, level, verbose, Pcbs);
+			BEC.createOutput(*Pout, verbose);
+		}
 	}
 	else
 	{
-		::libmaus::bambam::BamEntryContainer< ::libmaus::bambam::BamAlignmentNameComparator > BEC(blockmem,tmpfilenameout);
-		
-		if ( verbose )
-			std::cerr << "[V] Reading alignments from source." << std::endl;
-		uint64_t incnt = 0;
-		
-		while ( dec.readAlignment() )
+		if ( sortorder != "queryname" )
 		{
-			BEC.putAlignment(dec.getAlignment());
-			incnt++;
-			if ( verbose && (incnt % (1024*1024) == 0) )
-				std::cerr << "[V] " << incnt/(1024*1024) << "M" << std::endl;
-		}
-		
-		if ( verbose )
-			std::cerr << "[V] read " << incnt << " alignments" << std::endl;
+			::libmaus::bambam::BamEntryContainer< ::libmaus::bambam::BamAlignmentPosComparator > BEC(blockmem,tmpfilenameout);
 
-		// BEC.createOutput(std::cout, uphead, level, verbose, Pcbs);
-		BEC.createOutput(*Pout, verbose);
+			if ( verbose )
+				std::cerr << "[V] Reading alignments from source." << std::endl;
+			uint64_t incnt = 0;
+			
+			while ( dec.readAlignment() )
+			{
+				BEC.putAlignment(dec.getAlignment());
+				incnt++;
+				if ( verbose && (incnt % (1024*1024) == 0) )
+					std::cerr << "[V] " << incnt/(1024*1024) << "M" << std::endl;
+			}
+
+			if ( verbose )
+				std::cerr << "[V] read " << incnt << " alignments" << std::endl;
+
+			// BEC.createOutput(std::cout, uphead, level, verbose, Pcbs);
+			BEC.createOutput(*Pout, verbose);
+		}
+		else
+		{
+			::libmaus::bambam::BamEntryContainer< ::libmaus::bambam::BamAlignmentNameComparator > BEC(blockmem,tmpfilenameout);
+			
+			if ( verbose )
+				std::cerr << "[V] Reading alignments from source." << std::endl;
+			uint64_t incnt = 0;
+			
+			while ( dec.readAlignment() )
+			{
+				BEC.putAlignment(dec.getAlignment());
+				incnt++;
+				if ( verbose && (incnt % (1024*1024) == 0) )
+					std::cerr << "[V] " << incnt/(1024*1024) << "M" << std::endl;
+			}
+			
+			if ( verbose )
+				std::cerr << "[V] read " << incnt << " alignments" << std::endl;
+
+			// BEC.createOutput(std::cout, uphead, level, verbose, Pcbs);
+			BEC.createOutput(*Pout, verbose);
+		}
 	}
 
 	// flush encoder so callbacks see all output data
@@ -301,8 +435,9 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "inputthreads=<[1]>", "input helper threads (for inputformat=bam only, default: 1)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "reference=<>", "reference FastA (.fai file required, for cram i/o only)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "range=<>", "coordinate range to be processed (for coordinate sorted indexed BAM input only)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "outputthreads=<1>", "output helper threads (for outputformat=bam only, default: 1)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "outputthreads=<[1]>", "output helper threads (for outputformat=bam only, default: 1)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "O=<[stdout]>", "output filename (standard output if unset)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("fixmates=<[")+::biobambam::Licensing::formatNumber(getDefaultFixMates())+"]>", "fix mate information (for name collated input only, disabled by default)" ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 

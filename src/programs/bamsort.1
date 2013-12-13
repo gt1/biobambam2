@@ -130,6 +130,11 @@ reference FastA file for inputformat=cram and outputformat=cram. An index file (
 .PP
 .B range=<>:
 input range to be processed. This option is only valid if the input is a coordinate sorted and indexed BAM file
+.PP
+.B fixmates=<0|1>:
+fix mate information as bamfixmateinformation would do. Input is assumed to
+be collated by query name (no changes will be applied to mates which are not
+adjacent in the input stream). By default this option is disabled.
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"
