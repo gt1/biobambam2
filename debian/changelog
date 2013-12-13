@@ -1,3 +1,9 @@
+biobambam (0.0.116) unstable; urgency=low
+
+  * add fixmates key in bamsort 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Fri, 13 Dec 2013 11:57:09 +0000
+
 biobambam (0.0.115) unstable; urgency=low
 
   * add bamfixmateinformation 
