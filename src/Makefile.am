@@ -16,7 +16,8 @@ MANPAGES = programs/bamtofastq.1 programs/bamsort.1 programs/bammarkduplicates.1
 	programs/bamfilterrg.1 programs/bamdownsamplerandom.1 \
 	programs/bammarkduplicates2.1 \
 	programs/bamcat.1 programs/bammerge.1 programs/bamsplit.1 \
-	programs/bamsplitdiv.1 programs/bamchecksort.1 programs/fastqtobam.1
+	programs/bamsplitdiv.1 programs/bamchecksort.1 programs/fastqtobam.1 \
+	programs/bamfixmateinformation.1
 
 man_MANS = ${MANPAGES}
 
