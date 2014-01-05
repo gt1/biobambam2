@@ -18,40 +18,52 @@
 **/
 #include <biobambam/ResetAlignment.hpp>
 
+uint64_t resetAlignment(uint8_t * const D, uint64_t blocksize, bool const resetaux)
+{
+	libmaus::bambam::BamAlignmentEncoderBase::putRefId(D,-1);
+	libmaus::bambam::BamAlignmentEncoderBase::putPos(D,-1);
+	libmaus::bambam::BamAlignmentEncoderBase::putNextRefId(D,-1);
+	libmaus::bambam::BamAlignmentEncoderBase::putNextPos(D,-1);
+	libmaus::bambam::BamAlignmentEncoderBase::putTlen(D,0);
+	
+	if ( resetaux )
+		blocksize = libmaus::bambam::BamAlignment::eraseAux(D);
+		
+	blocksize = libmaus::bambam::BamAlignment::eraseCigarString(D,blocksize);
+	
+	uint32_t const inflags = libmaus::bambam::BamAlignmentDecoderBase::getFlags(D);
+	
+	if ( libmaus::bambam::BamAlignmentDecoderBase::isReverse(inflags) )
+		libmaus::bambam::BamAlignment::reverseComplementInplace(D);
+
+	if ( libmaus::bambam::BamAlignmentDecoderBase::isPaired(inflags) )
+	{
+		libmaus::bambam::BamAlignmentEncoderBase::putFlags(D,
+			(inflags | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FUNMAP | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FMUNMAP) &
+			(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FDUP))) &
+			(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FPROPER_PAIR))) &
+			(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREVERSE))) &
+			(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FMREVERSE)))
+		
+		);	
+	}
+	else
+	{
+		libmaus::bambam::BamAlignmentEncoderBase::putFlags(D,
+			(inflags | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FUNMAP) &
+			(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FDUP))) &
+			(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FPROPER_PAIR))) &
+			(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREVERSE))) &
+			(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FMREVERSE)))
+		);	
+	}
+	
+	return blocksize;
+}
+
 bool resetAlignment(libmaus::bambam::BamAlignment & algn, bool const resetaux)
 {
-	if ( resetaux )
-		algn.eraseAux();
-	algn.putRefId(-1);
-	algn.putPos(-1);
-	algn.putNextRefId(-1);
-	algn.putNextPos(-1);
-	algn.putTlen(0);
-	algn.eraseCigarString();
-	
-	if ( algn.isReverse() )
-		algn.reverseComplementInplace();
-	
-	if ( algn.isPaired() )
-		algn.putFlags(
-			(algn.getFlags() |
-			libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FUNMAP |
-			libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FMUNMAP)
-			&
-			(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FDUP))) &
-			(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FPROPER_PAIR))) &
-			(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREVERSE))) &
-			(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FMREVERSE)))
-		);
-	else
-		algn.putFlags(
-			(algn.getFlags() | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FUNMAP) &
-			(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FDUP))) &
-			(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FPROPER_PAIR))) &
-			(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREVERSE))) &
-			(~(static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FMREVERSE)))
-		);
-	
+	algn.blocksize = resetAlignment(algn.D.begin(),algn.blocksize,resetaux);
 	
 	if ( algn.isSecondary() )
 		return false;

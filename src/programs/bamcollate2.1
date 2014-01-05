@@ -164,6 +164,25 @@ mapping quality threshold. This option is only available for collate=1 (i.e. it 
 collate>1). If this key is set, reads are kept if the mapping quality field
 is at least the given value. For paired end reads it is sufficient for a
 read or its mate to have a mapping quality above the threshold.
+.PP
+.B reset
+reduce alignments to an unmapped state (see bamreset). This key is only
+valid for collate=0, collate=1 or collate=3. The default value is 0 for
+collate=0 and collate=1 and 1 for collate=3.
+.PP
+.B classes
+types of alignment lines to be kept. This key is only valid for collate=1. By default all alignments are kept.
+The value for this key is a comma separated list consisting of a subset of the following options:
+.IP F:
+keep first mates of complete pairs
+.IP F2:
+keep second mates of complete pairs
+.IP O:
+keep first mates of orphaned pairs (i.e. such that the other mate is not in the input file)
+.IP O2:
+keep second mates of orphaned pairs (i.e. such that the other mate is not in the input file)
+.IP S:
+keep single end reads
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"

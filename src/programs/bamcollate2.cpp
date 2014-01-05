@@ -41,6 +41,61 @@ static std::string getDefaultInputFormat() { return "bam"; }
 static int getDefaultMD5() { return 0; }
 static int getDefaultIndex() { return 0; }
 static int getDefaultMapQThreshold() { return -1; }
+static std::string getDefaultClassFilter() { return "F,F2,O,O2,S"; }
+
+static uint32_t const classmask_F  = (1ull << 0);
+static uint32_t const classmask_F2 = (1ull << 1);
+static uint32_t const classmask_O  = (1ull << 2);
+static uint32_t const classmask_O2 = (1ull << 3);
+static uint32_t const classmask_S  = (1ull << 4);
+static uint32_t const classmask_all = classmask_F | classmask_F2 | classmask_O | classmask_O2 | classmask_S;
+
+static std::string despace(std::string const & s)
+{
+	std::deque<char> Q(s.begin(),s.end());
+	while ( Q.size() && isspace(Q.front()) )
+		Q.pop_front();
+	while ( Q.size() && isspace(Q.back()) )
+		Q.pop_back();
+	return s;
+}
+
+static uint32_t parseClassList(std::string s)
+{
+	s = despace(s);
+	
+	if ( ! s.size() )
+		return 0;
+	
+	std::deque<std::string> tokens = libmaus::util::stringFunctions::tokenize<std::string>(s,std::string(","));
+	
+	uint32_t mask = 0;
+	
+	for ( uint64_t i = 0; i < tokens.size(); ++i )
+	{
+		tokens[i] = despace(tokens[i]);
+		
+		if ( tokens[i] == "F" )
+			mask |= classmask_F;
+		else if ( tokens[i] == "F2" )
+			mask |= classmask_F2;
+		else if ( tokens[i] == "O" )
+			mask |= classmask_O;
+		else if ( tokens[i] == "O2" )
+			mask |= classmask_O2;
+		else if ( tokens[i] == "S" )
+			mask |= classmask_S;
+		else
+		{
+			libmaus::exception::LibMausException se;
+			se.getStream() << "Unknown read class " << tokens[i] << std::endl;
+			se.finish();
+			throw se;
+		}
+	}
+	
+	return mask;
+}
 
 static int getLevel(libmaus::util::ArgInfo const & arginfo)
 {
@@ -151,13 +206,14 @@ void bamcollate2NonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::ba
 
 	libmaus::timing::RealTimeClock rtc; rtc.start();
 	uint32_t const excludeflags = libmaus::bambam::BamFlagBase::stringToFlags(arginfo.getValue<std::string>("exclude","SECONDARY,SUPPLEMENTARY"));
-	libmaus::bambam::BamAlignment const & algn = bamdec.getAlignment();
+	libmaus::bambam::BamAlignment & algn = bamdec.getAlignment();
 	::libmaus::autoarray::AutoArray<uint8_t> T;
 	uint64_t cnt = 0;
 	unsigned int const verbshift = 20;
+	bool const reset = arginfo.getValue<unsigned int>("reset",false);
 
 	// construct new header
-	::libmaus::bambam::BamHeader uphead(getModifiedHeaderText(bamdec,arginfo));
+	::libmaus::bambam::BamHeader uphead(getModifiedHeaderText(bamdec,arginfo,reset));
 
 	/*
 	 * start index/md5 callbacks
@@ -224,7 +280,12 @@ void bamcollate2NonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::ba
 			&&
 			( (!rgtrie) || (algn.getReadGroup() && rgtrie->searchCompleteNoFailureZ(algn.getReadGroup()) != -1) )
 		)
+		{
+			if ( reset )
+				resetAlignment(algn);
+		
 			algn.serialise(writer->getStream());
+		}
 
 		if ( precnt >> verbshift != cnt >> verbshift )
 			std::cerr 
@@ -306,7 +367,7 @@ void bamcollate2Collating(
 	if ( arginfo.getValue<unsigned int>("disablevalidation",0) )
 		CHCBD.disableValidation();
 
-	libmaus::bambam::CircularHashCollatingBamDecoder::OutputBufferEntry const * ob = 0;
+	libmaus::bambam::CircularHashCollatingBamDecoder::OutputBufferEntry * ob = 0;
 	
 	// number of alignments written to files
 	uint64_t cnt = 0;
@@ -314,11 +375,14 @@ void bamcollate2Collating(
 	uint64_t bcnt = 0;
 	unsigned int const verbshift = 20;
 	libmaus::timing::RealTimeClock rtc; rtc.start();
+	bool const reset = arginfo.getValue<unsigned int>("reset",false);
+	libmaus::bambam::BamAlignment Ralgna, Ralgnb;
+	std::string const sclassfilter = arginfo.getValue<std::string>("classes",getDefaultClassFilter());
+	uint32_t const classmask = parseClassList(sclassfilter);
 
 	// construct new header
-	::libmaus::bambam::BamHeader uphead(getModifiedHeaderText(CHCBD,arginfo));
+	::libmaus::bambam::BamHeader uphead(getModifiedHeaderText(CHCBD,arginfo,reset));
 	uphead.changeSortOrder("unknown");
-
 
 	/*
 	 * start index/md5 callbacks
@@ -381,7 +445,7 @@ void bamcollate2Collating(
 	{
 		uint64_t const precnt = cnt;
 		
-		if ( ob->fpair )
+		if ( ob->fpair && ((classmask & classmask_F) || (classmask & classmask_F2)) )
 		{
 			bool pass = true;
 			
@@ -409,16 +473,45 @@ void bamcollate2Collating(
 			
 			if ( pass )
 			{
-				::libmaus::bambam::EncoderBase::putLE<out_stream_type,uint32_t>(bgzfos,ob->blocksizea);
-				bgzfos.write(reinterpret_cast<char const *>(ob->Da),ob->blocksizea);
-				::libmaus::bambam::EncoderBase::putLE<out_stream_type,uint32_t>(bgzfos,ob->blocksizeb);
-				bgzfos.write(reinterpret_cast<char const *>(ob->Db),ob->blocksizeb);
+				if ( reset )
+				{
+					if ( classmask & classmask_F )
+					{
+						Ralgna.copyFrom(ob->Da,ob->blocksizea);
+						resetAlignment(Ralgna);
+						Ralgna.serialise(bgzfos);
+						bcnt += (Ralgna.blocksize);
+					}
+					
+					if ( classmask & classmask_F2 )
+					{
+						Ralgnb.copyFrom(ob->Db,ob->blocksizeb);
+						resetAlignment(Ralgnb);
+						Ralgnb.serialise(bgzfos);
+						bcnt += (Ralgnb.blocksize);
+					}
+				}
+				else
+				{
+					if ( classmask & classmask_F )
+					{
+						::libmaus::bambam::EncoderBase::putLE<out_stream_type,uint32_t>(bgzfos,ob->blocksizea);
+						bgzfos.write(reinterpret_cast<char const *>(ob->Da),ob->blocksizea);
+						bcnt += (ob->blocksizea);
+					}
+					
+					if ( classmask & classmask_F2 )
+					{
+						::libmaus::bambam::EncoderBase::putLE<out_stream_type,uint32_t>(bgzfos,ob->blocksizeb);
+						bgzfos.write(reinterpret_cast<char const *>(ob->Db),ob->blocksizeb);
+						bcnt += (ob->blocksizeb);
+					}
+				}
 
 				cnt += 2;
-				bcnt += (ob->blocksizea+ob->blocksizeb);
 			}
 		}
-		else if ( ob->fsingle )
+		else if ( ob->fsingle && (classmask & classmask_S) )
 		{
 			bool pass = true;
 			
@@ -438,14 +531,25 @@ void bamcollate2Collating(
 			
 			if ( pass )
 			{
-				::libmaus::bambam::EncoderBase::putLE<out_stream_type,uint32_t>(bgzfos,ob->blocksizea);
-				bgzfos.write(reinterpret_cast<char const *>(ob->Da),ob->blocksizea);
+				if ( reset )
+				{				
+					Ralgna.copyFrom(ob->Da,ob->blocksizea);
+					resetAlignment(Ralgna);
+					Ralgna.serialise(bgzfos);
+
+					bcnt += (Ralgna.blocksize);
+				}
+				else
+				{
+					::libmaus::bambam::EncoderBase::putLE<out_stream_type,uint32_t>(bgzfos,ob->blocksizea);
+					bgzfos.write(reinterpret_cast<char const *>(ob->Da),ob->blocksizea);
+					bcnt += (ob->blocksizea);
+				}
 
 				cnt += 1;
-				bcnt += (ob->blocksizea);
 			}
 		}
-		else if ( ob->forphan1 )
+		else if ( ob->forphan1 && (classmask & classmask_O) )
 		{
 			bool pass = true;
 			
@@ -465,14 +569,24 @@ void bamcollate2Collating(
 			
 			if ( pass )
 			{
-				::libmaus::bambam::EncoderBase::putLE<out_stream_type,uint32_t>(bgzfos,ob->blocksizea);
-				bgzfos.write(reinterpret_cast<char const *>(ob->Da),ob->blocksizea);
+				if ( reset )
+				{				
+					Ralgna.copyFrom(ob->Da,ob->blocksizea);
+					resetAlignment(Ralgna);
+					Ralgna.serialise(bgzfos);
+					bcnt += (Ralgna.blocksize);
+				}
+				else
+				{
+					::libmaus::bambam::EncoderBase::putLE<out_stream_type,uint32_t>(bgzfos,ob->blocksizea);
+					bgzfos.write(reinterpret_cast<char const *>(ob->Da),ob->blocksizea);
+					bcnt += (ob->blocksizea);
+				}
 
 				cnt += 1;
-				bcnt += (ob->blocksizea);
 			}
 		}
-		else if ( ob->forphan2 )
+		else if ( ob->forphan2 && (classmask & classmask_O2) )
 		{
 			bool pass = true;
 			
@@ -492,11 +606,21 @@ void bamcollate2Collating(
 			
 			if ( pass )
 			{
-				::libmaus::bambam::EncoderBase::putLE<out_stream_type,uint32_t>(bgzfos,ob->blocksizea);
-				bgzfos.write(reinterpret_cast<char const *>(ob->Da),ob->blocksizea);
+				if ( reset )
+				{				
+					Ralgna.copyFrom(ob->Da,ob->blocksizea);
+					resetAlignment(Ralgna);
+					Ralgna.serialise(bgzfos);
+					bcnt += (Ralgna.blocksize);
+				}
+				else
+				{
+					::libmaus::bambam::EncoderBase::putLE<out_stream_type,uint32_t>(bgzfos,ob->blocksizea);
+					bgzfos.write(reinterpret_cast<char const *>(ob->Da),ob->blocksizea);
+					bcnt += (ob->blocksizea);
+				}
 
 				cnt += 1;
-				bcnt += (ob->blocksizea);
 			}
 		}
 		
@@ -1296,7 +1420,7 @@ int main(int argc, char * argv[])
 				std::vector< std::pair<std::string,std::string> > V;
 				
 				V.push_back ( std::pair<std::string,std::string> ( "collate=<[1]>", "collate pairs" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "reset=<[1]>", "reset alignments and header like bamreset (for collate=3 only)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "reset=<>", "reset alignments and header like bamreset (for collate=0,1 or 3 only, default enabled for 3)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", "compression settings for output bam file (0=uncompressed,1=fast,9=best,-1=zlib default)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "filename=<[stdin]>", "input filename (default: read file from standard input)" ) );
 				#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
@@ -1317,6 +1441,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "indexfilename=<filename>", "file name for BAM index file (default: extend output file name)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "readgroups=[<>]", "read group filter (default: keep all)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("mapqthres=<[")+::biobambam::Licensing::formatNumber(getDefaultMapQThreshold())+"]>", "mapping quality threshold (collate=1 only, default: keep all)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("classes=[") + getDefaultClassFilter() + std::string("]"), "class filter (collate=1 only, default: keep all)" ) );
 				
 				::biobambam::Licensing::printMap(std::cerr,V);
 
