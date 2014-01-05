@@ -115,8 +115,6 @@ int bamfixmateinformation(::libmaus::util::ArgInfo const & arginfo)
 	std::string const tmpfilenamebase = arginfo.getValue<std::string>("tmpfile",arginfo.getDefaultTmpFileName());
 	std::string const tmpfilenameout = tmpfilenamebase + "_bamsort";
 	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilenameout);
-	uint64_t blockmem = arginfo.getValue<uint64_t>("blockmb",getDefaultBlockSize())*1024*1024;
-	std::string const sortorder = arginfo.getValue<std::string>("SO","coordinate");
 
 	// input decoder wrapper
 	libmaus::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
