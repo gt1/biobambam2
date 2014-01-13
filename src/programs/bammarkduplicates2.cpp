@@ -172,8 +172,11 @@ typedef PairActiveCountTemplate<libmaus::bambam::ReadEndsFreeList> ReadEndsActiv
 
 struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAlignmentInputPositionUpdateCallback
 {
+	static unsigned int const defaultfreelistsize = 16*1024;
+
 	// static int const default_maxreadlength = 250;
 	static int getDefaultMaxReadLength() { return 250; }
+	static uint64_t getDefaultFreeListSize() { return defaultfreelistsize; }
 	
 	#define POS_READ_ENDS
 
@@ -183,7 +186,6 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 	typedef BamPairActiveCount active_count_type;
 	#endif
 
-	static unsigned int const freelistsize = 16*1024;
 
 	libmaus::bambam::BamHeader const & bamheader;
 
@@ -217,11 +219,11 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 	
 	int maxreadlength;
 
-	BamAlignmentInputPositionCallbackDupMark(libmaus::bambam::BamHeader const & rbamheader)
+	BamAlignmentInputPositionCallbackDupMark(libmaus::bambam::BamHeader const & rbamheader, uint64_t const freelistsize = defaultfreelistsize)
 	: 
 		bamheader(rbamheader), REcomp(), position(-1,-1), 
 		expungepositionpairs(-1,-1), activepairs(), totalactivepairs(0), APFLpairs(freelistsize), excntpairs(0), fincntpairs(0), strcntpairs(0), REpairs(),
-		expungepositionfrags(-1,-1), activefrags(), totalactivefrags(0), APFLfrags(freelistsize), excntfrags(0), fincntfrags(0), strcntfrags(0), REfrags(),
+		expungepositionfrags(-1,-1), activefrags(), totalactivefrags(0), APFLfrags(2*freelistsize), excntfrags(0), fincntfrags(0), strcntfrags(0), REfrags(),
 		DSC(0),
 		maxreadlength(getDefaultMaxReadLength())
 	{
@@ -1097,8 +1099,8 @@ struct PositionTrackCallback :
 	public ::libmaus::bambam::CollatingBamDecoderAlignmentInputCallback,
 	public BamAlignmentInputPositionCallbackDupMark
 {
-	PositionTrackCallback(libmaus::bambam::BamHeader const & bamheader) 
-	: BamAlignmentInputPositionCallbackDupMark(bamheader) 
+	PositionTrackCallback(libmaus::bambam::BamHeader const & bamheader, uint64_t const freelistsize = getDefaultFreeListSize()) 
+	: BamAlignmentInputPositionCallbackDupMark(bamheader,freelistsize) 
 	{
 	
 	}
@@ -1352,7 +1354,8 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 
 	::libmaus::bambam::BamHeader const bamheader = CBD->getHeader();
 
-	PositionTrackCallback PTC(bamheader);
+	uint64_t const trackfreelistsize = arginfo.getValueUnsignedNumeric<uint64_t>("trackfreelistsize",PositionTrackCallback::getDefaultFreeListSize());
+	PositionTrackCallback PTC(bamheader,trackfreelistsize);
 	
 	if ( SRC )
 		PTI = SRC.get();
@@ -1781,6 +1784,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "md5filename=<filename>", "file name for md5 check sum (default: extend output file name)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "indexfilename=<filename>", "file name for BAM index file (default: extend output file name)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "trackfreelistsize=<["+::biobambam::Licensing::formatNumber(PositionTrackCallback::getDefaultFreeListSize())+"]>", "tracking lists free pool size" ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 
