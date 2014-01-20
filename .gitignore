@@ -36,3 +36,4 @@ src/biobambam/BamBamConfig.hpp
 src/bam[a-zA-Z1-9]*
 src/kmerprob
 src/fastqtobam
+src/normalisefasta
