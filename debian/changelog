@@ -1,3 +1,9 @@
+biobambam (0.0.118) unstable; urgency=low
+
+  * add bamfilterheader program 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Mon, 20 Jan 2014 20:50:19 +0000
+
 biobambam (0.0.117) unstable; urgency=low
 
   * add reset and classes keys in bamcollate2 
