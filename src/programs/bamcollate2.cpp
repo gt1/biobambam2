@@ -154,10 +154,38 @@ template<typename decoder_type>
 std::string getModifiedHeaderText(decoder_type const & bamdec, libmaus::util::ArgInfo const & arginfo, bool reset = false)
 {
 	libmaus::bambam::BamHeader const & header = bamdec.getHeader();
-	std::string const headertext(header.text);
+	std::string headertext = header.text;
+
+	// reset header if requested
+	if ( reset )
+	{
+		// no replacement header file given
+		if ( ! arginfo.hasArg("resetheadertext") )
+		{
+			// remove SQ lines
+			std::vector<libmaus::bambam::HeaderLine> allheaderlines = libmaus::bambam::HeaderLine::extractLines(headertext);
+
+			std::ostringstream upheadstr;
+			for ( uint64_t i = 0; i < allheaderlines.size(); ++i )
+				if ( allheaderlines[i].type != "SQ" )
+					upheadstr << allheaderlines[i].line << std::endl;
+
+			headertext = upheadstr.str();
+		}
+		// replace header given in file
+		else
+		{
+			std::string const headerfilename = arginfo.getUnparsedValue("resetheadertext","");
+			uint64_t const headerlen = libmaus::util::GetFileSize::getFileSize(headerfilename);
+			libmaus::aio::CheckedInputStream CIS(headerfilename);
+			libmaus::autoarray::AutoArray<char> ctext(headerlen,false);
+			CIS.read(ctext.begin(),headerlen);
+			headertext = std::string(ctext.begin(),ctext.end());		
+		}
+	}
 
 	// add PG line to header
-	std::string upheadtext = ::libmaus::bambam::ProgramHeaderLineSet::addProgramLine(
+	headertext = ::libmaus::bambam::ProgramHeaderLineSet::addProgramLine(
 		headertext,
 		"bamcollate2", // ID
 		"bamcollate2", // PN
@@ -166,18 +194,7 @@ std::string getModifiedHeaderText(decoder_type const & bamdec, libmaus::util::Ar
 		std::string(PACKAGE_VERSION) // VN			
 	);
 
-	if ( reset )
-	{
-		std::vector<libmaus::bambam::HeaderLine> allheaderlines = libmaus::bambam::HeaderLine::extractLines(upheadtext);
-
-		std::ostringstream upheadstr;
-		for ( uint64_t i = 0; i < allheaderlines.size(); ++i )
-			if ( allheaderlines[i].type != "SQ" )
-				upheadstr << allheaderlines[i].line << std::endl;
-		upheadtext = upheadstr.str();
-	}
-
-	return upheadtext;
+	return headertext;
 }
 
 ::libmaus::trie::LinearHashTrie<char,uint32_t>::shared_ptr_type getRGTrie(libmaus::util::ArgInfo const & arginfo)
@@ -1442,6 +1459,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "readgroups=[<>]", "read group filter (default: keep all)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("mapqthres=<[")+::biobambam::Licensing::formatNumber(getDefaultMapQThreshold())+"]>", "mapping quality threshold (collate=1 only, default: keep all)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("classes=[") + getDefaultClassFilter() + std::string("]"), "class filter (collate=1 only, default: keep all)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "resetheadertext=[<>]", "replacement SAM header text file for reset=1 (default: filter header in source BAM file)" ) );
 				
 				::biobambam::Licensing::printMap(std::cerr,V);
 

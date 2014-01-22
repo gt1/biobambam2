@@ -86,10 +86,34 @@ int bamreset(::libmaus::util::ArgInfo const & arginfo)
 	::libmaus::bambam::BamDecoder dec(std::cin,false);
 	::libmaus::bambam::BamHeader const & header = dec.getHeader();
 
-	std::string const headertext(header.text);
+	std::string headertext = header.text;
+
+	// no replacement header file given
+	if ( ! arginfo.hasArg("resetheadertext") )
+	{
+		// remove SQ lines
+		std::vector<libmaus::bambam::HeaderLine> allheaderlines = libmaus::bambam::HeaderLine::extractLines(headertext);
+
+		std::ostringstream upheadstr;
+		for ( uint64_t i = 0; i < allheaderlines.size(); ++i )
+			if ( allheaderlines[i].type != "SQ" )
+				upheadstr << allheaderlines[i].line << std::endl;
+
+		headertext = upheadstr.str();
+	}
+	// replace header given in file
+	else
+	{
+		std::string const headerfilename = arginfo.getUnparsedValue("resetheadertext","");
+		uint64_t const headerlen = libmaus::util::GetFileSize::getFileSize(headerfilename);
+		libmaus::aio::CheckedInputStream CIS(headerfilename);
+		libmaus::autoarray::AutoArray<char> ctext(headerlen,false);
+		CIS.read(ctext.begin(),headerlen);
+		headertext = std::string(ctext.begin(),ctext.end());		
+	}
 
 	// add PG line to header
-	std::string upheadtext = ::libmaus::bambam::ProgramHeaderLineSet::addProgramLine(
+	headertext = libmaus::bambam::ProgramHeaderLineSet::addProgramLine(
 		headertext,
 		"bamreset", // ID
 		"bamreset", // PN
@@ -98,16 +122,8 @@ int bamreset(::libmaus::util::ArgInfo const & arginfo)
 		std::string(PACKAGE_VERSION) // VN			
 	);
 	
-	std::vector<libmaus::bambam::HeaderLine> allheaderlines = libmaus::bambam::HeaderLine::extractLines(upheadtext);
-
-	std::ostringstream upheadstr;
-	for ( uint64_t i = 0; i < allheaderlines.size(); ++i )
-		if ( allheaderlines[i].type != "SQ" )
-			upheadstr << allheaderlines[i].line << std::endl;
-	upheadtext = upheadstr.str();
-	
 	// construct new header
-	libmaus::bambam::BamHeader uphead(upheadtext);
+	libmaus::bambam::BamHeader uphead(headertext);
 	uphead.changeSortOrder("unknown");
 
 	/*
@@ -222,6 +238,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress information" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "md5filename=<filename>", "file name for md5 check sum" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "resetheadertext=[<>]", "replacement SAM header text file for reset=1 (default: filter header in source BAM file)" ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 
