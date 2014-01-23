@@ -1,3 +1,9 @@
+biobambam (0.0.119) unstable; urgency=low
+
+  * add key for replacing header in bamcollate2 (reset=1) and bamreset 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Thu, 23 Jan 2014 14:00:45 +0000
+
 biobambam (0.0.118) unstable; urgency=low
 
   * add bamfilterheader program 
