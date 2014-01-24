@@ -22,5 +22,5 @@
 #include <libmaus/bambam/BamAlignment.hpp>
 
 uint64_t resetAlignment(uint8_t * const D, uint64_t blocksize, bool const resetaux = true);
-bool resetAlignment(libmaus::bambam::BamAlignment & algn, bool const resetaux = true);
+bool resetAlignment(libmaus::bambam::BamAlignment & algn, bool const resetaux = true, uint32_t const excludeflags = libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY);
 #endif

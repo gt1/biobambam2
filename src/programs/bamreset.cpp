@@ -38,6 +38,7 @@ static int getDefaultVerbose() { return 1; }
 #include <libmaus/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
 static int getDefaultMD5() { return 0; }
 static int getDefaultIndex() { return 0; }
+static std::string getDefaultExcludeFlags() { return "SECONDARY,SUPPLEMENTARY"; }
 
 
 int bamreset(::libmaus::util::ArgInfo const & arginfo)
@@ -132,6 +133,8 @@ int bamreset(::libmaus::util::ArgInfo const & arginfo)
 	std::string const tmpfilenamebase = arginfo.getValue<std::string>("tmpfile",arginfo.getDefaultTmpFileName());
 	std::string const tmpfileindex = tmpfilenamebase + "_index";
 	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
+	uint32_t const excludeflags = libmaus::bambam::BamFlagBase::stringToFlags(
+		arginfo.getValue<std::string>("exclude",getDefaultExcludeFlags()));
 
 	std::string md5filename;
 	std::string indexfilename;
@@ -182,7 +185,7 @@ int bamreset(::libmaus::util::ArgInfo const & arginfo)
 
 	while ( dec.readAlignment() )
 	{
-		bool const keep = resetAlignment(algn);
+		bool const keep = resetAlignment(algn,true,excludeflags);
 		
 		if ( keep )
 			algn.serialise(writer->getStream());
@@ -239,10 +242,13 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "md5filename=<filename>", "file name for md5 check sum" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "resetheadertext=[<>]", "replacement SAM header text file (default: filter header in source BAM file)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "exclude=["+getDefaultExcludeFlags()+"]", "drop alignments having any of the given flags set" ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
+
+				std::cerr << "Alignment flags: PAIRED,PROPER_PAIR,UNMAP,MUNMAP,REVERSE,MREVERSE,READ1,READ2,SECONDARY,QCFAIL,DUP,SUPPLEMENTARY" << std::endl;
 				
 				return EXIT_SUCCESS;
 			}

@@ -61,11 +61,14 @@ uint64_t resetAlignment(uint8_t * const D, uint64_t blocksize, bool const reseta
 	return blocksize;
 }
 
-bool resetAlignment(libmaus::bambam::BamAlignment & algn, bool const resetaux)
+bool resetAlignment(
+	libmaus::bambam::BamAlignment & algn, bool const resetaux,
+	uint32_t const excludeflags
+)
 {
 	algn.blocksize = resetAlignment(algn.D.begin(),algn.blocksize,resetaux);
 	
-	if ( algn.isSecondary() )
+	if ( algn.getFlags() & excludeflags )
 		return false;
 		
 	return true;
