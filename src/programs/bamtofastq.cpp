@@ -35,6 +35,11 @@ static std::string getDefaultInputFormat()
 	return "bam";
 }
 
+bool getDefaultFastA()
+{
+	return 0;
+}
+
 struct BamToFastQInputFileStream
 {
 	std::string const fn;
@@ -67,6 +72,7 @@ void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::bam
 	libmaus::timing::RealTimeClock rtc; rtc.start();
 	bool const gz = arginfo.getValue<int>("gz",0);
 	int const level = std::min(9,std::max(-1,arginfo.getValue<int>("level",Z_DEFAULT_COMPRESSION)));
+	bool const fasta = arginfo.getValue<int>("fasta",getDefaultFastA());
 	uint32_t const excludeflags = libmaus::bambam::BamFlagBase::stringToFlags(arginfo.getValue<std::string>("exclude","SECONDARY,SUPPLEMENTARY"));
 	libmaus::bambam::BamAlignment const & algn = bamdec.getAlignment();
 	::libmaus::autoarray::AutoArray<uint8_t> T;
@@ -89,7 +95,12 @@ void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::bam
 		
 		if ( ! (algn.getFlags() & excludeflags) )
 		{
-			uint64_t la = libmaus::bambam::BamAlignmentDecoderBase::putFastQ(algn.D.begin(),T);
+			uint64_t la = 
+				fasta ?
+				libmaus::bambam::BamAlignmentDecoderBase::putFastA(algn.D.begin(),T)
+				:
+				libmaus::bambam::BamAlignmentDecoderBase::putFastQ(algn.D.begin(),T)				
+				;
 			outputstream.write(reinterpret_cast<char const *>(T.begin()),la);
 			bcnt += la;
 		}
@@ -195,6 +206,8 @@ void bamtofastqCollating(
 	if ( arginfo.getValue<unsigned int>("disablevalidation",0) )
 		CHCBD.disableValidation();
 
+	bool const fasta = arginfo.getValue<int>("fasta",getDefaultFastA());
+
 	libmaus::bambam::BamToFastqOutputFileSet OFS(arginfo);
 
 	libmaus::bambam::CircularHashCollatingBamDecoder::OutputBufferEntry const * ob = 0;
@@ -214,9 +227,21 @@ void bamtofastqCollating(
 		
 		if ( ob->fpair )
 		{
-			uint64_t la = libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T);
+			uint64_t la = 
+				fasta
+				?
+				libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Da,T)
+				:
+				libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T)
+			;
 			OFS.Fout.write(reinterpret_cast<char const *>(T.begin()),la);
-			uint64_t lb = libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Db,T);
+			uint64_t lb = 
+				fasta
+				?
+				libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Db,T)
+				:
+				libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Db,T)
+				;
 			OFS.F2out.write(reinterpret_cast<char const *>(T.begin()),lb);
 
 			combs.pairs += 1;
@@ -225,7 +250,13 @@ void bamtofastqCollating(
 		}
 		else if ( ob->fsingle )
 		{
-			uint64_t la = libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T);
+			uint64_t la = 
+				fasta
+				?
+				libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Da,T)
+				:
+				libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T)
+				;
 			OFS.Sout.write(reinterpret_cast<char const *>(T.begin()),la);
 
 			combs.single += 1;
@@ -234,7 +265,13 @@ void bamtofastqCollating(
 		}
 		else if ( ob->forphan1 )
 		{
-			uint64_t la = libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T);
+			uint64_t la = 
+				fasta
+				?
+				libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Da,T)
+				:
+				libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T)
+				;
 			OFS.Oout.write(reinterpret_cast<char const *>(T.begin()),la);
 
 			combs.orphans1 += 1;
@@ -243,7 +280,13 @@ void bamtofastqCollating(
 		}
 		else if ( ob->forphan2 )
 		{
-			uint64_t la = libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T);
+			uint64_t la = 
+				fasta
+				?
+				libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Da,T)
+				:
+				libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T)
+				;
 			OFS.O2out.write(reinterpret_cast<char const *>(T.begin()),la);
 
 			combs.orphans2 += 1;
@@ -614,6 +657,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( std::string("T=<[") + arginfo.getDefaultTmpFileName() + "]>" , "temporary file name" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "gz=<[0]>", "compress output streams in gzip format (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "level=<[-1]>", "compression setting if gz=1 (default: -1, zlib default settings)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("fasta=<[")+libmaus::util::NumberSerialisation::formatNumber(getDefaultFastA(),0)+"]>", "output FastA instead of FastQ" ) );
 				
 				::biobambam::Licensing::printMap(std::cerr,V);
 
