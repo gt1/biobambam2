@@ -1,3 +1,9 @@
+biobambam (0.0.120) unstable; urgency=low
+
+  * add fasta key in bamtofastq 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Sun, 26 Jan 2014 13:06:38 +0000
+
 biobambam (0.0.119) unstable; urgency=low
 
   * add key for replacing header in bamcollate2 (reset=1) and bamreset 
