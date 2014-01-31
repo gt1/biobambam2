@@ -1,3 +1,9 @@
+biobambam (0.0.121) unstable; urgency=low
+
+  * improve handling of empty bgzf blocks 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Fri, 31 Jan 2014 12:52:37 +0000
+
 biobambam (0.0.120) unstable; urgency=low
 
   * add fasta key in bamtofastq 
