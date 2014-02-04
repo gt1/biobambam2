@@ -33,8 +33,6 @@
 #include <libmaus/bambam/BamWriter.hpp>
 #include <libmaus/bambam/ProgramHeaderLineSet.hpp>
 
-#include <libmaus/lz/SnappyCompress.hpp>
-
 #include <libmaus/util/ArgInfo.hpp>
 #include <libmaus/util/GetObject.hpp>
 #include <libmaus/util/PutObject.hpp>
@@ -60,6 +58,7 @@ static uint64_t getDefaultBlockSize() { return 1024; }
 static bool getDefaultDisableValidation() { return false; }
 static std::string getDefaultInputFormat() { return "bam"; }
 static int getDefaultFixMates() { return 0; }
+static int getDefaultSortThreads() { return 1; }
 
 int bamsort(::libmaus::util::ArgInfo const & arginfo)
 {
@@ -118,6 +117,7 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 	uint64_t blockmem = arginfo.getValue<uint64_t>("blockmb",getDefaultBlockSize())*1024*1024;
 	std::string const sortorder = arginfo.getValue<std::string>("SO","coordinate");
 	bool const fixmates = arginfo.getValue<int>("fixmates",getDefaultFixMates());
+	uint64_t sortthreads = arginfo.getValue<uint64_t>("sortthreads",getDefaultSortThreads());
 
 	// input decoder wrapper
 	libmaus::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
@@ -202,7 +202,8 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 	{
 		if ( sortorder != "queryname" )
 		{
-			::libmaus::bambam::BamEntryContainer< ::libmaus::bambam::BamAlignmentPosComparator > BEC(blockmem,tmpfilenameout);
+			::libmaus::bambam::BamEntryContainer< ::libmaus::bambam::BamAlignmentPosComparator > 
+				BEC(blockmem,tmpfilenameout,sortthreads);
 
 			if ( verbose )
 				std::cerr << "[V] Reading alignments from source." << std::endl;
@@ -265,7 +266,8 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 		}
 		else
 		{
-			::libmaus::bambam::BamEntryContainer< ::libmaus::bambam::BamAlignmentNameComparator > BEC(blockmem,tmpfilenameout);
+			::libmaus::bambam::BamEntryContainer< ::libmaus::bambam::BamAlignmentNameComparator > 
+				BEC(blockmem,tmpfilenameout,sortthreads);
 			
 			if ( verbose )
 				std::cerr << "[V] Reading alignments from source." << std::endl;
@@ -331,7 +333,7 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 	{
 		if ( sortorder != "queryname" )
 		{
-			::libmaus::bambam::BamEntryContainer< ::libmaus::bambam::BamAlignmentPosComparator > BEC(blockmem,tmpfilenameout);
+			::libmaus::bambam::BamEntryContainer< ::libmaus::bambam::BamAlignmentPosComparator > BEC(blockmem,tmpfilenameout,sortthreads);
 
 			if ( verbose )
 				std::cerr << "[V] Reading alignments from source." << std::endl;
@@ -353,7 +355,7 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 		}
 		else
 		{
-			::libmaus::bambam::BamEntryContainer< ::libmaus::bambam::BamAlignmentNameComparator > BEC(blockmem,tmpfilenameout);
+			::libmaus::bambam::BamEntryContainer< ::libmaus::bambam::BamAlignmentNameComparator > BEC(blockmem,tmpfilenameout,sortthreads);
 			
 			if ( verbose )
 				std::cerr << "[V] Reading alignments from source." << std::endl;
