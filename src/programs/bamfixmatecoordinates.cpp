@@ -31,7 +31,6 @@
 #include <libmaus/util/GetObject.hpp>
 
 #include <libmaus/lz/Deflate.hpp>
-#include <libmaus/lz/SnappyCompress.hpp>
 #include <libmaus/util/CountPutObject.hpp>
 #include <libmaus/util/ArgInfo.hpp>
 #include <libmaus/timing/RealTimeClock.hpp>

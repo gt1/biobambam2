@@ -34,8 +34,6 @@
 #include <libmaus/bambam/BamHeaderUpdate.hpp>
 #include <libmaus/bambam/ProgramHeaderLineSet.hpp>
 
-#include <libmaus/lz/SnappyCompress.hpp>
-
 #include <libmaus/util/ArgInfo.hpp>
 #include <libmaus/util/GetObject.hpp>
 #include <libmaus/util/PutObject.hpp>
