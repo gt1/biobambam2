@@ -324,7 +324,7 @@ void bamtofastqCollating(libmaus::util::ArgInfo const & arginfo)
 	uint64_t const numthreads = arginfo.getValue<uint64_t>("threads",0);
 
 	unsigned int const hlog = arginfo.getValue<unsigned int>("colhlog",18);
-	uint64_t const sbs = arginfo.getValueUnsignedNumeric<uint64_t>("colsbs",128ull*1024ull*1024ull);
+	uint64_t const sbs = arginfo.getValueUnsignedNumeric<uint64_t>("colsbs",32ull*1024ull*1024ull);
 
 	if ( inputformat == "bam" )
 	{
@@ -496,7 +496,7 @@ void bamtofastqCollatingRanking(libmaus::util::ArgInfo const & arginfo)
 	uint64_t const numthreads = arginfo.getValue<uint64_t>("threads",0);
 
 	unsigned int const hlog = arginfo.getValue<unsigned int>("colhlog",18);
-	uint64_t const sbs = arginfo.getValueUnsignedNumeric<uint64_t>("colsbs",128ull*1024ull*1024ull);
+	uint64_t const sbs = arginfo.getValueUnsignedNumeric<uint64_t>("colsbs",32ull*1024ull*1024ull);
 
 	if ( inputformat == "bam" )
 	{
@@ -653,7 +653,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "exclude=<[SECONDARY,SUPPLEMENTARY]>", "exclude alignments matching any of the given flags" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "disablevalidation=<[0]>", "disable validation of input data" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "colhlog=<[18]>", "base 2 logarithm of hash table size used for collation" ) );
-				V.push_back ( std::pair<std::string,std::string> ( std::string("colsbs=<[")+libmaus::util::NumberSerialisation::formatNumber(128ull*1024*1024,0)+"]>", "size of hash table overflow list in bytes" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("colsbs=<[")+libmaus::util::NumberSerialisation::formatNumber(32ull*1024*1024,0)+"]>", "size of hash table overflow list in bytes" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("T=<[") + arginfo.getDefaultTmpFileName() + "]>" , "temporary file name" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "gz=<[0]>", "compress output streams in gzip format (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "level=<[-1]>", "compression setting if gz=1 (default: -1, zlib default settings)" ) );
