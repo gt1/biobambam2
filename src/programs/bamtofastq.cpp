@@ -29,6 +29,7 @@
 #include <libmaus/util/TempFileRemovalContainer.hpp>
 #include <libmaus/util/MemUsage.hpp>
 #include <libmaus/lz/GzipOutputStream.hpp>
+#include <libmaus/aio/PosixFdInputStream.hpp>
 
 static std::string getDefaultInputFormat()
 {
@@ -40,6 +41,7 @@ bool getDefaultFastA()
 	return 0;
 }
 
+#if 0
 struct BamToFastQInputFileStream
 {
 	std::string const fn;
@@ -62,6 +64,42 @@ struct BamToFastQInputFileStream
 	: fn(rfn), CIS(
 		(fn != "-") ? openFile(fn) : libmaus::aio::CheckedInputStream::unique_ptr_type()
 	), in((fn != "-") ? (*CIS) : std::cin) {}
+};
+#endif
+
+struct BamToFastQInputFileStream
+{
+	std::string const fn;
+	libmaus::aio::PosixFdInputStream::unique_ptr_type CIS;
+	std::istream & in;
+	
+	static uint64_t getDefaultBufferSize()
+	{
+		return 2*1024*1024;
+	}
+	
+	static libmaus::aio::PosixFdInputStream::unique_ptr_type openFile(std::string const & fn, uint64_t const bufsize = getDefaultBufferSize())
+	{
+		libmaus::aio::PosixFdInputStream::unique_ptr_type ptr(new libmaus::aio::PosixFdInputStream(fn,bufsize,0));
+		return UNIQUE_PTR_MOVE(ptr);
+	}
+
+	static libmaus::aio::PosixFdInputStream::unique_ptr_type openFile(int const fd, uint64_t const bufsize = getDefaultBufferSize())
+	{
+		libmaus::aio::PosixFdInputStream::unique_ptr_type ptr(new libmaus::aio::PosixFdInputStream(fd,bufsize,0));
+		return UNIQUE_PTR_MOVE(ptr);
+	}
+	
+	BamToFastQInputFileStream(libmaus::util::ArgInfo const & arginfo)
+	: fn(arginfo.getValue<std::string>("filename","-")),
+	  CIS(
+		(fn != "-") ? openFile(fn) : openFile(STDIN_FILENO)
+	  ), in(*CIS) {}
+
+	BamToFastQInputFileStream(std::string const & rfn)
+	: fn(rfn), CIS(
+		(fn != "-") ? openFile(fn) : openFile(STDIN_FILENO)
+	), in(*CIS) {}
 };
 
 void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::bambam::BamAlignmentDecoder & bamdec)
