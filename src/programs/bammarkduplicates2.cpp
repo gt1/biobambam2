@@ -73,6 +73,8 @@ static std::string getProgId() { return "bammarkduplicates2"; }
 static int getDefaultMD5() { return 0; }
 static int getDefaultIndex() { return 0; }
 
+#include <libmaus/aio/PosixFdInput.hpp>
+
 /**
  * class storing elements for a given coordinate
  **/
@@ -1219,6 +1221,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	libmaus::bambam::BamAlignmentInputCallbackBam<BamAlignmentInputPositionCallbackDupMark>::unique_ptr_type BWR;
 	BamAlignmentInputPositionCallbackDupMark * PTI = 0;
 	::libmaus::aio::CheckedInputStream::unique_ptr_type CIS;
+	libmaus::aio::PosixFdInputStream::unique_ptr_type PFIS;
 	libmaus::aio::CheckedOutputStream::unique_ptr_type copybamstr;
 
 	typedef ::libmaus::bambam::BamCircularHashCollatingBamDecoder col_type;
@@ -1241,11 +1244,17 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	else if ( arginfo.hasArg("I") && (arginfo.getValue<std::string>("I","") != "") )
 	{
 		std::string const inputfilename = arginfo.getValue<std::string>("I","I");
+		#if 0
 		::libmaus::aio::CheckedInputStream::unique_ptr_type tCIS(new ::libmaus::aio::CheckedInputStream(inputfilename));
 		CIS = UNIQUE_PTR_MOVE(tCIS);
+		#else
+		libmaus::aio::PosixFdInputStream::unique_ptr_type tPFIS(new libmaus::aio::PosixFdInputStream(inputfilename,2*1024*1024,0));
+		PFIS = UNIQUE_PTR_MOVE(tPFIS);
+		#endif
 		
 		if ( markthreads > 1 )
 		{
+			#if 0
 			col_base_ptr_type tCBD(new par_col_type(
                                 *CIS,
                                 markthreads,
@@ -1253,17 +1262,36 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
                                 /* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY      | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL*/ 0,
                                 true /* put rank */,
                                 colhashbits,collistsize));
+			#else
+			col_base_ptr_type tCBD(new par_col_type(
+                                *PFIS,
+                                markthreads,
+                                tmpfilename,
+                                /* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY      | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL*/ 0,
+                                true /* put rank */,
+                                colhashbits,collistsize));
+			#endif
 			CBD = UNIQUE_PTR_MOVE(tCBD);
 		}
 		else
 		{
+			#if 0
 			col_base_ptr_type tCBD(new col_type(
                                 *CIS,
                                 // numthreads
                                 tmpfilename,
                                 /* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY      | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL*/ 0,
                                 true /* put rank */,
+                                colhashbits,collistsize));
+                        #else	
+			col_base_ptr_type tCBD(new col_type(
+                                *PFIS,
+                                // numthreads
+                                tmpfilename,
+                                /* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY      | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL*/ 0,
+                                true /* put rank */,
                                 colhashbits,collistsize));	
+			#endif
 			CBD = UNIQUE_PTR_MOVE(tCBD);
 		}
 	}
