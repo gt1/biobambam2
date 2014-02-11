@@ -1381,6 +1381,9 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	}
 
 	::libmaus::bambam::BamHeader const bamheader = CBD->getHeader();
+	
+	if ( arginfo.getValue<unsigned int>("disablevalidation",0) )
+		CBD->disableValidation();
 
 	uint64_t const trackfreelistsize = arginfo.getValueUnsignedNumeric<uint64_t>("trackfreelistsize",PositionTrackCallback::getDefaultFreeListSize());
 	PositionTrackCallback PTC(bamheader,trackfreelistsize);
