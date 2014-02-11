@@ -72,6 +72,7 @@ static bool getDefaultRmDup() { return 0; }
 static std::string getProgId() { return "bammarkduplicates2"; }
 static int getDefaultMD5() { return 0; }
 static int getDefaultIndex() { return 0; }
+static uint64_t getDefaultInputBufferSize() { return 64*1024; }
 
 #include <libmaus/aio/PosixFdInput.hpp>
 
@@ -1244,25 +1245,12 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	else if ( arginfo.hasArg("I") && (arginfo.getValue<std::string>("I","") != "") )
 	{
 		std::string const inputfilename = arginfo.getValue<std::string>("I","I");
-		#if 0
-		::libmaus::aio::CheckedInputStream::unique_ptr_type tCIS(new ::libmaus::aio::CheckedInputStream(inputfilename));
-		CIS = UNIQUE_PTR_MOVE(tCIS);
-		#else
-		libmaus::aio::PosixFdInputStream::unique_ptr_type tPFIS(new libmaus::aio::PosixFdInputStream(inputfilename,2*1024*1024,0));
+		uint64_t const inputbuffersize = arginfo.getValueUnsignedNumeric<uint64_t>("inputbuffersize",getDefaultInputBufferSize());
+		libmaus::aio::PosixFdInputStream::unique_ptr_type tPFIS(new libmaus::aio::PosixFdInputStream(inputfilename,inputbuffersize,0));
 		PFIS = UNIQUE_PTR_MOVE(tPFIS);
-		#endif
 		
 		if ( markthreads > 1 )
 		{
-			#if 0
-			col_base_ptr_type tCBD(new par_col_type(
-                                *CIS,
-                                markthreads,
-                                tmpfilename,
-                                /* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY      | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL*/ 0,
-                                true /* put rank */,
-                                colhashbits,collistsize));
-			#else
 			col_base_ptr_type tCBD(new par_col_type(
                                 *PFIS,
                                 markthreads,
@@ -1270,7 +1258,6 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
                                 /* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY      | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL*/ 0,
                                 true /* put rank */,
                                 colhashbits,collistsize));
-			#endif
 			CBD = UNIQUE_PTR_MOVE(tCBD);
 		}
 		else
@@ -1816,6 +1803,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "indexfilename=<filename>", "file name for BAM index file (default: extend output file name)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "trackfreelistsize=<["+::biobambam::Licensing::formatNumber(PositionTrackCallback::getDefaultFreeListSize())+"]>", "tracking lists free pool size" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "inputbuffersize=<["+::biobambam::Licensing::formatNumber(getDefaultInputBufferSize())+"]>", "size of input buffer" ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 

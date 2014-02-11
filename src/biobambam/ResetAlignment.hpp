@@ -21,6 +21,14 @@
 
 #include <libmaus/bambam/BamAlignment.hpp>
 
-uint64_t resetAlignment(uint8_t * const D, uint64_t blocksize, bool const resetaux = true);
-bool resetAlignment(libmaus::bambam::BamAlignment & algn, bool const resetaux = true, uint32_t const excludeflags = libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY);
+uint64_t resetAlignment(
+	uint8_t * const D, uint64_t blocksize, bool const resetaux = true,
+	libmaus::bambam::BamAuxFilterVector const * rgfilter = 0
+);
+bool resetAlignment(libmaus::bambam::BamAlignment & algn, bool const resetaux = true, 
+	uint32_t const excludeflags = 
+		libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY |
+		libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSUPPLEMENTARY,
+	libmaus::bambam::BamAuxFilterVector const * rgfilter = 0
+);
 #endif

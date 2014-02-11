@@ -187,6 +187,14 @@ keep single end reads
 .B resetheadertext
 file name for replacement SAM header if reset=1. By default the header of
 the input SAM/BAM/CRAM file is filtered.
+.PP
+.B resetaux=<0|1>:
+remove auxilliary fields if resetaux=1. This key is only available for
+reset=1. If reset=1 then the default is to remove all aux fields.
+.PP
+.B auxfilter=<>:
+comma separated list of aux tags to be kept if reset=1 and resetaux=0. If
+the key is not set then all tags are kept.
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"
