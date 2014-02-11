@@ -18,7 +18,9 @@
 **/
 #include <biobambam/ResetAlignment.hpp>
 
-uint64_t resetAlignment(uint8_t * const D, uint64_t blocksize, bool const resetaux)
+uint64_t resetAlignment(uint8_t * const D, uint64_t blocksize, bool const resetaux, 
+	libmaus::bambam::BamAuxFilterVector const * rgfilter
+)
 {
 	libmaus::bambam::BamAlignmentEncoderBase::putRefId(D,-1);
 	libmaus::bambam::BamAlignmentEncoderBase::putPos(D,-1);
@@ -26,6 +28,8 @@ uint64_t resetAlignment(uint8_t * const D, uint64_t blocksize, bool const reseta
 	libmaus::bambam::BamAlignmentEncoderBase::putNextPos(D,-1);
 	libmaus::bambam::BamAlignmentEncoderBase::putTlen(D,0);
 	
+	if ( rgfilter )
+		blocksize = libmaus::bambam::BamAlignmentDecoderBase::filterAux(D,blocksize,*rgfilter);
 	if ( resetaux )
 		blocksize = libmaus::bambam::BamAlignment::eraseAux(D);
 		
@@ -63,7 +67,8 @@ uint64_t resetAlignment(uint8_t * const D, uint64_t blocksize, bool const reseta
 
 bool resetAlignment(
 	libmaus::bambam::BamAlignment & algn, bool const resetaux,
-	uint32_t const excludeflags
+	uint32_t const excludeflags,
+	libmaus::bambam::BamAuxFilterVector const * rgfilter
 )
 {
 	algn.blocksize = resetAlignment(algn.D.begin(),algn.blocksize,resetaux);
