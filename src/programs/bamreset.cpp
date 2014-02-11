@@ -39,6 +39,7 @@ static int getDefaultVerbose() { return 1; }
 static int getDefaultMD5() { return 0; }
 static int getDefaultIndex() { return 0; }
 static std::string getDefaultExcludeFlags() { return "SECONDARY,SUPPLEMENTARY"; }
+static int getDefaultResetAux() { return 1; }
 
 
 int bamreset(::libmaus::util::ArgInfo const & arginfo)
@@ -183,9 +184,13 @@ int bamreset(::libmaus::util::ArgInfo const & arginfo)
 	libmaus::bambam::BamAlignment & algn = dec.getAlignment();
 	uint64_t c = 0;
 
+	bool const resetaux = arginfo.getValue<int>("resetaux",getDefaultResetAux());
+	libmaus::bambam::BamAuxFilterVector::unique_ptr_type const prgfilter(libmaus::bambam::BamAuxFilterVector::parseAuxFilterList(arginfo));
+	libmaus::bambam::BamAuxFilterVector const * rgfilter = prgfilter.get();
+
 	while ( dec.readAlignment() )
 	{
-		bool const keep = resetAlignment(algn,true,excludeflags);
+		bool const keep = resetAlignment(algn,resetaux /* reset aux */,excludeflags,rgfilter);
 		
 		if ( keep )
 			algn.serialise(writer->getStream());
@@ -243,6 +248,8 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "md5filename=<filename>", "file name for md5 check sum" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "resetheadertext=[<>]", "replacement SAM header text file (default: filter header in source BAM file)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "exclude=["+getDefaultExcludeFlags()+"]", "drop alignments having any of the given flags set" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("resetaux=<[")+::biobambam::Licensing::formatNumber(getDefaultResetAux())+"]>", "reset auxiliary fields (collate=0,1 only with reset=1)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "auxfilter=[<>]", "comma separated list of aux tags to keep if reset=1 and resetaux=0 (default: keep all)" ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 

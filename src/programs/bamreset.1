@@ -101,6 +101,13 @@ read as marked as having failed quality control
 read is marked as a duplicate of another read in the same file (see bammarkduplicates)
 .IP SUPPLEMENTARY:
 read is marked as supplementary alignment
+.PP
+.B resetaux=<0|1>:
+auxilliary fields (default).
+.PP
+.B auxfilter=<>:
+comma separated list of aux tags to be kept if resetaux=0. If the key is not
+set when resetaux=0, then all tags are kept.
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"

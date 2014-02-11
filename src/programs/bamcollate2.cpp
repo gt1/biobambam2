@@ -62,40 +62,6 @@ static std::string despace(std::string const & s)
 	return s;
 }
 
-static libmaus::bambam::BamAuxFilterVector::unique_ptr_type parseAuxFilterList(libmaus::util::ArgInfo const & arginfo)
-{
-	libmaus::bambam::BamAuxFilterVector::unique_ptr_type pfilter;
-	
-	if ( arginfo.hasArg("auxfilter") )
-	{
-		libmaus::bambam::BamAuxFilterVector::unique_ptr_type tfilter(
-			new libmaus::bambam::BamAuxFilterVector
-		);
-
-		std::string const filterlist = arginfo.getUnparsedValue("auxfilter","");
-		std::deque<std::string> tokens = libmaus::util::stringFunctions::tokenize<std::string>(filterlist,std::string(","));
-
-		std::cerr << "Constructing auxfilter " << filterlist << std::endl;
-		
-		for ( uint64_t i = 0; i < tokens.size(); ++i )
-		{
-			if ( tokens[i].size() != 2 )
-			{
-				libmaus::exception::LibMausException se;
-				se.getStream() << "Malformed tag name " << tokens[i] << std::endl;
-				se.finish();
-				throw se;
-			}
-			
-			tfilter->set(tokens[i]);
-		}
-		
-		pfilter = UNIQUE_PTR_MOVE(tfilter);
-	}
-	
-	return UNIQUE_PTR_MOVE(pfilter);
-}
-
 static uint32_t parseClassList(std::string s)
 {
 	s = despace(s);
@@ -265,7 +231,7 @@ void bamcollate2NonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::ba
 	unsigned int const verbshift = 20;
 	bool const reset = arginfo.getValue<unsigned int>("reset",false);
 	bool const resetaux = arginfo.getValue<unsigned int>("resetaux",getDefaultResetAux());
-	libmaus::bambam::BamAuxFilterVector::unique_ptr_type const prgfilter(parseAuxFilterList(arginfo));
+	libmaus::bambam::BamAuxFilterVector::unique_ptr_type const prgfilter(libmaus::bambam::BamAuxFilterVector::parseAuxFilterList(arginfo));
 	libmaus::bambam::BamAuxFilterVector const * rgfilter = prgfilter.get();
 
 	// construct new header
@@ -436,7 +402,7 @@ void bamcollate2Collating(
 	libmaus::timing::RealTimeClock rtc; rtc.start();
 	bool const reset = arginfo.getValue<unsigned int>("reset",false);
 	bool const resetaux = arginfo.getValue<unsigned int>("resetaux",getDefaultResetAux());
-	libmaus::bambam::BamAuxFilterVector::unique_ptr_type const prgfilter(parseAuxFilterList(arginfo));
+	libmaus::bambam::BamAuxFilterVector::unique_ptr_type const prgfilter(libmaus::bambam::BamAuxFilterVector::parseAuxFilterList(arginfo));
 	libmaus::bambam::BamAuxFilterVector const * rgfilter = prgfilter.get();
 	libmaus::bambam::BamAlignment Ralgna, Ralgnb;
 	std::string const sclassfilter = arginfo.getValue<std::string>("classes",getDefaultClassFilter());
@@ -1098,7 +1064,7 @@ void bamcollate2CollatingPostRanking(
 {
 	int const reset = arginfo.getValue<int>("reset",1);
 	bool const resetaux = arginfo.getValue<int>("resetaux",0);
-	libmaus::bambam::BamAuxFilterVector::unique_ptr_type const prgfilter(parseAuxFilterList(arginfo));
+	libmaus::bambam::BamAuxFilterVector::unique_ptr_type const prgfilter(libmaus::bambam::BamAuxFilterVector::parseAuxFilterList(arginfo));
 	libmaus::bambam::BamAuxFilterVector const * rgfilter = prgfilter.get();
 
 	if ( arginfo.getValue<unsigned int>("disablevalidation",0) )
