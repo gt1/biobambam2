@@ -41,35 +41,10 @@ bool getDefaultFastA()
 	return 0;
 }
 
-#if 0
 struct BamToFastQInputFileStream
 {
 	std::string const fn;
-	libmaus::aio::CheckedInputStream::unique_ptr_type CIS;
-	std::istream & in;
-	
-	static libmaus::aio::CheckedInputStream::unique_ptr_type openFile(std::string const & fn)
-	{
-		libmaus::aio::CheckedInputStream::unique_ptr_type ptr(new libmaus::aio::CheckedInputStream(fn));
-		return UNIQUE_PTR_MOVE(ptr);
-	}
-	
-	BamToFastQInputFileStream(libmaus::util::ArgInfo const & arginfo)
-	: fn(arginfo.getValue<std::string>("filename","-")),
-	  CIS(
-		(fn != "-") ? openFile(fn) : libmaus::aio::CheckedInputStream::unique_ptr_type()
-	  ), in((fn != "-") ? (*CIS) : std::cin) {}
-
-	BamToFastQInputFileStream(std::string const & rfn)
-	: fn(rfn), CIS(
-		(fn != "-") ? openFile(fn) : libmaus::aio::CheckedInputStream::unique_ptr_type()
-	), in((fn != "-") ? (*CIS) : std::cin) {}
-};
-#endif
-
-struct BamToFastQInputFileStream
-{
-	std::string const fn;
+	uint64_t const inputbuffersize;
 	libmaus::aio::PosixFdInputStream::unique_ptr_type CIS;
 	std::istream & in;
 	
@@ -92,12 +67,15 @@ struct BamToFastQInputFileStream
 	
 	BamToFastQInputFileStream(libmaus::util::ArgInfo const & arginfo)
 	: fn(arginfo.getValue<std::string>("filename","-")),
+	  inputbuffersize(arginfo.getValueUnsignedNumeric<uint64_t>("inputbuffersize",getDefaultBufferSize())),
 	  CIS(
 		(fn != "-") ? openFile(fn) : openFile(STDIN_FILENO)
 	  ), in(*CIS) {}
 
-	BamToFastQInputFileStream(std::string const & rfn)
-	: fn(rfn), CIS(
+	BamToFastQInputFileStream(std::string const & rfn, uint64_t const rinputbuffersize = getDefaultBufferSize())
+	: fn(rfn),
+	  inputbuffersize(rinputbuffersize), 
+	  CIS(
 		(fn != "-") ? openFile(fn) : openFile(STDIN_FILENO)
 	), in(*CIS) {}
 };
@@ -164,6 +142,7 @@ void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo)
 	std::string const inputformat = arginfo.getValue<std::string>("inputformat",getDefaultInputFormat());
 	std::string const inputfilename = arginfo.getValue<std::string>("filename","-");
 	uint64_t const numthreads = arginfo.getValue<uint64_t>("threads",0);
+	uint64_t const inputbuffersize = arginfo.getValueUnsignedNumeric<uint64_t>("inputbuffersize",BamToFastQInputFileStream::getDefaultBufferSize());
 	
 	if ( inputformat == "bam" )
 	{
@@ -174,7 +153,8 @@ void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo)
 		}
 		else
 		{
-			BamToFastQInputFileStream bamin(inputfilename);
+			BamToFastQInputFileStream bamin(inputfilename,inputbuffersize);
+			
 			if ( numthreads > 0 )
 			{
 				libmaus::bambam::BamParallelDecoderWrapper bamdecwrap(bamin.in,numthreads);
@@ -360,6 +340,7 @@ void bamtofastqCollating(libmaus::util::ArgInfo const & arginfo)
 	std::string const inputformat = arginfo.getValue<std::string>("inputformat",getDefaultInputFormat());
 	std::string const inputfilename = arginfo.getValue<std::string>("filename","-");
 	uint64_t const numthreads = arginfo.getValue<uint64_t>("threads",0);
+	uint64_t const inputbuffersize = arginfo.getValueUnsignedNumeric<uint64_t>("inputbuffersize",BamToFastQInputFileStream::getDefaultBufferSize());
 
 	unsigned int const hlog = arginfo.getValue<unsigned int>("colhlog",18);
 	uint64_t const sbs = arginfo.getValueUnsignedNumeric<uint64_t>("colsbs",32ull*1024ull*1024ull);
@@ -373,7 +354,7 @@ void bamtofastqCollating(libmaus::util::ArgInfo const & arginfo)
 		}
 		else
 		{
-			BamToFastQInputFileStream bamin(inputfilename);
+			BamToFastQInputFileStream bamin(inputfilename,inputbuffersize);
 
 			if ( numthreads > 0 )
 			{
@@ -532,13 +513,14 @@ void bamtofastqCollatingRanking(libmaus::util::ArgInfo const & arginfo)
 	std::string const inputformat = arginfo.getValue<std::string>("inputformat",getDefaultInputFormat());
 	std::string const inputfilename = arginfo.getValue<std::string>("filename","-");
 	uint64_t const numthreads = arginfo.getValue<uint64_t>("threads",0);
+	uint64_t const inputbuffersize = arginfo.getValueUnsignedNumeric<uint64_t>("inputbuffersize",BamToFastQInputFileStream::getDefaultBufferSize());
 
 	unsigned int const hlog = arginfo.getValue<unsigned int>("colhlog",18);
 	uint64_t const sbs = arginfo.getValueUnsignedNumeric<uint64_t>("colsbs",32ull*1024ull*1024ull);
 
 	if ( inputformat == "bam" )
 	{
-		BamToFastQInputFileStream bamin(inputfilename);
+		BamToFastQInputFileStream bamin(inputfilename,inputbuffersize);
 
 		if ( numthreads > 0 )
 		{
@@ -696,6 +678,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "gz=<[0]>", "compress output streams in gzip format (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "level=<[-1]>", "compression setting if gz=1 (default: -1, zlib default settings)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("fasta=<[")+libmaus::util::NumberSerialisation::formatNumber(getDefaultFastA(),0)+"]>", "output FastA instead of FastQ" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "inputbuffersize=<["+::biobambam::Licensing::formatNumber(BamToFastQInputFileStream::getDefaultBufferSize())+"]>", "size of input buffer" ) );
 				
 				::biobambam::Licensing::printMap(std::cerr,V);
 
