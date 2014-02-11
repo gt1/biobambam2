@@ -71,7 +71,7 @@ bool resetAlignment(
 	libmaus::bambam::BamAuxFilterVector const * rgfilter
 )
 {
-	algn.blocksize = resetAlignment(algn.D.begin(),algn.blocksize,resetaux);
+	algn.blocksize = resetAlignment(algn.D.begin(),algn.blocksize,resetaux,rgfilter);
 	
 	if ( algn.getFlags() & excludeflags )
 		return false;

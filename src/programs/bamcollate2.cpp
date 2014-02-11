@@ -32,6 +32,7 @@
 #include <libmaus/util/TempFileRemovalContainer.hpp>
 #include <libmaus/util/MemUsage.hpp>
 #include <libmaus/bambam/ProgramHeaderLineSet.hpp>
+#include <libmaus/bambam/BamAuxFilterVector.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static std::string getDefaultInputFormat() { return "bam"; }
@@ -42,6 +43,7 @@ static int getDefaultMD5() { return 0; }
 static int getDefaultIndex() { return 0; }
 static int getDefaultMapQThreshold() { return -1; }
 static std::string getDefaultClassFilter() { return "F,F2,O,O2,S"; }
+static bool getDefaultResetAux() { return true; }
 
 static uint32_t const classmask_F  = (1ull << 0);
 static uint32_t const classmask_F2 = (1ull << 1);
@@ -58,6 +60,40 @@ static std::string despace(std::string const & s)
 	while ( Q.size() && isspace(Q.back()) )
 		Q.pop_back();
 	return s;
+}
+
+static libmaus::bambam::BamAuxFilterVector::unique_ptr_type parseAuxFilterList(libmaus::util::ArgInfo const & arginfo)
+{
+	libmaus::bambam::BamAuxFilterVector::unique_ptr_type pfilter;
+	
+	if ( arginfo.hasArg("auxfilter") )
+	{
+		libmaus::bambam::BamAuxFilterVector::unique_ptr_type tfilter(
+			new libmaus::bambam::BamAuxFilterVector
+		);
+
+		std::string const filterlist = arginfo.getUnparsedValue("auxfilter","");
+		std::deque<std::string> tokens = libmaus::util::stringFunctions::tokenize<std::string>(filterlist,std::string(","));
+
+		std::cerr << "Constructing auxfilter " << filterlist << std::endl;
+		
+		for ( uint64_t i = 0; i < tokens.size(); ++i )
+		{
+			if ( tokens[i].size() != 2 )
+			{
+				libmaus::exception::LibMausException se;
+				se.getStream() << "Malformed tag name " << tokens[i] << std::endl;
+				se.finish();
+				throw se;
+			}
+			
+			tfilter->set(tokens[i]);
+		}
+		
+		pfilter = UNIQUE_PTR_MOVE(tfilter);
+	}
+	
+	return UNIQUE_PTR_MOVE(pfilter);
 }
 
 static uint32_t parseClassList(std::string s)
@@ -228,6 +264,9 @@ void bamcollate2NonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::ba
 	uint64_t cnt = 0;
 	unsigned int const verbshift = 20;
 	bool const reset = arginfo.getValue<unsigned int>("reset",false);
+	bool const resetaux = arginfo.getValue<unsigned int>("resetaux",getDefaultResetAux());
+	libmaus::bambam::BamAuxFilterVector::unique_ptr_type const prgfilter(parseAuxFilterList(arginfo));
+	libmaus::bambam::BamAuxFilterVector const * rgfilter = prgfilter.get();
 
 	// construct new header
 	::libmaus::bambam::BamHeader uphead(getModifiedHeaderText(bamdec,arginfo,reset));
@@ -280,8 +319,6 @@ void bamcollate2NonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::ba
 	 * end md5/index callbacks
 	 */
 
-	 // searchCompleteNoFailureZ
-
 	// construct writer
 	::libmaus::bambam::BamWriter::unique_ptr_type writer(new ::libmaus::bambam::BamWriter(std::cout,uphead,getLevel(arginfo),Pcbs));
 
@@ -299,7 +336,12 @@ void bamcollate2NonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::ba
 		)
 		{
 			if ( reset )
-				resetAlignment(algn);
+				resetAlignment(algn,
+					resetaux /* reset aux */,
+					libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY |
+				        libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSUPPLEMENTARY,
+				        rgfilter /* rg filter */
+				);
 		
 			algn.serialise(writer->getStream());
 		}
@@ -393,9 +435,14 @@ void bamcollate2Collating(
 	unsigned int const verbshift = 20;
 	libmaus::timing::RealTimeClock rtc; rtc.start();
 	bool const reset = arginfo.getValue<unsigned int>("reset",false);
+	bool const resetaux = arginfo.getValue<unsigned int>("resetaux",getDefaultResetAux());
+	libmaus::bambam::BamAuxFilterVector::unique_ptr_type const prgfilter(parseAuxFilterList(arginfo));
+	libmaus::bambam::BamAuxFilterVector const * rgfilter = prgfilter.get();
 	libmaus::bambam::BamAlignment Ralgna, Ralgnb;
 	std::string const sclassfilter = arginfo.getValue<std::string>("classes",getDefaultClassFilter());
 	uint32_t const classmask = parseClassList(sclassfilter);
+
+	std::cerr << "rgfilter=" << rgfilter << std::endl;
 
 	// construct new header
 	::libmaus::bambam::BamHeader uphead(getModifiedHeaderText(CHCBD,arginfo,reset));
@@ -495,7 +542,13 @@ void bamcollate2Collating(
 					if ( classmask & classmask_F )
 					{
 						Ralgna.copyFrom(ob->Da,ob->blocksizea);
-						resetAlignment(Ralgna);
+						resetAlignment(
+							Ralgna,
+							resetaux /* reset aux */,
+							libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY |
+						        libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSUPPLEMENTARY,
+						        rgfilter /* RG filter */
+							);
 						Ralgna.serialise(bgzfos);
 						bcnt += (Ralgna.blocksize);
 					}
@@ -503,7 +556,13 @@ void bamcollate2Collating(
 					if ( classmask & classmask_F2 )
 					{
 						Ralgnb.copyFrom(ob->Db,ob->blocksizeb);
-						resetAlignment(Ralgnb);
+						resetAlignment(
+							Ralgnb,
+							resetaux /* reset aux */,
+							libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY |
+						        libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSUPPLEMENTARY,
+						        rgfilter /* RG filter */
+						);
 						Ralgnb.serialise(bgzfos);
 						bcnt += (Ralgnb.blocksize);
 					}
@@ -551,7 +610,13 @@ void bamcollate2Collating(
 				if ( reset )
 				{				
 					Ralgna.copyFrom(ob->Da,ob->blocksizea);
-					resetAlignment(Ralgna);
+					resetAlignment(
+						Ralgna,
+						resetaux /* reset aux */,
+						libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY |
+					        libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSUPPLEMENTARY,
+					        rgfilter /* RG filter */
+					);
 					Ralgna.serialise(bgzfos);
 
 					bcnt += (Ralgna.blocksize);
@@ -589,7 +654,12 @@ void bamcollate2Collating(
 				if ( reset )
 				{				
 					Ralgna.copyFrom(ob->Da,ob->blocksizea);
-					resetAlignment(Ralgna);
+					resetAlignment(
+						Ralgna,
+						resetaux /* reset aux */,
+						libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY |
+					        libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSUPPLEMENTARY,
+					        rgfilter /* RG filter */					);
 					Ralgna.serialise(bgzfos);
 					bcnt += (Ralgna.blocksize);
 				}
@@ -626,7 +696,13 @@ void bamcollate2Collating(
 				if ( reset )
 				{				
 					Ralgna.copyFrom(ob->Da,ob->blocksizea);
-					resetAlignment(Ralgna);
+					resetAlignment(
+						Ralgna,
+						resetaux /* reset aux */,
+						libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY |
+					        libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSUPPLEMENTARY,
+					        rgfilter /* RG filter */
+					);
 					Ralgna.serialise(bgzfos);
 					bcnt += (Ralgna.blocksize);
 				}
@@ -1022,6 +1098,8 @@ void bamcollate2CollatingPostRanking(
 {
 	int const reset = arginfo.getValue<int>("reset",1);
 	bool const resetaux = arginfo.getValue<int>("resetaux",0);
+	libmaus::bambam::BamAuxFilterVector::unique_ptr_type const prgfilter(parseAuxFilterList(arginfo));
+	libmaus::bambam::BamAuxFilterVector const * rgfilter = prgfilter.get();
 
 	if ( arginfo.getValue<unsigned int>("disablevalidation",0) )
 		CHCBD.disableValidation();
@@ -1137,7 +1215,13 @@ void bamcollate2CollatingPostRanking(
 			algn.replaceName(namebuffer.begin(),namelen);
 			algn.filterOutAux(zrtag);
 			if ( reset )
-				resetAlignment(algn,resetaux);
+				resetAlignment(
+					algn,
+					resetaux,
+					libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY |
+				        libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSUPPLEMENTARY,
+				        rgfilter /* RG filter */
+				);
 			attachRank(algn,zranka,zzbafv);
 			algn.serialise(bgzfos);
 			
@@ -1148,7 +1232,13 @@ void bamcollate2CollatingPostRanking(
 			algn.replaceName(namebuffer.begin(),namelen);
 			algn.filterOutAux(zrtag);
 			if ( reset )
-				resetAlignment(algn,resetaux);
+				resetAlignment(
+					algn,
+					resetaux,
+					libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY |
+				        libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSUPPLEMENTARY,
+				        rgfilter /* RG filter */
+				);
 			attachRank(algn,zrankb,zzbafv);
 			algn.serialise(bgzfos);
 			
@@ -1179,7 +1269,13 @@ void bamcollate2CollatingPostRanking(
 			algn.replaceName(namebuffer.begin(),namelen);
 			algn.filterOutAux(zrtag);
 			if ( reset )
-				resetAlignment(algn,resetaux);
+				resetAlignment(
+					algn,
+					resetaux,
+					libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY |
+				        libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSUPPLEMENTARY,
+				        rgfilter /* RG filter */
+				);
 			attachRank(algn,zranka,zzbafv);
 			algn.serialise(bgzfos);
 
@@ -1216,7 +1312,13 @@ void bamcollate2CollatingPostRanking(
 			algn.replaceName(namebuffer.begin(),namelen);
 			algn.filterOutAux(zrtag);
 			if ( reset )
-				resetAlignment(algn,resetaux);
+				resetAlignment(
+					algn,
+					resetaux,
+					libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY |
+				        libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSUPPLEMENTARY,
+				        rgfilter /* RG filter */				
+				);
 			attachRank(algn,zranka,zzbafv);
 			algn.serialise(bgzfos);
 
@@ -1253,7 +1355,13 @@ void bamcollate2CollatingPostRanking(
 			algn.replaceName(namebuffer.begin(),namelen);
 			algn.filterOutAux(zrtag);
 			if ( reset )
-				resetAlignment(algn,resetaux);
+				resetAlignment(
+					algn,
+					resetaux,
+					libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY |
+				        libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSUPPLEMENTARY,
+				        rgfilter /* RG filter */
+				);
 			attachRank(algn,zranka,zzbafv);
 			algn.serialise(bgzfos);
 
@@ -1460,6 +1568,8 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( std::string("mapqthres=<[")+::biobambam::Licensing::formatNumber(getDefaultMapQThreshold())+"]>", "mapping quality threshold (collate=1 only, default: keep all)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("classes=[") + getDefaultClassFilter() + std::string("]"), "class filter (collate=1 only, default: keep all)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "resetheadertext=[<>]", "replacement SAM header text file for reset=1 (default: filter header in source BAM file)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("resetaux=<[")+::biobambam::Licensing::formatNumber(getDefaultResetAux())+"]>", "reset auxiliary fields (collate=0,1 only with reset=1)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "auxfilter=[<>]", "comma separated list of aux tags to keep if reset=1 and resetaux=0 (default: keep all)" ) );
 				
 				::biobambam::Licensing::printMap(std::cerr,V);
 
