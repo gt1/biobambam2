@@ -27,6 +27,7 @@ uint64_t resetAlignment(uint8_t * const D, uint64_t blocksize, bool const reseta
 	libmaus::bambam::BamAlignmentEncoderBase::putNextRefId(D,-1);
 	libmaus::bambam::BamAlignmentEncoderBase::putNextPos(D,-1);
 	libmaus::bambam::BamAlignmentEncoderBase::putTlen(D,0);
+	libmaus::bambam::BamAlignmentEncoderBase::putMapQ(D,0);
 	
 	if ( rgfilter )
 		blocksize = libmaus::bambam::BamAlignmentDecoderBase::filterAux(D,blocksize,*rgfilter);
