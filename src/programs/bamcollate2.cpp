@@ -408,8 +408,6 @@ void bamcollate2Collating(
 	std::string const sclassfilter = arginfo.getValue<std::string>("classes",getDefaultClassFilter());
 	uint32_t const classmask = parseClassList(sclassfilter);
 
-	std::cerr << "rgfilter=" << rgfilter << std::endl;
-
 	// construct new header
 	::libmaus::bambam::BamHeader uphead(getModifiedHeaderText(CHCBD,arginfo,reset));
 	uphead.changeSortOrder("unknown");
