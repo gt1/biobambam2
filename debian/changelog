@@ -1,3 +1,9 @@
+biobambam (0.0.123) unstable; urgency=low
+
+  * fixes for BAM indexing 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Thu, 20 Feb 2014 12:56:09 +0000
+
 biobambam (0.0.122) unstable; urgency=low
 
   * add parameter of tags to keep during BAM resetting
