@@ -92,7 +92,7 @@ struct DepthHist : public libmaus::bambam::CollatingBamDecoderAlignmentInputCall
 			int64_t const end = A.getAlignmentEnd()+1;
 			
 			for ( int64_t i = start; i < end; ++i )
-				if ( i >= 0 && i < D.size() )
+				if ( i >= 0 && i < static_cast<int64_t>(D.size()) )
 					D[i]++;
 					
 			prev.first = chr;

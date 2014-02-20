@@ -28,7 +28,6 @@
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; };
-static int getDefaultNumThreads() { return 1; };
 
 #include <libmaus/lz/BgzfDeflateOutputCallbackMD5.hpp>
 #include <libmaus/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
@@ -63,19 +62,19 @@ void getUsedRefSeqs(
 		if ( (!algn.isPaired()) && algn.isMapped() )
 		{
 			assert ( algn.getRefID() >= 0 );
-			assert ( algn.getRefID() < tusedrefseq->size() );
+			assert ( algn.getRefID() < static_cast<int64_t>(tusedrefseq->size()) );
 			tusedrefseq->set(algn.getRefID(),true);		
 		}
 		if ( algn.isPaired() && algn.isMapped() )
 		{
 			assert ( algn.getRefID() >= 0 );
-			assert ( algn.getRefID() < tusedrefseq->size() );
+			assert ( algn.getRefID() < static_cast<int64_t>(tusedrefseq->size()) );
 			tusedrefseq->set(algn.getRefID(),true);
 		}
 		if ( algn.isPaired() && algn.isMateMapped() )
 		{
 			assert ( algn.getNextRefID() >= 0 );
-			assert ( algn.getNextRefID() < tusedrefseq->size() );
+			assert ( algn.getNextRefID() < static_cast<int64_t>(tusedrefseq->size()) );
 			tusedrefseq->set(algn.getNextRefID(),true);
 		}
 			
@@ -217,7 +216,7 @@ uint64_t bamheaderfilter(libmaus::util::ArgInfo const & arginfo)
 		if ( (!algn.isPaired()) && algn.isMapped() )
 		{
 			assert ( algn.getRefID() >= 0 );
-			assert ( algn.getRefID() < usedrefseq->size() );
+			assert ( algn.getRefID() < static_cast<int64_t>(usedrefseq->size()) );
 			assert ( usedrefseq->get(algn.getRefID()) );
 			assert ( usedrefseq->rank1(algn.getRefID())-1 < uphead.chromosomes.size() );
 			algn.putRefId(usedrefseq->rank1(algn.getRefID())-1);
@@ -225,7 +224,7 @@ uint64_t bamheaderfilter(libmaus::util::ArgInfo const & arginfo)
 		if ( algn.isPaired() && algn.isMapped() )
 		{
 			assert ( algn.getRefID() >= 0 );
-			assert ( algn.getRefID() < usedrefseq->size() );
+			assert ( algn.getRefID() < static_cast<int64_t>(usedrefseq->size()) );
 			assert ( usedrefseq->get(algn.getRefID()) );
 			assert ( usedrefseq->rank1(algn.getRefID())-1 < uphead.chromosomes.size() );
 			algn.putRefId(usedrefseq->rank1(algn.getRefID())-1);
@@ -233,7 +232,7 @@ uint64_t bamheaderfilter(libmaus::util::ArgInfo const & arginfo)
 		if ( algn.isPaired() && algn.isMateMapped() )
 		{
 			assert ( algn.getNextRefID() >= 0 );
-			assert ( algn.getNextRefID() < usedrefseq->size() );
+			assert ( algn.getNextRefID() < static_cast<int64_t>(usedrefseq->size()) );
 			assert ( usedrefseq->get(algn.getNextRefID()) );
 			assert ( usedrefseq->rank1(algn.getNextRefID())-1 < uphead.chromosomes.size() );
 			algn.putNextRefId(usedrefseq->rank1(algn.getNextRefID())-1);
