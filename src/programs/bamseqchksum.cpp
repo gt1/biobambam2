@@ -71,8 +71,6 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 
 	libmaus::bambam::BamAlignment & algn = dec.getAlignment();
 	uint64_t c = 0;
-	uint32_t chksum_xor = crc32(0,0,0);
-	uint32_t chksum_withqual_xor = crc32(0,0,0);
         uint64_t chksum_mff = 1;
         uint64_t chksum_withqual_mff = 1;
 	::libmaus::autoarray::AutoArray<char> A;
@@ -93,7 +91,6 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 				chksum = crc32(chksum,(const unsigned char*) &flags, 1);
 				uint64_t const len = algn.isReverse() ? algn.decodeReadRC(A) : algn.decodeRead(A);
 				chksum = crc32(chksum,(const unsigned char *) A.begin(), len);
-				chksum_xor ^= chksum;
 				uint32_t chksum_copy = chksum;
 				chksum_copy &= 0x7FFFFFFFul;
 				if (!chksum_copy || chksum_copy == 0x7FFFFFFFul ) chksum_copy = 1;
@@ -102,7 +99,6 @@ if(!tmp){std::cout << c << " " << std::hex << chksum << " " <<  chksum_mff << " 
 				chksum_mff = tmp;
 				uint64_t const len2 = algn.isReverse() ? algn.decodeQualRC(A) : algn.decodeQual(A);
 				chksum = crc32(chksum,(const unsigned char *) A.begin(), len2);
-				chksum_withqual_xor ^= chksum;
 				chksum &= 0x7FFFFFFFul;
 				if (!chksum || chksum == 0x7FFFFFFFul ) chksum = 1;
 				chksum_withqual_mff = ( chksum_withqual_mff * chksum ) % 0x7FFFFFFFull;
@@ -111,12 +107,12 @@ if(!tmp){std::cout << c << " " << std::hex << chksum << " " <<  chksum_mff << " 
 				if ( verbose && (c & (1024*1024-1)) == 0 ) {
 					std::cerr << "[V] " << c/(1024*1024) << std::endl;
 std::cerr << c << " " << algn.getName() << " " << algn.isRead1() << " " << algn.isRead2() << " " << ( algn.isReverse() ? algn.getReadRC() : algn.getRead() ) << " " << ( algn.isReverse() ? algn.getQualRC() : algn.getQual() ) << " "
-<< std::hex << (0x0 + flags) << " " << chksum << " " << chksum_xor << " " << chksum_withqual_xor << " " << chksum_mff << " " << chksum_withqual_mff << " " << std::endl;
+<< std::hex << (0x0 + flags) << " " << chksum << " " << chksum_mff << " " << chksum_withqual_mff << " " << std::endl;
 				}
 			}
 		}
 
-	std::cout << c << " " << std::hex << chksum_xor << " " << chksum_withqual_xor << " " << chksum_mff << " " << chksum_withqual_mff << std::endl;
+	std::cout << c << " " << std::hex << " " << chksum_mff << " " << chksum_withqual_mff << std::endl;
 	return EXIT_SUCCESS;
 }
 
