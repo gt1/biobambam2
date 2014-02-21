@@ -1,3 +1,9 @@
+biobambam (0.0.125) unstable; urgency=low
+
+  * merge fixes for compiler warnings 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Fri, 21 Feb 2014 09:33:00 +0000
+
 biobambam (0.0.124) unstable; urgency=low
 
   * add meta information in BAM indexes 
