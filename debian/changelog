@@ -1,3 +1,9 @@
+biobambam (0.0.124) unstable; urgency=low
+
+  * add meta information in BAM indexes 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Fri, 21 Feb 2014 09:31:01 +0000
+
 biobambam (0.0.123) unstable; urgency=low
 
   * fixes for BAM indexing 
