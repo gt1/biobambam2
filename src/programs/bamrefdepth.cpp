@@ -108,7 +108,7 @@ int bamrefdepth(libmaus::util::ArgInfo const & arginfo)
 			
 			// std::cerr << "Q.size()=" << Q.size() << std::endl;
 
-			while ( Q.size() && pos > leftpos )
+			while ( Q.size() && pos > static_cast<int64_t>(leftpos) )
 			{
 				if ( Q[0] )
 					std::cout << refnames[algn.getRefID()] << "\t" << leftpos << "\t" << Q[0] << std::endl;
@@ -163,7 +163,7 @@ int bamrefdepth(libmaus::util::ArgInfo const & arginfo)
 					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CMATCH:
 					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CEQUAL:
 					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CDIFF:
-						for ( uint64_t i = 0; i < cigop[cidx].second; ++i, ++pos, ++readpos )
+						for ( uint64_t i = 0; static_cast<int64_t>(i) < cigop[cidx].second; ++i, ++pos, ++readpos )
 						{
 							if ( ! Q.size() )
 							{

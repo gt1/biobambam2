@@ -42,7 +42,6 @@
 #include <libmaus/lz/BgzfDeflateOutputCallbackMD5.hpp>
 #include <libmaus/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
 static int getDefaultMD5() { return 0; }
-static int getDefaultIndex() { return 0; }
 
 #include <biobambam/BamBamConfig.hpp>
 
@@ -54,8 +53,6 @@ static int getDefaultIndex() { return 0; }
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; }
-static std::string getDefaultSortOrder() { return "coordinate"; }
-static uint64_t getDefaultBlockSize() { return 1024; }
 static bool getDefaultDisableValidation() { return false; }
 static std::string getDefaultInputFormat() { return "bam"; }
 
