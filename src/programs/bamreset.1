@@ -69,6 +69,45 @@ written to the given file. If indexfilename is unset, then no BAM index will be 
 .PP
 .B indexfilename
 file name for BAM index if index=1.
+.PP
+.B resetheadertext
+file name for replacement SAM header. By default the header of
+the input SAM/BAM/CRAM file is filtered.
+.PP
+.B exclude=<SECONDARY,SUPPLEMENTARY>:
+Do not include reads in the output that have any of the given flags set. The
+flags are given separated by commas. Valid flags are:
+.IP PAIRED:
+read was paired in sequencing
+.IP PROPER_PAIR:
+read has been mapped as part of a proper pair
+.IP UNMAP:
+read was not mapped
+.IP MUNMAP:
+mate of read was not mapped
+.IP REVERSE:
+read was mapped to the reverse strand
+.IP MREVERSE:
+mate of read was mapped to the reverse strand
+.IP READ1:
+read was first read of a pair during sequencing
+.IP READ2:
+read was second read of a pair during sequencing
+.IP SECONDARY:
+alignment is secondary, i.e. an alternative mapping to the primary alignment in the same file
+.IP QCFAIL:
+read as marked as having failed quality control
+.IP DUP:
+read is marked as a duplicate of another read in the same file (see bammarkduplicates)
+.IP SUPPLEMENTARY:
+read is marked as supplementary alignment
+.PP
+.B resetaux=<0|1>:
+auxilliary fields (default).
+.PP
+.B auxfilter=<>:
+comma separated list of aux tags to be kept if resetaux=0. If the key is not
+set when resetaux=0, then all tags are kept.
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"

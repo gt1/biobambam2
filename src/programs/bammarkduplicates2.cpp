@@ -72,6 +72,9 @@ static bool getDefaultRmDup() { return 0; }
 static std::string getProgId() { return "bammarkduplicates2"; }
 static int getDefaultMD5() { return 0; }
 static int getDefaultIndex() { return 0; }
+static uint64_t getDefaultInputBufferSize() { return 64*1024; }
+
+#include <libmaus/aio/PosixFdInput.hpp>
 
 /**
  * class storing elements for a given coordinate
@@ -172,8 +175,11 @@ typedef PairActiveCountTemplate<libmaus::bambam::ReadEndsFreeList> ReadEndsActiv
 
 struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAlignmentInputPositionUpdateCallback
 {
+	static unsigned int const defaultfreelistsize = 16*1024;
+
 	// static int const default_maxreadlength = 250;
 	static int getDefaultMaxReadLength() { return 250; }
+	static uint64_t getDefaultFreeListSize() { return defaultfreelistsize; }
 	
 	#define POS_READ_ENDS
 
@@ -183,7 +189,6 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 	typedef BamPairActiveCount active_count_type;
 	#endif
 
-	static unsigned int const freelistsize = 16*1024;
 
 	libmaus::bambam::BamHeader const & bamheader;
 
@@ -217,11 +222,11 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 	
 	int maxreadlength;
 
-	BamAlignmentInputPositionCallbackDupMark(libmaus::bambam::BamHeader const & rbamheader)
+	BamAlignmentInputPositionCallbackDupMark(libmaus::bambam::BamHeader const & rbamheader, uint64_t const freelistsize = defaultfreelistsize)
 	: 
 		bamheader(rbamheader), REcomp(), position(-1,-1), 
 		expungepositionpairs(-1,-1), activepairs(), totalactivepairs(0), APFLpairs(freelistsize), excntpairs(0), fincntpairs(0), strcntpairs(0), REpairs(),
-		expungepositionfrags(-1,-1), activefrags(), totalactivefrags(0), APFLfrags(freelistsize), excntfrags(0), fincntfrags(0), strcntfrags(0), REfrags(),
+		expungepositionfrags(-1,-1), activefrags(), totalactivefrags(0), APFLfrags(2*freelistsize), excntfrags(0), fincntfrags(0), strcntfrags(0), REfrags(),
 		DSC(0),
 		maxreadlength(getDefaultMaxReadLength())
 	{
@@ -1097,8 +1102,8 @@ struct PositionTrackCallback :
 	public ::libmaus::bambam::CollatingBamDecoderAlignmentInputCallback,
 	public BamAlignmentInputPositionCallbackDupMark
 {
-	PositionTrackCallback(libmaus::bambam::BamHeader const & bamheader) 
-	: BamAlignmentInputPositionCallbackDupMark(bamheader) 
+	PositionTrackCallback(libmaus::bambam::BamHeader const & bamheader, uint64_t const freelistsize = getDefaultFreeListSize()) 
+	: BamAlignmentInputPositionCallbackDupMark(bamheader,freelistsize) 
 	{
 	
 	}
@@ -1217,6 +1222,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	libmaus::bambam::BamAlignmentInputCallbackBam<BamAlignmentInputPositionCallbackDupMark>::unique_ptr_type BWR;
 	BamAlignmentInputPositionCallbackDupMark * PTI = 0;
 	::libmaus::aio::CheckedInputStream::unique_ptr_type CIS;
+	libmaus::aio::PosixFdInputStream::unique_ptr_type PFIS;
 	libmaus::aio::CheckedOutputStream::unique_ptr_type copybamstr;
 
 	typedef ::libmaus::bambam::BamCircularHashCollatingBamDecoder col_type;
@@ -1239,13 +1245,14 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	else if ( arginfo.hasArg("I") && (arginfo.getValue<std::string>("I","") != "") )
 	{
 		std::string const inputfilename = arginfo.getValue<std::string>("I","I");
-		::libmaus::aio::CheckedInputStream::unique_ptr_type tCIS(new ::libmaus::aio::CheckedInputStream(inputfilename));
-		CIS = UNIQUE_PTR_MOVE(tCIS);
+		uint64_t const inputbuffersize = arginfo.getValueUnsignedNumeric<uint64_t>("inputbuffersize",getDefaultInputBufferSize());
+		libmaus::aio::PosixFdInputStream::unique_ptr_type tPFIS(new libmaus::aio::PosixFdInputStream(inputfilename,inputbuffersize,0));
+		PFIS = UNIQUE_PTR_MOVE(tPFIS);
 		
 		if ( markthreads > 1 )
 		{
 			col_base_ptr_type tCBD(new par_col_type(
-                                *CIS,
+                                *PFIS,
                                 markthreads,
                                 tmpfilename,
                                 /* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY      | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL*/ 0,
@@ -1255,13 +1262,23 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 		}
 		else
 		{
+			#if 0
 			col_base_ptr_type tCBD(new col_type(
                                 *CIS,
                                 // numthreads
                                 tmpfilename,
                                 /* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY      | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL*/ 0,
                                 true /* put rank */,
+                                colhashbits,collistsize));
+                        #else	
+			col_base_ptr_type tCBD(new col_type(
+                                *PFIS,
+                                // numthreads
+                                tmpfilename,
+                                /* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY      | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL*/ 0,
+                                true /* put rank */,
                                 colhashbits,collistsize));	
+			#endif
 			CBD = UNIQUE_PTR_MOVE(tCBD);
 		}
 	}
@@ -1351,8 +1368,12 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	}
 
 	::libmaus::bambam::BamHeader const bamheader = CBD->getHeader();
+	
+	if ( arginfo.getValue<unsigned int>("disablevalidation",0) )
+		CBD->disableValidation();
 
-	PositionTrackCallback PTC(bamheader);
+	uint64_t const trackfreelistsize = arginfo.getValueUnsignedNumeric<uint64_t>("trackfreelistsize",PositionTrackCallback::getDefaultFreeListSize());
+	PositionTrackCallback PTC(bamheader,trackfreelistsize);
 	
 	if ( SRC )
 		PTI = SRC.get();
@@ -1781,6 +1802,8 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "md5filename=<filename>", "file name for md5 check sum (default: extend output file name)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "indexfilename=<filename>", "file name for BAM index file (default: extend output file name)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "trackfreelistsize=<["+::biobambam::Licensing::formatNumber(PositionTrackCallback::getDefaultFreeListSize())+"]>", "tracking lists free pool size" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "inputbuffersize=<["+::biobambam::Licensing::formatNumber(getDefaultInputBufferSize())+"]>", "size of input buffer" ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 

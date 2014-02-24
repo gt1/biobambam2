@@ -218,6 +218,8 @@ int main(int argc, char * argv[])
 	{
 		::libmaus::util::ArgInfo const arginfo(argc,argv);
 		
+		std::cerr << "[V] This program is deprecated, please use bamcollate2 instead." << std::endl;
+		
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
 			if ( 
 				arginfo.restargs[i] == "-v"

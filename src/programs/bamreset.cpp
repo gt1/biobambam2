@@ -38,6 +38,8 @@ static int getDefaultVerbose() { return 1; }
 #include <libmaus/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
 static int getDefaultMD5() { return 0; }
 static int getDefaultIndex() { return 0; }
+static std::string getDefaultExcludeFlags() { return "SECONDARY,SUPPLEMENTARY"; }
+static int getDefaultResetAux() { return 1; }
 
 
 int bamreset(::libmaus::util::ArgInfo const & arginfo)
@@ -86,10 +88,34 @@ int bamreset(::libmaus::util::ArgInfo const & arginfo)
 	::libmaus::bambam::BamDecoder dec(std::cin,false);
 	::libmaus::bambam::BamHeader const & header = dec.getHeader();
 
-	std::string const headertext(header.text);
+	std::string headertext = header.text;
+
+	// no replacement header file given
+	if ( ! arginfo.hasArg("resetheadertext") )
+	{
+		// remove SQ lines
+		std::vector<libmaus::bambam::HeaderLine> allheaderlines = libmaus::bambam::HeaderLine::extractLines(headertext);
+
+		std::ostringstream upheadstr;
+		for ( uint64_t i = 0; i < allheaderlines.size(); ++i )
+			if ( allheaderlines[i].type != "SQ" )
+				upheadstr << allheaderlines[i].line << std::endl;
+
+		headertext = upheadstr.str();
+	}
+	// replace header given in file
+	else
+	{
+		std::string const headerfilename = arginfo.getUnparsedValue("resetheadertext","");
+		uint64_t const headerlen = libmaus::util::GetFileSize::getFileSize(headerfilename);
+		libmaus::aio::CheckedInputStream CIS(headerfilename);
+		libmaus::autoarray::AutoArray<char> ctext(headerlen,false);
+		CIS.read(ctext.begin(),headerlen);
+		headertext = std::string(ctext.begin(),ctext.end());		
+	}
 
 	// add PG line to header
-	std::string upheadtext = ::libmaus::bambam::ProgramHeaderLineSet::addProgramLine(
+	headertext = libmaus::bambam::ProgramHeaderLineSet::addProgramLine(
 		headertext,
 		"bamreset", // ID
 		"bamreset", // PN
@@ -98,16 +124,8 @@ int bamreset(::libmaus::util::ArgInfo const & arginfo)
 		std::string(PACKAGE_VERSION) // VN			
 	);
 	
-	std::vector<libmaus::bambam::HeaderLine> allheaderlines = libmaus::bambam::HeaderLine::extractLines(upheadtext);
-
-	std::ostringstream upheadstr;
-	for ( uint64_t i = 0; i < allheaderlines.size(); ++i )
-		if ( allheaderlines[i].type != "SQ" )
-			upheadstr << allheaderlines[i].line << std::endl;
-	upheadtext = upheadstr.str();
-	
 	// construct new header
-	libmaus::bambam::BamHeader uphead(upheadtext);
+	libmaus::bambam::BamHeader uphead(headertext);
 	uphead.changeSortOrder("unknown");
 
 	/*
@@ -116,6 +134,8 @@ int bamreset(::libmaus::util::ArgInfo const & arginfo)
 	std::string const tmpfilenamebase = arginfo.getValue<std::string>("tmpfile",arginfo.getDefaultTmpFileName());
 	std::string const tmpfileindex = tmpfilenamebase + "_index";
 	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
+	uint32_t const excludeflags = libmaus::bambam::BamFlagBase::stringToFlags(
+		arginfo.getValue<std::string>("exclude",getDefaultExcludeFlags()));
 
 	std::string md5filename;
 	std::string indexfilename;
@@ -164,9 +184,13 @@ int bamreset(::libmaus::util::ArgInfo const & arginfo)
 	libmaus::bambam::BamAlignment & algn = dec.getAlignment();
 	uint64_t c = 0;
 
+	bool const resetaux = arginfo.getValue<int>("resetaux",getDefaultResetAux());
+	libmaus::bambam::BamAuxFilterVector::unique_ptr_type const prgfilter(libmaus::bambam::BamAuxFilterVector::parseAuxFilterList(arginfo));
+	libmaus::bambam::BamAuxFilterVector const * rgfilter = prgfilter.get();
+
 	while ( dec.readAlignment() )
 	{
-		bool const keep = resetAlignment(algn);
+		bool const keep = resetAlignment(algn,resetaux /* reset aux */,excludeflags,rgfilter);
 		
 		if ( keep )
 			algn.serialise(writer->getStream());
@@ -220,10 +244,18 @@ int main(int argc, char * argv[])
 			
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", "compression settings for output bam file (0=uncompressed,1=fast,9=best,-1=zlib default)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress information" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "md5filename=<filename>", "file name for md5 check sum" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "resetheadertext=[<>]", "replacement SAM header text file (default: filter header in source BAM file)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "exclude=["+getDefaultExcludeFlags()+"]", "drop alignments having any of the given flags set" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("resetaux=<[")+::biobambam::Licensing::formatNumber(getDefaultResetAux())+"]>", "reset auxiliary fields (collate=0,1 only with reset=1)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "auxfilter=[<>]", "comma separated list of aux tags to keep if reset=1 and resetaux=0 (default: keep all)" ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
+
+				std::cerr << "Alignment flags: PAIRED,PROPER_PAIR,UNMAP,MUNMAP,REVERSE,MREVERSE,READ1,READ2,SECONDARY,QCFAIL,DUP,SUPPLEMENTARY" << std::endl;
 				
 				return EXIT_SUCCESS;
 			}

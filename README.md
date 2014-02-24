@@ -3,7 +3,7 @@ biobambam
 
 This package contains some tools for processing BAM files including
 
- - bamcollate: reads BAM and writes BAM reordered such that alignment
+ - bamcollate2: reads BAM and writes BAM reordered such that alignment
    or collated by query name
  - bammarkduplicates: reads BAM and writes BAM with duplicate alignments
    marked using the BAM flags field

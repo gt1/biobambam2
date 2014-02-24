@@ -40,9 +40,9 @@ int bamindex(libmaus::util::ArgInfo const & arginfo, std::istream & in, std::ost
 	libmaus::bambam::BamIndexGenerator BIG(tmpfileprefix,verbose,validate,debug);
 
 	libmaus::autoarray::AutoArray<uint8_t> B(libmaus::lz::BgzfConstants::getBgzfMaxBlockSize());
-	std::pair<uint64_t,uint64_t> rinfo;
-	while ((rinfo=rec.readPlusInfo(reinterpret_cast<char *>(B.begin()),B.size())).second)
-		BIG.addBlock(B.begin(),rinfo.first,rinfo.second);
+	libmaus::lz::BgzfInflateInfo rinfo;
+	while ( ! (rinfo=rec.readAndInfo(reinterpret_cast<char *>(B.begin()),B.size())).streameof )
+		BIG.addBlock(B.begin(),rinfo.compressed,rinfo.uncompressed);
 
 	BIG.flush(out);
 	

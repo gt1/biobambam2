@@ -29,34 +29,55 @@
 #include <libmaus/util/TempFileRemovalContainer.hpp>
 #include <libmaus/util/MemUsage.hpp>
 #include <libmaus/lz/GzipOutputStream.hpp>
+#include <libmaus/aio/PosixFdInputStream.hpp>
 
 static std::string getDefaultInputFormat()
 {
 	return "bam";
 }
 
+bool getDefaultFastA()
+{
+	return 0;
+}
+
 struct BamToFastQInputFileStream
 {
 	std::string const fn;
-	libmaus::aio::CheckedInputStream::unique_ptr_type CIS;
+	uint64_t const inputbuffersize;
+	libmaus::aio::PosixFdInputStream::unique_ptr_type CIS;
 	std::istream & in;
 	
-	static libmaus::aio::CheckedInputStream::unique_ptr_type openFile(std::string const & fn)
+	static uint64_t getDefaultBufferSize()
 	{
-		libmaus::aio::CheckedInputStream::unique_ptr_type ptr(new libmaus::aio::CheckedInputStream(fn));
+		return 2*1024*1024;
+	}
+	
+	static libmaus::aio::PosixFdInputStream::unique_ptr_type openFile(std::string const & fn, uint64_t const bufsize = getDefaultBufferSize())
+	{
+		libmaus::aio::PosixFdInputStream::unique_ptr_type ptr(new libmaus::aio::PosixFdInputStream(fn,bufsize,0));
+		return UNIQUE_PTR_MOVE(ptr);
+	}
+
+	static libmaus::aio::PosixFdInputStream::unique_ptr_type openFile(int const fd, uint64_t const bufsize = getDefaultBufferSize())
+	{
+		libmaus::aio::PosixFdInputStream::unique_ptr_type ptr(new libmaus::aio::PosixFdInputStream(fd,bufsize,0));
 		return UNIQUE_PTR_MOVE(ptr);
 	}
 	
 	BamToFastQInputFileStream(libmaus::util::ArgInfo const & arginfo)
 	: fn(arginfo.getValue<std::string>("filename","-")),
+	  inputbuffersize(arginfo.getValueUnsignedNumeric<uint64_t>("inputbuffersize",getDefaultBufferSize())),
 	  CIS(
-		(fn != "-") ? openFile(fn) : libmaus::aio::CheckedInputStream::unique_ptr_type()
-	  ), in((fn != "-") ? (*CIS) : std::cin) {}
+		(fn != "-") ? openFile(fn) : openFile(STDIN_FILENO)
+	  ), in(*CIS) {}
 
-	BamToFastQInputFileStream(std::string const & rfn)
-	: fn(rfn), CIS(
-		(fn != "-") ? openFile(fn) : libmaus::aio::CheckedInputStream::unique_ptr_type()
-	), in((fn != "-") ? (*CIS) : std::cin) {}
+	BamToFastQInputFileStream(std::string const & rfn, uint64_t const rinputbuffersize = getDefaultBufferSize())
+	: fn(rfn),
+	  inputbuffersize(rinputbuffersize), 
+	  CIS(
+		(fn != "-") ? openFile(fn) : openFile(STDIN_FILENO)
+	), in(*CIS) {}
 };
 
 void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::bambam::BamAlignmentDecoder & bamdec)
@@ -67,6 +88,7 @@ void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::bam
 	libmaus::timing::RealTimeClock rtc; rtc.start();
 	bool const gz = arginfo.getValue<int>("gz",0);
 	int const level = std::min(9,std::max(-1,arginfo.getValue<int>("level",Z_DEFAULT_COMPRESSION)));
+	bool const fasta = arginfo.getValue<int>("fasta",getDefaultFastA());
 	uint32_t const excludeflags = libmaus::bambam::BamFlagBase::stringToFlags(arginfo.getValue<std::string>("exclude","SECONDARY,SUPPLEMENTARY"));
 	libmaus::bambam::BamAlignment const & algn = bamdec.getAlignment();
 	::libmaus::autoarray::AutoArray<uint8_t> T;
@@ -89,7 +111,12 @@ void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::bam
 		
 		if ( ! (algn.getFlags() & excludeflags) )
 		{
-			uint64_t la = libmaus::bambam::BamAlignmentDecoderBase::putFastQ(algn.D.begin(),T);
+			uint64_t la = 
+				fasta ?
+				libmaus::bambam::BamAlignmentDecoderBase::putFastA(algn.D.begin(),T)
+				:
+				libmaus::bambam::BamAlignmentDecoderBase::putFastQ(algn.D.begin(),T)				
+				;
 			outputstream.write(reinterpret_cast<char const *>(T.begin()),la);
 			bcnt += la;
 		}
@@ -115,6 +142,7 @@ void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo)
 	std::string const inputformat = arginfo.getValue<std::string>("inputformat",getDefaultInputFormat());
 	std::string const inputfilename = arginfo.getValue<std::string>("filename","-");
 	uint64_t const numthreads = arginfo.getValue<uint64_t>("threads",0);
+	uint64_t const inputbuffersize = arginfo.getValueUnsignedNumeric<uint64_t>("inputbuffersize",BamToFastQInputFileStream::getDefaultBufferSize());
 	
 	if ( inputformat == "bam" )
 	{
@@ -125,7 +153,8 @@ void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo)
 		}
 		else
 		{
-			BamToFastQInputFileStream bamin(inputfilename);
+			BamToFastQInputFileStream bamin(inputfilename,inputbuffersize);
+			
 			if ( numthreads > 0 )
 			{
 				libmaus::bambam::BamParallelDecoderWrapper bamdecwrap(bamin.in,numthreads);
@@ -195,6 +224,8 @@ void bamtofastqCollating(
 	if ( arginfo.getValue<unsigned int>("disablevalidation",0) )
 		CHCBD.disableValidation();
 
+	bool const fasta = arginfo.getValue<int>("fasta",getDefaultFastA());
+
 	libmaus::bambam::BamToFastqOutputFileSet OFS(arginfo);
 
 	libmaus::bambam::CircularHashCollatingBamDecoder::OutputBufferEntry const * ob = 0;
@@ -214,9 +245,21 @@ void bamtofastqCollating(
 		
 		if ( ob->fpair )
 		{
-			uint64_t la = libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T);
+			uint64_t la = 
+				fasta
+				?
+				libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Da,T)
+				:
+				libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T)
+			;
 			OFS.Fout.write(reinterpret_cast<char const *>(T.begin()),la);
-			uint64_t lb = libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Db,T);
+			uint64_t lb = 
+				fasta
+				?
+				libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Db,T)
+				:
+				libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Db,T)
+				;
 			OFS.F2out.write(reinterpret_cast<char const *>(T.begin()),lb);
 
 			combs.pairs += 1;
@@ -225,7 +268,13 @@ void bamtofastqCollating(
 		}
 		else if ( ob->fsingle )
 		{
-			uint64_t la = libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T);
+			uint64_t la = 
+				fasta
+				?
+				libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Da,T)
+				:
+				libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T)
+				;
 			OFS.Sout.write(reinterpret_cast<char const *>(T.begin()),la);
 
 			combs.single += 1;
@@ -234,7 +283,13 @@ void bamtofastqCollating(
 		}
 		else if ( ob->forphan1 )
 		{
-			uint64_t la = libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T);
+			uint64_t la = 
+				fasta
+				?
+				libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Da,T)
+				:
+				libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T)
+				;
 			OFS.Oout.write(reinterpret_cast<char const *>(T.begin()),la);
 
 			combs.orphans1 += 1;
@@ -243,7 +298,13 @@ void bamtofastqCollating(
 		}
 		else if ( ob->forphan2 )
 		{
-			uint64_t la = libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T);
+			uint64_t la = 
+				fasta
+				?
+				libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Da,T)
+				:
+				libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T)
+				;
 			OFS.O2out.write(reinterpret_cast<char const *>(T.begin()),la);
 
 			combs.orphans2 += 1;
@@ -279,9 +340,10 @@ void bamtofastqCollating(libmaus::util::ArgInfo const & arginfo)
 	std::string const inputformat = arginfo.getValue<std::string>("inputformat",getDefaultInputFormat());
 	std::string const inputfilename = arginfo.getValue<std::string>("filename","-");
 	uint64_t const numthreads = arginfo.getValue<uint64_t>("threads",0);
+	uint64_t const inputbuffersize = arginfo.getValueUnsignedNumeric<uint64_t>("inputbuffersize",BamToFastQInputFileStream::getDefaultBufferSize());
 
 	unsigned int const hlog = arginfo.getValue<unsigned int>("colhlog",18);
-	uint64_t const sbs = arginfo.getValueUnsignedNumeric<uint64_t>("colsbs",128ull*1024ull*1024ull);
+	uint64_t const sbs = arginfo.getValueUnsignedNumeric<uint64_t>("colsbs",32ull*1024ull*1024ull);
 
 	if ( inputformat == "bam" )
 	{
@@ -292,7 +354,7 @@ void bamtofastqCollating(libmaus::util::ArgInfo const & arginfo)
 		}
 		else
 		{
-			BamToFastQInputFileStream bamin(inputfilename);
+			BamToFastQInputFileStream bamin(inputfilename,inputbuffersize);
 
 			if ( numthreads > 0 )
 			{
@@ -451,13 +513,14 @@ void bamtofastqCollatingRanking(libmaus::util::ArgInfo const & arginfo)
 	std::string const inputformat = arginfo.getValue<std::string>("inputformat",getDefaultInputFormat());
 	std::string const inputfilename = arginfo.getValue<std::string>("filename","-");
 	uint64_t const numthreads = arginfo.getValue<uint64_t>("threads",0);
+	uint64_t const inputbuffersize = arginfo.getValueUnsignedNumeric<uint64_t>("inputbuffersize",BamToFastQInputFileStream::getDefaultBufferSize());
 
 	unsigned int const hlog = arginfo.getValue<unsigned int>("colhlog",18);
-	uint64_t const sbs = arginfo.getValueUnsignedNumeric<uint64_t>("colsbs",128ull*1024ull*1024ull);
+	uint64_t const sbs = arginfo.getValueUnsignedNumeric<uint64_t>("colsbs",32ull*1024ull*1024ull);
 
 	if ( inputformat == "bam" )
 	{
-		BamToFastQInputFileStream bamin(inputfilename);
+		BamToFastQInputFileStream bamin(inputfilename,inputbuffersize);
 
 		if ( numthreads > 0 )
 		{
@@ -610,10 +673,12 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "exclude=<[SECONDARY,SUPPLEMENTARY]>", "exclude alignments matching any of the given flags" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "disablevalidation=<[0]>", "disable validation of input data" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "colhlog=<[18]>", "base 2 logarithm of hash table size used for collation" ) );
-				V.push_back ( std::pair<std::string,std::string> ( std::string("colsbs=<[")+libmaus::util::NumberSerialisation::formatNumber(128ull*1024*1024,0)+"]>", "size of hash table overflow list in bytes" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("colsbs=<[")+libmaus::util::NumberSerialisation::formatNumber(32ull*1024*1024,0)+"]>", "size of hash table overflow list in bytes" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("T=<[") + arginfo.getDefaultTmpFileName() + "]>" , "temporary file name" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "gz=<[0]>", "compress output streams in gzip format (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "level=<[-1]>", "compression setting if gz=1 (default: -1, zlib default settings)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("fasta=<[")+libmaus::util::NumberSerialisation::formatNumber(getDefaultFastA(),0)+"]>", "output FastA instead of FastQ" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "inputbuffersize=<["+::biobambam::Licensing::formatNumber(BamToFastQInputFileStream::getDefaultBufferSize())+"]>", "size of input buffer" ) );
 				
 				::biobambam::Licensing::printMap(std::cerr,V);
 

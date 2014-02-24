@@ -1,3 +1,51 @@
+biobambam (0.0.125) unstable; urgency=low
+
+  * merge fixes for compiler warnings 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Fri, 21 Feb 2014 09:33:00 +0000
+
+biobambam (0.0.124) unstable; urgency=low
+
+  * add meta information in BAM indexes 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Fri, 21 Feb 2014 09:31:01 +0000
+
+biobambam (0.0.123) unstable; urgency=low
+
+  * fixes for BAM indexing 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Thu, 20 Feb 2014 12:56:09 +0000
+
+biobambam (0.0.122) unstable; urgency=low
+
+  * add parameter of tags to keep during BAM resetting
+
+ -- German Tischler <gt1@sanger.ac.uk>  Wed, 12 Feb 2014 09:55:51 +0000
+
+biobambam (0.0.121) unstable; urgency=low
+
+  * improve handling of empty bgzf blocks 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Fri, 31 Jan 2014 12:52:37 +0000
+
+biobambam (0.0.120) unstable; urgency=low
+
+  * add fasta key in bamtofastq 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Sun, 26 Jan 2014 13:06:38 +0000
+
+biobambam (0.0.119) unstable; urgency=low
+
+  * add key for replacing header in bamcollate2 (reset=1) and bamreset 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Thu, 23 Jan 2014 14:00:45 +0000
+
+biobambam (0.0.118) unstable; urgency=low
+
+  * add bamfilterheader program 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Mon, 20 Jan 2014 20:50:19 +0000
+
 biobambam (0.0.117) unstable; urgency=low
 
   * add reset and classes keys in bamcollate2 

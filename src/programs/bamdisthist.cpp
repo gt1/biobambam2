@@ -32,87 +32,27 @@
 
 struct DepthHist : public libmaus::bambam::CollatingBamDecoderAlignmentInputCallback
 {
-	static uint64_t const skipthres = 1024;
-
-	libmaus::util::Histogram hist;
 	std::pair<int64_t,int64_t> prev;
-	int64_t actchr;
-	
-	std::deque < uint64_t > Q;
 	std::vector < uint32_t > D;
-	
 	libmaus::bambam::BamHeader const * bamheader;
+	libmaus::util::Histogram hist;
 	
 	DepthHist()
-	: prev(-1,-1), actchr(-1), bamheader(0)
+	: prev(-1,-1), D(), bamheader(0)
 	{
 	
 	}
 	
 	void handleD()
 	{
-		std::cerr << "[V] handling D array." << std::endl;
-		std::string name;
-		
-		if ( bamheader && actchr >= 0 )
-		{
-			std::cerr << "[V] getting chromosome data for actchr=" 
-				<< actchr 
-				<< " header is " << bamheader
-				<< " number of chromosomes is " << bamheader->chromosomes.size()
-				<< std::endl;
-			
-			uint64_t const exlen = bamheader->chromosomes.at(actchr).len;
-			
-			std::cerr << "got exlen=" << exlen << std::endl;
-			
-			name = bamheader->chromosomes.at(actchr).name;
-			
-			std::cerr << "[V] got length " << exlen << " name " << name << std::endl;
-			
-			while ( D.size() < exlen )
-				D.push_back(0);
-				
-			std::cerr << "[V] added missing values." << std::endl;
-		}
-		
-		std::string const fn = "depth_chr_" + libmaus::util::NumberSerialisation::formatNumber(actchr,4) + "_" + name + ".gpl";
-		libmaus::aio::CheckedOutputStream COS(fn);
-		uint64_t const skip = 1000;
-
-		std::cerr << "[V] opened file " << fn << " for writing." << std::endl;
-
-		int64_t const ws = 500;
-		for ( int64_t i = 0; i < static_cast<int64_t>(D.size()); i += skip )
-		{
-			int64_t const low = std::max(static_cast<int64_t>(0),i-ws);
-			int64_t const high = std::min(i+ws,static_cast<int64_t>(D.size()-1));
-			int64_t const diam = high-low+1;
-			
-			int64_t s = 0;
-			for ( int64_t j = low; j < high; ++j )
-				s += D[j];
-			double const ds = static_cast<double>(s)/(diam);
-
-			if ( s )
-				COS << i << "\t" << ds << std::endl;
-		}
-		
-		COS.flush();
-
-		std::cerr << "Handle actchr=" << actchr << " size " << D.size() << std::endl;
+		for ( uint64_t i = 0; i < D.size(); ++i )
+			if ( D[i] )
+				hist(D[i]);	
 	}
-
+	
 	void flush()
 	{
-		while ( Q.size() )
-		{
-			hist ( Q.front() );
-			D.push_back(Q.front());
-			Q.pop_front();
-		}
-
-		if ( actchr != -1 )
+		if ( prev.first != -1 )
 			handleD();
 	}
 
@@ -139,64 +79,24 @@ struct DepthHist : public libmaus::bambam::CollatingBamDecoderAlignmentInputCall
 				throw se;
 			}
 			
-			// new sequence
 			if ( chr != prev.first )
 			{
-				// handle entries which are still in the queue
-				while ( Q.size() )
-				{
-					assert ( Q.front() );
-					hist(Q.front());
-					D.push_back(Q.front());
-					Q.pop_front();
-				}
-			
-				if ( D.size() )
-					handleD();	
-				assert ( Q.size() == 0 );
+				handleD();			
+				D.resize(bamheader->getRefIDLength(chr));
+				std::fill(D.begin(),D.end(),0);
 				
-				// handle D vector
-				
-				D.resize(0);
-				
-				// depth 0 before first mapping
-				for ( uint64_t i = 0; i < static_cast<uint64_t>(pos); ++i )
-					D.push_back(0);
-
-				actchr = chr;
-			}
-			else
-			{
-				// pop old values now out of range
-				while ( Q.size() && prev.second != pos )
-				{
-					hist(Q.front());
-					D.push_back(Q.front());
-					Q.pop_front();
-					prev.second++;
-				}
-				
-				bool const addSkipToHist = (pos-prev.second) <= static_cast<int64_t>(skipthres);
-				
-				while ( prev.second != pos )
-				{
-					if ( addSkipToHist )
-						hist(0);
-					D.push_back(0);
-					prev.second++;
-				}
+				std::cerr << "[V] start of " << bamheader->getRefIDName(chr) << std::endl;
 			}
 			
-			uint64_t const reflen = A.getReferenceLength();
-
-			for ( uint64_t i = 0; i < reflen; ++i )
-				if ( i < Q.size() )
-					Q[i]++;
-				else
-					Q.push_back(1);
+			int64_t const start = A.getPos();
+			int64_t const end = A.getAlignmentEnd()+1;
 			
+			for ( int64_t i = start; i < end; ++i )
+				if ( i >= 0 && i < static_cast<int64_t>(D.size()) )
+					D[i]++;
+					
 			prev.first = chr;
-			prev.second = pos;
+			prev.second = pos;			
 		}
 	}
 };
@@ -360,12 +260,8 @@ void bamdisthist(libmaus::util::ArgInfo const & arginfo)
 		throw se;
 	}
 	
-	libmaus::aio::CheckedOutputStream depthhiststr("depthhist.gpl");
-	dh.hist.print(depthhiststr);
-	depthhiststr.flush();
-	depthhiststr.close();
-	
 	std::cerr << "[D] median of depth hist " << dh.hist.median() << std::endl;
+	std::cerr << "[D] avg of depth hist " << dh.hist.avg() << std::endl;
 }
 
 int main(int argc, char * argv[])

@@ -25,6 +25,11 @@ number fields are compared as numbers. As an example we have A15<B12 as
 A<B and A9<A12 as A=A and 9<12 (where 9 and 12 are considered as numbers and
 not as the sequences of their digits).
 .PP
+If the memory buffer given is not sufficiently large to process the input
+file, then the program writes intermediate results to a temporary file. This
+file can be large and depending on the compression of the input file larger
+than the input itself.
+.PP
 The following key=value pairs can be given:
 .PP
 .B SO=<coordinate|queryname>: 

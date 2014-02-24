@@ -17,7 +17,8 @@ MANPAGES = programs/bamtofastq.1 programs/bamsort.1 programs/bammarkduplicates.1
 	programs/bammarkduplicates2.1 \
 	programs/bamcat.1 programs/bammerge.1 programs/bamsplit.1 \
 	programs/bamsplitdiv.1 programs/bamchecksort.1 programs/fastqtobam.1 \
-	programs/bamfixmateinformation.1
+	programs/bamfixmateinformation.1 programs/normalisefasta.1 \
+	programs/bamfilterheader.1
 
 man_MANS = ${MANPAGES}
 
@@ -49,7 +50,9 @@ bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamr
 	bamchecksort \
 	fastqtobam \
 	bamfixmateinformation \
-	bamseqchksum
+	bamseqchksum \
+	normalisefasta \
+	bamfilterheader
 	
 noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments bamtoname \
 	bamdisthist bamrefdepth @BAMREFDEPTHPEAKS@
@@ -260,3 +263,14 @@ bamseqchksum_SOURCES = programs/bamseqchksum.cpp biobambam/Licensing.cpp
 bamseqchksum_LDADD = ${LIBMAUSLIBS}
 bamseqchksum_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
 bamseqchksum_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+normalisefasta_SOURCES = programs/normalisefasta.cpp biobambam/Licensing.cpp
+normalisefasta_LDADD = ${LIBMAUSLIBS}
+normalisefasta_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+normalisefasta_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+bamfilterheader_SOURCES = programs/bamfilterheader.cpp biobambam/Licensing.cpp
+bamfilterheader_LDADD = ${LIBMAUSLIBS}
+bamfilterheader_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+bamfilterheader_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
