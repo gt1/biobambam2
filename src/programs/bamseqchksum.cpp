@@ -77,11 +77,13 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 		private:
 		::libmaus::autoarray::AutoArray<char> A;
 		::libmaus::autoarray::AutoArray<char> B; //separate A & B can allow reordering speed up?
-                static void munge_chksum (uint32_t & chksum) {
-			//alter chksum value used for multiplication in a finite field
+                static void product_munged_chksum_multiply (uint64_t & product, uint32_t chksum) {
+			// alter chksum passed value ready for multiplication in a finite field
 			// i.e. 0 < chksum < (2^31 -1)
 			chksum &= MERSENNE31;
 			if (!chksum || chksum == MERSENNE31 ) chksum = 1;
+			// and multiply into existing product
+			product = ( product * chksum ) % MERSENNE31;
 		}
 		public:
 		uint64_t count;
@@ -99,26 +101,29 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 		void push(libmaus::bambam::BamAlignment const & algn) {
 			if ( ! (algn.getFlags() & (::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY | ::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSUPPLEMENTARY)) ) {
 				++count;
-				uint8_t flags = ( ( algn.getFlags() & ( //following flags are in the least significant byte!
+				const uint8_t flags = ( ( algn.getFlags() & ( //following flags are in the least significant byte!
 					::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FPAIRED |
 					::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREAD1 | 
 					::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREAD2 ) ) >> 0 )  & 0xFF;
-				uint32_t chksum = crc32(0,0,0);
-				chksum = crc32(chksum,(const unsigned char *)algn.getName(),algn.getLReadName());
-				chksum = crc32(chksum,(const unsigned char*) &flags, 1);
-				uint64_t const len = algn.isReverse() ? algn.decodeReadRC(A) : algn.decodeRead(A);
-				chksum = crc32(chksum,(const unsigned char *) A.begin(), len);
-				uint32_t chksum_copy = chksum;
-				munge_chksum(chksum_copy);
-				name_b_seq = ( name_b_seq * chksum_copy ) % MERSENNE31;
+				const uint32_t CRC32_INITIAL = crc32(0L, Z_NULL, 0);
+				uint32_t b_seq_chksum = crc32(CRC32_INITIAL,(const unsigned char*) &flags, 1);
+				const uint64_t len = algn.isReverse() ? algn.decodeReadRC(A) : algn.decodeRead(A);
+				b_seq_chksum = crc32(b_seq_chksum,(const unsigned char *) A.begin(), len);
+				product_munged_chksum_multiply(b_seq, b_seq_chksum);
+				const uint32_t name_b_seq_chksum = crc32_combine(
+					crc32(CRC32_INITIAL,(const unsigned char *)algn.getName(),algn.getLReadName()),
+					b_seq_chksum, 1 + len
+				);
+				product_munged_chksum_multiply(name_b_seq, name_b_seq_chksum);
 				uint64_t const len2 = algn.isReverse() ? algn.decodeQualRC(B) : algn.decodeQual(B);
-				chksum = crc32(chksum,(const unsigned char *) B.begin(), len2);
-				munge_chksum(chksum);
-				name_b_seq_qual = ( name_b_seq_qual * chksum ) % MERSENNE31;
+				const uint32_t qual_chksum = crc32(CRC32_INITIAL,(const unsigned char *) B.begin(), len2);
+				product_munged_chksum_multiply(name_b_seq_qual, crc32_combine( name_b_seq_chksum, qual_chksum, len2));
+				product_munged_chksum_multiply(b_seq_qual, crc32_combine( b_seq_chksum, qual_chksum, len2));
 			}
 		};
 	};
 
+//TODO: per readgroup * (all / passonly)
 	OrderIndependentSeqDataChecksums chksums;
 	
 		uint64_t c = 0;
@@ -130,7 +135,7 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 			}
 		}
 
-	std::cout << std::dec << chksums.count << " " << std::hex << " " << chksums.name_b_seq << " " << chksums.name_b_seq_qual << std::endl;
+	std::cout << std::dec << chksums.count << " " << std::hex << " " << chksums.b_seq << " " << chksums.name_b_seq << " " << chksums.b_seq_qual << " " << chksums.name_b_seq_qual << std::endl;
 	return EXIT_SUCCESS;
 }
 
