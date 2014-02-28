@@ -55,7 +55,7 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
 	
 	::libmaus::bambam::BamDecoder dec(std::cin,false);
-//	::libmaus::bambam::BamHeader const & header = dec.getHeader();
+	::libmaus::bambam::BamHeader const & header = dec.getHeader();
 
 //	std::string const headertext(header.text);
 
@@ -125,17 +125,23 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 
 //TODO: per readgroup * (all / passonly)
 	OrderIndependentSeqDataChecksums chksums;
+	OrderIndependentSeqDataChecksums readgroup_chksums[1 + header.getNumReadGroups()];
 	
 		uint64_t c = 0;
 		while ( dec.readAlignment() )
 		{
 			chksums.push(algn);
+			readgroup_chksums[algn.getReadGroupId(header)+1].push(algn);
 			if ( verbose && (++c & (1024*1024-1)) == 0 ) {
 				std::cerr << "[V] " << c/(1024*1024) << " " << chksums.count << " " << algn.getName() << " " << algn.isRead1() << " " << algn.isRead2() << " " << ( algn.isReverse() ? algn.getReadRC() : algn.getRead() ) << " " << ( algn.isReverse() ? algn.getQualRC() : algn.getQual() ) << " " << std::hex << (0x0 + algn.getFlags()) << std::dec << " " << chksums.name_b_seq << " " << chksums.name_b_seq_qual << " " << std::endl;
 			}
 		}
 
-	std::cout << std::dec << chksums.count << " " << std::hex << " " << chksums.b_seq << " " << chksums.name_b_seq << " " << chksums.b_seq_qual << " " << chksums.name_b_seq_qual << std::endl;
+	std::cout << "all " << chksums.count << " " << std::hex << " " << chksums.b_seq << " " << chksums.name_b_seq << " " << chksums.b_seq_qual << " " << chksums.name_b_seq_qual << std::dec << std::endl;
+	if(header.getNumReadGroups()){
+		for(unsigned int i=0; i<=header.getNumReadGroups(); i++)
+			std::cout << (i>0 ? header.getReadGroups().at(i-1).ID : " ") << " " << readgroup_chksums[i].count << " " << std::hex << " " << readgroup_chksums[i].b_seq << " " << readgroup_chksums[i].name_b_seq << " " << readgroup_chksums[i].b_seq_qual << " " << readgroup_chksums[i].name_b_seq_qual << std::dec << std::endl;
+	}
 	return EXIT_SUCCESS;
 }
 
