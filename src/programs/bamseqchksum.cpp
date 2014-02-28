@@ -27,6 +27,7 @@
 
 #include <libmaus/bambam/BamAlignment.hpp>
 #include <libmaus/bambam/BamDecoder.hpp>
+#include <libmaus/bambam/BamHeader.hpp>
 #include <libmaus/bambam/BamFlagBase.hpp>
 
 
@@ -70,19 +71,35 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 //	LHTsnofailure = ::libmaus::trie::LinearHashTrie<char,uint32_t>::shared_ptr_type(LHTnofailure.release());
 
 	libmaus::bambam::BamAlignment & algn = dec.getAlignment();
-	uint64_t c = 0;
-        uint64_t chksum_mff = 1;
-        uint64_t chksum_withqual_mff = 1;
-	::libmaus::autoarray::AutoArray<char> A;
-	
-//	if ( ! LHTsnofailure )
-		while ( dec.readAlignment() )
-		{
-//TODO: next if alt or supplementary alignment....
-			if ( ! (algn.getFlags() & (::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY | ::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSUPPLEMENTARY)) ) {
-				++c;
 
-				uint8_t flags = ( ( algn.getFlags() & ( //following flags are in the first byte!
+	const static uint64_t MERSENNE31 = 0x7FFFFFFFull;
+	struct OrderIndependentSeqDataChecksums {
+		private:
+		::libmaus::autoarray::AutoArray<char> A;
+		::libmaus::autoarray::AutoArray<char> B; //separate A & B can allow reordering speed up?
+                static void munge_chksum (uint32_t & chksum) {
+			//alter chksum value used for multiplication in a finite field
+			// i.e. 0 < chksum < (2^31 -1)
+			chksum &= MERSENNE31;
+			if (!chksum || chksum == MERSENNE31 ) chksum = 1;
+		}
+		public:
+		uint64_t count;
+        	uint64_t name_b_seq_qual;
+        	uint64_t b_seq_qual;
+        	uint64_t name_b_seq;
+        	uint64_t b_seq;
+		OrderIndependentSeqDataChecksums() : A(), B() {
+			count = 0;
+        		name_b_seq_qual = 1;
+        		b_seq_qual = 1;
+        		name_b_seq = 1;
+        		b_seq = 1;
+		};
+		void push(libmaus::bambam::BamAlignment const & algn) {
+			if ( ! (algn.getFlags() & (::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY | ::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSUPPLEMENTARY)) ) {
+				++count;
+				uint8_t flags = ( ( algn.getFlags() & ( //following flags are in the least significant byte!
 					::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FPAIRED |
 					::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREAD1 | 
 					::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREAD2 ) ) >> 0 )  & 0xFF;
@@ -92,27 +109,28 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 				uint64_t const len = algn.isReverse() ? algn.decodeReadRC(A) : algn.decodeRead(A);
 				chksum = crc32(chksum,(const unsigned char *) A.begin(), len);
 				uint32_t chksum_copy = chksum;
-				chksum_copy &= 0x7FFFFFFFul;
-				if (!chksum_copy || chksum_copy == 0x7FFFFFFFul ) chksum_copy = 1;
-                                uint64_t tmp = ( chksum_mff * chksum_copy ) % 0x7FFFFFFFull;
-if(!tmp){std::cout << c << " " << std::hex << chksum << " " <<  chksum_mff << " " << chksum_withqual_mff << std::endl; exit(1);}
-				chksum_mff = tmp;
-				uint64_t const len2 = algn.isReverse() ? algn.decodeQualRC(A) : algn.decodeQual(A);
-				chksum = crc32(chksum,(const unsigned char *) A.begin(), len2);
-				chksum &= 0x7FFFFFFFul;
-				if (!chksum || chksum == 0x7FFFFFFFul ) chksum = 1;
-				chksum_withqual_mff = ( chksum_withqual_mff * chksum ) % 0x7FFFFFFFull;
+				munge_chksum(chksum_copy);
+				name_b_seq = ( name_b_seq * chksum_copy ) % MERSENNE31;
+				uint64_t const len2 = algn.isReverse() ? algn.decodeQualRC(B) : algn.decodeQual(B);
+				chksum = crc32(chksum,(const unsigned char *) B.begin(), len2);
+				munge_chksum(chksum);
+				name_b_seq_qual = ( name_b_seq_qual * chksum ) % MERSENNE31;
+			}
+		};
+	};
 
-//std::cout << c << " " << std::hex << chksum << " " <<  chksum_mff << " " << chksum_withqual_mff << std::endl;
-				if ( verbose && (c & (1024*1024-1)) == 0 ) {
-					std::cerr << "[V] " << c/(1024*1024) << std::endl;
-std::cerr << c << " " << algn.getName() << " " << algn.isRead1() << " " << algn.isRead2() << " " << ( algn.isReverse() ? algn.getReadRC() : algn.getRead() ) << " " << ( algn.isReverse() ? algn.getQualRC() : algn.getQual() ) << " "
-<< std::hex << (0x0 + flags) << " " << chksum << " " << chksum_mff << " " << chksum_withqual_mff << " " << std::endl;
-				}
+	OrderIndependentSeqDataChecksums chksums;
+	
+		uint64_t c = 0;
+		while ( dec.readAlignment() )
+		{
+			chksums.push(algn);
+			if ( verbose && (++c & (1024*1024-1)) == 0 ) {
+				std::cerr << "[V] " << c/(1024*1024) << " " << chksums.count << " " << algn.getName() << " " << algn.isRead1() << " " << algn.isRead2() << " " << ( algn.isReverse() ? algn.getReadRC() : algn.getRead() ) << " " << ( algn.isReverse() ? algn.getQualRC() : algn.getQual() ) << " " << std::hex << (0x0 + algn.getFlags()) << std::dec << " " << chksums.name_b_seq << " " << chksums.name_b_seq_qual << " " << std::endl;
 			}
 		}
 
-	std::cout << c << " " << std::hex << " " << chksum_mff << " " << chksum_withqual_mff << std::endl;
+	std::cout << std::dec << chksums.count << " " << std::hex << " " << chksums.name_b_seq << " " << chksums.name_b_seq_qual << std::endl;
 	return EXIT_SUCCESS;
 }
 
