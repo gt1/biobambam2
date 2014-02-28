@@ -106,19 +106,19 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 					::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREAD1 | 
 					::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREAD2 ) ) >> 0 )  & 0xFF;
 				const uint32_t CRC32_INITIAL = crc32(0L, Z_NULL, 0);
-				uint32_t b_seq_chksum = crc32(CRC32_INITIAL,(const unsigned char*) &flags, 1);
+				uint32_t chksum = crc32(CRC32_INITIAL,(const unsigned char *)algn.getName(),algn.getLReadName());
+				chksum = crc32(chksum,(const unsigned char*) &flags, 1);
 				const uint64_t len = algn.isReverse() ? algn.decodeReadRC(A) : algn.decodeRead(A);
-				b_seq_chksum = crc32(b_seq_chksum,(const unsigned char *) A.begin(), len);
-				product_munged_chksum_multiply(b_seq, b_seq_chksum);
-				const uint32_t name_b_seq_chksum = crc32_combine(
-					crc32(CRC32_INITIAL,(const unsigned char *)algn.getName(),algn.getLReadName()),
-					b_seq_chksum, 1 + len
-				);
-				product_munged_chksum_multiply(name_b_seq, name_b_seq_chksum);
-				uint64_t const len2 = algn.isReverse() ? algn.decodeQualRC(B) : algn.decodeQual(B);
-				const uint32_t qual_chksum = crc32(CRC32_INITIAL,(const unsigned char *) B.begin(), len2);
-				product_munged_chksum_multiply(name_b_seq_qual, crc32_combine( name_b_seq_chksum, qual_chksum, len2));
-				product_munged_chksum_multiply(b_seq_qual, crc32_combine( b_seq_chksum, qual_chksum, len2));
+				chksum = crc32(chksum,(const unsigned char *) A.begin(), len);
+				product_munged_chksum_multiply(name_b_seq, chksum);
+				uint32_t chksumnn = crc32(CRC32_INITIAL,(const unsigned char*) &flags, 1);
+				chksumnn = crc32(chksumnn,(const unsigned char *) A.begin(), len);
+				product_munged_chksum_multiply(b_seq, chksumnn);
+				const uint64_t len2 = algn.isReverse() ? algn.decodeQualRC(B) : algn.decodeQual(B);
+				chksum = crc32(chksum,(const unsigned char *) B.begin(), len2);
+				product_munged_chksum_multiply(name_b_seq_qual, chksum);
+				chksumnn = crc32(chksumnn,(const unsigned char *) B.begin(), len2);
+				product_munged_chksum_multiply(b_seq_qual, chksumnn);
 			}
 		};
 	};
