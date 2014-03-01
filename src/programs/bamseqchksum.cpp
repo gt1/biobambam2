@@ -137,10 +137,10 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 			}
 		}
 
-	std::cout << "all " << chksums.count << " " << std::hex << " " << chksums.b_seq << " " << chksums.name_b_seq << " " << chksums.b_seq_qual << " " << chksums.name_b_seq_qual << std::dec << std::endl;
+	std::cout << "all\t" << chksums.count << "\t" << std::hex << "\t" << chksums.b_seq << "\t" << chksums.name_b_seq << "\t" << chksums.b_seq_qual << "\t" << chksums.name_b_seq_qual << std::dec << std::endl;
 	if(header.getNumReadGroups()){
 		for(unsigned int i=0; i<=header.getNumReadGroups(); i++)
-			std::cout << (i>0 ? header.getReadGroups().at(i-1).ID : " ") << " " << readgroup_chksums[i].count << " " << std::hex << " " << readgroup_chksums[i].b_seq << " " << readgroup_chksums[i].name_b_seq << " " << readgroup_chksums[i].b_seq_qual << " " << readgroup_chksums[i].name_b_seq_qual << std::dec << std::endl;
+			std::cout << (i>0 ? header.getReadGroups().at(i-1).ID : "") << "\t" << readgroup_chksums[i].count << "\t" << std::hex << "\t" << readgroup_chksums[i].b_seq << "\t" << readgroup_chksums[i].name_b_seq << "\t" << readgroup_chksums[i].b_seq_qual << "\t" << readgroup_chksums[i].name_b_seq_qual << std::dec << std::endl;
 	}
 	return EXIT_SUCCESS;
 }
