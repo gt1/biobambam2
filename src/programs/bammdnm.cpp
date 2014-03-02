@@ -44,6 +44,8 @@ static int getDefaultMD5() { return 0; }
 static int getDefaultDisableValidation() { return 0; }
 static int getDefaultLevel() { return -1; }
 static int getDefaultVerbose() { return 1; }
+static int getDefaultRecompIndetOnly() { return 0; }
+static int getDefaultWarnChange() { return 0; }
 
 static uint64_t const ioblocksize = 2*1024*1024;
 
@@ -70,11 +72,16 @@ struct MdNmRecalculation
 	libmaus::autoarray::AutoArray<uint8_t> vmap;
 	libmaus::autoarray::AutoArray<uint64_t> nar;
 	libmaus::rank::ERank222B::unique_ptr_type Prank;
+	
+	bool recompindetonly;
+	bool warnchange;
 
-	MdNmRecalculation(std::string const & reference, bool const rvalidate)
+	MdNmRecalculation(std::string const & reference, bool const rvalidate, bool const rrecompindetonly, bool const rwarnchange)
 	: fain(reference,ioblocksize), 
 	  fareader(fain), validate(rvalidate), loadrefid(-1), prevcheckrefid(-1), prevcheckpos(-1),
-	  numrecalc(0), numkept(0), vmap(256,false)
+	  numrecalc(0), numkept(0), vmap(256,false),
+	  recompindetonly(rrecompindetonly),
+	  warnchange(rwarnchange)
 	{
 		std::fill(vmap.begin(),vmap.end(),1);
 		vmap['A'] = vmap['C'] = vmap['G'] = vmap['T'] =
@@ -141,53 +148,56 @@ struct MdNmRecalculation
 				throw se;		
 			}
 			
-			std::string const & seq = currefpat.spattern;
-			uint64_t const seqlen = seq.size();
-			
-			if ( nar.size() < (seqlen+1+63)/64 )
-				nar = libmaus::autoarray::AutoArray<uint64_t>((seqlen+1+63)/64,false);
-				
-			uint8_t const * p = reinterpret_cast<uint8_t const *>(seq.c_str());
-			for ( uint64_t i = 0; i < (seqlen/64); ++i )
+			if ( recompindetonly )
 			{
-				uint64_t v = 0;
-				for ( uint64_t j = 0; j < 64; ++j )
+				std::string const & seq = currefpat.spattern;
+				uint64_t const seqlen = seq.size();
+				
+				if ( nar.size() < (seqlen+1+63)/64 )
+					nar = libmaus::autoarray::AutoArray<uint64_t>((seqlen+1+63)/64,false);
+					
+				uint8_t const * p = reinterpret_cast<uint8_t const *>(seq.c_str());
+				for ( uint64_t i = 0; i < (seqlen/64); ++i )
 				{
-					v <<= 1;
-					v |= vmap[*(p++)];
-				}
+					uint64_t v = 0;
+					for ( uint64_t j = 0; j < 64; ++j )
+					{
+						v <<= 1;
+						v |= vmap[*(p++)];
+					}
 
-				nar[i] = v;
-			}
-			uint64_t const rest = seqlen-((seqlen/64)*64);
-			if ( rest )
-			{
-				uint64_t v = 0;
-				for ( uint64_t j = 0; j < rest; ++j )
+					nar[i] = v;
+				}
+				uint64_t const rest = seqlen-((seqlen/64)*64);
+				if ( rest )
 				{
-					v <<= 1;
-					v |= vmap[*(p++)];				
+					uint64_t v = 0;
+					for ( uint64_t j = 0; j < rest; ++j )
+					{
+						v <<= 1;
+						v |= vmap[*(p++)];				
+					}
+					
+					nar[seqlen/64] = v << (63-rest);
 				}
 				
-				nar[seqlen/64] = v << (63-rest);
-			}
-			
-			#if 0
-			p = reinterpret_cast<uint8_t const *>(seq.c_str());
-			uint64_t nn = 0;
-			for ( uint64_t i = 0; i < seqlen; ++i )
-			{
-				if ( *p == 'N' )
+				#if 0
+				p = reinterpret_cast<uint8_t const *>(seq.c_str());
+				uint64_t nn = 0;
+				for ( uint64_t i = 0; i < seqlen; ++i )
 				{
-					assert ( libmaus::bitio::getBit(nar.begin(),i) );
-					++nn;
+					if ( *p == 'N' )
+					{
+						assert ( libmaus::bitio::getBit(nar.begin(),i) );
+						++nn;
+					}
+					assert ( libmaus::bitio::getBit(nar.begin(),i) == vmap[*(p++)] );
 				}
-				assert ( libmaus::bitio::getBit(nar.begin(),i) == vmap[*(p++)] );
+				#endif
+				
+				libmaus::rank::ERank222B::unique_ptr_type Trank(new libmaus::rank::ERank222B(nar.begin(),64*((seqlen+1+63)/64)));
+				Prank = UNIQUE_PTR_MOVE(Trank);
 			}
-			#endif
-			
-			libmaus::rank::ERank222B::unique_ptr_type Trank(new libmaus::rank::ERank222B(nar.begin(),64*((seqlen+1+63)/64)));
-			Prank = UNIQUE_PTR_MOVE(Trank);
 				
 			loadrefid += 1;
 		}
@@ -208,21 +218,23 @@ struct MdNmRecalculation
 			int64_t const pos = libmaus::bambam::BamAlignmentDecoderBase::getPos(D);
 			int64_t const refend = pos + libmaus::bambam::BamAlignmentDecoderBase::getReferenceLength(D);
 			std::string const & ref = loadReference(refid);
-		
+			
 			if ( 
-				1
-				/*
-				refend <= ref.size() &&
 				(
-					(Prank->rankm1(refend)-Prank->rankm1(pos))
-					||
-					libmaus::bambam::BamAlignmentDecoderBase::hasNonACGT(D) 
+					recompindetonly 
+					&& 
+					(
+						(Prank->rankm1(refend)-Prank->rankm1(pos)) 
+						|| 
+						libmaus::bambam::BamAlignmentDecoderBase::hasNonACGT(D)
+					)
 				)
-				*/
+				||
+				(!recompindetonly)
 			)
 			{
 				numrecalc += 1;
-				libmaus::bambam::BamAlignmentDecoderBase::calculateMd(D,blocksize,context,ref.begin() + pos);
+				libmaus::bambam::BamAlignmentDecoderBase::calculateMd(D,blocksize,context,ref.begin() + pos,warnchange);
 				if ( context.diff )
 					recalc = true;
 			}
@@ -316,20 +328,16 @@ static int bammdnm(libmaus::util::ArgInfo const & arginfo)
 
 	::libmaus::bambam::BamAlignment algn;
 	uint8_t * copyptr = 0;
-
-	int64_t prevcheckrefid = -1;
-	int64_t prevcheckpos = -1;
 	
 	bool const validate = !arginfo.getValue<unsigned int>("disablevalidation",getDefaultDisableValidation());
 	int const level = libmaus::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue("level",Z_DEFAULT_COMPRESSION));
 	bool const verbose = arginfo.getValue<unsigned int>("verbose",getDefaultVerbose());
+	bool const recompindetonly = arginfo.getValue<unsigned int>("recompindetonly",getDefaultRecompIndetOnly());
+	bool const warnchange = arginfo.getValue<unsigned int>("warnchange",getDefaultWarnChange());
 
 	libmaus::aio::PosixFdOutputStream::unique_ptr_type Ppfos;
 	libmaus::bambam::BamWriter::unique_ptr_type Pout;
 	libmaus::bambam::BamWriter::stream_type * bamout = 0;
-	
-	uint64_t numrecalc = 0;
-	uint64_t numkept = 0;
 	
 	MdNmRecalculation::unique_ptr_type Precalc;
 
@@ -359,7 +367,7 @@ static int bammdnm(libmaus::util::ArgInfo const & arginfo)
 				Pout = UNIQUE_PTR_MOVE(Tout);
 				bamout = &(Pout->getStream());
 				
-				MdNmRecalculation::unique_ptr_type Trecalc(new MdNmRecalculation(reference,validate));
+				MdNmRecalculation::unique_ptr_type Trecalc(new MdNmRecalculation(reference,validate,recompindetonly,warnchange));
 				Precalc = UNIQUE_PTR_MOVE(Trecalc);
 			}
 		}
@@ -502,7 +510,7 @@ static int bammdnm(libmaus::util::ArgInfo const & arginfo)
 							alcnt++;
 
 							if ( verbose && (alcnt % (1024*1024) == 0) )
-								std::cerr << "[V] " << alcnt/(1024*1024) << " " << (alcnt / rtc.getElapsedSeconds()) << " " << rtc.formatTime(rtc.getElapsedSeconds()) << " recalculated=" << numrecalc << std::endl;
+								std::cerr << "[V] " << alcnt/(1024*1024) << " " << (alcnt / rtc.getElapsedSeconds()) << " " << rtc.formatTime(rtc.getElapsedSeconds()) << " recalculated=" << Precalc->numrecalc << std::endl;
 						}
 						break;
 					}
@@ -566,6 +574,8 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "indexfilename=<filename>", "file name for BAM index file" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "reference=<>", "reference FastA" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "recompindetonly=<["+::biobambam::Licensing::formatNumber(getDefaultRecompIndetOnly())+"]>", "only compute MD/NM fields in the presence of indeterminate bases (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "warnchange=<["+::biobambam::Licensing::formatNumber(getDefaultWarnChange())+"]>", "print a warning message when MD/NM field is present but different from the recomputed value (default: 0)" ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 
