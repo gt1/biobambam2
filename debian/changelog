@@ -1,3 +1,9 @@
+biobambam (0.0.126) unstable; urgency=low
+
+  * add bammdnm program 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Sun, 02 Mar 2014 18:43:05 +0000
+
 biobambam (0.0.125) unstable; urgency=low
 
   * merge fixes for compiler warnings 
