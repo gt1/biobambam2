@@ -51,10 +51,11 @@ bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamr
 	fastqtobam \
 	bamfixmateinformation \
 	normalisefasta \
-	bamfilterheader
+	bamfilterheader \
+	bammdnm
 	
 noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments bamtoname \
-	bammdnm bamdisthist bamrefdepth @BAMREFDEPTHPEAKS@
+	bamdisthist bamrefdepth @BAMREFDEPTHPEAKS@
 	
 EXTRA_PROGRAMS = bamrefdepthpeaks
 
