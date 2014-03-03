@@ -37,7 +37,7 @@
 
 #include <biobambam/Licensing.hpp>
 
-static int getDefaultVerbose() { return 1; }
+static int getDefaultVerbose() { return 0; }
 
 
 int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
@@ -57,19 +57,6 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 	::libmaus::bambam::BamDecoder dec(std::cin,false);
 	::libmaus::bambam::BamHeader const & header = dec.getHeader();
 
-//	std::string const headertext(header.text);
-
-
-
-//	::libmaus::trie::LinearHashTrie<char,uint32_t>::shared_ptr_type LHTsnofailure;
-	
-//	std::deque<std::string> qreadgroups = ::libmaus::util::stringFunctions::tokenize(readgroups,std::string(","));
-//	std::vector<std::string> vreadgroups = std::vector<std::string>(qreadgroups.begin(),qreadgroups.end());
-//	::libmaus::trie::Trie<char> trienofailure;
-//	trienofailure.insertContainer(vreadgroups);
-//	::libmaus::trie::LinearHashTrie<char,uint32_t>::unique_ptr_type LHTnofailure(trienofailure.toLinearHashTrie<uint32_t>());
-//	LHTsnofailure = ::libmaus::trie::LinearHashTrie<char,uint32_t>::shared_ptr_type(LHTnofailure.release());
-
 	libmaus::bambam::BamAlignment & algn = dec.getAlignment();
 
 	const static uint64_t MERSENNE31 = 0x7FFFFFFFull;
@@ -86,44 +73,58 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 			product = ( product * chksum ) % MERSENNE31;
 		}
 		public:
-		uint64_t count;
-        	uint64_t name_b_seq_qual;
-        	uint64_t b_seq_qual;
-        	uint64_t name_b_seq;
-        	uint64_t b_seq;
-		OrderIndependentSeqDataChecksums() : A(), B() {
-			count = 0;
-        		name_b_seq_qual = 1;
-        		b_seq_qual = 1;
-        		name_b_seq = 1;
-        		b_seq = 1;
+		struct Products {
+			uint64_t count;
+        		uint64_t name_b_seq_qual;
+        		uint64_t b_seq_qual;
+        		uint64_t name_b_seq;
+        		uint64_t b_seq;
+			Products(){
+				count = 0;
+        			name_b_seq_qual = 1;
+        			b_seq_qual = 1;
+        			name_b_seq = 1;
+        			b_seq = 1;
+			}
 		};
+		Products all;
+		Products pass;
+		OrderIndependentSeqDataChecksums() : A(), B(), all(), pass() { };
 		void push(libmaus::bambam::BamAlignment const & algn) {
 			if ( ! (algn.getFlags() & (::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY | ::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSUPPLEMENTARY)) ) {
-				++count;
+				++all.count;
 				const uint8_t flags = ( ( algn.getFlags() & ( //following flags are in the least significant byte!
 					::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FPAIRED |
 					::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREAD1 | 
 					::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREAD2 ) ) >> 0 )  & 0xFF;
+				const bool is_pass = ! algn.isQCFail();
 				const uint32_t CRC32_INITIAL = crc32(0L, Z_NULL, 0);
 				uint32_t chksum = crc32(CRC32_INITIAL,(const unsigned char *)algn.getName(),algn.getLReadName());
 				chksum = crc32(chksum,(const unsigned char*) &flags, 1);
 				const uint64_t len = algn.isReverse() ? algn.decodeReadRC(A) : algn.decodeRead(A);
 				chksum = crc32(chksum,(const unsigned char *) A.begin(), len);
-				product_munged_chksum_multiply(name_b_seq, chksum);
+				product_munged_chksum_multiply(all.name_b_seq, chksum);
 				uint32_t chksumnn = crc32(CRC32_INITIAL,(const unsigned char*) &flags, 1);
 				chksumnn = crc32(chksumnn,(const unsigned char *) A.begin(), len);
-				product_munged_chksum_multiply(b_seq, chksumnn);
+				product_munged_chksum_multiply(all.b_seq, chksumnn);
+				if(is_pass) {
+					++pass.count;
+					product_munged_chksum_multiply(pass.name_b_seq, chksum);
+					product_munged_chksum_multiply(pass.b_seq, chksumnn);
+				}
 				const uint64_t len2 = algn.isReverse() ? algn.decodeQualRC(B) : algn.decodeQual(B);
 				chksum = crc32(chksum,(const unsigned char *) B.begin(), len2);
-				product_munged_chksum_multiply(name_b_seq_qual, chksum);
+				product_munged_chksum_multiply(all.name_b_seq_qual, chksum);
 				chksumnn = crc32(chksumnn,(const unsigned char *) B.begin(), len2);
-				product_munged_chksum_multiply(b_seq_qual, chksumnn);
+				product_munged_chksum_multiply(all.b_seq_qual, chksumnn);
+				if(is_pass) {
+					product_munged_chksum_multiply(pass.name_b_seq_qual, chksum);
+					product_munged_chksum_multiply(pass.b_seq_qual, chksumnn);
+				}
 			}
 		};
 	};
 
-//TODO: per readgroup * (all / passonly)
 	OrderIndependentSeqDataChecksums chksums;
 	OrderIndependentSeqDataChecksums readgroup_chksums[1 + header.getNumReadGroups()];
 	
@@ -133,14 +134,17 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 			chksums.push(algn);
 			readgroup_chksums[algn.getReadGroupId(header)+1].push(algn);
 			if ( verbose && (++c & (1024*1024-1)) == 0 ) {
-				std::cerr << "[V] " << c/(1024*1024) << " " << chksums.count << " " << algn.getName() << " " << algn.isRead1() << " " << algn.isRead2() << " " << ( algn.isReverse() ? algn.getReadRC() : algn.getRead() ) << " " << ( algn.isReverse() ? algn.getQualRC() : algn.getQual() ) << " " << std::hex << (0x0 + algn.getFlags()) << std::dec << " " << chksums.name_b_seq << " " << chksums.name_b_seq_qual << " " << std::endl;
+				std::cerr << "[V] " << c/(1024*1024) << " " << chksums.all.count << " " << algn.getName() << " " << algn.isRead1() << " " << algn.isRead2() << " " << ( algn.isReverse() ? algn.getReadRC() : algn.getRead() ) << " " << ( algn.isReverse() ? algn.getQualRC() : algn.getQual() ) << " " << std::hex << (0x0 + algn.getFlags()) << std::dec << " " << chksums.all.b_seq << " " << chksums.all.name_b_seq_qual << " " << std::endl;
 			}
 		}
 
-	std::cout << "all\t" << chksums.count << "\t" << std::hex << "\t" << chksums.b_seq << "\t" << chksums.name_b_seq << "\t" << chksums.b_seq_qual << "\t" << chksums.name_b_seq_qual << std::dec << std::endl;
+	std::cout << "all\tall\t" << chksums.all.count << "\t" << std::hex << "\t" << chksums.all.b_seq << "\t" << chksums.all.name_b_seq << "\t" << chksums.all.b_seq_qual << "\t" << chksums.all.name_b_seq_qual << std::dec << std::endl;
+	std::cout << "all\tpass\t" << chksums.pass.count << "\t" << std::hex << "\t" << chksums.pass.b_seq << "\t" << chksums.pass.name_b_seq << "\t" << chksums.pass.b_seq_qual << "\t" << chksums.pass.name_b_seq_qual << std::dec << std::endl;
 	if(header.getNumReadGroups()){
-		for(unsigned int i=0; i<=header.getNumReadGroups(); i++)
-			std::cout << (i>0 ? header.getReadGroups().at(i-1).ID : "") << "\t" << readgroup_chksums[i].count << "\t" << std::hex << "\t" << readgroup_chksums[i].b_seq << "\t" << readgroup_chksums[i].name_b_seq << "\t" << readgroup_chksums[i].b_seq_qual << "\t" << readgroup_chksums[i].name_b_seq_qual << std::dec << std::endl;
+		for(unsigned int i=0; i<=header.getNumReadGroups(); i++){
+			std::cout << (i>0 ? header.getReadGroups().at(i-1).ID : "") << "\tall\t" << readgroup_chksums[i].all.count << "\t" << std::hex << "\t" << readgroup_chksums[i].all.b_seq << "\t" << readgroup_chksums[i].all.name_b_seq << "\t" << readgroup_chksums[i].all.b_seq_qual << "\t" << readgroup_chksums[i].all.name_b_seq_qual << std::dec << std::endl;
+			std::cout << (i>0 ? header.getReadGroups().at(i-1).ID : "") << "\tpass\t" << readgroup_chksums[i].pass.count << "\t" << std::hex << "\t" << readgroup_chksums[i].pass.b_seq << "\t" << readgroup_chksums[i].pass.name_b_seq << "\t" << readgroup_chksums[i].pass.b_seq_qual << "\t" << readgroup_chksums[i].pass.name_b_seq_qual << std::dec << std::endl;
+		}
 	}
 	return EXIT_SUCCESS;
 }
