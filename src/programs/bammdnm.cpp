@@ -358,7 +358,7 @@ static int bammdnm(libmaus::util::ArgInfo const & arginfo)
 				haveheader = true;
 				pa = reinterpret_cast<uint8_t *>(B.begin()) + P.second;
 				
-				::libmaus::bambam::BamHeader::unique_ptr_type uphead(libmaus::bambam::BamHeaderUpdate::updateHeader(arginfo,header,"bamlocalrealign",std::string(PACKAGE_VERSION)));
+				::libmaus::bambam::BamHeader::unique_ptr_type uphead(libmaus::bambam::BamHeaderUpdate::updateHeader(arginfo,header,"bammdnm",std::string(PACKAGE_VERSION)));
 
 				libmaus::aio::PosixFdOutputStream::unique_ptr_type Tpfos(new libmaus::aio::PosixFdOutputStream(STDOUT_FILENO,ioblocksize));
 				Ppfos = UNIQUE_PTR_MOVE(Tpfos);
