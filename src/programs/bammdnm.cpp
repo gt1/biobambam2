@@ -48,7 +48,7 @@ static int getDefaultVerbose() { return 1; }
 static int getDefaultRecompIndetOnly() { return 0; }
 static int getDefaultWarnChange() { return 0; }
 
-static uint64_t const ioblocksize = 2*1024*1024;
+static uint64_t const ioblocksize = 128*1024;
 
 struct MdNmRecalculation
 {
