@@ -138,6 +138,7 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 			}
 		}
 
+	std::cout << "###\tset\t" << "count" << "\t" << std::hex << "\t" << "b_seq" << "\t" << "name_b_seq" << "\t" << "b_seq_qual" << "\t" << "name_b_seq_qual" << std::dec << std::endl;
 	std::cout << "all\tall\t" << chksums.all.count << "\t" << std::hex << "\t" << chksums.all.b_seq << "\t" << chksums.all.name_b_seq << "\t" << chksums.all.b_seq_qual << "\t" << chksums.all.name_b_seq_qual << std::dec << std::endl;
 	std::cout << "all\tpass\t" << chksums.pass.count << "\t" << std::hex << "\t" << chksums.pass.b_seq << "\t" << chksums.pass.name_b_seq << "\t" << chksums.pass.b_seq_qual << "\t" << chksums.pass.name_b_seq_qual << std::dec << std::endl;
 	if(header.getNumReadGroups()){
