@@ -22,6 +22,7 @@
 #include <libmaus/aio/PosixFdInputStream.hpp>
 #include <libmaus/aio/PosixFdOutputStream.hpp>
 #include <libmaus/fastx/FastAReader.hpp>
+#include <libmaus/fastx/FastABgzfIndex.hpp>
 #include <libmaus/fastx/StreamFastAReader.hpp>
 #include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
 #include <libmaus/bambam/BamDecoder.hpp>
@@ -54,8 +55,11 @@ struct MdNmRecalculation
 	typedef MdNmRecalculation this_type;
 	typedef libmaus::util::unique_ptr<this_type>::type unique_ptr_type;
 
+	bool const inputbgzf;
+	bool const havebgzfindex;
 	::libmaus::aio::PosixFdInputStream fain;
-	libmaus::fastx::StreamFastAReaderWrapper fareader;
+	::libmaus::fastx::FastABgzfIndex::unique_ptr_type Pbgzfindex;
+	libmaus::fastx::StreamFastAReaderWrapper::unique_ptr_type fareader;
 	libmaus::fastx::StreamFastAReaderWrapper::pattern_type currefpat;
 
 	bool validate;
@@ -75,10 +79,35 @@ struct MdNmRecalculation
 	
 	bool recompindetonly;
 	bool warnchange;
+	
+	static bool isGzip(std::istream & in)
+	{
+		int const b0 = in.get();
+		int const b1 = in.get();
+		in.clear();
+		in.seekg(0,std::ios::beg);
+		
+		return b0 == libmaus::lz::GzipHeaderConstantsBase::ID1 &&
+		       b1 == libmaus::lz::GzipHeaderConstantsBase::ID2;
+	}
+	
+	static bool isGzip(std::string const & filename)
+	{
+		libmaus::aio::CheckedInputStream CIS(filename);
+		return isGzip(CIS);
+	}
 
 	MdNmRecalculation(std::string const & reference, bool const rvalidate, bool const rrecompindetonly, bool const rwarnchange)
-	: fain(reference,ioblocksize), 
-	  fareader(fain), validate(rvalidate), loadrefid(-1), prevcheckrefid(-1), prevcheckpos(-1),
+	: 
+	  inputbgzf(isGzip(reference)),
+	  havebgzfindex(inputbgzf && libmaus::util::GetFileSize::fileExists(reference+".idx")),
+	  fain(reference,ioblocksize), 
+	  Pbgzfindex(havebgzfindex ? ::libmaus::fastx::FastABgzfIndex::load(reference+".idx") : ::libmaus::fastx::FastABgzfIndex::unique_ptr_type() ),
+	  fareader(inputbgzf ? 0 : new libmaus::fastx::StreamFastAReaderWrapper(fain)),
+	  validate(rvalidate), 
+	  loadrefid(-1), 
+	  prevcheckrefid(-1), 
+	  prevcheckpos(-1),
 	  numrecalc(0), numkept(0), vmap(256,false),
 	  recompindetonly(rrecompindetonly),
 	  warnchange(rwarnchange)
@@ -136,18 +165,52 @@ struct MdNmRecalculation
 	
 	std::string const & loadReference(uint64_t const id)
 	{
-		while ( loadrefid < static_cast<int64_t>(id) )
+		if ( static_cast<int64_t>(id) != loadrefid )
 		{
-			bool const ok = fareader.getNextPatternUnlocked(currefpat);
-			
-			if ( ! ok )
+			if ( inputbgzf )
 			{
-				::libmaus::exception::LibMausException se;
-				se.getStream() << "[D] Failed to load reference sequence id " << id << std::endl;
-				se.finish();
-				throw se;		
+				::libmaus::fastx::FastABgzfIndexEntry const & ent = (*Pbgzfindex)[id];
+				currefpat.sid = ent.name;
+				currefpat.spattern.resize(ent.patlen);
+				::libmaus::fastx::FastABgzfDecoder::unique_ptr_type fastr(Pbgzfindex->getStream(fain,id));
+				::libmaus::autoarray::AutoArray<char> B(64*1024,false);
+				uint64_t p = 0;
+				uint64_t todo = ent.patlen;
+				
+				while ( todo )
+				{
+					uint64_t const pack = std::min(todo,B.size());
+					fastr->read(B.begin(),pack);
+					assert ( fastr->gcount() == static_cast<int64_t>(pack) );
+					
+					std::copy(B.begin(),B.begin()+pack,currefpat.spattern.begin()+p);
+					
+					p += pack;
+					todo -= pack;
+				}
+				
+				std::cerr << "[D] loaded " << ent.name << " of length " << p << std::endl;
+				
+				loadrefid = id;
 			}
-			
+			else
+			{
+				while ( loadrefid < static_cast<int64_t>(id) )
+				{
+					bool const ok = fareader->getNextPatternUnlocked(currefpat);
+						
+					if ( ! ok )
+					{
+						::libmaus::exception::LibMausException se;
+						se.getStream() << "[D] Failed to load reference sequence id " << id << std::endl;
+						se.finish();
+						throw se;		
+					}
+					
+					loadrefid++;
+				}
+			}
+
 			if ( recompindetonly )
 			{
 				std::string const & seq = currefpat.spattern;
@@ -198,8 +261,6 @@ struct MdNmRecalculation
 				libmaus::rank::ERank222B::unique_ptr_type Trank(new libmaus::rank::ERank222B(nar.begin(),64*((seqlen+1+63)/64)));
 				Prank = UNIQUE_PTR_MOVE(Trank);
 			}
-				
-			loadrefid += 1;
 		}
 		
 		return currefpat.spattern;

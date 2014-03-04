@@ -13,8 +13,11 @@ the resulting data to a BAM file on standard output.
 The following key=value pairs can be given:
 .PP
 .B reference=<>:
-file name of the reference in FastA format. This field is required, i.e. the
-program will quit if the key is not given.
+file name of the reference in uncompressed or compressed FastA format. This field is required, i.e. the
+program will quit if the key is not given. Uncompressed FastA is expected in
+general FastA file format. Compressed FastA needs to be in the format
+produced by normalisefasta using bgzf=1. For a compressed FastA file
+ref.fa.bgzf an index is required and this index must be named ref.fa.bgzf.idx .
 .PP
 .B level=<-1|0|1|9>:
 set compression level of the output BAM file. Valid
