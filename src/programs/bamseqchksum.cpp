@@ -75,10 +75,10 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 		public:
 		struct Products {
 			uint64_t count;
-        		uint64_t name_b_seq_qual;
-        		uint64_t b_seq_qual;
-        		uint64_t name_b_seq;
         		uint64_t b_seq;
+        		uint64_t name_b_seq;
+        		uint64_t b_seq_qual;
+        		uint64_t name_b_seq_qual;
 			Products(){
 				count = 0;
         			name_b_seq_qual = 1;

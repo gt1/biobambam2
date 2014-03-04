@@ -17,6 +17,11 @@ flags, sequence and qualities
 .IP [4]
 queryname, flags, sequence and qualities
 .PP
+where the flags are the least significant byte of the BAM FLAGS containing
+only the bits for multiple segments, first segment and last segment. The
+sequence is reverse complemented, and quality string reversed, before 
+checksumming if the reverse complemented bit is set.
+.PP
 The product, modulo 2^31-1, of these checksums is taken over all
 non-supplementary and non-secondary BAM alignment records. Separate 
 products are reported for combinations of all and QC pass records and for each
