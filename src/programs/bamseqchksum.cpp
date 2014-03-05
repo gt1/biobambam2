@@ -20,25 +20,18 @@
 #include "config.h"
 
 #include <iostream>
-//#include <queue>
 #include <zlib.h>
-
-
 
 #include <libmaus/bambam/BamAlignment.hpp>
 #include <libmaus/bambam/BamDecoder.hpp>
 #include <libmaus/bambam/BamHeader.hpp>
 #include <libmaus/bambam/BamFlagBase.hpp>
 
-
 #include <libmaus/util/ArgInfo.hpp>
-#include <libmaus/util/GetObject.hpp>
-#include <libmaus/util/PutObject.hpp>
 
 #include <biobambam/Licensing.hpp>
 
 static int getDefaultVerbose() { return 0; }
-
 
 int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 {
@@ -50,7 +43,6 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 		se.finish();
 		throw se;
 	}
-
 	
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
 	
@@ -134,19 +126,31 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 			chksums.push(algn);
 			readgroup_chksums[algn.getReadGroupId(header)+1].push(algn);
 			if ( verbose && (++c & (1024*1024-1)) == 0 ) {
-				std::cerr << "[V] " << c/(1024*1024) << " " << chksums.all.count << " " << algn.getName() << " " << algn.isRead1() << " " << algn.isRead2() << " " << ( algn.isReverse() ? algn.getReadRC() : algn.getRead() ) << " " << ( algn.isReverse() ? algn.getQualRC() : algn.getQual() ) << " " << std::hex << (0x0 + algn.getFlags()) << std::dec << " " << chksums.all.b_seq << " " << chksums.all.name_b_seq_qual << " " << std::endl;
+				std::cerr << "[V] " << c/(1024*1024) << " " << chksums.all.count << " " << algn.getName() << " " << algn.isRead1()
+				<< " " << algn.isRead2() << " " << ( algn.isReverse() ? algn.getReadRC() : algn.getRead() ) << " "
+				<< ( algn.isReverse() ? algn.getQualRC() : algn.getQual() ) << " " << std::hex << (0x0 + algn.getFlags())
+				<< std::dec << " " << chksums.all.b_seq << " " << chksums.all.name_b_seq_qual << " " << std::endl;
 			}
 		}
 
-	std::cout << "###\tset\t" << "count" << "\t" << std::hex << "\t" << "b_seq" << "\t" << "name_b_seq" << "\t" << "b_seq_qual" << "\t" << "name_b_seq_qual" << std::dec << std::endl;
-	std::cout << "all\tall\t" << chksums.all.count << "\t" << std::hex << "\t" << chksums.all.b_seq << "\t" << chksums.all.name_b_seq << "\t" << chksums.all.b_seq_qual << "\t" << chksums.all.name_b_seq_qual << std::dec << std::endl;
-	std::cout << "all\tpass\t" << chksums.pass.count << "\t" << std::hex << "\t" << chksums.pass.b_seq << "\t" << chksums.pass.name_b_seq << "\t" << chksums.pass.b_seq_qual << "\t" << chksums.pass.name_b_seq_qual << std::dec << std::endl;
+	std::cout << "###\tset\t" << "count" << "\t" << std::hex << "\t" << "b_seq" << "\t"
+		<< "name_b_seq" << "\t" << "b_seq_qual" << "\t" << "name_b_seq_qual" << std::dec << std::endl;
+	std::cout << "all\tall\t" << chksums.all.count << "\t" << std::hex << "\t" << chksums.all.b_seq << "\t"
+		<< chksums.all.name_b_seq << "\t" << chksums.all.b_seq_qual << "\t" << chksums.all.name_b_seq_qual << std::dec << std::endl;
+	std::cout << "all\tpass\t" << chksums.pass.count << "\t" << std::hex << "\t" << chksums.pass.b_seq << "\t"
+		<< chksums.pass.name_b_seq << "\t" << chksums.pass.b_seq_qual << "\t" << chksums.pass.name_b_seq_qual << std::dec << std::endl;
+
 	if(header.getNumReadGroups()){
 		for(unsigned int i=0; i<=header.getNumReadGroups(); i++){
-			std::cout << (i>0 ? header.getReadGroups().at(i-1).ID : "") << "\tall\t" << readgroup_chksums[i].all.count << "\t" << std::hex << "\t" << readgroup_chksums[i].all.b_seq << "\t" << readgroup_chksums[i].all.name_b_seq << "\t" << readgroup_chksums[i].all.b_seq_qual << "\t" << readgroup_chksums[i].all.name_b_seq_qual << std::dec << std::endl;
-			std::cout << (i>0 ? header.getReadGroups().at(i-1).ID : "") << "\tpass\t" << readgroup_chksums[i].pass.count << "\t" << std::hex << "\t" << readgroup_chksums[i].pass.b_seq << "\t" << readgroup_chksums[i].pass.name_b_seq << "\t" << readgroup_chksums[i].pass.b_seq_qual << "\t" << readgroup_chksums[i].pass.name_b_seq_qual << std::dec << std::endl;
+			std::cout << (i>0 ? header.getReadGroups().at(i-1).ID : "") << "\tall\t" << readgroup_chksums[i].all.count << "\t"
+				<< std::hex << "\t" << readgroup_chksums[i].all.b_seq << "\t" << readgroup_chksums[i].all.name_b_seq << "\t"
+				<< readgroup_chksums[i].all.b_seq_qual << "\t" << readgroup_chksums[i].all.name_b_seq_qual << std::dec << std::endl;
+			std::cout << (i>0 ? header.getReadGroups().at(i-1).ID : "") << "\tpass\t" << readgroup_chksums[i].pass.count << "\t"
+				<< std::hex << "\t" << readgroup_chksums[i].pass.b_seq << "\t" << readgroup_chksums[i].pass.name_b_seq << "\t"
+				<< readgroup_chksums[i].pass.b_seq_qual << "\t" << readgroup_chksums[i].pass.name_b_seq_qual << std::dec << std::endl;
 		}
 	}
+
 	return EXIT_SUCCESS;
 }
 
