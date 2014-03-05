@@ -47,8 +47,7 @@ static int getDefaultLevel() { return -1; }
 static int getDefaultVerbose() { return 1; }
 static int getDefaultRecompIndetOnly() { return 0; }
 static int getDefaultWarnChange() { return 0; }
-
-static uint64_t const ioblocksize = 128*1024;
+static uint64_t getDefaultIOBlockSize() { return 128*1024; }
 
 struct MdNmRecalculation
 {
@@ -97,11 +96,11 @@ struct MdNmRecalculation
 		return isGzip(CIS);
 	}
 
-	MdNmRecalculation(std::string const & reference, bool const rvalidate, bool const rrecompindetonly, bool const rwarnchange)
+	MdNmRecalculation(std::string const & reference, bool const rvalidate, bool const rrecompindetonly, bool const rwarnchange, uint64_t const rioblocksize)
 	: 
 	  inputbgzf(isGzip(reference)),
 	  havebgzfindex(inputbgzf && libmaus::util::GetFileSize::fileExists(reference+".idx")),
-	  fain(reference,ioblocksize), 
+	  fain(reference,rioblocksize), 
 	  Pbgzfindex(havebgzfindex ? ::libmaus::fastx::FastABgzfIndex::load(reference+".idx") : ::libmaus::fastx::FastABgzfIndex::unique_ptr_type() ),
 	  fareader(inputbgzf ? 0 : new libmaus::fastx::StreamFastAReaderWrapper(fain)),
 	  validate(rvalidate), 
@@ -371,6 +370,7 @@ static int bammdnm(libmaus::util::ArgInfo const & arginfo)
 	}
 
 	std::string const reference = arginfo.getUnparsedValue("reference","");
+	uint64_t const ioblocksize = arginfo.getValueUnsignedNumeric<uint64_t>("ioblocksize",getDefaultIOBlockSize());
 
 	::libmaus::aio::PosixFdInputStream PFIS(STDIN_FILENO,ioblocksize);
 	::libmaus::lz::BgzfInflate< ::libmaus::aio::PosixFdInputStream > infl(PFIS);
@@ -428,7 +428,7 @@ static int bammdnm(libmaus::util::ArgInfo const & arginfo)
 				Pout = UNIQUE_PTR_MOVE(Tout);
 				bamout = &(Pout->getStream());
 				
-				MdNmRecalculation::unique_ptr_type Trecalc(new MdNmRecalculation(reference,validate,recompindetonly,warnchange));
+				MdNmRecalculation::unique_ptr_type Trecalc(new MdNmRecalculation(reference,validate,recompindetonly,warnchange,ioblocksize));
 				Precalc = UNIQUE_PTR_MOVE(Trecalc);
 			}
 		}
@@ -637,6 +637,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "reference=<>", "reference FastA" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "recompindetonly=<["+::biobambam::Licensing::formatNumber(getDefaultRecompIndetOnly())+"]>", "only compute MD/NM fields in the presence of indeterminate bases (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "warnchange=<["+::biobambam::Licensing::formatNumber(getDefaultWarnChange())+"]>", "print a warning message when MD/NM field is present but different from the recomputed value (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "ioblocksize=<["+::biobambam::Licensing::formatNumber(getDefaultIOBlockSize())+"]>", "block size for I/O operations" ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 
