@@ -196,6 +196,9 @@ int main(int argc, char * argv[])
 				std::vector< std::pair<std::string,std::string> > V;
 
 				V.push_back ( std::pair<std::string,std::string> ( std::string("cols=<[")+libmaus::util::NumberSerialisation::formatNumber(getDefaultCols(),0)+"]>", "column width" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("bgzf=<[")+libmaus::util::NumberSerialisation::formatNumber(getDefaultBgzf(),0)+"]>", "compress output" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("index=<>"), "file name for index if bgzf=1 (no index is created if key is not given)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("level=<[")+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", "compression level if bgzf=1" ) );
 				
 				::biobambam::Licensing::printMap(std::cerr,V);
 
