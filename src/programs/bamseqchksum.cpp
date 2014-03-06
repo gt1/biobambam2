@@ -83,7 +83,15 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 		Products pass;
 		OrderIndependentSeqDataChecksums() : A(), B(), all(), pass() { };
 		void push(libmaus::bambam::BamAlignment const & algn) {
-			if ( ! (algn.getFlags() & (::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY | ::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSUPPLEMENTARY)) ) {
+			if 
+			( ! (
+				algn.getFlags() &
+				(
+					::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY |
+					::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSUPPLEMENTARY
+				)
+			) )
+			{
 				++all.count;
 				const uint8_t flags = ( ( algn.getFlags() & ( //following flags are in the least significant byte!
 					::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FPAIRED |
@@ -99,7 +107,8 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 				uint32_t chksumnn = crc32(CRC32_INITIAL,(const unsigned char*) &flags, 1);
 				chksumnn = crc32(chksumnn,(const unsigned char *) A.begin(), len);
 				product_munged_chksum_multiply(all.b_seq, chksumnn);
-				if(is_pass) {
+				if(is_pass)
+				{
 					++pass.count;
 					product_munged_chksum_multiply(pass.name_b_seq, chksum);
 					product_munged_chksum_multiply(pass.b_seq, chksumnn);
@@ -109,7 +118,8 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 				product_munged_chksum_multiply(all.name_b_seq_qual, chksum);
 				chksumnn = crc32(chksumnn,(const unsigned char *) B.begin(), len2);
 				product_munged_chksum_multiply(all.b_seq_qual, chksumnn);
-				if(is_pass) {
+				if(is_pass)
+				{
 					product_munged_chksum_multiply(pass.name_b_seq_qual, chksum);
 					product_munged_chksum_multiply(pass.b_seq_qual, chksumnn);
 				}
@@ -120,18 +130,19 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 	OrderIndependentSeqDataChecksums chksums;
 	OrderIndependentSeqDataChecksums readgroup_chksums[1 + header.getNumReadGroups()];
 	
-		uint64_t c = 0;
-		while ( dec.readAlignment() )
+	uint64_t c = 0;
+	while ( dec.readAlignment() )
+	{
+		chksums.push(algn);
+		readgroup_chksums[algn.getReadGroupId(header)+1].push(algn);
+		if ( verbose && (++c & (1024*1024-1)) == 0 )
 		{
-			chksums.push(algn);
-			readgroup_chksums[algn.getReadGroupId(header)+1].push(algn);
-			if ( verbose && (++c & (1024*1024-1)) == 0 ) {
-				std::cerr << "[V] " << c/(1024*1024) << " " << chksums.all.count << " " << algn.getName() << " " << algn.isRead1()
-				<< " " << algn.isRead2() << " " << ( algn.isReverse() ? algn.getReadRC() : algn.getRead() ) << " "
-				<< ( algn.isReverse() ? algn.getQualRC() : algn.getQual() ) << " " << std::hex << (0x0 + algn.getFlags())
-				<< std::dec << " " << chksums.all.b_seq << " " << chksums.all.name_b_seq_qual << " " << std::endl;
-			}
+			std::cerr << "[V] " << c/(1024*1024) << " " << chksums.all.count << " " << algn.getName() << " " << algn.isRead1()
+			<< " " << algn.isRead2() << " " << ( algn.isReverse() ? algn.getReadRC() : algn.getRead() ) << " "
+			<< ( algn.isReverse() ? algn.getQualRC() : algn.getQual() ) << " " << std::hex << (0x0 + algn.getFlags())
+			<< std::dec << " " << chksums.all.b_seq << " " << chksums.all.name_b_seq_qual << " " << std::endl;
 		}
+	}
 
 	std::cout << "###\tset\t" << "count" << "\t" << std::hex << "\t" << "b_seq" << "\t"
 		<< "name_b_seq" << "\t" << "b_seq_qual" << "\t" << "name_b_seq_qual" << std::dec << std::endl;
@@ -140,8 +151,10 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 	std::cout << "all\tpass\t" << chksums.pass.count << "\t" << std::hex << "\t" << chksums.pass.b_seq << "\t"
 		<< chksums.pass.name_b_seq << "\t" << chksums.pass.b_seq_qual << "\t" << chksums.pass.name_b_seq_qual << std::dec << std::endl;
 
-	if(header.getNumReadGroups()){
-		for(unsigned int i=0; i<=header.getNumReadGroups(); i++){
+	if(header.getNumReadGroups())
+	{
+		for(unsigned int i=0; i<=header.getNumReadGroups(); i++)
+		{
 			std::cout << (i>0 ? header.getReadGroups().at(i-1).ID : "") << "\tall\t" << readgroup_chksums[i].all.count << "\t"
 				<< std::hex << "\t" << readgroup_chksums[i].all.b_seq << "\t" << readgroup_chksums[i].all.name_b_seq << "\t"
 				<< readgroup_chksums[i].all.b_seq_qual << "\t" << readgroup_chksums[i].all.name_b_seq_qual << std::dec << std::endl;
