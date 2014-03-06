@@ -1,3 +1,9 @@
+biobambam (0.0.127) unstable; urgency=low
+
+  * add support for bgzf compressed reference in bammdnm 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Thu, 06 Mar 2014 14:08:41 +0000
+
 biobambam (0.0.126) unstable; urgency=low
 
   * add bammdnm program 
