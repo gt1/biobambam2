@@ -134,6 +134,9 @@ void normalisefastaBgzf(libmaus::util::ArgInfo const & arginfo, std::ostream & o
 		}		
 
 		ioffset += libmaus::util::NumberSerialisation::serialiseNumber(indexstr,zoffset);
+
+		std::pair<uint64_t,uint64_t> const Pn = defl.writeSyncedCount("\n",1);
+		zoffset += Pn.second;
 	}
 
 	defl.flush();
