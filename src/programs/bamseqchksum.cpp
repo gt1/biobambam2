@@ -35,22 +35,6 @@ static int getDefaultVerbose() { return 0; }
 
 int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 {
-
-	if ( isatty(STDIN_FILENO) )
-	{
-		::libmaus::exception::LibMausException se;
-		se.getStream() << "Refusing to read binary data from terminal, please redirect standard input to pipe or file." << std::endl;
-		se.finish();
-		throw se;
-	}
-	
-	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
-	
-	::libmaus::bambam::BamDecoder dec(std::cin,false);
-	::libmaus::bambam::BamHeader const & header = dec.getHeader();
-
-	libmaus::bambam::BamAlignment & algn = dec.getAlignment();
-
 	const static uint64_t MERSENNE31 = 0x7FFFFFFFull;
 	struct OrderIndependentSeqDataChecksums {
 		private:
@@ -127,6 +111,20 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 		};
 	};
 
+	if ( isatty(STDIN_FILENO) )
+	{
+		::libmaus::exception::LibMausException se;
+		se.getStream() << "Refusing to read data from terminal, please redirect standard input to pipe or file." << std::endl;
+		se.finish();
+		throw se;
+	}
+	
+	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
+	
+	::libmaus::bambam::BamDecoder dec(std::cin,false);
+	::libmaus::bambam::BamHeader const & header = dec.getHeader();
+
+	libmaus::bambam::BamAlignment & algn = dec.getAlignment();
 	OrderIndependentSeqDataChecksums chksums;
 	OrderIndependentSeqDataChecksums readgroup_chksums[1 + header.getNumReadGroups()];
 	
