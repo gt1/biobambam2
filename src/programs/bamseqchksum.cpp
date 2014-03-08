@@ -22,16 +22,23 @@
 #include <iostream>
 #include <zlib.h>
 
-#include <libmaus/bambam/BamAlignment.hpp>
+//#include <libmaus/bambam/BamAlignment.hpp>
 #include <libmaus/bambam/BamDecoder.hpp>
-#include <libmaus/bambam/BamHeader.hpp>
-#include <libmaus/bambam/BamFlagBase.hpp>
+#include <libmaus/bambam/ScramDecoder.hpp>
+//#include <libmaus/bambam/BamHeader.hpp>
+//#include <libmaus/bambam/BamFlagBase.hpp>
 
 #include <libmaus/util/ArgInfo.hpp>
 
 #include <biobambam/Licensing.hpp>
+#include <biobambam/BamBamConfig.hpp>
 
 static int getDefaultVerbose() { return 0; }
+static std::string getDefaultInputFormat()
+{
+	return "bam";
+}
+
 
 int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 {
@@ -120,16 +127,33 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 	}
 	
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
-	
-	::libmaus::bambam::BamDecoder dec(std::cin,false);
-	::libmaus::bambam::BamHeader const & header = dec.getHeader();
+	std::string const inputformat = arginfo.getValue<std::string>("inputformat",getDefaultInputFormat());
 
-	libmaus::bambam::BamAlignment & algn = dec.getAlignment();
+	::libmaus::bambam::BamAlignmentDecoder::unique_ptr_type const pdec
+	(
+		#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
+		inputformat == "sam"  ? (::libmaus::bambam::BamAlignmentDecoder*) new ::libmaus::bambam::ScramDecoder("/dev/stdin","r","") :
+		inputformat == "cram" ? (::libmaus::bambam::BamAlignmentDecoder*) new ::libmaus::bambam::ScramDecoder("/dev/stdin","rc", arginfo.getValue<std::string>("reference","")) :
+		inputformat == "sbam" ? (::libmaus::bambam::BamAlignmentDecoder*) new ::libmaus::bambam::ScramDecoder("/dev/stdin","rb","") :
+		#endif
+		inputformat == "bam"  ? (::libmaus::bambam::BamAlignmentDecoder*) new ::libmaus::bambam::BamDecoder(std::cin,false) : NULL
+	);
+	if ( ! pdec)
+	{
+		::libmaus::exception::LibMausException se;
+		se.getStream() << "Unsupported input format \"" << inputformat << "\"" << std::endl;
+		se.finish();
+		throw se;
+	}
+
+	::libmaus::bambam::BamHeader const & header = pdec->getHeader();
+
+	::libmaus::bambam::BamAlignment & algn = pdec->getAlignment();
 	OrderIndependentSeqDataChecksums chksums;
 	OrderIndependentSeqDataChecksums readgroup_chksums[1 + header.getNumReadGroups()];
 	
 	uint64_t c = 0;
-	while ( dec.readAlignment() )
+	while ( pdec->readAlignment() )
 	{
 		chksums.push(algn);
 		readgroup_chksums[algn.getReadGroupId(header)+1].push(algn);
@@ -195,6 +219,12 @@ int main(int argc, char * argv[])
 				std::vector< std::pair<std::string,std::string> > V;
 			
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress information" ) );
+				#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
+				V.push_back ( std::pair<std::string,std::string> ( std::string("inputformat=<[")+getDefaultInputFormat()+"]>", "input format: cram, bam or sam" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "reference=<[]>", "name of reference FastA in case of inputformat=cram" ) );
+				#else
+				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<[bam]>", "input format: bam" ) );
+				#endif
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 

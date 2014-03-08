@@ -29,12 +29,27 @@ readgroup.
 .LP
 The following key=value pairs can be given:
 .PP
-.B verbose=<1>:
+.B verbose=<0>:
 Valid values are
 .IP 1:
 print progress report on standard error
 .IP 0:
 do not print progress report
+.PP
+.B inputformat=<bam>: input file format
+All versions of bamseqchksum come with support for the BAM input format. If
+the program in addition is linked to the io_lib package, then the following
+options are valid:
+.IP bam:
+BAM (see http://samtools.sourceforge.net/SAM1.pdf)
+.IP sam:
+SAM (see http://samtools.sourceforge.net/SAM1.pdf)
+.IP cram:
+CRAM (see http://www.ebi.ac.uk/ena/about/cram_toolkit)
+.PP
+.B reference=:
+file name of the reference for CRAM input files. If this key is unset, then
+the CRAM file header will be scanned for obtaining a reference file name.
 .SH AUTHOR
 Written by David Jackson (using code by German Tischler as a template).
 .SH "REPORTING BUGS"
