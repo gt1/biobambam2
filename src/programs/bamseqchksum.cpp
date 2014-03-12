@@ -64,16 +64,31 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
         		uint64_t name_b_seq_qual;
 			Products(){
 				count = 0;
-        			name_b_seq_qual = 1;
-        			b_seq_qual = 1;
-        			name_b_seq = 1;
         			b_seq = 1;
+        			name_b_seq = 1;
+        			b_seq_qual = 1;
+        			name_b_seq_qual = 1;
 			}
+			void push (Products const & subsetproducts)
+			{
+				count += subsetproducts.count;
+				product_munged_chksum_multiply(b_seq, subsetproducts.b_seq);
+				product_munged_chksum_multiply(name_b_seq, subsetproducts.name_b_seq);
+				product_munged_chksum_multiply(b_seq_qual, subsetproducts.b_seq_qual);
+				product_munged_chksum_multiply(name_b_seq_qual, subsetproducts.name_b_seq_qual);
+			};
+			bool operator== (Products const & other) const
+			{
+				return count==other.count &&
+					b_seq==other.b_seq && name_b_seq==other.name_b_seq &&
+					b_seq_qual==other.b_seq_qual && name_b_seq_qual==other.name_b_seq_qual;
+			};
 		};
 		Products all;
 		Products pass;
 		OrderIndependentSeqDataChecksums() : A(), B(), all(), pass() { };
-		void push(libmaus::bambam::BamAlignment const & algn) {
+		void push(libmaus::bambam::BamAlignment const & algn)
+		{
 			if 
 			( ! (
 				algn.getFlags() &
@@ -116,6 +131,15 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 				}
 			}
 		};
+		void push(OrderIndependentSeqDataChecksums const & subsetchksum)
+		{
+			pass.push(subsetchksum.pass);
+			all.push(subsetchksum.all);
+		};
+		bool operator== (OrderIndependentSeqDataChecksums const & other) const
+		{
+			return pass==other.pass && all==other.all;
+		}
 	};
 
 	if ( isatty(STDIN_FILENO) )
@@ -175,8 +199,10 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 
 	if(header.getNumReadGroups())
 	{
+		OrderIndependentSeqDataChecksums chksumschk;
 		for(unsigned int i=0; i<=header.getNumReadGroups(); i++)
 		{
+			chksumschk.push(readgroup_chksums[i]);
 			std::cout << (i>0 ? header.getReadGroups().at(i-1).ID : "") << "\tall\t" << readgroup_chksums[i].all.count << "\t"
 				<< std::hex << "\t" << readgroup_chksums[i].all.b_seq << "\t" << readgroup_chksums[i].all.name_b_seq << "\t"
 				<< readgroup_chksums[i].all.b_seq_qual << "\t" << readgroup_chksums[i].all.name_b_seq_qual << std::dec << std::endl;
@@ -184,6 +210,7 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 				<< std::hex << "\t" << readgroup_chksums[i].pass.b_seq << "\t" << readgroup_chksums[i].pass.name_b_seq << "\t"
 				<< readgroup_chksums[i].pass.b_seq_qual << "\t" << readgroup_chksums[i].pass.name_b_seq_qual << std::dec << std::endl;
 		}
+		assert(chksumschk == chksums);
 	}
 
 	return EXIT_SUCCESS;
