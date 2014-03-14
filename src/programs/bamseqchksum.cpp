@@ -52,21 +52,38 @@ static std::string getDefaultInputFormat()
 int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 {
 	const static uint64_t MERSENNE31 = 0x7FFFFFFFull;
+	/**
+	* Finite field products of CRC32 checksums of primary/source sequence data
+	*
+	* Checksum products should remain unchanged if primary data is retained no matter what
+	* alignment information is added or altered, or the ordering of the records.
+	*
+	* Products calulated for all records and for those with pass QC bit.
+	**/
 	struct OrderIndependentSeqDataChecksums {
 		private:
 		::libmaus::autoarray::AutoArray<char> A; // check with German: can we change underlying data block to unsigned char / uint8_t?
 		::libmaus::autoarray::AutoArray<char> B; //separate A & B can allow reordering speed up?
 		std::vector<std::string> auxtags;
+		// to provide fast checking of aux fields when processing and validation at startup
 		::libmaus::bambam::BamAuxFilterVector const auxtagsfilter;
+		/**
+		* Multiply existing product by new checksum, having altered checksum ready for
+		* multiplication in a finite field i.e. 0 < chksum < (2^31 -1)
+		* @param product to be updated
+		* @param chksum to update product with
+		**/
                 static void product_munged_chksum_multiply (uint64_t & product, uint32_t chksum) {
-			// alter chksum passed value ready for multiplication in a finite field
-			// i.e. 0 < chksum < (2^31 -1)
 			chksum &= MERSENNE31;
 			if (!chksum || chksum == MERSENNE31 ) chksum = 1;
-			// and multiply into existing product
 			product = ( product * chksum ) % MERSENNE31;
 		}
 		public:
+		/**
+		* Product checksums calculated based on basecalls and (multi segment, first
+		* and last) bit info, and this combined with the query name, or the basecall
+		* qualities, or certain BAM auxilary fields.
+		**/
 		struct Products {
 			uint64_t count;
         		uint64_t b_seq;
@@ -98,6 +115,14 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 		Products all;
 		Products pass;
 		OrderIndependentSeqDataChecksums() : A(), B(), auxtags({"BC","RT","QT","TC","FI"}), auxtagsfilter(auxtags), all(), pass() { };
+		/**
+		* Combine primary sequence data from alignment record into checksum products
+		*
+		* Ignores Supplementary and auxilary alignment records so primary data in not 
+		* included twice.
+		*
+		* @param algn BAM alignment record
+		**/
 		void push(libmaus::bambam::BamAlignment const & algn)
 		{
 			if 
@@ -138,22 +163,28 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 				uint8_t const * aux = ::libmaus::bambam::BamAlignmentDecoderBase::getAux(algn.D.begin());
 				// end of algn data block (and so of aux area)
 				uint8_t const * const auxend = algn.D.begin() + algn.blocksize - 1;
+				// start of each aux entry for auxtags
 				std::vector<uint8_t const *> paux(auxtags.size(),NULL);
+				// size of each aux entry for auxtags
 				std::vector<uint64_t> saux(auxtags.size(),0);
 				while( aux < auxend)
 				{
 					uint64_t const auxlen = ::libmaus::bambam::BamAlignmentDecoderBase::getAuxLength(aux);
+					// skip over aux tag data we're not interested in
 					if( auxtagsfilter(aux[0],aux[1]) )
 					{
 						std::vector<std::string>::iterator it_auxtags = auxtags.begin();
 						std::vector<uint8_t const *>::iterator it_paux = paux.begin();
 						std::vector<uint64_t>::iterator it_saux = saux.begin();
+						// consider each tag in auxtag
 						while ( it_auxtags != auxtags.end())
 						{
+							// until we match the tag for the current aux data
 							if(! it_auxtags->compare(0,2,(char *)aux,2) )
 							{
 								*it_paux = aux;
 								*it_saux = auxlen;
+								// stop this loop
 								it_auxtags = auxtags.end();
 							}
 							else
@@ -168,8 +199,10 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 				}
 				std::vector<uint8_t const *>::iterator it_paux = paux.begin();
 				std::vector<uint64_t>::iterator it_saux = saux.begin();
+				//loop over the chunks of data corresponding to the auxtags
 				while (it_paux != paux.end())
 				{
+					//if data exists push into running checksum
 					if(*it_paux)
 						chksum = crc32(chksum,(const unsigned char *) *it_paux, *it_saux);
 					++it_paux;
