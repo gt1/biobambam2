@@ -40,13 +40,24 @@ static std::string getDefaultInputFormat()
 }
 
 
+/*static uint8_t sizeOfBamAuxFilterVector(::libmaus::bambam::BamAuxFilterVector const & auxtags)
+{// yuck yuck - just to get things working....
+	uint8_t count = 0;
+	uint8_t i = auxtags.B.n;
+	while (i--)
+		if (auxtags.B[i])
+			count++;
+	return count;
+}*/
 int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 {
 	const static uint64_t MERSENNE31 = 0x7FFFFFFFull;
 	struct OrderIndependentSeqDataChecksums {
 		private:
-		::libmaus::autoarray::AutoArray<char> A;
+		::libmaus::autoarray::AutoArray<char> A; // check with German: can we change underlying data block to unsigned char / uint8_t?
 		::libmaus::autoarray::AutoArray<char> B; //separate A & B can allow reordering speed up?
+		std::vector<std::string> auxtags;
+		::libmaus::bambam::BamAuxFilterVector const auxtagsfilter;
                 static void product_munged_chksum_multiply (uint64_t & product, uint32_t chksum) {
 			// alter chksum passed value ready for multiplication in a finite field
 			// i.e. 0 < chksum < (2^31 -1)
@@ -61,13 +72,13 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
         		uint64_t b_seq;
         		uint64_t name_b_seq;
         		uint64_t b_seq_qual;
-        		uint64_t name_b_seq_qual;
+        		uint64_t b_seq_tags;
 			Products(){
 				count = 0;
         			b_seq = 1;
         			name_b_seq = 1;
         			b_seq_qual = 1;
-        			name_b_seq_qual = 1;
+        			b_seq_tags = 1;
 			}
 			void push (Products const & subsetproducts)
 			{
@@ -75,18 +86,18 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 				product_munged_chksum_multiply(b_seq, subsetproducts.b_seq);
 				product_munged_chksum_multiply(name_b_seq, subsetproducts.name_b_seq);
 				product_munged_chksum_multiply(b_seq_qual, subsetproducts.b_seq_qual);
-				product_munged_chksum_multiply(name_b_seq_qual, subsetproducts.name_b_seq_qual);
+				product_munged_chksum_multiply(b_seq_tags, subsetproducts.b_seq_tags);
 			};
 			bool operator== (Products const & other) const
 			{
 				return count==other.count &&
 					b_seq==other.b_seq && name_b_seq==other.name_b_seq &&
-					b_seq_qual==other.b_seq_qual && name_b_seq_qual==other.name_b_seq_qual;
+					b_seq_qual==other.b_seq_qual && b_seq_tags==other.b_seq_tags;
 			};
 		};
 		Products all;
 		Products pass;
-		OrderIndependentSeqDataChecksums() : A(), B(), all(), pass() { };
+		OrderIndependentSeqDataChecksums() : A(), B(), auxtags({"BC","RT","QT","TC","FI"}), auxtagsfilter(auxtags), all(), pass() { };
 		void push(libmaus::bambam::BamAlignment const & algn)
 		{
 			if 
@@ -119,14 +130,55 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 					product_munged_chksum_multiply(pass.name_b_seq, chksum);
 					product_munged_chksum_multiply(pass.b_seq, chksumnn);
 				}
+				chksum = chksumnn;
 				const uint64_t len2 = algn.isReverse() ? algn.decodeQualRC(B) : algn.decodeQual(B);
-				chksum = crc32(chksum,(const unsigned char *) B.begin(), len2);
-				product_munged_chksum_multiply(all.name_b_seq_qual, chksum);
 				chksumnn = crc32(chksumnn,(const unsigned char *) B.begin(), len2);
 				product_munged_chksum_multiply(all.b_seq_qual, chksumnn);
+				// set aux to start pointer of aux area
+				uint8_t const * aux = ::libmaus::bambam::BamAlignmentDecoderBase::getAux(algn.D.begin());
+				// end of algn data block (and so of aux area)
+				uint8_t const * const auxend = algn.D.begin() + algn.blocksize - 1;
+				std::vector<uint8_t const *> paux(auxtags.size(),NULL);
+				std::vector<uint64_t> saux(auxtags.size(),0);
+				while( aux < auxend)
+				{
+					uint64_t const auxlen = ::libmaus::bambam::BamAlignmentDecoderBase::getAuxLength(aux);
+					if( auxtagsfilter(aux[0],aux[1]) )
+					{
+						std::vector<std::string>::iterator it_auxtags = auxtags.begin();
+						std::vector<uint8_t const *>::iterator it_paux = paux.begin();
+						std::vector<uint64_t>::iterator it_saux = saux.begin();
+						while ( it_auxtags != auxtags.end())
+						{
+							if(! it_auxtags->compare(0,2,(char *)aux,2) )
+							{
+								*it_paux = aux;
+								*it_saux = auxlen;
+								it_auxtags = auxtags.end();
+							}
+							else
+							{
+								++it_auxtags;
+								++it_paux;
+								++it_saux;
+							}
+						}
+					}
+					aux += auxlen;
+				}
+				std::vector<uint8_t const *>::iterator it_paux = paux.begin();
+				std::vector<uint64_t>::iterator it_saux = saux.begin();
+				while (it_paux != paux.end())
+				{
+					if(*it_paux)
+						chksum = crc32(chksum,(const unsigned char *) *it_paux, *it_saux);
+					++it_paux;
+					++it_saux;
+				}
+				product_munged_chksum_multiply(all.b_seq_tags, chksum);
 				if(is_pass)
 				{
-					product_munged_chksum_multiply(pass.name_b_seq_qual, chksum);
+					product_munged_chksum_multiply(pass.b_seq_tags, chksum);
 					product_munged_chksum_multiply(pass.b_seq_qual, chksumnn);
 				}
 			}
@@ -186,16 +238,16 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 			std::cerr << "[V] " << c/(1024*1024) << " " << chksums.all.count << " " << algn.getName() << " " << algn.isRead1()
 			<< " " << algn.isRead2() << " " << ( algn.isReverse() ? algn.getReadRC() : algn.getRead() ) << " "
 			<< ( algn.isReverse() ? algn.getQualRC() : algn.getQual() ) << " " << std::hex << (0x0 + algn.getFlags())
-			<< std::dec << " " << chksums.all.b_seq << " " << chksums.all.name_b_seq_qual << " " << std::endl;
+			<< std::dec << " " << chksums.all.b_seq << " " << chksums.all.b_seq_tags << " " << std::endl;
 		}
 	}
 
 	std::cout << "###\tset\t" << "count" << "\t" << std::hex << "\t" << "b_seq" << "\t"
-		<< "name_b_seq" << "\t" << "b_seq_qual" << "\t" << "name_b_seq_qual" << std::dec << std::endl;
+		<< "name_b_seq" << "\t" << "b_seq_qual" << "\t" << "b_seq_tags" << std::dec << std::endl;
 	std::cout << "all\tall\t" << chksums.all.count << "\t" << std::hex << "\t" << chksums.all.b_seq << "\t"
-		<< chksums.all.name_b_seq << "\t" << chksums.all.b_seq_qual << "\t" << chksums.all.name_b_seq_qual << std::dec << std::endl;
+		<< chksums.all.name_b_seq << "\t" << chksums.all.b_seq_qual << "\t" << chksums.all.b_seq_tags << std::dec << std::endl;
 	std::cout << "all\tpass\t" << chksums.pass.count << "\t" << std::hex << "\t" << chksums.pass.b_seq << "\t"
-		<< chksums.pass.name_b_seq << "\t" << chksums.pass.b_seq_qual << "\t" << chksums.pass.name_b_seq_qual << std::dec << std::endl;
+		<< chksums.pass.name_b_seq << "\t" << chksums.pass.b_seq_qual << "\t" << chksums.pass.b_seq_tags << std::dec << std::endl;
 
 	if(header.getNumReadGroups())
 	{
@@ -205,10 +257,10 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 			chksumschk.push(readgroup_chksums[i]);
 			std::cout << (i>0 ? header.getReadGroups().at(i-1).ID : "") << "\tall\t" << readgroup_chksums[i].all.count << "\t"
 				<< std::hex << "\t" << readgroup_chksums[i].all.b_seq << "\t" << readgroup_chksums[i].all.name_b_seq << "\t"
-				<< readgroup_chksums[i].all.b_seq_qual << "\t" << readgroup_chksums[i].all.name_b_seq_qual << std::dec << std::endl;
+				<< readgroup_chksums[i].all.b_seq_qual << "\t" << readgroup_chksums[i].all.b_seq_tags << std::dec << std::endl;
 			std::cout << (i>0 ? header.getReadGroups().at(i-1).ID : "") << "\tpass\t" << readgroup_chksums[i].pass.count << "\t"
 				<< std::hex << "\t" << readgroup_chksums[i].pass.b_seq << "\t" << readgroup_chksums[i].pass.name_b_seq << "\t"
-				<< readgroup_chksums[i].pass.b_seq_qual << "\t" << readgroup_chksums[i].pass.name_b_seq_qual << std::dec << std::endl;
+				<< readgroup_chksums[i].pass.b_seq_qual << "\t" << readgroup_chksums[i].pass.b_seq_tags << std::dec << std::endl;
 		}
 		assert(chksumschk == chksums);
 	}
