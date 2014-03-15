@@ -64,7 +64,7 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 		private:
 		::libmaus::autoarray::AutoArray<char> A; // check with German: can we change underlying data block to unsigned char / uint8_t?
 		::libmaus::autoarray::AutoArray<char> B; //separate A & B can allow reordering speed up?
-		std::vector<std::string> auxtags;
+		std::vector<std::string> const auxtags;
 		// to provide fast checking of aux fields when processing and validation at startup
 		::libmaus::bambam::BamAuxFilterVector const auxtagsfilter;
 		/**
@@ -173,7 +173,7 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 					// skip over aux tag data we're not interested in
 					if( auxtagsfilter(aux[0],aux[1]) )
 					{
-						std::vector<std::string>::iterator it_auxtags = auxtags.begin();
+						std::vector<std::string>::const_iterator it_auxtags = auxtags.begin();
 						std::vector<uint8_t const *>::iterator it_paux = paux.begin();
 						std::vector<uint64_t>::iterator it_saux = saux.begin();
 						// consider each tag in auxtag
@@ -197,8 +197,8 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 					}
 					aux += auxlen;
 				}
-				std::vector<uint8_t const *>::iterator it_paux = paux.begin();
-				std::vector<uint64_t>::iterator it_saux = saux.begin();
+				std::vector<uint8_t const *>::const_iterator it_paux = paux.begin();
+				std::vector<uint64_t>::const_iterator it_saux = saux.begin();
 				//loop over the chunks of data corresponding to the auxtags
 				while (it_paux != paux.end())
 				{
