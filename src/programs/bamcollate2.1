@@ -195,6 +195,23 @@ reset=1. If reset=1 then the default is to remove all aux fields.
 .B auxfilter=<>:
 comma separated list of aux tags to be kept if reset=1 and resetaux=0. If
 the key is not set then all tags are kept.
+.PP
+.B outputformat=<bam>: output file format.
+All versions of bamcollate2 come with support for the BAM output format. If
+the program in addition is linked to the io_lib package, then the following
+options are valid:
+.IP bam:
+BAM (see http://samtools.sourceforge.net/SAM1.pdf)
+.IP sam:
+SAM (see http://samtools.sourceforge.net/SAM1.pdf)
+.IP cram:
+CRAM (see http://www.ebi.ac.uk/ena/about/cram_toolkit). This format is not advisable for data not sorted by coordinate.
+.PP
+.B O=<[stdout]>: 
+output filename, standard output if unset.
+.PP
+.B outputthreads=<[1]>:
+output helper threads, only valid for outputformat=bam.
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"
