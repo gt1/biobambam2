@@ -30,6 +30,7 @@
 #include <libmaus/util/MemUsage.hpp>
 #include <libmaus/lz/GzipOutputStream.hpp>
 #include <libmaus/aio/PosixFdInputStream.hpp>
+#include <libmaus/aio/PosixFdOutputStream.hpp>
 
 static std::string getDefaultInputFormat()
 {
@@ -39,6 +40,36 @@ static std::string getDefaultInputFormat()
 bool getDefaultFastA()
 {
 	return 0;
+}
+
+bool getDefaultOutputPerReadgroup()
+{
+	return 0;
+}
+
+std::string getDefaultReadGroupSuffixF()
+{
+	return "_1.fq";
+}
+
+std::string getDefaultReadGroupSuffixF2()
+{
+	return "_2.fq";
+}
+
+std::string getDefaultReadGroupSuffixO()
+{
+	return "_o1.fq";
+}
+
+std::string getDefaultReadGroupSuffixO2()
+{
+	return "_o2.fq";
+}
+
+std::string getDefaultReadGroupSuffixS()
+{
+	return "_s.fq";
 }
 
 struct BamToFastQInputFileStream
@@ -226,7 +257,6 @@ void bamtofastqCollating(
 
 	bool const fasta = arginfo.getValue<int>("fasta",getDefaultFastA());
 
-	libmaus::bambam::BamToFastqOutputFileSet OFS(arginfo);
 
 	libmaus::bambam::CircularHashCollatingBamDecoder::OutputBufferEntry const * ob = 0;
 	
@@ -238,88 +268,312 @@ void bamtofastqCollating(
 	libmaus::timing::RealTimeClock rtc; rtc.start();
 	::libmaus::autoarray::AutoArray<uint8_t> T;
 	CollateCombs combs;
-		
-	while ( (ob = CHCBD.process()) )
+
+	bool const outputperreadgroup = arginfo.getValue<unsigned int>("outputperreadgroup",getDefaultOutputPerReadgroup());
+
+	if ( outputperreadgroup )
 	{
-		uint64_t const precnt = cnt;
+		std::string const Fsuffix = arginfo.getUnparsedValue("outputperreadgroupsuffixF",getDefaultReadGroupSuffixF());
+		std::string const F2suffix = arginfo.getUnparsedValue("outputperreadgroupsuffixF2",getDefaultReadGroupSuffixF2());
+		std::string const Osuffix = arginfo.getUnparsedValue("outputperreadgroupsuffixO",getDefaultReadGroupSuffixO());
+		std::string const O2suffix = arginfo.getUnparsedValue("outputperreadgroupsuffixO2",getDefaultReadGroupSuffixO2());
+		std::string const Ssuffix = arginfo.getUnparsedValue("outputperreadgroupsuffixS",getDefaultReadGroupSuffixS());
 		
-		if ( ob->fpair )
-		{
-			uint64_t la = 
-				fasta
-				?
-				libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Da,T)
-				:
-				libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T)
-			;
-			OFS.Fout.write(reinterpret_cast<char const *>(T.begin()),la);
-			uint64_t lb = 
-				fasta
-				?
-				libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Db,T)
-				:
-				libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Db,T)
-				;
-			OFS.F2out.write(reinterpret_cast<char const *>(T.begin()),lb);
+		// collect set of all suffixes
+		std::set<std::string> suffixset;
+		suffixset.insert(Fsuffix);
+		suffixset.insert(F2suffix);
+		suffixset.insert(Osuffix);
+		suffixset.insert(O2suffix);
+		suffixset.insert(Ssuffix);
 
-			combs.pairs += 1;
-			cnt += 2;
-			bcnt += (la+lb);
-		}
-		else if ( ob->fsingle )
+		// assign id to each suffix
+		std::map<std::string,uint64_t> suffixmap;
+		std::vector<std::string> suffixremap;
+		for ( std::set<std::string>::const_iterator ita = suffixset.begin(); ita != suffixset.end(); ++ita )
 		{
-			uint64_t la = 
-				fasta
-				?
-				libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Da,T)
-				:
-				libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T)
-				;
-			OFS.Sout.write(reinterpret_cast<char const *>(T.begin()),la);
-
-			combs.single += 1;
-			cnt += 1;
-			bcnt += (la);
+			uint64_t const id = suffixmap.size();
+			suffixmap[*ita] = id;
+			suffixremap.push_back(*ita);
 		}
-		else if ( ob->forphan1 )
-		{
-			uint64_t la = 
-				fasta
-				?
-				libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Da,T)
-				:
-				libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T)
-				;
-			OFS.Oout.write(reinterpret_cast<char const *>(T.begin()),la);
-
-			combs.orphans1 += 1;
-			cnt += 1;
-			bcnt += (la);
-		}
-		else if ( ob->forphan2 )
-		{
-			uint64_t la = 
-				fasta
-				?
-				libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Da,T)
-				:
-				libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T)
-				;
-			OFS.O2out.write(reinterpret_cast<char const *>(T.begin()),la);
-
-			combs.orphans2 += 1;
-			cnt += 1;
-			bcnt += (la);
-		}
+		uint64_t const Fmap = suffixmap.find(Fsuffix)->second;
+		uint64_t const F2map = suffixmap.find(F2suffix)->second;
+		uint64_t const Omap = suffixmap.find(Osuffix)->second;
+		uint64_t const O2map = suffixmap.find(O2suffix)->second;
+		uint64_t const Smap = suffixmap.find(Ssuffix)->second;
 		
-		if ( precnt >> verbshift != cnt >> verbshift )
+		// get bam header
+		libmaus::bambam::BamHeader const & header = CHCBD.getHeader();
+		
+		// get read group vector
+		std::vector<libmaus::bambam::ReadGroup> const & readgroups = header.getReadGroups();
+		
+		// compute set of read group ids
+		std::set<std::string> readgroupsidset;
+		for ( uint64_t i = 0; i < readgroups.size(); ++i )
+			readgroupsidset.insert(readgroups[i].ID);
+			
+		// check that read group ids are unique
+		if ( readgroupsidset.size() != readgroups.size() )
 		{
-			std::cerr 
-				<< "[V] "
-				<< (cnt >> 20) 
-				<< "\t"
-				<< (static_cast<double>(bcnt)/(1024.0*1024.0))/rtc.getElapsedSeconds() << "MB/s"
-				<< "\t" << static_cast<double>(cnt)/rtc.getElapsedSeconds() << std::endl;
+			libmaus::exception::LibMausException ex;
+			ex.getStream() << "read group ids are not unique." << std::endl;
+			ex.finish();
+			throw ex;
+		}
+			
+		// construct id for default read group
+		std::string defaultidprefix = "default";
+		std::string defaultid = defaultidprefix;
+		uint64_t defaultidex = 0;
+		while ( readgroupsidset.find(defaultid) != readgroupsidset.end() )
+		{
+			std::ostringstream ostr;
+			ostr << defaultidprefix << "_" << (defaultidex++);
+			defaultid = ostr.str();
+		}
+		assert ( readgroupsidset.find(defaultid) == readgroupsidset.end() );
+		
+		// number of output files
+		uint64_t const filesperrg = suffixset.size();
+		uint64_t const numoutputfiles = (readgroups.size()+1) * filesperrg;
+		
+		// output directory
+		std::string outputdir = arginfo.getUnparsedValue("outputdir","");
+		if ( outputdir.size() )
+			outputdir += "/";
+		
+		// construct output file names
+		std::vector<std::string> outputfilenamevector;	
+		for ( std::set<std::string>::const_iterator ita = suffixset.begin(); ita != suffixset.end(); ++ita )
+			outputfilenamevector.push_back(outputdir + defaultid + *ita);
+		for ( uint64_t i = 0; i < readgroups.size(); ++i )
+			for ( std::set<std::string>::const_iterator ita = suffixset.begin(); ita != suffixset.end(); ++ita )
+				outputfilenamevector.push_back(outputdir + readgroups[i].ID + *ita);
+				
+		assert ( outputfilenamevector.size() == numoutputfiles );
+		uint64_t const posixoutbufsize = 256*1024;
+		libmaus::autoarray::AutoArray< ::libmaus::aio::PosixFdOutputStream::unique_ptr_type > APFOS(numoutputfiles);
+		libmaus::autoarray::AutoArray< libmaus::lz::GzipOutputStream::unique_ptr_type > AGZOS(numoutputfiles);
+		libmaus::autoarray::AutoArray< std::ostream * > AOS(numoutputfiles);
+		libmaus::autoarray::AutoArray< uint64_t > filefrags(numoutputfiles);
+		bool const gz = arginfo.getValue<int>("gz",0);
+		int const level = std::min(9,std::max(-1,arginfo.getValue<int>("level",Z_DEFAULT_COMPRESSION)));
+		for ( uint64_t i = 0; i < numoutputfiles; ++i )
+		{
+			::libmaus::aio::PosixFdOutputStream::unique_ptr_type tptr(
+				new ::libmaus::aio::PosixFdOutputStream(outputfilenamevector[i],posixoutbufsize)
+			);
+			APFOS[i] = UNIQUE_PTR_MOVE(tptr);
+			
+			if ( gz )
+			{
+				libmaus::lz::GzipOutputStream::unique_ptr_type tPgzos(new libmaus::lz::GzipOutputStream(*(APFOS[i]),libmaus::bambam::BamToFastqOutputFileSet::getGzipBufferSize(),level));
+				AGZOS[i] = UNIQUE_PTR_MOVE(tPgzos);
+				AOS[i] = AGZOS[i].get();
+			}
+			else
+			{
+				AOS[i] = APFOS[i].get();
+			}
+		}
+
+		while ( (ob = CHCBD.process()) )
+		{
+			uint64_t const precnt = cnt;
+			
+			int64_t const rg = ob->Da ?
+				header.getReadGroupId(libmaus::bambam::BamAlignmentDecoderBase::getReadGroup(ob->Da,ob->blocksizea))
+				:
+				-1
+				;
+			int64_t const rgfbase = rg + 1;
+			assert ( rgfbase < readgroups.size() + 1 );
+			uint64_t const rgfshift = rgfbase * filesperrg;
+			
+			if ( ob->fpair )
+			{
+				uint64_t la = 
+					fasta
+					?
+					libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Da,T)
+					:
+					libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T)
+				;
+				AOS[rgfshift + Fmap]->write(reinterpret_cast<char const *>(T.begin()),la);
+				filefrags[rgfshift + Fmap]++;
+				uint64_t lb = 
+					fasta
+					?
+					libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Db,T)
+					:
+					libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Db,T)
+					;
+				AOS[rgfshift + F2map]->write(reinterpret_cast<char const *>(T.begin()),lb);
+				filefrags[rgfshift + F2map]++;
+
+				combs.pairs += 1;
+				cnt += 2;
+				bcnt += (la+lb);
+			}
+			else if ( ob->fsingle )
+			{
+				uint64_t la = 
+					fasta
+					?
+					libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Da,T)
+					:
+					libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T)
+					;
+				AOS[rgfshift + Smap]->write(reinterpret_cast<char const *>(T.begin()),la);
+				filefrags[rgfshift + Smap]++;
+
+				combs.single += 1;
+				cnt += 1;
+				bcnt += (la);
+			}
+			else if ( ob->forphan1 )
+			{
+				uint64_t la = 
+					fasta
+					?
+					libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Da,T)
+					:
+					libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T)
+					;
+				AOS[rgfshift + Omap]->write(reinterpret_cast<char const *>(T.begin()),la);
+				filefrags[rgfshift + Omap]++;
+
+				combs.orphans1 += 1;
+				cnt += 1;
+				bcnt += (la);
+			}
+			else if ( ob->forphan2 )
+			{
+				uint64_t la = 
+					fasta
+					?
+					libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Da,T)
+					:
+					libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T)
+					;
+				AOS[rgfshift + O2map]->write(reinterpret_cast<char const *>(T.begin()),la);
+				filefrags[rgfshift + Omap]++;
+
+				combs.orphans2 += 1;
+				cnt += 1;
+				bcnt += (la);
+			}
+			
+			if ( precnt >> verbshift != cnt >> verbshift )
+			{
+				std::cerr 
+					<< "[V] "
+					<< (cnt >> 20) 
+					<< "\t"
+					<< (static_cast<double>(bcnt)/(1024.0*1024.0))/rtc.getElapsedSeconds() << "MB/s"
+					<< "\t" << static_cast<double>(cnt)/rtc.getElapsedSeconds() << std::endl;
+			}
+		}
+
+		
+		// close files
+		for ( uint64_t i = 0; i < numoutputfiles; ++i )
+		{
+			if ( AGZOS[i] )
+				AGZOS[i].reset();
+			APFOS[i].reset();
+			
+			if ( ! filefrags[i] )
+				remove(outputfilenamevector[i].c_str());
+		}
+	}
+	else
+	{		
+		libmaus::bambam::BamToFastqOutputFileSet OFS(arginfo);
+		
+		while ( (ob = CHCBD.process()) )
+		{
+			uint64_t const precnt = cnt;
+			
+			if ( ob->fpair )
+			{
+				uint64_t la = 
+					fasta
+					?
+					libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Da,T)
+					:
+					libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T)
+				;
+				OFS.Fout.write(reinterpret_cast<char const *>(T.begin()),la);
+				uint64_t lb = 
+					fasta
+					?
+					libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Db,T)
+					:
+					libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Db,T)
+					;
+				OFS.F2out.write(reinterpret_cast<char const *>(T.begin()),lb);
+
+				combs.pairs += 1;
+				cnt += 2;
+				bcnt += (la+lb);
+			}
+			else if ( ob->fsingle )
+			{
+				uint64_t la = 
+					fasta
+					?
+					libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Da,T)
+					:
+					libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T)
+					;
+				OFS.Sout.write(reinterpret_cast<char const *>(T.begin()),la);
+
+				combs.single += 1;
+				cnt += 1;
+				bcnt += (la);
+			}
+			else if ( ob->forphan1 )
+			{
+				uint64_t la = 
+					fasta
+					?
+					libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Da,T)
+					:
+					libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T)
+					;
+				OFS.Oout.write(reinterpret_cast<char const *>(T.begin()),la);
+
+				combs.orphans1 += 1;
+				cnt += 1;
+				bcnt += (la);
+			}
+			else if ( ob->forphan2 )
+			{
+				uint64_t la = 
+					fasta
+					?
+					libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Da,T)
+					:
+					libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T)
+					;
+				OFS.O2out.write(reinterpret_cast<char const *>(T.begin()),la);
+
+				combs.orphans2 += 1;
+				cnt += 1;
+				bcnt += (la);
+			}
+			
+			if ( precnt >> verbshift != cnt >> verbshift )
+			{
+				std::cerr 
+					<< "[V] "
+					<< (cnt >> 20) 
+					<< "\t"
+					<< (static_cast<double>(bcnt)/(1024.0*1024.0))/rtc.getElapsedSeconds() << "MB/s"
+					<< "\t" << static_cast<double>(cnt)/rtc.getElapsedSeconds() << std::endl;
+			}
 		}
 	}
 
@@ -679,6 +933,13 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "level=<[-1]>", "compression setting if gz=1 (default: -1, zlib default settings)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("fasta=<[")+libmaus::util::NumberSerialisation::formatNumber(getDefaultFastA(),0)+"]>", "output FastA instead of FastQ" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "inputbuffersize=<["+::biobambam::Licensing::formatNumber(BamToFastQInputFileStream::getDefaultBufferSize())+"]>", "size of input buffer" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "outputperreadgroup=<["+::biobambam::Licensing::formatNumber(getDefaultOutputPerReadgroup())+"]>", "split output per read group (for collate=1 only)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "outputdir=<>", "directory for output (default: in current directory)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "outputperreadgroupsuffixF=<["+getDefaultReadGroupSuffixF()+"]>", "suffix for F category when outputperreadgroup=1" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "outputperreadgroupsuffixF2=<["+getDefaultReadGroupSuffixF2()+"]>", "suffix for F2 category when outputperreadgroup=1" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "outputperreadgroupsuffixO=<["+getDefaultReadGroupSuffixO()+"]>", "suffix for O category when outputperreadgroup=1" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "outputperreadgroupsuffixO2=<["+getDefaultReadGroupSuffixO2()+"]>", "suffix for O2 category when outputperreadgroup=1" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "outputperreadgroupsuffixS=<["+getDefaultReadGroupSuffixS()+"]>", "suffix for S category when outputperreadgroup=1" ) );
 				
 				::biobambam::Licensing::printMap(std::cerr,V);
 
