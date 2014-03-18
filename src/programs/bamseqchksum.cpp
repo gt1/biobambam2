@@ -22,11 +22,8 @@
 #include <iostream>
 #include <zlib.h>
 
-//#include <libmaus/bambam/BamAlignment.hpp>
 #include <libmaus/bambam/BamDecoder.hpp>
 #include <libmaus/bambam/ScramDecoder.hpp>
-//#include <libmaus/bambam/BamHeader.hpp>
-//#include <libmaus/bambam/BamFlagBase.hpp>
 
 #include <libmaus/util/ArgInfo.hpp>
 
@@ -39,19 +36,9 @@ static std::string getDefaultInputFormat()
 	return "bam";
 }
 
-
-/*static uint8_t sizeOfBamAuxFilterVector(::libmaus::bambam::BamAuxFilterVector const & auxtags)
-{// yuck yuck - just to get things working....
-	uint8_t count = 0;
-	uint8_t i = auxtags.B.n;
-	while (i--)
-		if (auxtags.B[i])
-			count++;
-	return count;
-}*/
 int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 {
-	const static uint64_t MERSENNE31 = 0x7FFFFFFFull;
+	const static uint64_t MERSENNE31 = 0x7FFFFFFFull; // Mersenne Prime 2^31 - 1
 	/**
 	* Finite field products of CRC32 checksums of primary/source sequence data
 	*
