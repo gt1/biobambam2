@@ -51,9 +51,6 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 		private:
 		::libmaus::autoarray::AutoArray<char> A; // check with German: can we change underlying data block to unsigned char / uint8_t?
 		::libmaus::autoarray::AutoArray<char> B; //separate A & B can allow reordering speed up?
-		std::vector<std::string> const auxtags;
-		// to provide fast checking of aux fields when processing and validation at startup
-		::libmaus::bambam::BamAuxFilterVector const auxtagsfilter;
 		/**
 		* Multiply existing product by new checksum, having altered checksum ready for
 		* multiplication in a finite field i.e. 0 < chksum < (2^31 -1)
@@ -66,6 +63,9 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 			product = ( product * chksum ) % MERSENNE31;
 		}
 		public:
+		std::vector<std::string> const auxtags;
+		// to provide fast checking of aux fields when processing and validation at startup
+		::libmaus::bambam::BamAuxFilterVector const auxtagsfilter;
 		/**
 		* Product checksums calculated based on basecalls and (multi segment, first
 		* and last) bit info, and this combined with the query name, or the basecall
@@ -210,7 +210,7 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 		};
 		bool operator== (OrderIndependentSeqDataChecksums const & other) const
 		{
-			return pass==other.pass && all==other.all;
+			return pass==other.pass && all==other.all && auxtags==other.auxtags;
 		}
 	};
 
@@ -262,8 +262,15 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 		}
 	}
 
-	std::cout << "###\tset\t" << "count" << "\t" << std::hex << "\t" << "b_seq" << "\t"
-		<< "name_b_seq" << "\t" << "b_seq_qual" << "\t" << "b_seq_tags" << std::dec << std::endl;
+	std::cout << "###\tset\t" << "count" << "\t" << "\t" << "b_seq" << "\t" << "name_b_seq" << "\t" << "b_seq_qual" << "\t"
+		<< "b_seq_tags(";
+	for (std::vector<std::string>::const_iterator it_aux = chksums.auxtags.begin(); it_aux != chksums.auxtags.end(); ++it_aux)
+	{
+		if (chksums.auxtags.begin() != it_aux)
+			std::cout << ",";
+		std::cout << *it_aux;
+	}
+	std::cout << ")" << std::endl;
 	std::cout << "all\tall\t" << chksums.all.count << "\t" << std::hex << "\t" << chksums.all.b_seq << "\t"
 		<< chksums.all.name_b_seq << "\t" << chksums.all.b_seq_qual << "\t" << chksums.all.b_seq_tags << std::dec << std::endl;
 	std::cout << "all\tpass\t" << chksums.pass.count << "\t" << std::hex << "\t" << chksums.pass.b_seq << "\t"
