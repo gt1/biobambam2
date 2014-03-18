@@ -1,3 +1,9 @@
+biobambam (0.0.128) unstable; urgency=low
+
+  * add output parameters (format, file name, threads) for bamcollate2 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Tue, 18 Mar 2014 09:59:29 +0000
+
 biobambam (0.0.127) unstable; urgency=low
 
   * add support for bgzf compressed reference in bammdnm 
