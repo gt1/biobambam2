@@ -1,3 +1,9 @@
+biobambam (0.0.129) unstable; urgency=low
+
+  * add splitting by read group option in bamtofastq 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Wed, 19 Mar 2014 09:22:13 +0000
+
 biobambam (0.0.128) unstable; urgency=low
 
   * add output parameters (format, file name, threads) for bamcollate2 
