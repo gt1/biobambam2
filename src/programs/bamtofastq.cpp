@@ -934,7 +934,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( std::string("fasta=<[")+libmaus::util::NumberSerialisation::formatNumber(getDefaultFastA(),0)+"]>", "output FastA instead of FastQ" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "inputbuffersize=<["+::biobambam::Licensing::formatNumber(BamToFastQInputFileStream::getDefaultBufferSize())+"]>", "size of input buffer" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "outputperreadgroup=<["+::biobambam::Licensing::formatNumber(getDefaultOutputPerReadgroup())+"]>", "split output per read group (for collate=1 only)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "outputdir=<>", "directory for output (default: in current directory)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "outputdir=<>", "directory for output if outputperreadgroup=1 (default: current directory)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "outputperreadgroupsuffixF=<["+getDefaultReadGroupSuffixF()+"]>", "suffix for F category when outputperreadgroup=1" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "outputperreadgroupsuffixF2=<["+getDefaultReadGroupSuffixF2()+"]>", "suffix for F2 category when outputperreadgroup=1" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "outputperreadgroupsuffixO=<["+getDefaultReadGroupSuffixO()+"]>", "suffix for O category when outputperreadgroup=1" ) );
