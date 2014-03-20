@@ -47,29 +47,29 @@ bool getDefaultOutputPerReadgroup()
 	return 0;
 }
 
-std::string getDefaultReadGroupSuffixF()
+std::string getDefaultReadGroupSuffixF(bool const gz)
 {
-	return "_1.fq";
+	return std::string("_1.fq") + (gz ? ".gz" : "");
 }
 
-std::string getDefaultReadGroupSuffixF2()
+std::string getDefaultReadGroupSuffixF2(bool const gz)
 {
-	return "_2.fq";
+	return std::string("_2.fq") + (gz ? ".gz" : "");
 }
 
-std::string getDefaultReadGroupSuffixO()
+std::string getDefaultReadGroupSuffixO(bool const gz)
 {
-	return "_o1.fq";
+	return std::string("_o1.fq") + (gz ? ".gz" : "");
 }
 
-std::string getDefaultReadGroupSuffixO2()
+std::string getDefaultReadGroupSuffixO2(bool const gz)
 {
-	return "_o2.fq";
+	return std::string("_o2.fq") + (gz ? ".gz" : "");
 }
 
-std::string getDefaultReadGroupSuffixS()
+std::string getDefaultReadGroupSuffixS(bool const gz)
 {
-	return "_s.fq";
+	return std::string("_s.fq") + (gz ? ".gz" : "");
 }
 
 struct BamToFastQInputFileStream
@@ -273,11 +273,12 @@ void bamtofastqCollating(
 
 	if ( outputperreadgroup )
 	{
-		std::string const Fsuffix = arginfo.getUnparsedValue("outputperreadgroupsuffixF",getDefaultReadGroupSuffixF());
-		std::string const F2suffix = arginfo.getUnparsedValue("outputperreadgroupsuffixF2",getDefaultReadGroupSuffixF2());
-		std::string const Osuffix = arginfo.getUnparsedValue("outputperreadgroupsuffixO",getDefaultReadGroupSuffixO());
-		std::string const O2suffix = arginfo.getUnparsedValue("outputperreadgroupsuffixO2",getDefaultReadGroupSuffixO2());
-		std::string const Ssuffix = arginfo.getUnparsedValue("outputperreadgroupsuffixS",getDefaultReadGroupSuffixS());
+		bool const gz = arginfo.getValue<int>("gz",0);
+		std::string const Fsuffix = arginfo.getUnparsedValue("outputperreadgroupsuffixF",getDefaultReadGroupSuffixF(gz));
+		std::string const F2suffix = arginfo.getUnparsedValue("outputperreadgroupsuffixF2",getDefaultReadGroupSuffixF2(gz));
+		std::string const Osuffix = arginfo.getUnparsedValue("outputperreadgroupsuffixO",getDefaultReadGroupSuffixO(gz));
+		std::string const O2suffix = arginfo.getUnparsedValue("outputperreadgroupsuffixO2",getDefaultReadGroupSuffixO2(gz));
+		std::string const Ssuffix = arginfo.getUnparsedValue("outputperreadgroupsuffixS",getDefaultReadGroupSuffixS(gz));
 		
 		// collect set of all suffixes
 		std::set<std::string> suffixset;
@@ -357,7 +358,6 @@ void bamtofastqCollating(
 		libmaus::autoarray::AutoArray< libmaus::lz::GzipOutputStream::unique_ptr_type > AGZOS(numoutputfiles);
 		libmaus::autoarray::AutoArray< std::ostream * > AOS(numoutputfiles);
 		libmaus::autoarray::AutoArray< uint64_t > filefrags(numoutputfiles);
-		bool const gz = arginfo.getValue<int>("gz",0);
 		int const level = std::min(9,std::max(-1,arginfo.getValue<int>("level",Z_DEFAULT_COMPRESSION)));
 		for ( uint64_t i = 0; i < numoutputfiles; ++i )
 		{
@@ -909,6 +909,8 @@ int main(int argc, char * argv[])
 				
 				std::vector< std::pair<std::string,std::string> > V;
 				
+				bool const gz = arginfo.getValue<unsigned int>("gz",0);
+				
 				V.push_back ( std::pair<std::string,std::string> ( "F=<[stdout]>", "matched pairs first mates" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "F2=<[stdout]>", "matched pairs second mates" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "S=<[stdout]>", "single end" ) );
@@ -935,11 +937,11 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "inputbuffersize=<["+::biobambam::Licensing::formatNumber(BamToFastQInputFileStream::getDefaultBufferSize())+"]>", "size of input buffer" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "outputperreadgroup=<["+::biobambam::Licensing::formatNumber(getDefaultOutputPerReadgroup())+"]>", "split output per read group (for collate=1 only)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "outputdir=<>", "directory for output if outputperreadgroup=1 (default: current directory)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "outputperreadgroupsuffixF=<["+getDefaultReadGroupSuffixF()+"]>", "suffix for F category when outputperreadgroup=1" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "outputperreadgroupsuffixF2=<["+getDefaultReadGroupSuffixF2()+"]>", "suffix for F2 category when outputperreadgroup=1" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "outputperreadgroupsuffixO=<["+getDefaultReadGroupSuffixO()+"]>", "suffix for O category when outputperreadgroup=1" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "outputperreadgroupsuffixO2=<["+getDefaultReadGroupSuffixO2()+"]>", "suffix for O2 category when outputperreadgroup=1" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "outputperreadgroupsuffixS=<["+getDefaultReadGroupSuffixS()+"]>", "suffix for S category when outputperreadgroup=1" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "outputperreadgroupsuffixF=<["+getDefaultReadGroupSuffixF(gz)+"]>", "suffix for F category when outputperreadgroup=1" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "outputperreadgroupsuffixF2=<["+getDefaultReadGroupSuffixF2(gz)+"]>", "suffix for F2 category when outputperreadgroup=1" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "outputperreadgroupsuffixO=<["+getDefaultReadGroupSuffixO(gz)+"]>", "suffix for O category when outputperreadgroup=1" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "outputperreadgroupsuffixO2=<["+getDefaultReadGroupSuffixO2(gz)+"]>", "suffix for O2 category when outputperreadgroup=1" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "outputperreadgroupsuffixS=<["+getDefaultReadGroupSuffixS(gz)+"]>", "suffix for S category when outputperreadgroup=1" ) );
 				
 				::biobambam::Licensing::printMap(std::cerr,V);
 
