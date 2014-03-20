@@ -161,11 +161,14 @@ int bamclipreinsert(::libmaus::util::ArgInfo const & arginfo)
 	libmaus::autoarray::AutoArray<libmaus::bambam::cigar_operation> cigop;
 	std::stack < libmaus::bambam::cigar_operation > hardstack;
 	libmaus::bambam::BamAlignment::D_array_type Tcigar;
+	libmaus::bambam::BamAuxFilterVector auxfilterout;
+	auxfilterout.set('q','s');
+	auxfilterout.set('q','q');
 
 	while ( dec.readAlignment() )
 	{
 		// reinsert clipped parts and attach soft clipping cigar operations as needed
-		clipReinsert(algn,auxtags,bafv,cigop,Tcigar,hardstack);
+		clipReinsert(algn,auxtags,bafv,cigop,Tcigar,hardstack,auxfilterout);
 
 		algn.serialise(writer->getStream());
 
