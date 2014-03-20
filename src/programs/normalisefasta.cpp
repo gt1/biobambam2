@@ -79,7 +79,6 @@ void normalisefastaBgzf(libmaus::util::ArgInfo const & arginfo, std::ostream & o
 {
 	libmaus::fastx::StreamFastAReaderWrapper in(std::cin);
 	libmaus::fastx::StreamFastAReaderWrapper::pattern_type pattern;
-	uint64_t offset = 0;
 	int const level = arginfo.getValue("level",getDefaultLevel());
 	std::string const indexfn = arginfo.getUnparsedValue("index","");
 
