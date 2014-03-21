@@ -234,6 +234,9 @@ int bam12auxmerge(::libmaus::util::ArgInfo const & arginfo)
 	std::stack < libmaus::bambam::cigar_operation > hardstack;
 	libmaus::bambam::BamAlignment::D_array_type Tcigar;
 	libmaus::bambam::BamAuxFilterVector bafv;
+	libmaus::bambam::BamAuxFilterVector auxfilterout;
+	auxfilterout.set('q','s');
+	auxfilterout.set('q','q');
 
 	// helpers for zztoname	
  	libmaus::bambam::BamAuxFilterVector zzbafv;
@@ -354,7 +357,7 @@ int bam12auxmerge(::libmaus::util::ArgInfo const & arginfo)
 			strip12(algn);
 
 		if ( clipreinsert )
-			clipReinsert(algn,auxtags,bafv,cigop,Tcigar,hardstack);
+			clipReinsert(algn,auxtags,bafv,cigop,Tcigar,hardstack,auxfilterout);
 			
 		if ( zztoname )
 			zzToRank(algn,zzbafv);	

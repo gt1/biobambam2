@@ -33,6 +33,7 @@
 #include <libmaus/util/MemUsage.hpp>
 #include <libmaus/bambam/ProgramHeaderLineSet.hpp>
 #include <libmaus/bambam/BamAuxFilterVector.hpp>
+#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static std::string getDefaultInputFormat() { return "bam"; }
@@ -97,35 +98,6 @@ static uint32_t parseClassList(std::string s)
 	}
 	
 	return mask;
-}
-
-static int getLevel(libmaus::util::ArgInfo const & arginfo)
-{
-	int const level = arginfo.getValue<int>("level",getDefaultLevel());
-	
-	switch ( level )
-	{
-		case Z_NO_COMPRESSION:
-		case Z_BEST_SPEED:
-		case Z_BEST_COMPRESSION:
-		case Z_DEFAULT_COMPRESSION:
-			break;
-		default:
-		{
-			::libmaus::exception::LibMausException se;
-			se.getStream()
-				<< "Unknown compression level, please use"
-				<< " level=" << Z_DEFAULT_COMPRESSION << " (default) or"
-				<< " level=" << Z_BEST_SPEED << " (fast) or"
-				<< " level=" << Z_BEST_COMPRESSION << " (best) or"
-				<< " level=" << Z_NO_COMPRESSION << " (no compression)" << std::endl;
-			se.finish();
-			throw se;
-		}
-			break;
-	}
-	
-	return level;
 }
 
 struct BamToFastQInputFileStream
@@ -286,7 +258,9 @@ void bamcollate2NonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::ba
 	 */
 
 	// construct writer
-	::libmaus::bambam::BamWriter::unique_ptr_type writer(new ::libmaus::bambam::BamWriter(std::cout,uphead,getLevel(arginfo),Pcbs));
+	libmaus::bambam::BamBlockWriterBase::unique_ptr_type writer(
+		libmaus::bambam::BamBlockWriterBaseFactory::construct(uphead,arginfo,Pcbs)
+	);
 
 	// read group trie
 	::libmaus::trie::LinearHashTrie<char,uint32_t>::shared_ptr_type const rgtrie = getRGTrie(arginfo);
@@ -309,7 +283,7 @@ void bamcollate2NonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::ba
 				        rgfilter /* rg filter */
 				);
 		
-			algn.serialise(writer->getStream());
+			writer->writeAlignment(algn);
 		}
 
 		if ( precnt >> verbshift != cnt >> verbshift )
@@ -461,9 +435,9 @@ void bamcollate2Collating(
 	 */
 
 	// construct writer
-	::libmaus::bambam::BamWriter::unique_ptr_type writer(new ::libmaus::bambam::BamWriter(std::cout,uphead,getLevel(arginfo),Pcbs));
-	typedef libmaus::bambam::BamWriter::stream_type out_stream_type;
-	out_stream_type & bgzfos = writer->getStream();
+	libmaus::bambam::BamBlockWriterBase::unique_ptr_type writer(
+		libmaus::bambam::BamBlockWriterBaseFactory::construct(uphead,arginfo,Pcbs)
+	);
 
 	// read group trie
 	::libmaus::trie::LinearHashTrie<char,uint32_t>::shared_ptr_type rgtrie = getRGTrie(arginfo);
@@ -513,7 +487,7 @@ void bamcollate2Collating(
 						        libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSUPPLEMENTARY,
 						        rgfilter /* RG filter */
 							);
-						Ralgna.serialise(bgzfos);
+						writer->writeAlignment(Ralgna);
 						bcnt += (Ralgna.blocksize);
 					}
 					
@@ -527,7 +501,7 @@ void bamcollate2Collating(
 						        libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSUPPLEMENTARY,
 						        rgfilter /* RG filter */
 						);
-						Ralgnb.serialise(bgzfos);
+						writer->writeAlignment(Ralgnb);
 						bcnt += (Ralgnb.blocksize);
 					}
 				}
@@ -535,15 +509,13 @@ void bamcollate2Collating(
 				{
 					if ( classmask & classmask_F )
 					{
-						::libmaus::bambam::EncoderBase::putLE<out_stream_type,uint32_t>(bgzfos,ob->blocksizea);
-						bgzfos.write(reinterpret_cast<char const *>(ob->Da),ob->blocksizea);
+						writer->writeBamBlock(ob->Da,ob->blocksizea);
 						bcnt += (ob->blocksizea);
 					}
 					
 					if ( classmask & classmask_F2 )
 					{
-						::libmaus::bambam::EncoderBase::putLE<out_stream_type,uint32_t>(bgzfos,ob->blocksizeb);
-						bgzfos.write(reinterpret_cast<char const *>(ob->Db),ob->blocksizeb);
+						writer->writeBamBlock(ob->Db,ob->blocksizeb);
 						bcnt += (ob->blocksizeb);
 					}
 				}
@@ -581,14 +553,13 @@ void bamcollate2Collating(
 					        libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSUPPLEMENTARY,
 					        rgfilter /* RG filter */
 					);
-					Ralgna.serialise(bgzfos);
+					writer->writeAlignment(Ralgna);
 
 					bcnt += (Ralgna.blocksize);
 				}
 				else
 				{
-					::libmaus::bambam::EncoderBase::putLE<out_stream_type,uint32_t>(bgzfos,ob->blocksizea);
-					bgzfos.write(reinterpret_cast<char const *>(ob->Da),ob->blocksizea);
+					writer->writeBamBlock(ob->Da,ob->blocksizea);
 					bcnt += (ob->blocksizea);
 				}
 
@@ -624,13 +595,12 @@ void bamcollate2Collating(
 						libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY |
 					        libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSUPPLEMENTARY,
 					        rgfilter /* RG filter */					);
-					Ralgna.serialise(bgzfos);
+					writer->writeAlignment(Ralgna);
 					bcnt += (Ralgna.blocksize);
 				}
 				else
 				{
-					::libmaus::bambam::EncoderBase::putLE<out_stream_type,uint32_t>(bgzfos,ob->blocksizea);
-					bgzfos.write(reinterpret_cast<char const *>(ob->Da),ob->blocksizea);
+					writer->writeBamBlock(ob->Da,ob->blocksizea);
 					bcnt += (ob->blocksizea);
 				}
 
@@ -667,13 +637,12 @@ void bamcollate2Collating(
 					        libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSUPPLEMENTARY,
 					        rgfilter /* RG filter */
 					);
-					Ralgna.serialise(bgzfos);
+					writer->writeAlignment(Ralgna);
 					bcnt += (Ralgna.blocksize);
 				}
 				else
 				{
-					::libmaus::bambam::EncoderBase::putLE<out_stream_type,uint32_t>(bgzfos,ob->blocksizea);
-					bgzfos.write(reinterpret_cast<char const *>(ob->Da),ob->blocksizea);
+					writer->writeBamBlock(ob->Da,ob->blocksizea);
 					bcnt += (ob->blocksizea);
 				}
 
@@ -860,9 +829,9 @@ void bamcollate2CollatingRanking(
 	 */
 
 	// construct writer
-	::libmaus::bambam::BamWriter::unique_ptr_type writer(new ::libmaus::bambam::BamWriter(std::cout,uphead,getLevel(arginfo),Pcbs));
-	typedef libmaus::bambam::BamWriter::stream_type out_stream_type;
-	out_stream_type & bgzfos = writer->getStream();
+	libmaus::bambam::BamBlockWriterBase::unique_ptr_type writer(
+		libmaus::bambam::BamBlockWriterBaseFactory::construct(uphead,arginfo,Pcbs)
+	);
 
 	libmaus::bambam::BamAuxFilterVector zrtag;
 	zrtag.set('Z','R');
@@ -886,7 +855,7 @@ void bamcollate2CollatingRanking(
 			algn.blocksize = ob->blocksizea;
 			algn.replaceName(name.c_str(),name.size());
 			algn.filterOutAux(zrtag);
-			algn.serialise(bgzfos);
+			writer->writeAlignment(algn);
 			
 			if ( algn.D.size() < ob->blocksizeb )
 				algn.D.resize(ob->blocksizeb);
@@ -894,7 +863,7 @@ void bamcollate2CollatingRanking(
 			algn.blocksize = ob->blocksizeb;
 			algn.replaceName(name.c_str(),name.size());
 			algn.filterOutAux(zrtag);
-			algn.serialise(bgzfos);
+			writer->writeAlignment(algn);
 			
 			cnt += 2;
 		}
@@ -914,7 +883,7 @@ void bamcollate2CollatingRanking(
 			algn.blocksize = ob->blocksizea;
 			algn.replaceName(name.c_str(),name.size());
 			algn.filterOutAux(zrtag);
-			algn.serialise(bgzfos);
+			writer->writeAlignment(algn);
 
 			cnt += 1;
 		}
@@ -933,7 +902,7 @@ void bamcollate2CollatingRanking(
 			algn.blocksize = ob->blocksizea;
 			algn.replaceName(name.c_str(),name.size());
 			algn.filterOutAux(zrtag);
-			algn.serialise(bgzfos);
+			writer->writeAlignment(algn);
 
 			cnt += 1;
 		}
@@ -952,7 +921,7 @@ void bamcollate2CollatingRanking(
 			algn.blocksize = ob->blocksizea;
 			algn.replaceName(name.c_str(),name.size());
 			algn.filterOutAux(zrtag);
-			algn.serialise(bgzfos);
+			writer->writeAlignment(algn);
 
 			cnt += 1;
 		}
@@ -1130,9 +1099,9 @@ void bamcollate2CollatingPostRanking(
 	 */
 
 	// construct writer
-	::libmaus::bambam::BamWriter::unique_ptr_type writer(new ::libmaus::bambam::BamWriter(std::cout,uphead,getLevel(arginfo),Pcbs));
-	typedef libmaus::bambam::BamWriter::stream_type out_stream_type;
-	out_stream_type & bgzfos = writer->getStream();
+	libmaus::bambam::BamBlockWriterBase::unique_ptr_type writer(
+		libmaus::bambam::BamBlockWriterBaseFactory::construct(uphead,arginfo,Pcbs)
+	);
 	uint64_t r = 0;
 
 	libmaus::bambam::BamAuxFilterVector zrtag;
@@ -1187,7 +1156,7 @@ void bamcollate2CollatingPostRanking(
 				        rgfilter /* RG filter */
 				);
 			attachRank(algn,zranka,zzbafv);
-			algn.serialise(bgzfos);
+			writer->writeAlignment(algn);
 			
 			if ( algn.D.size() < ob->blocksizeb )
 				algn.D.resize(ob->blocksizeb);
@@ -1204,7 +1173,7 @@ void bamcollate2CollatingPostRanking(
 				        rgfilter /* RG filter */
 				);
 			attachRank(algn,zrankb,zzbafv);
-			algn.serialise(bgzfos);
+			writer->writeAlignment(algn);
 			
 			cnt += 2;
 		}
@@ -1241,7 +1210,7 @@ void bamcollate2CollatingPostRanking(
 				        rgfilter /* RG filter */
 				);
 			attachRank(algn,zranka,zzbafv);
-			algn.serialise(bgzfos);
+			writer->writeAlignment(algn);
 
 			cnt += 1;
 		}
@@ -1284,7 +1253,7 @@ void bamcollate2CollatingPostRanking(
 				        rgfilter /* RG filter */				
 				);
 			attachRank(algn,zranka,zzbafv);
-			algn.serialise(bgzfos);
+			writer->writeAlignment(algn);
 
 			cnt += 1;
 		}
@@ -1327,7 +1296,7 @@ void bamcollate2CollatingPostRanking(
 				        rgfilter /* RG filter */
 				);
 			attachRank(algn,zranka,zzbafv);
-			algn.serialise(bgzfos);
+			writer->writeAlignment(algn);
 
 			cnt += 1;
 		}
@@ -1534,7 +1503,10 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "resetheadertext=[<>]", "replacement SAM header text file for reset=1 (default: filter header in source BAM file)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("resetaux=<[")+::biobambam::Licensing::formatNumber(getDefaultResetAux())+"]>", "reset auxiliary fields (collate=0,1 only with reset=1)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "auxfilter=[<>]", "comma separated list of aux tags to keep if reset=1 and resetaux=0 (default: keep all)" ) );
-				
+				V.push_back ( std::pair<std::string,std::string> ( std::string("outputformat=<[")+libmaus::bambam::BamBlockWriterBaseFactory::getDefaultOutputFormat()+"]>", std::string("output format (") + libmaus::bambam::BamBlockWriterBaseFactory::getValidOutputFormats() + ")" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "O=<[stdout]>", "output filename (standard output if unset)" ) );				
+				V.push_back ( std::pair<std::string,std::string> ( "outputthreads=<[1]>", "output helper threads (for outputformat=bam only, default: 1)" ) );
+
 				::biobambam::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;

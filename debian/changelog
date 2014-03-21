@@ -1,3 +1,27 @@
+biobambam (0.0.129) unstable; urgency=low
+
+  * add splitting by read group option in bamtofastq 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Wed, 19 Mar 2014 09:22:13 +0000
+
+biobambam (0.0.128) unstable; urgency=low
+
+  * add output parameters (format, file name, threads) for bamcollate2 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Tue, 18 Mar 2014 09:59:29 +0000
+
+biobambam (0.0.127) unstable; urgency=low
+
+  * add support for bgzf compressed reference in bammdnm 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Thu, 06 Mar 2014 14:08:41 +0000
+
+biobambam (0.0.126) unstable; urgency=low
+
+  * add bammdnm program 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Sun, 02 Mar 2014 18:43:05 +0000
+
 biobambam (0.0.125) unstable; urgency=low
 
   * merge fixes for compiler warnings 

@@ -21,15 +21,19 @@
 #include <iostream>
 #include <queue>
 
+#include <libmaus/aio/CheckedOutputStream.hpp>
+
 #include <libmaus/bambam/BamAlignment.hpp>
 #include <libmaus/bambam/BamDecoder.hpp>
 #include <libmaus/bambam/BamWriter.hpp>
 #include <libmaus/bambam/ProgramHeaderLineSet.hpp>
 
 #include <libmaus/util/ArgInfo.hpp>
+#include <libmaus/util/GetObject.hpp>
+#include <libmaus/util/PutObject.hpp>
+#include <libmaus/util/TempFileRemovalContainer.hpp>
 
 #include <biobambam/Licensing.hpp>
-#include <biobambam/ClipReinsert.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; }
@@ -39,8 +43,10 @@ static int getDefaultVerbose() { return 1; }
 static int getDefaultMD5() { return 0; }
 static int getDefaultIndex() { return 0; }
 
-int bamclipreinsert(::libmaus::util::ArgInfo const & arginfo)
+int bamfilternames(::libmaus::util::ArgInfo const & arginfo)
 {
+	::libmaus::util::TempFileRemovalContainer::setup();
+
 	if ( isatty(STDIN_FILENO) )
 	{
 		::libmaus::exception::LibMausException se;
@@ -90,13 +96,12 @@ int bamclipreinsert(::libmaus::util::ArgInfo const & arginfo)
 	// add PG line to header
 	std::string const upheadtext = ::libmaus::bambam::ProgramHeaderLineSet::addProgramLine(
 		headertext,
-		"bamclipreinsert", // ID
-		"bamclipreinsert", // PN
+		"bamfilternames", // ID
+		"bamfilternames", // PN
 		arginfo.commandline, // CL
 		::libmaus::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
 		std::string(PACKAGE_VERSION) // VN			
 	);
-		
 	// construct new header
 	libmaus::bambam::BamHeader const uphead(upheadtext);
 
@@ -147,35 +152,52 @@ int bamclipreinsert(::libmaus::util::ArgInfo const & arginfo)
 	/*
 	 * end md5/index callbacks
 	 */
-
 	::libmaus::bambam::BamWriter::unique_ptr_type writer(new ::libmaus::bambam::BamWriter(std::cout,uphead,level,Pcbs));
-	libmaus::bambam::BamAuxFilterVector bafv;
- 	// bafv.set('z','z');
- 	// std::vector<uint8_t> R(8);
- 	// std::string const zz("zz");
- 	
+
+	::libmaus::trie::LinearHashTrie<char,uint32_t>::shared_ptr_type LHTsnofailure;
+	
+	if ( arginfo.hasArg("names") )
+	{
+		std::string const names = arginfo.getUnparsedValue("names",std::string());
+		
+		libmaus::aio::CheckedInputStream namestr(names);
+		std::vector<std::string> vnames;
+		while ( namestr )
+		{
+			std::string line;
+			std::getline(namestr,line);
+			
+			if ( line.size() )
+				vnames.push_back(line);
+		}
+
+		::libmaus::trie::Trie<char> trienofailure;
+		trienofailure.insertContainer(vnames);
+		::libmaus::trie::LinearHashTrie<char,uint32_t>::unique_ptr_type LHTnofailure(trienofailure.toLinearHashTrie<uint32_t>());
+		LHTsnofailure = ::libmaus::trie::LinearHashTrie<char,uint32_t>::shared_ptr_type(LHTnofailure.release());
+	}
+	
 	libmaus::bambam::BamAlignment & algn = dec.getAlignment();
 	uint64_t c = 0;
-
-	libmaus::autoarray::AutoArray < std::pair<uint8_t,uint8_t> > auxtags;
-	libmaus::autoarray::AutoArray<libmaus::bambam::cigar_operation> cigop;
-	std::stack < libmaus::bambam::cigar_operation > hardstack;
-	libmaus::bambam::BamAlignment::D_array_type Tcigar;
-	libmaus::bambam::BamAuxFilterVector auxfilterout;
-	auxfilterout.set('q','s');
-	auxfilterout.set('q','q');
-
-	while ( dec.readAlignment() )
+	
+	if ( ! LHTsnofailure )
 	{
-		// reinsert clipped parts and attach soft clipping cigar operations as needed
-		clipReinsert(algn,auxtags,bafv,cigop,Tcigar,hardstack,auxfilterout);
-
-		algn.serialise(writer->getStream());
-
-		++c;
-		
-		if ( verbose && (c & (1024*1024-1)) == 0 )
- 			std::cerr << "[V] " << c/(1024*1024) << std::endl;
+		while ( dec.readAlignment() )
+		{
+			algn.serialise(writer->getStream());
+			if ( verbose && (++c & (1024*1024-1)) == 0 )
+				std::cerr << "[V] " << c/(1024*1024) << std::endl;
+		}
+	}
+	else
+	{
+		while ( dec.readAlignment() )
+		{
+			if ( LHTsnofailure->searchCompleteNoFailureZ(algn.getName()) != -1 )
+				algn.serialise(writer->getStream());
+			if ( verbose && (++c & (1024*1024-1)) == 0 )
+				std::cerr << "[V] " << c/(1024*1024) << std::endl;
+		}	
 	}
 
 	writer.reset();
@@ -223,6 +245,7 @@ int main(int argc, char * argv[])
 			
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", "compression settings for output bam file (0=uncompressed,1=fast,9=best,-1=zlib default)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress information" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "names=<[]>", "file containing read names to be kept (default: keep all)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "md5filename=<filename>", "file name for md5 check sum (default: extend output file name)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
@@ -236,7 +259,7 @@ int main(int argc, char * argv[])
 				return EXIT_SUCCESS;
 			}
 			
-		return bamclipreinsert(arginfo);
+		return bamfilternames(arginfo);
 	}
 	catch(std::exception const & ex)
 	{

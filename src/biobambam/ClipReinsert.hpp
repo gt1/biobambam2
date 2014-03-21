@@ -27,6 +27,7 @@ bool clipReinsert(
  	libmaus::bambam::BamAuxFilterVector & bafv,
 	libmaus::autoarray::AutoArray<libmaus::bambam::cigar_operation> & cigop,
 	libmaus::bambam::BamAlignment::D_array_type & Tcigar,
-	std::stack < libmaus::bambam::cigar_operation > & hardstack
+	std::stack < libmaus::bambam::cigar_operation > & hardstack,
+ 	libmaus::bambam::BamAuxFilterVector const & auxfilterout
 );
 #endif

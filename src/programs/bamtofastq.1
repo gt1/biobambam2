@@ -1,4 +1,4 @@
-.TH BAMTOFASTQ 1 "January 2014" BIOBAMBAM
+.TH BAMTOFASTQ 1 "March 2014" BIOBAMBAM
 .SH NAME
 bamtofastq - convert SAM, BAM or CRAM files to FastQ
 .SH SYNOPSIS
@@ -141,6 +141,37 @@ zlib/gzip level 9 (best) compression
 .PP
 .B fasta=<0|1>:
 output FastA instead of FastQ if fasta=1.
+.PP
+.B outputperreadgroup=<0|1>
+split output by read group if outputperreadgroup=1 (default is 0). If
+splitting by read group is performed then no output is written on standard
+output but all data is written to files. The file names will be generated
+using the outputdir and outputperreadgroupsuffix parameters and read group
+names.
+.PP
+.B outputdir=<>
+output directory if outputperreadgroup=1. By default the output files are
+generated in the current directory.
+.PP
+.B outputperreadgroupsuffixF=<_1.fq>
+output file name suffix for first mates of complete pairs if outputperreadgroup=1.
+Default is _1.fq if gz=0 and _1.fq.gz for gz=1.
+.PP
+.B outputperreadgroupsuffixF2=<_2.fq>
+output file name suffix for second mates of complete pairs if outputperreadgroup=1.
+Default is _2.fq if gz=0 and _2.fq.gz for gz=1.
+.PP
+.B outputperreadgroupsuffixO=<_o1.fq>
+output file name suffix for first mates of incomplete pairs if outputperreadgroup=1.
+Default is _o1.fq if gz=0 and _o1.fq.gz for gz=1.
+.PP
+.B outputperreadgroupsuffixO2=<_o2.fq>
+output file name suffix for second mates of incomplete pairs if outputperreadgroup=1.
+Default is _o2.fq if gz=0 and _o2.fq.gz for gz=1.
+.PP
+.B outputperreadgroupsuffixS=<_s.fq>
+output file name suffix for singled end reads if outputperreadgroup=1.
+Default is _s.fq if gz=0 and _s.fq.gz for gz=1.
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"
