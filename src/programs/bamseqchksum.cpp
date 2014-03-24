@@ -49,7 +49,7 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 	**/
 	struct OrderIndependentSeqDataChecksums {
 		private:
-		::libmaus::autoarray::AutoArray<char> A; // check with German: can we change underlying data block to unsigned char / uint8_t?
+		::libmaus::autoarray::AutoArray<char> A; // check with German: can we change/treat underlying data block to unsigned char / uint8_t?
 		::libmaus::autoarray::AutoArray<char> B; //separate A & B can allow reordering speed up?
 		/**
 		* Multiply existing product by new checksum, having altered checksum ready for
@@ -128,13 +128,13 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 					::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREAD2 ) ) >> 0 )  & 0xFF;
 				const bool is_pass = ! algn.isQCFail();
 				const uint32_t CRC32_INITIAL = crc32(0L, Z_NULL, 0);
-				uint32_t chksum = crc32(CRC32_INITIAL,(const unsigned char *)algn.getName(),algn.getLReadName());
-				chksum = crc32(chksum,(const unsigned char*) &flags, 1);
+				uint32_t chksum = crc32(CRC32_INITIAL,reinterpret_cast<const unsigned char *>(algn.getName()),algn.getLReadName());
+				chksum = crc32(chksum,reinterpret_cast<const unsigned char*>( &flags), 1);
 				const uint64_t len = algn.isReverse() ? algn.decodeReadRC(A) : algn.decodeRead(A);
-				chksum = crc32(chksum,(const unsigned char *) A.begin(), len);
+				chksum = crc32(chksum,reinterpret_cast<const unsigned char *>( A.begin()), len);
 				product_munged_chksum_multiply(all.name_b_seq, chksum);
-				uint32_t chksumnn = crc32(CRC32_INITIAL,(const unsigned char*) &flags, 1);
-				chksumnn = crc32(chksumnn,(const unsigned char *) A.begin(), len);
+				uint32_t chksumnn = crc32(CRC32_INITIAL,reinterpret_cast<const unsigned char*>( &flags), 1);
+				chksumnn = crc32(chksumnn,reinterpret_cast<const unsigned char *>( A.begin()), len);
 				product_munged_chksum_multiply(all.b_seq, chksumnn);
 				if(is_pass)
 				{
@@ -144,7 +144,7 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 				}
 				chksum = chksumnn;
 				const uint64_t len2 = algn.isReverse() ? algn.decodeQualRC(B) : algn.decodeQual(B);
-				chksumnn = crc32(chksumnn,(const unsigned char *) B.begin(), len2);
+				chksumnn = crc32(chksumnn,reinterpret_cast<const unsigned char *>( B.begin()), len2);
 				product_munged_chksum_multiply(all.b_seq_qual, chksumnn);
 				// set aux to start pointer of aux area
 				uint8_t const * aux = ::libmaus::bambam::BamAlignmentDecoderBase::getAux(algn.D.begin());
@@ -167,7 +167,7 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 						while ( it_auxtags != auxtags.end())
 						{
 							// until we match the tag for the current aux data
-							if(! it_auxtags->compare(0,2,(char *)aux,2) )
+							if(! it_auxtags->compare(0,2,reinterpret_cast<const char *>(aux),2) )
 							{
 								*it_paux = aux;
 								*it_saux = auxlen;
@@ -191,7 +191,7 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 				{
 					//if data exists push into running checksum
 					if(*it_paux)
-						chksum = crc32(chksum,(const unsigned char *) *it_paux, *it_saux);
+						chksum = crc32(chksum,reinterpret_cast<const unsigned char *>( *it_paux), *it_saux);
 					++it_paux;
 					++it_saux;
 				}
@@ -228,11 +228,12 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 	::libmaus::bambam::BamAlignmentDecoder::unique_ptr_type const pdec
 	(
 		#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
-		inputformat == "sam"  ? (::libmaus::bambam::BamAlignmentDecoder*) new ::libmaus::bambam::ScramDecoder("/dev/stdin","r","") :
-		inputformat == "cram" ? (::libmaus::bambam::BamAlignmentDecoder*) new ::libmaus::bambam::ScramDecoder("/dev/stdin","rc", arginfo.getValue<std::string>("reference","")) :
-		inputformat == "sbam" ? (::libmaus::bambam::BamAlignmentDecoder*) new ::libmaus::bambam::ScramDecoder("/dev/stdin","rb","") :
+		//
+		inputformat == "sam"  ? new ::libmaus::bambam::ScramDecoder("/dev/stdin","r","") :
+		inputformat == "cram" ? new ::libmaus::bambam::ScramDecoder("/dev/stdin","rc", arginfo.getValue<std::string>("reference","")) :
+		inputformat == "sbam" ? new ::libmaus::bambam::ScramDecoder("/dev/stdin","rb","") :
 		#endif
-		inputformat == "bam"  ? (::libmaus::bambam::BamAlignmentDecoder*) new ::libmaus::bambam::BamDecoder(std::cin,false) : NULL
+		inputformat == "bam"  ? static_cast< ::libmaus::bambam::BamAlignmentDecoder*>(new ::libmaus::bambam::BamDecoder(std::cin,false)) : NULL
 	);
 	if ( ! pdec)
 	{
