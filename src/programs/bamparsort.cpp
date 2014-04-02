@@ -3943,6 +3943,8 @@ int main(int argc, char * argv[])
 	try
 	{
 		libmaus::util::ArgInfo const arginfo(argc,argv);
+		
+		std::cerr << "\n[D] - THIS PROGRAM IS HIGHLY EXPERIMENTAL -\n" << std::endl;
 
 		#if defined(_OPENMP)
 		unsigned int const maxthreads = omp_get_max_threads();
