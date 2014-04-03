@@ -388,7 +388,7 @@ void bamtofastqCollating(
 				-1
 				;
 			int64_t const rgfbase = rg + 1;
-			assert ( rgfbase < readgroups.size() + 1 );
+			assert ( static_cast<int64_t>(rgfbase) < static_cast<int64_t>(readgroups.size() + 1) );
 			uint64_t const rgfshift = rgfbase * filesperrg;
 			
 			if ( ob->fpair )
