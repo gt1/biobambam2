@@ -1,3 +1,10 @@
+biobambam (0.0.130) unstable; urgency=low
+
+  * remove qs/qq aux tags in adapter reinsertion
+  * change default file extensions in compressed collating bamtofastq split by read group 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Thu, 03 Apr 2014 14:05:09 +0100
+
 biobambam (0.0.129) unstable; urgency=low
 
   * add splitting by read group option in bamtofastq 
