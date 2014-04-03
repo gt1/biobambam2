@@ -295,15 +295,15 @@ std::vector< PeakInfo  > analyse(std::deque<float> const & Q, std::string const 
 			while ( 
 				lhigh != high 
 				&& 
-				peaks[lhigh].i - peaks[llow].i == lhigh-llow
+				peaks[lhigh].i - peaks[llow].i == static_cast<int64_t>(lhigh-llow)
 			)
 			{
 				++lhigh;
 			}
-			
+						
+			#if 0
 			uint64_t const mid = peaks[(llow+lhigh)/2].i;
 			
-			#if 0
 			std::cerr << "===" << mid << "===" << std::endl;
 			for ( uint64_t i = llow; i != lhigh; ++i )
 				std::cerr << peaks[i] << std::endl;
@@ -368,15 +368,15 @@ std::vector< PeakInfo  > analyse(std::deque<float> const & Q, std::string const 
 	// sort remaining peaks by centre
 	std::sort(peaks.begin(),peaks.end());
 
-	int64_t const kpre = 10;
+	// int64_t const kpre = 10;
 	
 	for ( uint64_t z = 0; z < peaks.size(); ++z )
 	{
-		int64_t const i = peaks[z].i;
-		uint64_t const bs = peaks[z].bs;
-		float const hpre = peaks[z].hpre;
-		float const hpost = peaks[z].hpost;
-		int64_t const k = kpre + bs;
+		// int64_t const i = peaks[z].i;
+		// uint64_t const bs = peaks[z].bs;
+		// float const hpre = peaks[z].hpre;
+		// float const hpost = peaks[z].hpost;
+		// int64_t const k = kpre + bs;
 		
 		std::ostringstream ostr;
 		ostr << " " << peaks[z] << " ";
@@ -414,8 +414,8 @@ void generateGPL(std::deque<float> const & Q, std::vector< PeakInfo > const & pe
 	}
 	#endif
 	
-	uint64_t const numblocks = 1024;
-	uint64_t blocksize = (Q.size() + numblocks-1)/numblocks;
+	// uint64_t const numblocks = 1024;
+	// uint64_t blocksize = (Q.size() + numblocks-1)/numblocks;
 	
 	std::ostringstream depthstr;
 	// depthstr << "plot_" << header.chromosomes[previd].name << ".gpl";
@@ -640,9 +640,9 @@ int bamrefdepth(libmaus::util::ArgInfo const & arginfo)
 					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CMATCH:
 					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CEQUAL:
 					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CDIFF:
-						for ( uint64_t i = 0; i < cigop[cidx].second; ++i, ++pos, ++readpos )
+						for ( uint64_t i = 0; i < static_cast<uint64_t>(cigop[cidx].second); ++i, ++pos, ++readpos )
 						{
-							while ( pos >= Q.size() )
+							while ( pos >= static_cast<int64_t>(Q.size()) )
 								Q.push_back(0);
 								
 							Q[pos] += 1;
