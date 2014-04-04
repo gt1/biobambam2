@@ -59,6 +59,14 @@ read group identifier for reads. By default no read group identifer is set.
 The fields CN, DS, DT, FO, KS, LB, PG, PI, PL, PU and SM of the
 corresponding @RG header line can be set by using the keys RGCN, RGDS, etc.
 respectively.
+.PP
+.B qualityoffset=<33>
+FastQ quality offset. This value is subtracted from the ASCII character
+representation to get the quality score value.
+.PP
+.B checkquality=<1>
+check whether quality values are in range and terminate if an invalid value
+is encountered.
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"
