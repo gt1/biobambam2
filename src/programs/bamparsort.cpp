@@ -1015,7 +1015,7 @@ struct BamThreadPoolDecodeBamParsePackageDispatcher : public libmaus::parallel::
 			
 			switch ( contextbase.bamParserState )
 			{
-				case contextbase.bam_parser_state_read_blocklength:
+				case BamThreadPoolDecodeContextBase<order_type>::bam_parser_state_read_blocklength:
 				{
 					if ( contextbase.bamBlockSizeRead == 0 )
 					{
@@ -1060,7 +1060,7 @@ struct BamThreadPoolDecodeBamParsePackageDispatcher : public libmaus::parallel::
 					}
 					break;
 				}
-				case contextbase.bam_parser_state_read_blockdata:
+				case BamThreadPoolDecodeContextBase<order_type>::bam_parser_state_read_blockdata:
 				{
 					assert ( pa != pc );
 				
@@ -2215,8 +2215,8 @@ struct BamThreadPoolMergeWritePackage : public ::libmaus::parallel::SimpleThread
 struct BamThreadPoolMergeProcessBufferInfo
 {
 	typedef BamThreadPoolMergeProcessBufferInfo this_type;
-	typedef typename libmaus::util::unique_ptr<this_type>::type unique_ptr_type;
-	typedef typename libmaus::util::shared_ptr<this_type>::type shared_ptr_type;
+	typedef libmaus::util::unique_ptr<this_type>::type unique_ptr_type;
+	typedef libmaus::util::shared_ptr<this_type>::type shared_ptr_type;
 
 	uint64_t blockid;
 	uint64_t seqid;
