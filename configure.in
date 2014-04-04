@@ -18,6 +18,15 @@ AC_ARG_ENABLE(profile,
 AC_ARG_ENABLE(fast,
         AS_HELP_STRING([--enable-fast],[disable evaluation of assertions (default no)]),
         [fast=${enableval}],[fast=no])
+AC_ARG_ENABLE(install-experimental,
+        AS_HELP_STRING([--enable-install-experimental],[install experimental programs (default no)]),
+        [install_experimental=${enableval}],[install_experimental=no])
+
+if test "${install_experimental}" = "yes" ; then
+	BAMPARSORTINSTEXP=bamparsort
+else
+	BAMPARSORTNOINSTEXP=bamparsort
+fi
 
 # check for C compiler
 CFLAGS_SAVE="${CFLAGS}"
@@ -233,5 +242,8 @@ AC_SUBST([LIBMAUSIOLIBDEFINE])
 #
 AC_SUBST([LIFTINGWAVELETTRANSFORMDEFINE])
 AC_SUBST([BAMREFDEPTHPEAKS])
+#
+AC_SUBST([BAMPARSORTINSTEXP])
+AC_SUBST([BAMPARSORTNOINSTEXP])
 # 
 AC_OUTPUT(Makefile src/Makefile src/biobambam/BamBamConfig.hpp)

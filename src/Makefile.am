@@ -52,13 +52,13 @@ bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamr
 	bamfixmateinformation \
 	normalisefasta \
 	bamfilterheader \
-	bammdnm
-	
+	bammdnm @BAMPARSORTINSTEXP@
+
 noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments bamtoname \
 	bamdisthist bamrefdepth fastabgzfextract bamfilternames @BAMREFDEPTHPEAKS@ \
-	bamparsort
+	@BAMPARSORTNOINSTEXP@
 	
-EXTRA_PROGRAMS = bamrefdepthpeaks
+EXTRA_PROGRAMS = bamrefdepthpeaks bamparsort
 
 bamcollate_SOURCES = programs/bamcollate.cpp biobambam/Licensing.cpp
 bamcollate_LDADD = ${LIBMAUSLIBS}
