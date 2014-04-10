@@ -23,6 +23,7 @@
 #include <libmaus/aio/PosixFdOutputStream.hpp>
 #include <libmaus/fastx/FastAReader.hpp>
 #include <libmaus/fastx/FastABgzfIndex.hpp>
+#include <libmaus/fastx/FastAIndex.hpp>
 #include <libmaus/fastx/StreamFastAReader.hpp>
 #include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
 #include <libmaus/bambam/BamDecoder.hpp>
@@ -31,6 +32,8 @@
 #include <libmaus/bambam/BamMultiAlignmentDecoderFactory.hpp>
 #include <libmaus/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
 #include <libmaus/lz/BgzfDeflateOutputCallbackMD5.hpp>
+#include <libmaus/lz/RAZFIndex.hpp>
+#include <libmaus/lz/RAZFDecoder.hpp>
 #include <libmaus/timing/RealTimeClock.hpp>
 #include <libmaus/util/ArgInfo.hpp>
 #include <libmaus/util/GetFileSize.hpp>
@@ -54,11 +57,16 @@ struct MdNmRecalculation
 	typedef MdNmRecalculation this_type;
 	typedef libmaus::util::unique_ptr<this_type>::type unique_ptr_type;
 
-	bool const inputbgzf;
+	bool const isgz;
+	bool const israzf;
+	bool const isbgzf;
+	bool const isplain;
+	std::string fastaindexfilename;
+	libmaus::fastx::FastAIndex::unique_ptr_type Pfaindex;
 	bool const havebgzfindex;
-	::libmaus::aio::PosixFdInputStream fain;
 	::libmaus::fastx::FastABgzfIndex::unique_ptr_type Pbgzfindex;
-	libmaus::fastx::StreamFastAReaderWrapper::unique_ptr_type fareader;
+	::libmaus::aio::PosixFdInputStream refin;
+	::libmaus::lz::RAZFDecoder::unique_ptr_type razfdec;
 	libmaus::fastx::StreamFastAReaderWrapper::pattern_type currefpat;
 
 	bool validate;
@@ -95,14 +103,58 @@ struct MdNmRecalculation
 		libmaus::aio::CheckedInputStream CIS(filename);
 		return isGzip(CIS);
 	}
+	
+	static std::string fastaIndexName(std::string const & reference)
+	{
+		std::string indexname;
+		
+		// try appending fai
+		if ( libmaus::util::GetFileSize::fileExists(indexname=(reference + ".fai") ) )
+		{
+		
+		}
+		// try removing .fa and appending fai
+		else if ( 
+			libmaus::util::OutputFileNameTools::endsOn(reference,".fa")
+			&&
+			libmaus::util::GetFileSize::fileExists(
+				indexname=(libmaus::util::OutputFileNameTools::clipOff(
+					reference,".fa"
+				) + ".fai")
+			) 
+		)
+		{
+		}
+		// try removing .fasta and appending fai
+		else if ( 
+			libmaus::util::OutputFileNameTools::endsOn(reference,".fasta")
+			&&
+			libmaus::util::GetFileSize::fileExists(
+				indexname=(libmaus::util::OutputFileNameTools::clipOff(
+					reference,".fasta"
+				) + ".fai")
+			) 
+		)
+		{
+		}
+		
+		return indexname;
+	}
 
 	MdNmRecalculation(std::string const & reference, bool const rvalidate, bool const rrecompindetonly, bool const rwarnchange, uint64_t const rioblocksize)
 	: 
-	  inputbgzf(isGzip(reference)),
-	  havebgzfindex(inputbgzf && libmaus::util::GetFileSize::fileExists(reference+".idx")),
-	  fain(reference,rioblocksize), 
+	  isgz(isGzip(reference)),
+	  israzf(isgz && libmaus::lz::RAZFIndex::hasRazfHeader(reference)),
+	  isbgzf(isgz && (!israzf)),
+	  isplain(!isgz),
+	  fastaindexfilename((israzf || isplain) ? fastaIndexName(reference) : std::string() ),
+	  Pfaindex(
+	  	fastaindexfilename.size() ? libmaus::fastx::FastAIndex::load(fastaindexfilename) : ::libmaus::fastx::FastAIndex::unique_ptr_type()
+	  ),
+	  havebgzfindex(isbgzf && libmaus::util::GetFileSize::fileExists(reference+".idx")),
 	  Pbgzfindex(havebgzfindex ? ::libmaus::fastx::FastABgzfIndex::load(reference+".idx") : ::libmaus::fastx::FastABgzfIndex::unique_ptr_type() ),
-	  fareader(inputbgzf ? 0 : new libmaus::fastx::StreamFastAReaderWrapper(fain)),
+	  refin(reference,rioblocksize), 
+	  razfdec(israzf ? (new ::libmaus::lz::RAZFDecoder(refin)) : 0 ),
 	  validate(rvalidate), 
 	  loadrefid(-1), 
 	  prevcheckrefid(-1), 
@@ -111,6 +163,22 @@ struct MdNmRecalculation
 	  recompindetonly(rrecompindetonly),
 	  warnchange(rwarnchange)
 	{
+		if ( (israzf || isplain) && (!Pfaindex.get()) )
+		{
+			libmaus::exception::LibMausException lme;
+			lme.getStream() << "MdNmRecalculation(): reference is plain or RAZF but there is no fai file" << std::endl;
+			lme.finish();
+			throw lme;
+		}
+		
+		if ( isbgzf && (!Pbgzfindex.get()) )
+		{
+			libmaus::exception::LibMausException lme;
+			lme.getStream() << "MdNmRecalculation(): reference is bgzf but there is no idx file" << std::endl;
+			lme.finish();
+			throw lme;			
+		}
+	
 		std::fill(vmap.begin(),vmap.end(),1);
 		vmap['A'] = vmap['C'] = vmap['G'] = vmap['T'] =
 		vmap['a'] = vmap['c'] = vmap['g'] = vmap['t'] = 0;
@@ -166,12 +234,12 @@ struct MdNmRecalculation
 	{
 		if ( static_cast<int64_t>(id) != loadrefid )
 		{
-			if ( inputbgzf )
+			if ( isbgzf )
 			{
 				::libmaus::fastx::FastABgzfIndexEntry const & ent = (*Pbgzfindex)[id];
 				currefpat.sid = ent.name;
 				currefpat.spattern.resize(ent.patlen);
-				::libmaus::fastx::FastABgzfDecoder::unique_ptr_type fastr(Pbgzfindex->getStream(fain,id));
+				::libmaus::fastx::FastABgzfDecoder::unique_ptr_type fastr(Pbgzfindex->getStream(refin,id));
 				::libmaus::autoarray::AutoArray<char> B(64*1024,false);
 				uint64_t p = 0;
 				uint64_t todo = ent.patlen;
@@ -194,6 +262,18 @@ struct MdNmRecalculation
 			}
 			else
 			{
+				std::istream * in = israzf ? 
+					static_cast<std::istream *>(razfdec.get())
+					: 
+					static_cast<std::istream *>((&refin));
+				libmaus::autoarray::AutoArray<char> newrefdata = Pfaindex->readSequence(*in,id);
+
+				currefpat.sid = Pfaindex->sequences[id].name;
+				currefpat.spattern = std::string(newrefdata.begin(),newrefdata.end());
+				
+				loadrefid = id;
+					
+				#if 0
 				while ( loadrefid < static_cast<int64_t>(id) )
 				{
 					bool const ok = fareader->getNextPatternUnlocked(currefpat);
@@ -208,6 +288,7 @@ struct MdNmRecalculation
 					
 					loadrefid++;
 				}
+				#endif
 			}
 
 			if ( recompindetonly )
