@@ -47,11 +47,15 @@ static int getDefaultLevel()
 
 std::string stripName(std::string const & s)
 {
-	uint64_t i = 0;
+	uint64_t j = 0;
+	while ( j < s.size() && isspace(s[j]) )
+		++j;
+		
+	uint64_t i = j;
 	while ( i < s.size() && !isspace(s[i]) )
 		++i;
 		
-	return s.substr(0,i);
+	return s.substr(j,i-j);
 }
 
 void normalisefastaUncompressed(libmaus::util::ArgInfo const & arginfo)
