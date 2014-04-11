@@ -1,3 +1,10 @@
+biobambam (0.0.131) unstable; urgency=low
+
+  * add support for razf compressed reference in bammdnm
+  * add quality offset parameter in fastqtobam 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Fri, 11 Apr 2014 10:10:52 +0100
+
 biobambam (0.0.130) unstable; urgency=low
 
   * remove qs/qq aux tags in adapter reinsertion
