@@ -149,7 +149,7 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 				// set aux to start pointer of aux area
 				uint8_t const * aux = ::libmaus::bambam::BamAlignmentDecoderBase::getAux(algn.D.begin());
 				// end of algn data block (and so of aux area)
-				uint8_t const * const auxend = algn.D.begin() + algn.blocksize - 1;
+				uint8_t const * const auxend = algn.D.begin() + algn.blocksize;
 				// start of each aux entry for auxtags
 				std::vector<uint8_t const *> paux(auxtags.size(),NULL);
 				// size of each aux entry for auxtags
