@@ -2,7 +2,7 @@ AC_INIT(biobambam,0.0.131,[gt1@sanger.ac.uk],[biobambam],[http://www.sanger.ac.u
 AC_CANONICAL_SYSTEM
 AC_PROG_LIBTOOL
 
-AM_INIT_AUTOMAKE
+AM_INIT_AUTOMAKE([std-options subdir-objects])
 AM_CONFIG_HEADER(config.h)
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -134,7 +134,7 @@ if test ! -z "${with_libmaus}" ; then
 	fi
 fi
 
-PKG_CHECK_MODULES([libmaus],[libmaus >= 0.0.112])
+PKG_CHECK_MODULES([libmaus],[libmaus >= 0.0.113])
 
 if test ! -z "${with_libmaus}" ; then
 	if test ! -z "${PKGCONFIGPATHSAVE}" ; then
