@@ -59,6 +59,9 @@ static bool getDefaultDisableValidation() { return false; }
 static std::string getDefaultInputFormat() { return "bam"; }
 static int getDefaultFixMates() { return 0; }
 static int getDefaultSortThreads() { return 1; }
+static int getDefaultCalMdNm() { return 0; }
+static int getDefaultCalMdNmRecompIndetOnly() { return 0; }
+static int getDefaultCalMdNmWarnChange() { return 0; }
 
 int bamsort(::libmaus::util::ArgInfo const & arginfo)
 {
@@ -333,6 +336,18 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 	{
 		if ( sortorder != "queryname" )
 		{
+			bool const calmdnm = arginfo.getValue<unsigned int>("calmdnm",getDefaultCalMdNm());			
+			if ( calmdnm && (! arginfo.hasArg("calmdnmreference")) )
+			{
+				libmaus::exception::LibMausException lme;
+				lme.getStream() << "calmdnm is set but required calmdnmreference is not, aborting." << std::endl;
+				lme.finish();
+				throw lme;
+			}
+			std::string const calmdnmreference = arginfo.getUnparsedValue("calmdnmreference","");
+			bool const calmdnmrecompindetonly = arginfo.getValue<unsigned int>("calmdnmrecompindetonly",getDefaultCalMdNmRecompIndetOnly());
+			bool const calmdnmwarnchange = arginfo.getValue<unsigned int>("calmdnmwarnchange",getDefaultCalMdNmWarnChange());
+			
 			::libmaus::bambam::BamEntryContainer< ::libmaus::bambam::BamAlignmentPosComparator > BEC(blockmem,tmpfilenameout,sortthreads);
 
 			if ( verbose )
@@ -350,8 +365,16 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 			if ( verbose )
 				std::cerr << "[V] read " << incnt << " alignments" << std::endl;
 
-			// BEC.createOutput(std::cout, uphead, level, verbose, Pcbs);
-			BEC.createOutput(*Pout, verbose);
+
+			if ( calmdnm )
+			{
+				libmaus::bambam::MdNmRecalculation mdnmrecalc(calmdnmreference,false /* do not validate again */,calmdnmrecompindetonly,calmdnmwarnchange,64*1024);
+				BEC.createOutput(*Pout, verbose, &mdnmrecalc);
+			}
+			else
+			{
+				BEC.createOutput(*Pout, verbose, 0);			
+			}
 		}
 		else
 		{
@@ -440,6 +463,10 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "outputthreads=<[1]>", "output helper threads (for outputformat=bam only, default: 1)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "O=<[stdout]>", "output filename (standard output if unset)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("fixmates=<[")+::biobambam::Licensing::formatNumber(getDefaultFixMates())+"]>", "fix mate information (for name collated input only, disabled by default)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("calmdnm=<[")+::biobambam::Licensing::formatNumber(getDefaultCalMdNm())+"]>", "calculate MD and NM aux fields (for coordinate sorted output only)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("calmdnmreference=<[]>"), "reference for calculating MD and NM aux fields (calmdnm=1 only)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("calmdnmrecompindetonly=<[")+::biobambam::Licensing::formatNumber(getDefaultCalMdNm())+"]>", "only recalculate MD and NM in the presence of indeterminate bases (calmdnm=1 only)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("calmdnmwarnchange=<[")+::biobambam::Licensing::formatNumber(getDefaultCalMdNmWarnChange())+"]>", "warn when changing existing MD/NM fields (calmdnm=1 only)" ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 
