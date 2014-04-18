@@ -140,6 +140,24 @@ input range to be processed. This option is only valid if the input is a coordin
 fix mate information as bamfixmateinformation would do. Input is assumed to
 be collated by query name (no changes will be applied to mates which are not
 adjacent in the input stream). By default this option is disabled.
+.PP
+.B calmdnm=<0|1>:
+calculate the MD and NM fields as a side effect. By default the fields are
+not calculated. Calculation is only performed if sorting is performed by
+coordinate. If calmdnm=1, then the parameter calmdnmreference in required.
+The supported file formats can be found in the manual page for bammdnm.
+.PP
+.B calmdnmreference=<[]>:
+name of reference sequence file if calmdnm=1.
+.PP
+.B calmdnmrecompindetonly=<0|1>:
+compute MD/NM fields in the presence of indeterminate (N) bases only. This
+option is only relevant if calmdnm=1. By default the fields are computed for
+all mapped alignments if calmdnm=1.
+.PP
+.B calmdnmwarnchange=<0|1>:
+warn if MD/NM field which was computed is differing from a previously
+existing field. By default no warnings are produced.
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"
