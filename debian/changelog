@@ -1,3 +1,9 @@
+biobambam (0.0.133) unstable; urgency=medium
+
+  * update manual page for bamsort 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Fri, 18 Apr 2014 23:31:35 +0100
+
 biobambam (0.0.132) unstable; urgency=medium
 
   * implement option for MD/NM calculation during bamsort 
