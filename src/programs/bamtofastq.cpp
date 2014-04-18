@@ -1,7 +1,7 @@
 /**
     biobambam
-    Copyright (C) 2009-2013 German Tischler
-    Copyright (C) 2011-2013 Genome Research Limited
+    Copyright (C) 2009-2014 German Tischler
+    Copyright (C) 2011-2014 Genome Research Limited
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -43,6 +43,11 @@ bool getDefaultFastA()
 }
 
 bool getDefaultOutputPerReadgroup()
+{
+	return 0;
+}
+
+bool getDefaultTryOQ()
 {
 	return 0;
 }
@@ -111,6 +116,9 @@ struct BamToFastQInputFileStream
 	), in(*CIS) {}
 };
 
+enum bamtofastq_conversion_type { bamtofastq_conversion_type_fastq, bamtofastq_conversion_type_fasta, bamtofastq_conversion_type_fastq_try_oq };
+
+template<bamtofastq_conversion_type conversion_type>
 void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::bambam::BamAlignmentDecoder & bamdec)
 {
 	if ( arginfo.getValue<unsigned int>("disablevalidation",0) )
@@ -119,7 +127,6 @@ void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::bam
 	libmaus::timing::RealTimeClock rtc; rtc.start();
 	bool const gz = arginfo.getValue<int>("gz",0);
 	int const level = std::min(9,std::max(-1,arginfo.getValue<int>("level",Z_DEFAULT_COMPRESSION)));
-	bool const fasta = arginfo.getValue<int>("fasta",getDefaultFastA());
 	uint32_t const excludeflags = libmaus::bambam::BamFlagBase::stringToFlags(arginfo.getValue<std::string>("exclude","SECONDARY,SUPPLEMENTARY"));
 	libmaus::bambam::BamAlignment const & algn = bamdec.getAlignment();
 	::libmaus::autoarray::AutoArray<uint8_t> T;
@@ -142,12 +149,21 @@ void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::bam
 		
 		if ( ! (algn.getFlags() & excludeflags) )
 		{
-			uint64_t la = 
-				fasta ?
-				libmaus::bambam::BamAlignmentDecoderBase::putFastA(algn.D.begin(),T)
-				:
-				libmaus::bambam::BamAlignmentDecoderBase::putFastQ(algn.D.begin(),T)				
-				;
+			uint64_t la;
+			
+			switch ( conversion_type )
+			{
+				case bamtofastq_conversion_type_fastq:
+					la = libmaus::bambam::BamAlignmentDecoderBase::putFastQ(algn.D.begin(),T);
+					break;
+				case bamtofastq_conversion_type_fasta:
+					la = libmaus::bambam::BamAlignmentDecoderBase::putFastA(algn.D.begin(),T);
+					break;
+				case bamtofastq_conversion_type_fastq_try_oq:
+					la = libmaus::bambam::BamAlignmentDecoderBase::putFastQTryOQ(algn.D.begin(),algn.blocksize,T);
+					break;
+			}
+
 			outputstream.write(reinterpret_cast<char const *>(T.begin()),la);
 			bcnt += la;
 		}
@@ -168,19 +184,39 @@ void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::bam
 	std::cout.flush();
 }
 
+void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::bambam::BamAlignmentDecoder & bamdec, bamtofastq_conversion_type const conversion_type)
+{
+	switch ( conversion_type )
+	{
+		case bamtofastq_conversion_type_fasta:
+			bamtofastqNonCollating<bamtofastq_conversion_type_fasta>(arginfo,bamdec);
+			break;
+		case bamtofastq_conversion_type_fastq:					
+			bamtofastqNonCollating<bamtofastq_conversion_type_fastq>(arginfo,bamdec);
+			break;
+		case bamtofastq_conversion_type_fastq_try_oq:
+			bamtofastqNonCollating<bamtofastq_conversion_type_fastq_try_oq>(arginfo,bamdec);
+			break;
+	}
+}
+
 void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo)
 {
 	std::string const inputformat = arginfo.getValue<std::string>("inputformat",getDefaultInputFormat());
 	std::string const inputfilename = arginfo.getValue<std::string>("filename","-");
 	uint64_t const numthreads = arginfo.getValue<uint64_t>("threads",0);
 	uint64_t const inputbuffersize = arginfo.getValueUnsignedNumeric<uint64_t>("inputbuffersize",BamToFastQInputFileStream::getDefaultBufferSize());
+
+	bool const fasta = arginfo.getValue<int>("fasta",getDefaultFastA());
+	bool const tryoq = arginfo.getValue<int>("tryoq",getDefaultTryOQ());	
+	bamtofastq_conversion_type const conversion_type = fasta ? bamtofastq_conversion_type_fasta : (tryoq ? bamtofastq_conversion_type_fastq_try_oq : bamtofastq_conversion_type_fastq);
 	
 	if ( inputformat == "bam" )
 	{
 		if ( arginfo.hasArg("ranges") )
 		{
 			libmaus::bambam::BamRangeDecoder bamdec(inputfilename,arginfo.getUnparsedValue("ranges",""));
-			bamtofastqNonCollating(arginfo,bamdec);
+			bamtofastqNonCollating(arginfo,bamdec,conversion_type);
 		}
 		else
 		{
@@ -189,12 +225,12 @@ void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo)
 			if ( numthreads > 0 )
 			{
 				libmaus::bambam::BamParallelDecoderWrapper bamdecwrap(bamin.in,numthreads);
-				bamtofastqNonCollating(arginfo,bamdecwrap.getDecoder());	
+				bamtofastqNonCollating(arginfo,bamdecwrap.getDecoder(),conversion_type);	
 			}
 			else
 			{
 				libmaus::bambam::BamDecoder bamdec(bamin.in);
-				bamtofastqNonCollating(arginfo,bamdec);
+				bamtofastqNonCollating(arginfo,bamdec,conversion_type);
 			}
 		}
 	}
@@ -202,13 +238,13 @@ void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo)
 	else if ( inputformat == "sam" )
 	{
 		libmaus::bambam::ScramDecoder bamdec(inputfilename,"r","");
-		bamtofastqNonCollating(arginfo,bamdec);
+		bamtofastqNonCollating(arginfo,bamdec,conversion_type);
 	}
 	else if ( inputformat == "cram" )
 	{
 		std::string const reference = arginfo.getValue<std::string>("reference","");
 		libmaus::bambam::ScramDecoder bamdec(inputfilename,"rc",reference);
-		bamtofastqNonCollating(arginfo,bamdec);
+		bamtofastqNonCollating(arginfo,bamdec,conversion_type);
 	}
 	#endif
 	else
@@ -247,6 +283,7 @@ std::ostream & operator<<(std::ostream & out, CollateCombs const & combs)
 	return out;
 };
 
+template<bamtofastq_conversion_type conversion_type>
 void bamtofastqCollating(
 	libmaus::util::ArgInfo const & arginfo,
 	libmaus::bambam::CircularHashCollatingBamDecoder & CHCBD
@@ -254,9 +291,6 @@ void bamtofastqCollating(
 {
 	if ( arginfo.getValue<unsigned int>("disablevalidation",0) )
 		CHCBD.disableValidation();
-
-	bool const fasta = arginfo.getValue<int>("fasta",getDefaultFastA());
-
 
 	libmaus::bambam::CircularHashCollatingBamDecoder::OutputBufferEntry const * ob = 0;
 	
@@ -393,22 +427,37 @@ void bamtofastqCollating(
 			
 			if ( ob->fpair )
 			{
-				uint64_t la = 
-					fasta
-					?
-					libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Da,T)
-					:
-					libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T)
-				;
+				uint64_t la;
+				switch ( conversion_type )
+				{
+					case bamtofastq_conversion_type_fasta:
+						la = libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Da,T);
+						break;
+					case bamtofastq_conversion_type_fastq:
+						la = libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T);
+						break;
+					case bamtofastq_conversion_type_fastq_try_oq:
+						la = libmaus::bambam::BamAlignmentDecoderBase::putFastQTryOQ(ob->Da,ob->blocksizea,T);
+						break;
+				}
+
 				AOS[rgfshift + Fmap]->write(reinterpret_cast<char const *>(T.begin()),la);
 				filefrags[rgfshift + Fmap]++;
-				uint64_t lb = 
-					fasta
-					?
-					libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Db,T)
-					:
-					libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Db,T)
-					;
+				
+				uint64_t lb;
+				switch ( conversion_type )
+				{
+					case bamtofastq_conversion_type_fasta:
+						lb = libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Db,T);
+						break;
+					case bamtofastq_conversion_type_fastq:
+						lb = libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Db,T);
+						break;
+					case bamtofastq_conversion_type_fastq_try_oq:
+						lb = libmaus::bambam::BamAlignmentDecoderBase::putFastQTryOQ(ob->Db,ob->blocksizeb,T);
+						break;
+				}
+
 				AOS[rgfshift + F2map]->write(reinterpret_cast<char const *>(T.begin()),lb);
 				filefrags[rgfshift + F2map]++;
 
@@ -418,13 +467,20 @@ void bamtofastqCollating(
 			}
 			else if ( ob->fsingle )
 			{
-				uint64_t la = 
-					fasta
-					?
-					libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Da,T)
-					:
-					libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T)
-					;
+				uint64_t la;
+				switch ( conversion_type )
+				{
+					case bamtofastq_conversion_type_fasta:
+						la = libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Da,T);
+						break;
+					case bamtofastq_conversion_type_fastq:
+						la = libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T);
+						break;
+					case bamtofastq_conversion_type_fastq_try_oq:
+						la = libmaus::bambam::BamAlignmentDecoderBase::putFastQTryOQ(ob->Da,ob->blocksizea,T);
+						break;
+				}
+
 				AOS[rgfshift + Smap]->write(reinterpret_cast<char const *>(T.begin()),la);
 				filefrags[rgfshift + Smap]++;
 
@@ -434,13 +490,20 @@ void bamtofastqCollating(
 			}
 			else if ( ob->forphan1 )
 			{
-				uint64_t la = 
-					fasta
-					?
-					libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Da,T)
-					:
-					libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T)
-					;
+				uint64_t la;
+				switch ( conversion_type )
+				{
+					case bamtofastq_conversion_type_fasta:
+						la = libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Da,T);
+						break;
+					case bamtofastq_conversion_type_fastq:
+						la = libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T);
+						break;
+					case bamtofastq_conversion_type_fastq_try_oq:
+						la = libmaus::bambam::BamAlignmentDecoderBase::putFastQTryOQ(ob->Da,ob->blocksizea,T);
+						break;
+				}
+
 				AOS[rgfshift + Omap]->write(reinterpret_cast<char const *>(T.begin()),la);
 				filefrags[rgfshift + Omap]++;
 
@@ -450,13 +513,20 @@ void bamtofastqCollating(
 			}
 			else if ( ob->forphan2 )
 			{
-				uint64_t la = 
-					fasta
-					?
-					libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Da,T)
-					:
-					libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T)
-					;
+				uint64_t la;
+				switch ( conversion_type )
+				{
+					case bamtofastq_conversion_type_fasta:
+						la = libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Da,T);
+						break;
+					case bamtofastq_conversion_type_fastq:
+						la = libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T);
+						break;
+					case bamtofastq_conversion_type_fastq_try_oq:
+						la = libmaus::bambam::BamAlignmentDecoderBase::putFastQTryOQ(ob->Da,ob->blocksizea,T);
+						break;
+				}
+
 				AOS[rgfshift + O2map]->write(reinterpret_cast<char const *>(T.begin()),la);
 				filefrags[rgfshift + Omap]++;
 
@@ -498,21 +568,34 @@ void bamtofastqCollating(
 			
 			if ( ob->fpair )
 			{
-				uint64_t la = 
-					fasta
-					?
-					libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Da,T)
-					:
-					libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T)
-				;
+				uint64_t la;
+				switch ( conversion_type )
+				{
+					case bamtofastq_conversion_type_fasta:
+						la = libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Da,T);
+						break;
+					case bamtofastq_conversion_type_fastq:
+						la = libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T);
+						break;
+					case bamtofastq_conversion_type_fastq_try_oq:
+						la = libmaus::bambam::BamAlignmentDecoderBase::putFastQTryOQ(ob->Da,ob->blocksizea,T);
+						break;
+				}
 				OFS.Fout.write(reinterpret_cast<char const *>(T.begin()),la);
-				uint64_t lb = 
-					fasta
-					?
-					libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Db,T)
-					:
-					libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Db,T)
-					;
+
+				uint64_t lb;
+				switch ( conversion_type )
+				{
+					case bamtofastq_conversion_type_fasta:
+						lb = libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Db,T);
+						break;
+					case bamtofastq_conversion_type_fastq:
+						lb = libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Db,T);
+						break;
+					case bamtofastq_conversion_type_fastq_try_oq:
+						lb = libmaus::bambam::BamAlignmentDecoderBase::putFastQTryOQ(ob->Db,ob->blocksizeb,T);
+						break;
+				}
 				OFS.F2out.write(reinterpret_cast<char const *>(T.begin()),lb);
 
 				combs.pairs += 1;
@@ -521,13 +604,19 @@ void bamtofastqCollating(
 			}
 			else if ( ob->fsingle )
 			{
-				uint64_t la = 
-					fasta
-					?
-					libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Da,T)
-					:
-					libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T)
-					;
+				uint64_t la;
+				switch ( conversion_type )
+				{
+					case bamtofastq_conversion_type_fasta:
+						la = libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Da,T);
+						break;
+					case bamtofastq_conversion_type_fastq:
+						la = libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T);
+						break;
+					case bamtofastq_conversion_type_fastq_try_oq:
+						la = libmaus::bambam::BamAlignmentDecoderBase::putFastQTryOQ(ob->Da,ob->blocksizea,T);
+						break;
+				}
 				OFS.Sout.write(reinterpret_cast<char const *>(T.begin()),la);
 
 				combs.single += 1;
@@ -536,13 +625,19 @@ void bamtofastqCollating(
 			}
 			else if ( ob->forphan1 )
 			{
-				uint64_t la = 
-					fasta
-					?
-					libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Da,T)
-					:
-					libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T)
-					;
+				uint64_t la;
+				switch ( conversion_type )
+				{
+					case bamtofastq_conversion_type_fasta:
+						la = libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Da,T);
+						break;
+					case bamtofastq_conversion_type_fastq:
+						la = libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T);
+						break;
+					case bamtofastq_conversion_type_fastq_try_oq:
+						la = libmaus::bambam::BamAlignmentDecoderBase::putFastQTryOQ(ob->Da,ob->blocksizea,T);
+						break;
+				}
 				OFS.Oout.write(reinterpret_cast<char const *>(T.begin()),la);
 
 				combs.orphans1 += 1;
@@ -551,13 +646,19 @@ void bamtofastqCollating(
 			}
 			else if ( ob->forphan2 )
 			{
-				uint64_t la = 
-					fasta
-					?
-					libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Da,T)
-					:
-					libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T)
-					;
+				uint64_t la;
+				switch ( conversion_type )
+				{
+					case bamtofastq_conversion_type_fasta:
+						la = libmaus::bambam::BamAlignmentDecoderBase::putFastA(ob->Da,T);
+						break;
+					case bamtofastq_conversion_type_fastq:
+						la = libmaus::bambam::BamAlignmentDecoderBase::putFastQ(ob->Da,T);
+						break;
+					case bamtofastq_conversion_type_fastq_try_oq:
+						la = libmaus::bambam::BamAlignmentDecoderBase::putFastQTryOQ(ob->Da,ob->blocksizea,T);
+						break;
+				}
 				OFS.O2out.write(reinterpret_cast<char const *>(T.begin()),la);
 
 				combs.orphans2 += 1;
@@ -585,6 +686,26 @@ void bamtofastqCollating(
 		std::cerr << combs;
 }
 
+void bamtofastqCollating(
+	libmaus::util::ArgInfo const & arginfo,
+	libmaus::bambam::CircularHashCollatingBamDecoder & CHCBD,
+	bamtofastq_conversion_type const conversion_type
+)
+{
+	switch ( conversion_type )
+	{
+		case bamtofastq_conversion_type_fasta:
+			bamtofastqCollating<bamtofastq_conversion_type_fasta>(arginfo,CHCBD);
+			break;
+		case bamtofastq_conversion_type_fastq:
+			bamtofastqCollating<bamtofastq_conversion_type_fastq>(arginfo,CHCBD);
+			break;
+		case bamtofastq_conversion_type_fastq_try_oq:
+			bamtofastqCollating<bamtofastq_conversion_type_fastq_try_oq>(arginfo,CHCBD);
+			break;
+	}
+}
+
 void bamtofastqCollating(libmaus::util::ArgInfo const & arginfo)
 {
 	uint32_t const excludeflags = libmaus::bambam::BamFlagBase::stringToFlags(arginfo.getValue<std::string>("exclude","SECONDARY,SUPPLEMENTARY"));
@@ -596,6 +717,10 @@ void bamtofastqCollating(libmaus::util::ArgInfo const & arginfo)
 	uint64_t const numthreads = arginfo.getValue<uint64_t>("threads",0);
 	uint64_t const inputbuffersize = arginfo.getValueUnsignedNumeric<uint64_t>("inputbuffersize",BamToFastQInputFileStream::getDefaultBufferSize());
 
+	bool const fasta = arginfo.getValue<int>("fasta",getDefaultFastA());
+	bool const tryoq = arginfo.getValue<int>("tryoq",getDefaultTryOQ());	
+	bamtofastq_conversion_type const conversion_type = fasta ? bamtofastq_conversion_type_fasta : (tryoq ? bamtofastq_conversion_type_fastq_try_oq : bamtofastq_conversion_type_fastq);
+
 	unsigned int const hlog = arginfo.getValue<unsigned int>("colhlog",18);
 	uint64_t const sbs = arginfo.getValueUnsignedNumeric<uint64_t>("colsbs",32ull*1024ull*1024ull);
 
@@ -604,7 +729,7 @@ void bamtofastqCollating(libmaus::util::ArgInfo const & arginfo)
 		if ( arginfo.hasArg("ranges") )
 		{
 			libmaus::bambam::BamRangeCircularHashCollatingBamDecoder CHCBD(inputfilename,arginfo.getUnparsedValue("ranges",""),tmpfilename,excludeflags,false,hlog,sbs);
-			bamtofastqCollating(arginfo,CHCBD);
+			bamtofastqCollating(arginfo,CHCBD,conversion_type);
 		}
 		else
 		{
@@ -620,7 +745,7 @@ void bamtofastqCollating(libmaus::util::ArgInfo const & arginfo)
 					hlog,
 					sbs
 					);
-				bamtofastqCollating(arginfo,CHCBD);
+				bamtofastqCollating(arginfo,CHCBD,conversion_type);
 			}
 			else
 			{
@@ -631,7 +756,7 @@ void bamtofastqCollating(libmaus::util::ArgInfo const & arginfo)
 					hlog,
 					sbs
 					);
-				bamtofastqCollating(arginfo,CHCBD);
+				bamtofastqCollating(arginfo,CHCBD,conversion_type);
 			}
 		}
 	}
@@ -643,7 +768,7 @@ void bamtofastqCollating(libmaus::util::ArgInfo const & arginfo)
 			false, /* put rank */
 			hlog,sbs
 		);
-		bamtofastqCollating(arginfo,CHCBD);
+		bamtofastqCollating(arginfo,CHCBD,conversion_type);
 	}
 	else if ( inputformat == "cram" )
 	{
@@ -653,7 +778,7 @@ void bamtofastqCollating(libmaus::util::ArgInfo const & arginfo)
 			false, /* put rank */
 			hlog,sbs
 		);
-		bamtofastqCollating(arginfo,CHCBD);
+		bamtofastqCollating(arginfo,CHCBD,conversion_type);
 	}
 	#endif
 	else
@@ -942,6 +1067,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "outputperreadgroupsuffixO=<["+getDefaultReadGroupSuffixO(gz)+"]>", "suffix for O category when outputperreadgroup=1" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "outputperreadgroupsuffixO2=<["+getDefaultReadGroupSuffixO2(gz)+"]>", "suffix for O2 category when outputperreadgroup=1" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "outputperreadgroupsuffixS=<["+getDefaultReadGroupSuffixS(gz)+"]>", "suffix for S category when outputperreadgroup=1" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("tryoq=<[") + ::biobambam::Licensing::formatNumber(getDefaultTryOQ()) + "]>", "use OQ field instead of quality field if present (collate={0,1} only)" ) );
 				
 				::biobambam::Licensing::printMap(std::cerr,V);
 

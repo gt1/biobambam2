@@ -172,6 +172,9 @@ Default is _o2.fq if gz=0 and _o2.fq.gz for gz=1.
 .B outputperreadgroupsuffixS=<_s.fq>
 output file name suffix for singled end reads if outputperreadgroup=1.
 Default is _s.fq if gz=0 and _s.fq.gz for gz=1.
+.PP
+.B tryoq=<0|1>:
+use content of OQ aux field if present instead of quality field when converting to FastQ. By default the quality field is used.
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"
