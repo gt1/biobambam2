@@ -1,3 +1,9 @@
+biobambam (0.0.134) unstable; urgency=low
+
+  * add read name schemes c18s and c18pe in fastqtobam 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Tue, 22 Apr 2014 12:21:49 +0100
+
 biobambam (0.0.133) unstable; urgency=medium
 
   * update manual page for bamsort 
