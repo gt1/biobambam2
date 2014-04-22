@@ -67,6 +67,30 @@ representation to get the quality score value.
 .B checkquality=<1>
 check whether quality values are in range and terminate if an invalid value
 is encountered.
+.PP
+.B namescheme=<generic>
+read name scheme. This determines how read names are parsed. There are three
+possible options:
+.IP generic:
+the first sequence of non whitespace characters is extracted from the @ line
+of the FastQ record and the rest of the @ line is discarded. If the retained
+name ends in /1 or /2, then the read is part of a read pair, otherwise it is 
+the single read for the template. For a pair the part of the name before the
+/1 or /2 is considered the template name. For a single the whole name is
+considered the name of the template.
+.IP c18s:
+The name is expected to consist of two sequences of non white-space
+characters where the first contains seven colon separated fields and the second
+four colon separated fields. The first of the two is considered to be the name of
+the template. It is assumed that this read is the only read for the template.
+.IP c18pe:
+As for c18s, the name is expected to consist of two sequences of non white-space
+characters where the first contains seven colon separated fields and the second
+four colon separated fields. The first of the two is considered to be the name of
+the template. The read is assumed to be part of a read pair. The first field
+in the second non-whitespace sequence of the @ line designates, whether it
+is the first or second of the pair depending on whether the field stores the
+number 1 or 2 respectively.
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"

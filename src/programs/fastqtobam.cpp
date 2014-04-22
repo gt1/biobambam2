@@ -55,9 +55,14 @@ static int getDefaultVerbose()
 {
 	return 0;
 }
+
 static int getDefaultGz() 
 {
 	return 0;
+}
+static std::string getDefaultNameScheme() 
+{
+	return "generic";
 }
 
 static int getLevel(libmaus::util::ArgInfo const & arginfo)
@@ -150,44 +155,182 @@ struct RgInfo
 	}
 };
 
+enum fastq_name_scheme_type { 
+	fastq_name_scheme_generic,
+	fastq_name_scheme_casava18_single,
+	fastq_name_scheme_casava18_paired_end
+};
+
+static fastq_name_scheme_type parseNameScheme(std::string const & schemename)
+{
+	if ( schemename == "generic" )
+		return fastq_name_scheme_generic;
+	else if ( schemename == "c18s" )
+		return fastq_name_scheme_casava18_single;
+	else if ( schemename == "c18pe" )
+		return fastq_name_scheme_casava18_paired_end;
+	else
+	{
+		libmaus::exception::LibMausException lme;
+		lme.getStream() << "unknown read name scheme " << schemename << std::endl;
+		lme.finish();
+		throw lme;	
+	}
+}
+
 struct NameInfo
 {
+	std::string name;
 	bool ispair;
 	bool isfirst;
 	uint64_t gl;
 	uint64_t gr;
-	
-	NameInfo() : ispair(false), isfirst(false), gl(0), gr(0) {}
-	NameInfo(std::string const & name, libmaus::fastx::SpaceTable const & ST)
-	: ispair(false), isfirst(true), gl(0), gr(name.size())
+	fastq_name_scheme_type const namescheme;
+		
+	NameInfo() : name(), ispair(false), isfirst(false), gl(0), gr(0), namescheme(fastq_name_scheme_generic) {}
+	NameInfo(
+		std::string const & rname, 
+		libmaus::fastx::SpaceTable const & ST,
+		fastq_name_scheme_type const rnamescheme
+	)
+	: name(rname), ispair(false), isfirst(true), gl(0), gr(name.size()), namescheme(rnamescheme)
 	{
-		uint64_t l = 0;
-		// skip space at start
-		while ( l != name.size() && ST.spacetable[name[l]] )
-			++l;
-		while ( l != name.size() )
+		switch ( namescheme )
 		{
-			// skip non space symbols
-			uint64_t r = l;
-			while ( (r != name.size()) && (!ST.spacetable[name[r]]) )
-				++r;
-			
-			// check whether this part of the name ends on /1 or /2
-			if ( r-l >= 2 && name[r-2] == '/' && (name[r-1] == '1' || name[r-1] == '2') )
+			case fastq_name_scheme_generic:
 			{
-				if ( name[r-1] == '2' )
-					isfirst = false;
+				uint64_t l = 0;
+				// skip space at start
+				while ( l != name.size() && ST.spacetable[name[l]] )
+					++l;
+				if ( l != name.size() )
+				{
+					// skip non space symbols
+					uint64_t r = l;
+					while ( (r != name.size()) && (!ST.spacetable[name[r]]) )
+						++r;
 					
-				gl = l;
-				gr = r;
-				ispair = true;
+					// check whether this part of the name ends on /1 or /2
+					if ( r-l >= 2 && name[r-2] == '/' && (name[r-1] == '1' || name[r-1] == '2') )
+					{
+						if ( name[r-1] == '2' )
+							isfirst = false;
+							
+						gl = l;
+						gr = r;
+						ispair = true;
+					}
+					else
+					{
+						gl = l;
+						gr = r;
+						ispair = false;
+					}
+					
+					l = r;
+				}	
+				
+				break;
 			}
+			case fastq_name_scheme_casava18_single:
+			case fastq_name_scheme_casava18_paired_end:
+			{
+				uint64_t l = 0;
+				
+				while ( l != name.size() && ST.spacetable[name[l]] )
+					++l;
+					
+				uint64_t const l0 = l;
+				
+				while ( l != name.size() && ! ST.spacetable[name[l]] )
+					++l;
+				
+				uint64_t const l0l = l-l0;	
+
+				while ( l != name.size() && ST.spacetable[name[l]] )
+					++l;
+					
+				uint64_t const l1 = l;
+
+				while ( l != name.size() && ! ST.spacetable[name[l]] )
+					++l;
+					
+				uint64_t const l1l = l-l1;
 			
-			l = r;
-			// skip spaces
-			while ( l != name.size() && ST.spacetable[name[l]] )
-				++l;
-		}	
+				// count number of colons	
+				uint64_t l0c = 0;
+				for ( uint64_t i = l0; i != l0+l0l; ++i )
+					l0c += (name[i] == ':');
+				uint64_t l1c = 0;
+				for ( uint64_t i = l1; i != l1+l1l; ++i )
+					l1c += (name[i] == ':');
+			
+				if ( l0c != 6 || l1c != 3 )
+				{
+					::libmaus::exception::LibMausException se;
+					se.getStream() << "malformed read name " << name << " (wrong number of colon separated fields)" << std::endl;
+					se.finish();
+					throw se;
+				}
+				
+				gl = l0;
+				gr = l0+l0l;
+				
+				if ( namescheme == fastq_name_scheme_casava18_single )
+				{
+					ispair = false;
+				}
+				else
+				{
+					ispair = true;
+					
+					uint64_t fragid = 0;
+					unsigned int fragidlen = 0;
+					uint64_t p = l1;
+					while ( isdigit(name[p]) )
+					{
+						fragid *= 10;
+						fragid += name[p++]-'0';
+						fragidlen++;
+					}
+					
+					if ( (! fragidlen) || (fragid<1) || (fragid>2) || name[p] != ':' )
+					{
+						::libmaus::exception::LibMausException se;
+						se.getStream() << "malformed read name " << name << " (malformed fragment id)" << std::endl;
+						se.finish();
+						throw se;	
+					}
+					
+					isfirst = (fragid==1);
+				}
+				
+				break;
+			}
+		}
+	}
+	
+	std::string getName() const
+	{
+		switch ( namescheme )
+		{
+			case fastq_name_scheme_generic:
+				if ( ispair )
+					return name.substr(gl,gr-gl-2);		
+				else
+					return name.substr(gl,gr-gl);
+				break;
+			case fastq_name_scheme_casava18_single:
+			case fastq_name_scheme_casava18_paired_end:
+				return name.substr(gl,gr-gl);
+			default:
+			{
+				::libmaus::exception::LibMausException se;
+				se.getStream() << "NameInfo::getName(): invalid name scheme" << std::endl;
+				se.finish();
+				throw se;			
+			}
+		}
 	}
 };
 
@@ -209,7 +352,12 @@ void checkFastQElement(element_type const & element, int const qualityoffset)
 }
 
 template<typename writer_type>
-void fastqtobamSingle(std::istream & in, writer_type & bamwr, int const verbose, std::string const & rgid, int const qualityoffset, bool const checkquality)
+void fastqtobamSingle(
+	std::istream & in, writer_type & bamwr, int const verbose, std::string const & rgid, 
+	int const qualityoffset,
+	bool const checkquality,
+	fastq_name_scheme_type const namescheme
+	)
 {
 	typedef ::libmaus::fastx::StreamFastQReaderWrapper reader_type;
 	typedef reader_type::pattern_type pattern_type;
@@ -217,11 +365,11 @@ void fastqtobamSingle(std::istream & in, writer_type & bamwr, int const verbose,
 	pattern_type element;
 	libmaus::fastx::SpaceTable ST;
 	uint64_t proc = 0;
-	
+		
 	while ( fqin.getNextPatternUnlocked(element) )
 	{
 		std::string const & name = element.sid;
-		NameInfo const NI(name,ST);
+		NameInfo const NI(name,ST,namescheme);
 		
 		if ( checkquality )
 			checkFastQElement(element,qualityoffset);
@@ -229,7 +377,7 @@ void fastqtobamSingle(std::istream & in, writer_type & bamwr, int const verbose,
 		if ( NI.ispair )
 		{
 			bamwr.encodeAlignment(
-				name.substr(NI.gl,NI.gr-NI.gl-2),
+				NI.getName(),
 				-1,
 				-1,
 				0,
@@ -252,7 +400,7 @@ void fastqtobamSingle(std::istream & in, writer_type & bamwr, int const verbose,
 		else
 		{
 			bamwr.encodeAlignment(
-				name,
+				NI.getName(),
 				-1,
 				-1,
 				0,
@@ -279,7 +427,12 @@ void fastqtobamSingle(std::istream & in, writer_type & bamwr, int const verbose,
 }
 
 template<typename writer_type>
-void fastqtobamPair(std::istream & in_1, std::istream & in_2, writer_type & bamwr, int const verbose, std::string const & rgid, int const qualityoffset, bool const checkquality)
+void fastqtobamPair(
+	std::istream & in_1, std::istream & in_2, 
+	writer_type & bamwr, int const verbose, std::string const & rgid, 
+	int const qualityoffset, bool const checkquality,
+	fastq_name_scheme_type const namescheme
+)
 {
 	typedef ::libmaus::fastx::StreamFastQReaderWrapper reader_type;
 	typedef reader_type::pattern_type pattern_type;
@@ -309,8 +462,8 @@ void fastqtobamPair(std::istream & in_1, std::istream & in_2, writer_type & bamw
 
 		std::string const & name_1 = element_1.sid;
 		std::string const & name_2 = element_2.sid;
-		NameInfo const NI_1(name_1,ST);
-		NameInfo const NI_2(name_2,ST);
+		NameInfo const NI_1(name_1,ST,namescheme);
+		NameInfo const NI_2(name_2,ST,namescheme);
 		
 		if ( (!NI_1.ispair) || (!NI_1.isfirst) )
 		{
@@ -328,7 +481,7 @@ void fastqtobamPair(std::istream & in_1, std::istream & in_2, writer_type & bamw
 		}
 
 		bamwr.encodeAlignment(
-			name_1.substr(NI_1.gl,NI_1.gr-NI_1.gl-2),
+			NI_1.getName(),
 			-1,
 			-1,
 			0,
@@ -349,7 +502,7 @@ void fastqtobamPair(std::istream & in_1, std::istream & in_2, writer_type & bamw
 		bamwr.commit();
 
 		bamwr.encodeAlignment(
-			name_2.substr(NI_2.gl,NI_2.gr-NI_2.gl-2),
+			NI_2.getName(),
 			-1,
 			-1,
 			0,
@@ -391,6 +544,9 @@ void fastqtobam(libmaus::util::ArgInfo const & arginfo)
 	unsigned int const threads = arginfo.getValue<unsigned int>("threads",1);
 	int const qualityoffset = arginfo.getValue<int>("qualityoffset",getDefaultQualityOffset());
 	bool const checkquality = arginfo.getValue<int>("checkquality",getDefaultCheckQuality());
+	fastq_name_scheme_type const namescheme = parseNameScheme(
+		arginfo.getValue<std::string>("namescheme",getDefaultNameScheme())
+	);
 	RgInfo const rginfo(arginfo);
 	std::string const rgid = rginfo.ID; // ;arginfo.getUnparsedValue("RG","");
 
@@ -449,11 +605,11 @@ void fastqtobam(libmaus::util::ArgInfo const & arginfo)
 			if ( gz )
 			{
 				libmaus::lz::BufferedGzipStream BGS(std::cin);
-				fastqtobamSingle(BGS,*bamwr,verbose,rgid,qualityoffset,checkquality);
+				fastqtobamSingle(BGS,*bamwr,verbose,rgid,qualityoffset,checkquality,namescheme);
 			}
 			else
 			{
-				fastqtobamSingle(std::cin,*bamwr,verbose,rgid,qualityoffset,checkquality);
+				fastqtobamSingle(std::cin,*bamwr,verbose,rgid,qualityoffset,checkquality,namescheme);
 			}
 		}
 		else if ( filenames.size() == 1 )
@@ -463,11 +619,11 @@ void fastqtobam(libmaus::util::ArgInfo const & arginfo)
 			if ( gz )
 			{
 				libmaus::lz::BufferedGzipStream BGS(CIS);
-				fastqtobamSingle(BGS,*bamwr,verbose,rgid,qualityoffset,checkquality);
+				fastqtobamSingle(BGS,*bamwr,verbose,rgid,qualityoffset,checkquality,namescheme);
 			}
 			else
 			{
-				fastqtobamSingle(CIS,*bamwr,verbose,rgid,qualityoffset,checkquality);
+				fastqtobamSingle(CIS,*bamwr,verbose,rgid,qualityoffset,checkquality,namescheme);
 			}
 		}
 		else
@@ -482,11 +638,11 @@ void fastqtobam(libmaus::util::ArgInfo const & arginfo)
 			{
 				libmaus::lz::BufferedGzipStream BGS_1(CIS_1);
 				libmaus::lz::BufferedGzipStream BGS_2(CIS_2);
-				fastqtobamPair(BGS_1,BGS_2,*bamwr,verbose,rgid,qualityoffset,checkquality);
+				fastqtobamPair(BGS_1,BGS_2,*bamwr,verbose,rgid,qualityoffset,checkquality,namescheme);
 			}
 			else
 			{
-				fastqtobamPair(CIS_1,CIS_2,*bamwr,verbose,rgid,qualityoffset,checkquality);
+				fastqtobamPair(CIS_1,CIS_2,*bamwr,verbose,rgid,qualityoffset,checkquality,namescheme);
 			}
 		}
 
@@ -505,11 +661,11 @@ void fastqtobam(libmaus::util::ArgInfo const & arginfo)
 			if ( gz )
 			{
 				libmaus::lz::BufferedGzipStream BGS(std::cin);
-				fastqtobamSingle(BGS,*bamwr,verbose,rgid,qualityoffset,checkquality);
+				fastqtobamSingle(BGS,*bamwr,verbose,rgid,qualityoffset,checkquality,namescheme);
 			}
 			else
 			{
-				fastqtobamSingle(std::cin,*bamwr,verbose,rgid,qualityoffset,checkquality);
+				fastqtobamSingle(std::cin,*bamwr,verbose,rgid,qualityoffset,checkquality,namescheme);
 			}
 		}
 		else if ( filenames.size() == 1 )
@@ -519,11 +675,11 @@ void fastqtobam(libmaus::util::ArgInfo const & arginfo)
 			if ( gz )
 			{
 				libmaus::lz::BufferedGzipStream BGS(CIS);
-				fastqtobamSingle(BGS,*bamwr,verbose,rgid,qualityoffset,checkquality);
+				fastqtobamSingle(BGS,*bamwr,verbose,rgid,qualityoffset,checkquality,namescheme);
 			}
 			else
 			{
-				fastqtobamSingle(CIS,*bamwr,verbose,rgid,qualityoffset,checkquality);		
+				fastqtobamSingle(CIS,*bamwr,verbose,rgid,qualityoffset,checkquality,namescheme);		
 			}
 		}
 		else
@@ -538,11 +694,11 @@ void fastqtobam(libmaus::util::ArgInfo const & arginfo)
 			{
 				libmaus::lz::BufferedGzipStream BGS_1(CIS_1);
 				libmaus::lz::BufferedGzipStream BGS_2(CIS_2);
-				fastqtobamPair(BGS_1,BGS_2,*bamwr,verbose,rgid,qualityoffset,checkquality);			
+				fastqtobamPair(BGS_1,BGS_2,*bamwr,verbose,rgid,qualityoffset,checkquality,namescheme);			
 			}
 			else
 			{
-				fastqtobamPair(CIS_1,CIS_2,*bamwr,verbose,rgid,qualityoffset,checkquality);		
+				fastqtobamPair(CIS_1,CIS_2,*bamwr,verbose,rgid,qualityoffset,checkquality,namescheme);		
 			}
 		}
 
@@ -556,12 +712,53 @@ void fastqtobam(libmaus::util::ArgInfo const & arginfo)
 	}
 }
 
+#if defined(FASTQTOBAMDEBUG)
+static void testNameInfo()
+{
+	{
+		std::string const name = "read1";
+		libmaus::fastx::SpaceTable const ST;
+		NameInfo const NI(name,ST,fastq_name_scheme_generic);
+		std::cerr << NI.getName() << " " << NI.ispair << " " << NI.isfirst << std::endl;
+	}
+	{
+		std::string const name = "read1/1";
+		libmaus::fastx::SpaceTable const ST;
+		NameInfo const NI(name,ST,fastq_name_scheme_generic);
+		std::cerr << NI.getName() << " " << NI.ispair << " " << NI.isfirst << std::endl;
+	}
+	{
+		std::string const name = "read1/2";
+		libmaus::fastx::SpaceTable const ST;
+		NameInfo const NI(name,ST,fastq_name_scheme_generic);
+		std::cerr << NI.getName() << " " << NI.ispair << " " << NI.isfirst << std::endl;
+	}
+	{
+		std::string const name = "HWI-ST1289:72:C18CTACXX:8:1101:1116:2072 1:N:0:";
+		libmaus::fastx::SpaceTable const ST;
+		NameInfo const NI(name,ST,fastq_name_scheme_casava18_single);
+		std::cerr << NI.getName() << " " << NI.ispair << " " << NI.isfirst << std::endl;
+	}
+	{
+		std::string const name = "HWI-ST1289:72:C18CTACXX:8:1101:1116:2072 1:N:0:";
+		libmaus::fastx::SpaceTable const ST;
+		NameInfo const NI(name,ST,fastq_name_scheme_casava18_paired_end);
+		std::cerr << NI.getName() << " " << NI.ispair << " " << NI.isfirst << std::endl;
+	}
+	{
+		std::string const name = "HWI-ST1289:72:C18CTACXX:8:1101:1116:2072 2:N:0:";
+		libmaus::fastx::SpaceTable const ST;
+		NameInfo const NI(name,ST,fastq_name_scheme_casava18_paired_end);
+		std::cerr << NI.getName() << " " << NI.ispair << " " << NI.isfirst << std::endl;
+	}
+}
+#endif
+
 int main(int argc, char * argv[])
 {
 	try
 	{
-		libmaus::timing::RealTimeClock rtc; rtc.start();
-		
+		libmaus::timing::RealTimeClock rtc; rtc.start();	
 		::libmaus::util::ArgInfo const arginfo(argc,argv);
 		
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
@@ -608,6 +805,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "RGSM=<>", "SM field of RG header line if RGID is set (default: not present)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "qualityoffset=<["+::biobambam::Licensing::formatNumber(getDefaultQualityOffset())+"]>", "quality offset (default: 33)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "checkquality=<["+::biobambam::Licensing::formatNumber(getDefaultCheckQuality())+"]>", "check quality (default: true)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("namescheme=<[")+(getDefaultNameScheme())+"]>", "read name scheme (generic, c18s, c18p)" ) );
 				
 				::biobambam::Licensing::printMap(std::cerr,V);
 
