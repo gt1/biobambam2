@@ -1,3 +1,9 @@
+biobambam (0.0.135) unstable; urgency=low
+
+  * fix help message in fastqtobam 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Tue, 22 Apr 2014 13:23:19 +0100
+
 biobambam (0.0.134) unstable; urgency=low
 
   * add read name schemes c18s and c18pe in fastqtobam 
