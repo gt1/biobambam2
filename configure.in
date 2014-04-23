@@ -2,7 +2,7 @@ AC_INIT(biobambam,0.0.135,[gt1@sanger.ac.uk],[biobambam],[http://www.sanger.ac.u
 AC_CANONICAL_SYSTEM
 AC_PROG_LIBTOOL
 
-AM_INIT_AUTOMAKE([std-options subdir-objects])
+AM_INIT_AUTOMAKE([std-options subdir-objects parallel-tests])
 AM_CONFIG_HEADER(config.h)
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -246,4 +246,4 @@ AC_SUBST([BAMREFDEPTHPEAKS])
 AC_SUBST([BAMPARSORTINSTEXP])
 AC_SUBST([BAMPARSORTNOINSTEXP])
 # 
-AC_OUTPUT(Makefile src/Makefile src/biobambam/BamBamConfig.hpp)
+AC_OUTPUT(Makefile src/Makefile test/Makefile src/biobambam/BamBamConfig.hpp)
