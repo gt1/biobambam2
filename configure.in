@@ -6,6 +6,17 @@ AM_INIT_AUTOMAKE([std-options subdir-objects parallel-tests])
 AM_CONFIG_HEADER(config.h)
 AC_CONFIG_MACRO_DIR([m4])
 
+AC_CANONICAL_SYSTEM
+AC_MSG_CHECKING([whether we are cross compiling])
+ISNATIVE=
+if test \( "${ac_cv_build}" = "${ac_cv_host}" \) -a \( "${ac_cv_build}" = "${ac_cv_target}" \) ; then
+	ISNATIVE=1
+	AC_MSG_RESULT([no])
+else
+	ISNATIVE=0
+	AC_MSG_RESULT([yes])
+fi
+
 AC_ARG_ENABLE(optimization,
         AS_HELP_STRING([--enable-optimization],[use compiler optimization (default yes)]),
         [optimization=${enableval}],[optimization=yes])
@@ -223,6 +234,13 @@ if test "${with_liftingwavelettransform}" != "no" ; then
 	LIBS="${LIBS} ${LIFTINGWAVELETTRANSFORMLIBS}"
 fi
 
+AC_PATH_PROG(BASHPROG,bash,no)
+
+TESTDIR=
+if test \( "${ISNATIVE}" -eq 1 \) -a \( "${BASHPROG}" != "no" \) ; then
+	TESTDIR=test
+fi
+
 AC_MSG_NOTICE([Using flags ${CFLAGS} for C compiler ${CC}])
 AC_MSG_NOTICE([Using flags ${CXXFLAGS} for C++ compiler ${CXX}])
 
@@ -245,5 +263,6 @@ AC_SUBST([BAMREFDEPTHPEAKS])
 #
 AC_SUBST([BAMPARSORTINSTEXP])
 AC_SUBST([BAMPARSORTNOINSTEXP])
+AC_SUBST([TESTDIR])
 # 
 AC_OUTPUT(Makefile src/Makefile test/Makefile src/biobambam/BamBamConfig.hpp)

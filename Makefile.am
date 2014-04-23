@@ -1,3 +1,3 @@
 EXTRA_DIST = configure GPLv3
-SUBDIRS = src test
+SUBDIRS = src @TESTDIR@
 ACLOCAL_AMFLAGS=-I m4
