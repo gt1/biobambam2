@@ -38,3 +38,10 @@ src/kmerprob
 src/fastqtobam
 src/normalisefasta
 src/fastabgzfextract
+test/*.log
+test/*.trs
+src/*/.deps
+src/*/.dirstamp
+*.fq
+*.fa
+*.bam
