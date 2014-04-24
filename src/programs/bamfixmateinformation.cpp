@@ -108,7 +108,7 @@ int bamfixmateinformation(::libmaus::util::ArgInfo const & arginfo)
 
 	// prefix for tmp files
 	std::string const tmpfilenamebase = arginfo.getValue<std::string>("tmpfile",arginfo.getDefaultTmpFileName());
-	std::string const tmpfilenameout = tmpfilenamebase + "_bamsort";
+	std::string const tmpfilenameout = tmpfilenamebase + "_bamfixmateinformation";
 	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilenameout);
 
 	// input decoder wrapper
@@ -132,7 +132,7 @@ int bamfixmateinformation(::libmaus::util::ArgInfo const & arginfo)
 	}
 
 	::libmaus::bambam::BamHeader::unique_ptr_type uphead(
-		libmaus::bambam::BamHeaderUpdate::updateHeader(arginfo,header,"bamsort",std::string(PACKAGE_VERSION))
+		libmaus::bambam::BamHeaderUpdate::updateHeader(arginfo,header,"bamfixmateinformation",std::string(PACKAGE_VERSION))
 	);
 
 	/*
