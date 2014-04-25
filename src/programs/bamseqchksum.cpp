@@ -35,6 +35,11 @@ static std::string getDefaultInputFormat()
 {
 	return "bam";
 }
+static std::vector<std::string> getDefaultAuxTags() {
+	static const char * defaults[] = {"BC","RT","QT","TC","FI"};
+	std::vector<std::string> v (defaults, defaults + sizeof(defaults)/sizeof(*defaults));
+	return v;
+}
 
 int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 {
@@ -101,7 +106,7 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 		};
 		Products all;
 		Products pass;
-		OrderIndependentSeqDataChecksums() : A(), B(), auxtags({"BC","RT","QT","TC","FI"}), auxtagsfilter(auxtags), all(), pass() { };
+		OrderIndependentSeqDataChecksums() : A(), B(), auxtags(getDefaultAuxTags()), auxtagsfilter(auxtags), all(), pass() { };
 		/**
 		* Combine primary sequence data from alignment record into checksum products
 		*
