@@ -36,7 +36,7 @@ static std::string getDefaultInputFormat()
 	return "bam";
 }
 static std::vector<std::string> getDefaultAuxTags() {
-	static const char * defaults[] = {"BC","RT","QT","TC","FI"};
+	static const char * defaults[] = {"BC","FI","QT","RT","TC"}; //lexical order
 	std::vector<std::string> v (defaults, defaults + sizeof(defaults)/sizeof(*defaults));
 	return v;
 }
