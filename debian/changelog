@@ -1,3 +1,9 @@
+biobambam (0.0.136) unstable; urgency=low
+
+  * add pairedfiles name scheme in fastqtobam 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Tue, 29 Apr 2014 16:55:14 +0100
+
 biobambam (0.0.135) unstable; urgency=low
 
   * fix help message in fastqtobam 
