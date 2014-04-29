@@ -11,11 +11,13 @@ which each read is marked as unmapped. If no input file name is given, then
 a single FastQ file is read from standard input. If one file name is given,
 then a single FastQ file is read from the given file. In both cases the read
 names in the file are parsed to determine whether the contained reads are
-paired or not. If two file names are given, then the program assumes to find
+paired or not if the name scheme is not set to pairedfiles.
+If two file names are given, then the program assumes to find
 two FastQ files which are synchronous, i.e. where the first read in the
 first file is the mate of the first read in the second file etc. Input file
 names can be given either via the I key or after the key=value pairs on the
-command line.
+command line. The program accepts read name formats as described below
+under the key namescheme.
 .PP
 The following key=value pairs can be given:
 .PP
@@ -91,12 +93,21 @@ the template. The read is assumed to be part of a read pair. The first field
 in the second non-whitespace sequence of the @ line designates, whether it
 is the first or second of the pair depending on whether the field stores the
 number 1 or 2 respectively.
+.IP pairedfiles:
+The input framgents are assumed to be paired. If there is a single input
+file then the pairs are expected consecutive in the file. If there are two
+input files then the read names in the two are expected to be synchronous.
+All characters in read names beginning from the first white space character
+are discarded. If the two (so reduced) read names in question end on /1 and /2 
+respectively, then those suffixes will be clipped off also. The remaining
+read names are checked for equality. If they are not equal, then the program
+will reject the input and terminate.
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"
 Report bugs to <gt1@sanger.ac.uk>
 .SH COPYRIGHT
-Copyright \(co 2009-2013 German Tischler, \(co 2011-2013 Genome Research Limited.
+Copyright \(co 2009-2014 German Tischler, \(co 2011-2014 Genome Research Limited.
 License GPLv3+: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>
 .br
 This is free software: you are free to change and redistribute it.
