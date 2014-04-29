@@ -2432,6 +2432,32 @@ struct BamThreadPoolMergeContextBase : public BamThreadPoolMergeContextBaseConst
 		>,
 		BamThreadPoolMergeHeapComparator<order_type>
 	> mergeQ;
+	
+	void mergeQueuePush(uint64_t const blockid, uint8_t const * data)
+	{
+		#if 0
+		uint32_t const blocksize =
+			(static_cast<uint32_t>(data[0]) << 0 ) |
+			(static_cast<uint32_t>(data[1]) << 8 ) |
+			(static_cast<uint32_t>(data[2]) << 16) |
+			(static_cast<uint32_t>(data[3]) << 24);
+		uint8_t const * aldat = data + 4;
+
+		if ( std::string(libmaus::bambam::BamAlignmentDecoderBase::getReadName(aldat)) == "MS6_12707:1:1101:1781:15425" )
+		{
+			::libmaus::bambam::BamFormatAuxiliary aux;
+			std::cerr << "[D]*\t" << libmaus::bambam::BamAlignmentDecoderBase::formatAlignment(
+				aldat,blocksize,
+				mergeinfo.sheader->chromosomes,
+				aux
+			) << std::endl;
+			
+			std::cerr << libmaus::util::StackTrace().toString();
+		}
+		#endif
+
+		mergeQ.push(std::pair<uint64_t,uint8_t const *>(blockid,data));
+	}
 
 	uint64_t outputMerged;
 	
@@ -2588,7 +2614,9 @@ struct BamThreadPoolMergeContextBase : public BamThreadPoolMergeContextBaseConst
 	}
 };
 
-
+/*
+ * block reading
+ */
 template<typename _order_type>
 struct BamThreadPoolMergeReadPackageDispatcher : public libmaus::parallel::SimpleThreadWorkPackageDispatcher
 {
@@ -2605,6 +2633,7 @@ struct BamThreadPoolMergeReadPackageDispatcher : public libmaus::parallel::Simpl
 		BamThreadPoolMergeReadPackage<order_type> & RP = *dynamic_cast<BamThreadPoolMergeReadPackage<order_type> *>(P);
 		BamThreadPoolMergeContextBase<order_type> & contextbase = *(RP.contextbase);
 		
+		// block id for reading
 		uint64_t const blockid = RP.blockid;
 
 		#if 0
@@ -2619,6 +2648,7 @@ struct BamThreadPoolMergeReadPackageDispatcher : public libmaus::parallel::Simpl
 		
 		while ( !finishedLoop )
 		{
+			// see if we can get a package from the free list
 			uint64_t baseid = 0;
 			bool baseidok = false;
 			{
@@ -2632,25 +2662,35 @@ struct BamThreadPoolMergeReadPackageDispatcher : public libmaus::parallel::Simpl
 			contextbase.cerrlock.unlock();
 			#endif
 			
+			// if we have space
 			if ( baseidok )
 			{
+				// read package
 				contextbase.blockReaders[blockid]->readBlock(*(contextbase.readBlocks[baseid]));
 				
+				// last one?
 				if ( contextbase.readBlocks[baseid]->eof )
 				{
+					// reading for this block is finished, so quit read loop after this one
+					finishedLoop = true;
+					// set finished flag for this block
 					contextbase.blockReadersFinishedVector.setSync(blockid,true);
+					// increment number of finished readers
 					uint64_t const numfinished = ++(contextbase.blockReadersFinished);
 					
+					// all blocks finished?
 					if ( numfinished == contextbase.numblocks )
 					{
+						// reading finished
 						contextbase.readFinished.set(true);
-						finishedLoop = true;
 					}
 				}
 				
+				// deque base block
 				uint64_t const rbaseid = contextbase.readBlocksFreeLists[blockid]->deque();
 				assert ( baseid == rbaseid );
 				
+				// queue it for decompression
 				BamThreadPoolMergeDecompressPackage<order_type> * decpack =
 					contextbase.decompressFreeList.getPackage();
 				*decpack = BamThreadPoolMergeDecompressPackage<order_type>(
@@ -2670,6 +2710,9 @@ struct BamThreadPoolMergeReadPackageDispatcher : public libmaus::parallel::Simpl
 	}
 };
 
+/*
+ * package decompression
+ */
 template<typename _order_type>
 struct BamThreadPoolMergeDecompressPackageDispatcher : public libmaus::parallel::SimpleThreadWorkPackageDispatcher
 {
@@ -2686,7 +2729,9 @@ struct BamThreadPoolMergeDecompressPackageDispatcher : public libmaus::parallel:
 		BamThreadPoolMergeDecompressPackage<order_type> & RP = *dynamic_cast<BamThreadPoolMergeDecompressPackage<order_type> *>(P);
 		BamThreadPoolMergeContextBase<order_type> & contextbase = *(RP.contextbase);
 		
+		// block id
 		uint64_t const blockid = RP.blockid;
+		// base id
 		uint64_t const baseid = RP.baseid;
 		
 		#if 0
@@ -2695,18 +2740,23 @@ struct BamThreadPoolMergeDecompressPackageDispatcher : public libmaus::parallel:
 		contextbase.cerrlock.unlock();
 		#endif
 
+		// uncompress the block
 		contextbase.readBlocks[baseid]->uncompressBlock();
 		
+		// generate processing package
 		BamThreadPoolMergeProcessPackage<order_type> * procpack = contextbase.processFreeList.getPackage();
 		*procpack = BamThreadPoolMergeProcessPackage<order_type>(
 			RP.contextbase,RP.blockid,RP.baseid,RP.seqid
 		);
 		
 		{
+			// get locks
 			libmaus::parallel::ScopePosixSpinLock llprocessPendingLock(contextbase.processPendingLock);
 			libmaus::parallel::ScopePosixSpinLock llprocessPendingNextLock(contextbase.processPendingNextLock);
+			// put package in pending list
 			contextbase.processPending[blockid].push(procpack);
 			
+			// queue package for dispatcher if top of pending list is next package to be processed
 			if ( contextbase.processPending[blockid].top()->seqid == contextbase.processPendingNext[blockid] )
 			{
 				BamThreadPoolMergeProcessPackage<order_type> * nextprocpack =
@@ -2722,6 +2772,9 @@ struct BamThreadPoolMergeDecompressPackageDispatcher : public libmaus::parallel:
 	}
 };
 
+/*
+ * package processing (decompose byte stream into alignments)
+ */
 template<typename _order_type>
 struct BamThreadPoolMergeProcessPackageDispatcher : public libmaus::parallel::SimpleThreadWorkPackageDispatcher
 {
@@ -2746,8 +2799,10 @@ struct BamThreadPoolMergeProcessPackageDispatcher : public libmaus::parallel::Si
 		
 		BamThreadPoolMergeProcessPackage<order_type> & RP = *dynamic_cast<BamThreadPoolMergeProcessPackage<order_type> *>(P);
 		BamThreadPoolMergeContextBase<order_type> & contextbase = *(RP.contextbase);
-		
+	
+		// block id	
 		uint64_t const blockid = RP.blockid;
+		// base id
 		uint64_t const baseid = RP.baseid;
 		
 		#if 0
@@ -2756,17 +2811,23 @@ struct BamThreadPoolMergeProcessPackageDispatcher : public libmaus::parallel::Si
 		contextbase.cerrlock.unlock();
 		#endif
 
+		// current state of the alignment parser
 		BamThreadPoolMergeParserState & parserState = contextbase.parserStates[blockid];
 		
+		// get uncompressed data
 		typename BamThreadPoolMergeContextBase<order_type>::read_block_type & datablock = *(contextbase.readBlocks[baseid]);
 		uint8_t * const pa = datablock.O.begin();
 		uint8_t * const pe = pa + datablock.uncompsize;
 		uint8_t * pc = pa;
 		
+		// try to get process buffer
 		uint64_t processBufferId = 0;
 		bool stalled = ! (contextbase.processBuffersFreeLists[blockid]->tryDequeFront(processBufferId));
+		// we are running if there is a free buffer and the input is not empty
 		bool running = (!stalled) && (pc != pe);
+		// get pointer to process buffer
 		BamProcessBuffer * processBuffer = (!stalled) ? contextbase.processBuffers[processBufferId].get() : 0;
+		// ids of finished parse buffers
 		std::deque<uint64_t> finishedBuffers;
 		
 		#if 0
@@ -2784,13 +2845,15 @@ struct BamThreadPoolMergeProcessPackageDispatcher : public libmaus::parallel::Si
 			contextbase.cerrlock.unlock();
 		}
 		#endif
-				
+		
 		while ( running )
 		{
 			switch ( parserState.state )
 			{
+				// block size not completely read
 				case BamThreadPoolMergeParserState::bam_thread_pool_merge_parser_state_reading_blocklen:
 				{
+					// nothing of block len read an complete alignment block is in this buffer
 					if ( 
 						(!parserState.blocklenred)
 						&&
@@ -2799,6 +2862,7 @@ struct BamThreadPoolMergeProcessPackageDispatcher : public libmaus::parallel::Si
 						(pe-pc) >= (4+(parserState.blocklen=decodeLEInteger4(pc)))
 					)
 					{
+						// while complete alignment blocks in this buffer
 						while ( 
 							running 
 							&&
@@ -2807,8 +2871,10 @@ struct BamThreadPoolMergeProcessPackageDispatcher : public libmaus::parallel::Si
 							(pe-pc) >= (4+(parserState.blocklen=decodeLEInteger4(pc)))
 						)
 						{
+							// try to put alignment in process buffer
 							if ( processBuffer->put(pc+4,parserState.blocklen) )
 							{
+								// increase pointer if succesfull
 								pc += 4+parserState.blocklen;
 							}
 							else
@@ -2819,16 +2885,23 @@ struct BamThreadPoolMergeProcessPackageDispatcher : public libmaus::parallel::Si
 								contextbase.cerrlock.unlock();
 								#endif
 								
+								// process buffer cannot take another alignment block,
+								// mark it as finished
 								finishedBuffers.push_back(processBufferId);
+								// try to get next process buffer, stall if there is none
 								stalled = ! (contextbase.processBuffersFreeLists[blockid]->tryDequeFront(processBufferId));
+								// continue if there was a free buffer
 								running = running && (!stalled);
+								// set buffer pointer
 								processBuffer = (!stalled) ? contextbase.processBuffers[processBufferId].get() : 0;
 							}
 						}
 						
+						// block len read should be zero
 						assert ( ! parserState.blocklenred );
 						parserState.blocklen = 0;
 					}
+					// alignment block is split over two input buffers
 					else
 					{
 						#if 0
@@ -2841,13 +2914,17 @@ struct BamThreadPoolMergeProcessPackageDispatcher : public libmaus::parallel::Si
 						contextbase.cerrlock.unlock();
 						#endif
 						
+						// add more block len bytes until we reach the end of the buffer
 						while ( pc != pe && parserState.blocklenred < 4 )
 						{
 							parserState.blocklen |= (static_cast<uint32_t>(*(pc++)) << (8*(parserState.blocklenred++)));
 						}
+						// block length complete, start to read the data
 						if ( parserState.blocklenred == 4 )
 						{
+							// change state
 							parserState.state = BamThreadPoolMergeParserState::bam_thread_pool_merge_parser_state_reading_block;
+							// set up for next block
 							parserState.blockred = 0;
 
 							#if 0
@@ -2856,35 +2933,46 @@ struct BamThreadPoolMergeProcessPackageDispatcher : public libmaus::parallel::Si
 							contextbase.cerrlock.unlock();
 							#endif
 							
+							// increase size of gather buffer if necessary
 							if ( parserState.gatherbuffer.size() < parserState.blocklen )
 								parserState.gatherbuffer = libmaus::autoarray::AutoArray<uint8_t>(parserState.blocklen,false);
 						}
 					}
 					break;
 				}
+				// read block data
 				case BamThreadPoolMergeParserState::bam_thread_pool_merge_parser_state_reading_block:
 				{
 					assert ( pe >= pc );
+					// number of bytes left
 					uint32_t const av = pe-pc;
+					// number of bytes to be extracted
 					uint32_t const tocopy = std::min(
 						av,
 						static_cast<uint32_t>(parserState.blocklen - parserState.blockred)
 					);
+					// copy bytes to gather buffer
 					std::copy(pc,pc+tocopy,parserState.gatherbuffer.begin()+parserState.blockred);
 					
+					// increase counters
 					parserState.blockred += tocopy;
 					pc += tocopy;
 					
+					// if we have the complete block now
 					if ( parserState.blockred == parserState.blocklen )
 					{
+						// try to put alignment in process buffer
 						if ( processBuffer->put(parserState.gatherbuffer.begin(),parserState.blocklen) )
 						{
+							// if successful then move on to next alignment
 							parserState.blocklen = 0;
 							parserState.blocklenred = 0;
 							parserState.state = BamThreadPoolMergeParserState::bam_thread_pool_merge_parser_state_reading_blocklen;
 						}
+						// alignment does not fit
 						else
 						{
+							// take back pointers by amount we have just advandec them
 							parserState.blockred -= tocopy;
 							pc -= tocopy;
 						
@@ -2894,9 +2982,13 @@ struct BamThreadPoolMergeProcessPackageDispatcher : public libmaus::parallel::Si
 							contextbase.cerrlock.unlock();
 							#endif
 							
+							// mark process buffer as finished
 							finishedBuffers.push_back(processBufferId);
+							// stall if there is no free buffer
 							stalled = ! (contextbase.processBuffersFreeLists[blockid]->tryDequeFront(processBufferId));
+							// running if not stalled
 							running = running && (!stalled);
+							// get process buffer pointer
 							processBuffer = (!stalled) ? contextbase.processBuffers[processBufferId].get() : 0;
 						}
 					}
@@ -2904,11 +2996,14 @@ struct BamThreadPoolMergeProcessPackageDispatcher : public libmaus::parallel::Si
 				}
 			}
 			
+			// running if we have not reached the end of the input
 			running = running && (pc != pe);
 		}
 
+		// check for eof flag on input
 		bool const eof = datablock.eof;
 
+		// if we have reached the end of the file and processed the complete input buffer
 		if ( eof && !stalled )
 		{
 			// insert last finished buffer
@@ -2919,7 +3014,8 @@ struct BamThreadPoolMergeProcessPackageDispatcher : public libmaus::parallel::Si
 			std::cerr << "parsing finished for block " << blockid << std::endl;
 			contextbase.cerrlock.unlock();
 			#endif
-				
+			
+			// mark block parsing as finished for this block
 			if ( ++contextbase.blockParsersFinished == contextbase.numblocks )
 			{
 				contextbase.parsingFinished.set(true);
@@ -2942,6 +3038,7 @@ struct BamThreadPoolMergeProcessPackageDispatcher : public libmaus::parallel::Si
 		// queue finished blocks
 		for ( uint64_t i = 0; i < finishedBuffers.size(); ++i )
 		{
+			// construct merge process buffer info object
 			libmaus::parallel::ScopePosixSpinLock lbufferInfoLock(contextbase.bufferInfoLock);
 			BamThreadPoolMergeProcessBufferInfo const info(
 				blockid,
@@ -2952,6 +3049,7 @@ struct BamThreadPoolMergeProcessPackageDispatcher : public libmaus::parallel::Si
 				(i==finishedBuffers.size()-1), // this is the last queue buffer
 				contextbase.processBuffers[finishedBuffers[i]].get()
 			);
+			// enque in pending list
 			contextbase.bufferInfoPending[blockid].push(info);
 
 			#if 0
@@ -2965,7 +3063,9 @@ struct BamThreadPoolMergeProcessPackageDispatcher : public libmaus::parallel::Si
 			info.checkOrder<order_type>(*(contextbase.mergeinfo.sheader));
 			#endif
 			
+			// if this is the first buffer
 			if ( info.seqid == 0 )
+				// if there is some data for each block then set up the block merging
 				if ( (++contextbase.bufferInfoInitComplete) == contextbase.numblocks )
 				{
 					#if 0
@@ -2974,25 +3074,27 @@ struct BamThreadPoolMergeProcessPackageDispatcher : public libmaus::parallel::Si
 					contextbase.cerrlock.unlock();		
 					#endif
 
-					// 
+					// get lock
 					libmaus::parallel::ScopePosixSpinLock lalPerBlockLock(contextbase.alPerBlockLock);
 					
 					for ( uint64_t j = 0; j < contextbase.numblocks; ++j )
 					{
+						// if block has any alignments
 						if ( contextbase.alPerBlockFinished[j] != contextbase.mergeinfo.tmpfileblockcntsums[j] )
 						{
-							BamThreadPoolMergeProcessBufferInfo info = contextbase.bufferInfoPending[j].top();
-							
-							contextbase.activeMergeBuffers[j] = info;
+							// set active merge input buffer for block j
+							contextbase.activeMergeBuffers[j] = contextbase.bufferInfoPending[j].top();
 
+							// get info
+							BamThreadPoolMergeProcessBufferInfo & info = contextbase.activeMergeBuffers[j];
+							
+							// buffer should not be empty
 							assert ( info.pc != info.pe );
 							
-							contextbase.mergeQ.push(
-								std::pair<uint64_t,uint8_t const *>(
-									j,info.buffer->ca + (*(info.pc++))
-								)
-							);
+							// put entry in merge heap
+							contextbase.mergeQueuePush(j,info.buffer->ca + (*(info.pc++)));
 							
+							// remove buffer now active from pending list
 							contextbase.bufferInfoPending[j].pop();
 							
 							#if 0
@@ -3017,6 +3119,7 @@ struct BamThreadPoolMergeProcessPackageDispatcher : public libmaus::parallel::Si
 						}
 					}
 
+					// enque a merge package
 					BamThreadPoolMergeMergePackage<order_type> * mergepack =
 						contextbase.mergeFreeList.getPackage();
 					*mergepack = BamThreadPoolMergeMergePackage<order_type>(RP.contextbase);
@@ -3024,6 +3127,7 @@ struct BamThreadPoolMergeProcessPackageDispatcher : public libmaus::parallel::Si
 				}
 		}
 
+		// if we did not stall (input buffer was processed completely)
 		if ( ! stalled )
 		{
 			// reinsert process buffer if it is unfinished
@@ -3073,6 +3177,7 @@ struct BamThreadPoolMergeProcessPackageDispatcher : public libmaus::parallel::Si
 				tpi.enque(nextprocpack);
 			}
 		}
+		// input buffer was not processed completely
 		else
 		{
 			#if 0
@@ -3092,13 +3197,18 @@ struct BamThreadPoolMergeProcessPackageDispatcher : public libmaus::parallel::Si
 			);
 		}
 
+		// check whether this block was missing to continue merging
 		{
+			// get locks
 			libmaus::parallel::ScopePosixSpinLock lbufferInfoLock(contextbase.bufferInfoLock);
 			libmaus::parallel::ScopePosixSpinLock lmissingLock(contextbase.missingLock);
 			if ( contextbase.missingSet.get() )
 			{
+				// get id of missing block
 				uint64_t const missing = contextbase.missing;
 
+				// check if we have any finished buffers for the missing block
+				// and if so whether we have the next required one
 				if ( 
 					contextbase.bufferInfoPending[missing].size()
 					&&
@@ -3108,18 +3218,20 @@ struct BamThreadPoolMergeProcessPackageDispatcher : public libmaus::parallel::Si
 					)
 				)
 				{
-					BamThreadPoolMergeProcessBufferInfo info = contextbase.bufferInfoPending[missing].top();
-					contextbase.activeMergeBuffers[missing] = info;
+					// set it in active vector
+					contextbase.activeMergeBuffers[missing] = contextbase.bufferInfoPending[missing].top();
+					// get info object
+					BamThreadPoolMergeProcessBufferInfo & info = contextbase.activeMergeBuffers[missing];
+					// no longer missing
 					contextbase.missingSet.set(false);
 
+					// info should be non empty
 					assert ( info.pc != info.pe );
-							
-					contextbase.mergeQ.push(
-						std::pair<uint64_t,uint8_t const *>(
-							missing,info.buffer->ca + (*(info.pc++))
-						)
-					);
-							
+					
+					// insert alignment in merge heap
+					contextbase.mergeQueuePush(missing,info.buffer->ca + (*(info.pc++)));
+					
+					// remove info object from pending list
 					contextbase.bufferInfoPending[missing].pop();
 
 					#if 0
@@ -3128,11 +3240,11 @@ struct BamThreadPoolMergeProcessPackageDispatcher : public libmaus::parallel::Si
 					contextbase.cerrlock.unlock();
 					#endif
 
+					// enque merge package
 					BamThreadPoolMergeMergePackage<order_type> * mergepack =
 						contextbase.mergeFreeList.getPackage();
 					*mergepack = BamThreadPoolMergeMergePackage<order_type>(RP.contextbase);
 					tpi.enque(mergepack);				
-					
 				}
 			}
 		}
@@ -3148,7 +3260,8 @@ struct BamThreadPoolMergeMergePackageDispatcher : public libmaus::parallel::Simp
 {
 	typedef _order_type order_type;
 	
-	uint32_t decodeLE4(uint8_t const * v)
+	// decode a little endian 4 byte number
+	static uint32_t decodeLE4(uint8_t const * v)
 	{
 		return
 			(static_cast<uint32_t>(v[0]) << 0) |
@@ -3157,6 +3270,7 @@ struct BamThreadPoolMergeMergePackageDispatcher : public libmaus::parallel::Simp
 			(static_cast<uint32_t>(v[3]) << 24) ;
 	}
 
+	// enque a compress package
 	static void enqueCompress(
 		BamThreadPoolMergeMergePackage<order_type> & RP,
 		uint64_t const deflatebufferid,
@@ -3191,27 +3305,37 @@ struct BamThreadPoolMergeMergePackageDispatcher : public libmaus::parallel::Simp
 		contextbase.cerrlock.unlock();
 		#endif
 
+		// get the alignments per block lock
 		libmaus::parallel::ScopePosixSpinLock lalPerBlockLock(contextbase.alPerBlockLock);
 
+		// try to get a deflate buffer id
 		uint64_t deflatebufferid = 0;
+		// stall if there is no free buffer
 		bool stalled = !contextbase.deflateBuffersFreeList.tryDequeFront(deflatebufferid);
+		// get pointer to buffer
 		libmaus::lz::BgzfDeflateBase * deflateBuffer =
 			stalled ? 0 : contextbase.deflateBuffers[deflatebufferid].get();
+		// either there is no buffer or the one we have is not yet full
 		assert ( deflateBuffer == 0 || deflateBuffer->pc != deflateBuffer->pe );
-		std::deque<uint64_t> compressPendingBuffer;
+		// list of buffers to be compressed
+		// std::deque<uint64_t> compressPendingBuffer;
 
-		// handle pending write data
+		// handle pending write data from previous run
 		while ( (!stalled) && (contextbase.mergeWritePendingFill) )
 		{
+			// number of free bytes in output deflate buffer
 			uint64_t const spaceinbuffer = (deflateBuffer->pe - deflateBuffer->pc);	
+			// number of bytes to be written
 			uint64_t const bufferwrite = std::min(spaceinbuffer,contextbase.mergeWritePendingFill);
 			
+			// copy the bytes
 			std::copy(
 				contextbase.mergeWritePending.begin(),
 				contextbase.mergeWritePending.begin()+bufferwrite,
 				deflateBuffer->pc
 			);
 			
+			// increase buffer pointer in output deflate buffer
 			deflateBuffer->pc += bufferwrite;
 			
 			if ( bufferwrite != contextbase.mergeWritePendingFill )
@@ -3243,13 +3367,40 @@ struct BamThreadPoolMergeMergePackageDispatcher : public libmaus::parallel::Simp
 		
 		while ( running )
 		{
+			// get merge queue top entry
 			std::pair<uint64_t,uint8_t const *> const P = contextbase.mergeQ.top();
+			// pop entry
 			contextbase.mergeQ.pop();
 			
+			// get block length
 			uint32_t const blocklen = decodeLE4(P.second);
+			// block start pointer
 			uint8_t const * pa = P.second;
+			// current output pointer
 			uint8_t const * pc = pa;
+			// block end pointer
 			uint8_t const * pe = pa + blocklen + 4;
+			
+			#if 0
+			{
+				uint8_t const * alp = pa + sizeof(uint32_t);
+				::libmaus::bambam::BamFormatAuxiliary aux;
+				libmaus::bambam::BamAlignmentDecoderBase::formatAlignment(
+					alp,blocklen,
+					contextbase.mergeinfo.sheader->chromosomes,
+					aux
+				);
+				
+				contextbase.cerrlock.lock();
+				std::cerr << "[D]\t" << libmaus::bambam::BamAlignmentDecoderBase::formatAlignment(
+						alp,blocklen,
+						contextbase.mergeinfo.sheader->chromosomes,
+						aux
+					)
+					<< std::endl;
+				contextbase.cerrlock.unlock();		
+			}
+			#endif
 			
 			#if 0
 			if ( contextbase.thisAlgn.D.size() < blocklen )
@@ -3276,6 +3427,7 @@ struct BamThreadPoolMergeMergePackageDispatcher : public libmaus::parallel::Simp
 			contextbase.prevAlgnBlock = contextbase.thisAlgnBlock;
 			#endif
 			
+			// while alignment block data remaining
 			while ( pc != pe )
 			{
 				// number of bytes still pending
@@ -3352,24 +3504,25 @@ struct BamThreadPoolMergeMergePackageDispatcher : public libmaus::parallel::Simp
 			contextbase.cerrlock.unlock();
 			#endif
 			
+			// increase alignments processed for this block
 			contextbase.alPerBlockFinished[P.first]++;
 			
+			// if there are more alignments for this block
 			if ( 
 				contextbase.alPerBlockFinished[P.first] != 
 				contextbase.mergeinfo.tmpfileblockcntsums[P.first] 
 			)
 			{
+				// get merge buffer info
 				BamThreadPoolMergeProcessBufferInfo & info = contextbase.activeMergeBuffers[P.first];
 				
+				// if there are more alignments in the process buffer
 				if ( info.pc != info.pe )
 				{
-					contextbase.mergeQ.push(
-						std::pair<uint64_t,uint8_t const *>(
-							P.first,
-							info.buffer->ca + (*(info.pc++))
-						)
-					);
+					// put alignment in heap
+					contextbase.mergeQueuePush(P.first,info.buffer->ca + (*(info.pc++)));
 				}
+				// otherwise
 				else
 				{
 					#if 0
@@ -3408,7 +3561,6 @@ struct BamThreadPoolMergeMergePackageDispatcher : public libmaus::parallel::Simp
 					contextbase.bufferInfoPending[P.first].pop();
 					#endif
 					
-					
 					// check if next block is already in queue
 					if ( 
 						contextbase.bufferInfoPending[P.first].size()
@@ -3425,18 +3577,17 @@ struct BamThreadPoolMergeMergePackageDispatcher : public libmaus::parallel::Simp
 						contextbase.cerrlock.unlock();
 						#endif
 					
+						// mark next buffer as active
 						contextbase.activeMergeBuffers[P.first] =
 							contextbase.bufferInfoPending[P.first].top();
+						// remove if from pending queue
 						contextbase.bufferInfoPending[P.first].pop();
 
+						// get info
 						BamThreadPoolMergeProcessBufferInfo & info = contextbase.activeMergeBuffers[P.first];
 
-						contextbase.mergeQ.push(
-							std::pair<uint64_t,uint8_t const *>(
-								P.first,
-								info.buffer->ca + (*(info.pc++))
-							)
-						);
+						// put next alignment in merge heap
+						contextbase.mergeQueuePush(P.first,info.buffer->ca + (*(info.pc++)));
 
 						#if 0
 						contextbase.cerrlock.lock();
@@ -3527,6 +3678,7 @@ struct BamThreadPoolMergeMergePackageDispatcher : public libmaus::parallel::Simp
 
 		if ( ! stalled )
 		{
+			// if we are finished, enque the final buffer for compression
 			if ( finishflag )
 			{
 				contextbase.mergeWriteIn += 1;
@@ -3539,6 +3691,7 @@ struct BamThreadPoolMergeMergePackageDispatcher : public libmaus::parallel::Simp
 				contextbase.cerrlock.unlock();					
 				#endif
 			}
+			// otherwise
 			else
 			{
 				#if 0
@@ -3546,7 +3699,8 @@ struct BamThreadPoolMergeMergePackageDispatcher : public libmaus::parallel::Simp
 				std::cerr << "no stall, reinsering buffer" << std::endl;
 				contextbase.cerrlock.unlock();	
 				#endif
-				
+			
+				// put unfinished deflate buffer back into the free list
 				contextbase.deflateBuffersFreeList.push_front(deflatebufferid);
 			}
 		}
@@ -3878,6 +4032,9 @@ int bamparsortTemplate(libmaus::util::ArgInfo const & arginfo, std::string const
 	
 	bool const verbose = arginfo.getValue<unsigned int>("verbose",getDefaultVerbose());
 
+	#if 0
+	mergeSortedBlocksNoThreadPool<order_type>(arginfo,mergeinfo,neworder);
+	#else
 	// write bam header
 	{
 		std::ostringstream headerostr;
@@ -3978,7 +4135,8 @@ int bamparsortTemplate(libmaus::util::ArgInfo const & arginfo, std::string const
 	}
 
 	
-	std::cout.flush();	
+	std::cout.flush();
+	#endif
 	
 	return EXIT_SUCCESS;
 }
