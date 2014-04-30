@@ -1,3 +1,9 @@
+biobambam (0.0.137) unstable; urgency=low
+
+  * add bamseqchksum program 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Wed, 30 Apr 2014 09:31:01 +0100
+
 biobambam (0.0.136) unstable; urgency=low
 
   * add pairedfiles name scheme in fastqtobam 
