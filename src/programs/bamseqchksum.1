@@ -1,0 +1,63 @@
+.TH BAMSEQCHKSUM 1 "March 2014" BIOBAMBAM
+.SH NAME
+bamseqchksum - produce checksums for primary data in BAM files
+.SH SYNOPSIS
+.PP
+.B bamseqchksum
+[options]
+.SH DESCRIPTION
+bamseqchksum reads a BAM file from stdin, for each record calculates crc32
+checksums over
+.IP [1]
+flags and sequence
+.IP [2]
+queryname, flags and sequence
+.IP [3]
+flags, sequence and qualities
+.IP [4]
+flags, sequence and source data related aux tags
+.PP
+where the flags are the least significant byte of the BAM FLAGS containing
+only the bits for multiple segments, first segment and last segment. The
+sequence is reverse complemented, and quality string reversed, before 
+checksumming if the reverse complemented bit is set.
+.PP
+The product, modulo 2^31-1, of these checksums is taken over all
+non-supplementary and non-secondary BAM alignment records. Separate 
+products are reported for combinations of all and QC pass records and for each
+readgroup.
+.LP
+The following key=value pairs can be given:
+.PP
+.B verbose=<0>:
+Valid values are
+.IP 1:
+print progress report on standard error
+.IP 0:
+do not print progress report
+.PP
+.B inputformat=<bam>: input file format
+All versions of bamseqchksum come with support for the BAM input format. If
+the program in addition is linked to the io_lib package, then the following
+options are valid:
+.IP bam:
+BAM (see http://samtools.sourceforge.net/SAM1.pdf)
+.IP sam:
+SAM (see http://samtools.sourceforge.net/SAM1.pdf)
+.IP cram:
+CRAM (see http://www.ebi.ac.uk/ena/about/cram_toolkit)
+.PP
+.B reference=:
+file name of the reference for CRAM input files. If this key is unset, then
+the CRAM file header will be scanned for obtaining a reference file name.
+.SH AUTHOR
+Written by David Jackson (using code by German Tischler as a template).
+.SH "REPORTING BUGS"
+Report bugs to <gt1@sanger.ac.uk>
+.SH COPYRIGHT
+Copyright \(co 2014-2014 David Jackson, \(co 2014-2014 Genome Research Limited.
+Copyright \(co 2009-2013 German Tischler, \(co 2011-2013 Genome Research Limited.
+License GPLv3+: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.

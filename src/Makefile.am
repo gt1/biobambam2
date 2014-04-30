@@ -19,6 +19,7 @@ MANPAGES = programs/bamtofastq.1 programs/bamsort.1 programs/bammarkduplicates.1
 	programs/bamsplitdiv.1 programs/bamchecksort.1 programs/fastqtobam.1 \
 	programs/bamfixmateinformation.1 programs/normalisefasta.1 \
 	programs/bamfilterheader.1 programs/bammdnm.1
+	programs/bamseqchksum.1
 
 man_MANS = ${MANPAGES}
 
@@ -50,6 +51,7 @@ bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamr
 	bamchecksort \
 	fastqtobam \
 	bamfixmateinformation \
+	bamseqchksum \
 	normalisefasta \
 	bamfilterheader \
 	bammdnm @BAMPARSORTINSTEXP@ \
@@ -260,6 +262,11 @@ bamfixmateinformation_SOURCES = programs/bamfixmateinformation.cpp biobambam/Lic
 bamfixmateinformation_LDADD = ${LIBMAUSLIBS}
 bamfixmateinformation_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
 bamfixmateinformation_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+bamseqchksum_SOURCES = programs/bamseqchksum.cpp biobambam/Licensing.cpp
+bamseqchksum_LDADD = ${LIBMAUSLIBS}
+bamseqchksum_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+bamseqchksum_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
 
 normalisefasta_SOURCES = programs/normalisefasta.cpp biobambam/Licensing.cpp
 normalisefasta_LDADD = ${LIBMAUSLIBS}
