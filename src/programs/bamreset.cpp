@@ -33,6 +33,7 @@
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; }
+static int getDefaultResetSortOrder() { return 1; }
 
 #include <libmaus/lz/BgzfDeflateOutputCallbackMD5.hpp>
 #include <libmaus/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
@@ -62,6 +63,7 @@ int bamreset(::libmaus::util::ArgInfo const & arginfo)
 	
 	int const level = arginfo.getValue<int>("level",getDefaultLevel());
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
+	int const resetsortorder = arginfo.getValue<int>("resetsortorder",getDefaultResetSortOrder());
 	
 	switch ( level )
 	{
@@ -126,7 +128,8 @@ int bamreset(::libmaus::util::ArgInfo const & arginfo)
 	
 	// construct new header
 	libmaus::bambam::BamHeader uphead(headertext);
-	uphead.changeSortOrder("unknown");
+	if ( resetsortorder )
+		uphead.changeSortOrder("unknown");
 
 	/*
 	 * start index/md5 callbacks
@@ -248,8 +251,9 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "md5filename=<filename>", "file name for md5 check sum" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "resetheadertext=[<>]", "replacement SAM header text file (default: filter header in source BAM file)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "exclude=["+getDefaultExcludeFlags()+"]", "drop alignments having any of the given flags set" ) );
-				V.push_back ( std::pair<std::string,std::string> ( std::string("resetaux=<[")+::biobambam::Licensing::formatNumber(getDefaultResetAux())+"]>", "reset auxiliary fields (collate=0,1 only with reset=1)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "auxfilter=[<>]", "comma separated list of aux tags to keep if reset=1 and resetaux=0 (default: keep all)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("resetaux=<[")+::biobambam::Licensing::formatNumber(getDefaultResetAux())+"]>", "reset auxiliary fields" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "auxfilter=[<>]", "comma separated list of aux tags to keep if resetaux=0 (default: keep all)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "resetsortorder=<["+::biobambam::Licensing::formatNumber(getDefaultResetSortOrder())+"]>", "set sort order to unknown (default: 1)" ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 
