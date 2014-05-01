@@ -1,3 +1,10 @@
+biobambam (0.0.138) unstable; urgency=low
+
+  * fix read duplication bug in fastqtobam
+  * add parameter for maximum valid quality value in fastqtobam 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Thu, 01 May 2014 10:30:25 +0100
+
 biobambam (0.0.137) unstable; urgency=low
 
   * add bamseqchksum program 
