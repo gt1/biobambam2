@@ -66,6 +66,23 @@ respectively.
 FastQ quality offset. This value is subtracted from the ASCII character
 representation to get the quality score value.
 .PP
+.B qualitymax=<41>
+maximum valid quality value, 41 by default. Higher values may
+indicate a wrong setting of the qualityoffset parameter. BAM allows quality values up
+to the value of 94.
+.PP
+.B qualityhist=<0>
+compute a quality histogram and print it on the standard error channel after
+processing has finished successfully. Lines for the quality histogram are
+prefixed with [H] and contain tab separated values. The histogram enumerates
+quality scores from high to low values. The histogram has four columns
+(after the [H] marker). The first is the ASCII representation of the quality
+with offset 33, i.e. the symbol ! denotes quality 0. The second column gives
+the absolute frequency of the value. The third column stores the relative
+frequency of the value, i.e. the fraction of all values assigned to this value.
+The fourth column gives a cumulative relative frequency value over all quality
+for the current line and those for higher quality values.
+.PP
 .B checkquality=<1>
 check whether quality values are in range and terminate if an invalid value
 is encountered.
