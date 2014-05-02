@@ -8,7 +8,8 @@ TESTS=\
 TEST_ENVIRONMENT= 
 LOG_COMPILER=/bin/bash
 EXTRA_DIST= dupsingle.sh dupsinglemarked.sh sorttestshort.sh dupsinglemarkedsortedqreset.sh \
-	testfastqbamloop.sh testshortsortcoordinate.sh testshortsortqueryname.sh testshortsort.sh testdupsingle.sh # 
+	testfastqbamloop.sh testshortsortcoordinate.sh testshortsortqueryname.sh testshortsort.sh testdupsingle.sh \
+	testdupsinglemarkedsortedqreset.sh # 
 
 check_PROGRAMS=bamcmp bamtosam
 
