@@ -235,9 +235,10 @@ if test "${with_liftingwavelettransform}" != "no" ; then
 fi
 
 AC_PATH_PROG(BASHPROG,bash,no)
+AC_PATH_PROG(BASE64PROG,base64,no)
 
 TESTDIR=
-if test \( "${ISNATIVE}" -eq 1 \) -a \( "${BASHPROG}" != "no" \) ; then
+if test \( "${ISNATIVE}" -eq 1 \) -a \( "${BASHPROG}" != "no" \) -a \( "${BASE64PROG}" != "no" \) ; then
 	TESTDIR=test
 fi
 
