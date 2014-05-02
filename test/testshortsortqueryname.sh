@@ -1,5 +1,7 @@
 #! /bin/bash
-../src/bamsort SO=queryname <sorttestshort.bam | ../src/bamchecksort
+source sorttestshort.sh
+
+sorttestshort | ../src/bamsort SO=queryname | ../src/bamchecksort
 
 # copy pipe return status array
 PIPESTAT=( ${PIPESTATUS[*]} )

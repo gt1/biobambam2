@@ -6,7 +6,7 @@ TESTS=\
 	testdupsingle.sh
 TEST_ENVIRONMENT= 
 LOG_COMPILER=/bin/bash
-EXTRA_DIST= # 
+EXTRA_DIST= sortshorttest.sh # 
 
 check_PROGRAMS=bamcmp
 
