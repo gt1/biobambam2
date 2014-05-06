@@ -59,7 +59,7 @@ bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamr
 
 noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments bamtoname \
 	bamdisthist bamrefdepth fastabgzfextract bamfilternames @BAMREFDEPTHPEAKS@ \
-	@BAMPARSORTNOINSTEXP@
+	@BAMPARSORTNOINSTEXP@ bamheap
 	
 EXTRA_PROGRAMS = bamrefdepthpeaks bamparsort
 
@@ -302,3 +302,8 @@ bammapdist_SOURCES = programs/bammapdist.cpp biobambam/Licensing.cpp
 bammapdist_LDADD = ${LIBMAUSLIBS}
 bammapdist_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
 bammapdist_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+bamheap_SOURCES = programs/bamheap.cpp biobambam/Licensing.cpp
+bamheap_LDADD = ${LIBMAUSLIBS}
+bamheap_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+bamheap_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
