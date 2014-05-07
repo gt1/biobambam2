@@ -364,8 +364,8 @@ int bamheap(libmaus::util::ArgInfo const & arginfo)
 	::libmaus::bambam::BamHeader const & header = dec.getHeader();	
 	::libmaus::bambam::BamAlignment const & algn = dec.getAlignment();
 
-	std::vector<::libmaus::bambam::BamAlignment::shared_ptr_type> algnpool;
-	std::vector<::libmaus::bambam::BamAlignment *> algnfreelist;
+	std::vector< ::libmaus::bambam::BamAlignment::shared_ptr_type > algnpool;
+	std::vector< ::libmaus::bambam::BamAlignment * > algnfreelist;
 	
 	
 	libmaus::autoarray::AutoArray<libmaus::bambam::cigar_operation> cigop;
