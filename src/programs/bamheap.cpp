@@ -21,6 +21,8 @@
 #include <libmaus/util/SimpleCountingHash.hpp>
 #include <libmaus/util/ArgInfo.hpp>
 #include <libmaus/util/MemUsage.hpp>
+#include <libmaus/fastx/Phred.hpp>
+#include <libmaus/math/binom.hpp>
 
 #include <biobambam/BamBamConfig.hpp>
 #include <biobambam/Licensing.hpp>
@@ -299,11 +301,97 @@ struct EntriesContainer
 			#if defined(REGPRINT)	
 			// if ( dif /* && del */ )
 			{
+				double T[6] = {0,0,0,0,0,0};
+				unsigned int N[6] = {0,0,0,0,0,0};
+				
 				std::cerr << header.getRefIDName(refid) << "," << entry->refpos << ",0 ";
 				for ( uint64_t i = 0; i < entry->baseheap.size(); ++i )
 				{
+					double const p = libmaus::fastx::Phred::probCorrect(entry->baseheap[i].second);
+					double const q = (1.0-p)/5.0;
+				
+					switch ( entry->baseheap[i].first )
+					{
+						case bam_heap_entry_base_A:
+							T[0] += p;
+							T[1] += q;
+							T[2] += q;
+							T[3] += q;
+							T[4] += q;
+							T[5] += q;
+							N[0] ++;
+							break;
+						case bam_heap_entry_base_C:
+							T[1] += p;
+							T[0] += q;
+							T[2] += q;
+							T[3] += q;
+							T[4] += q;
+							T[5] += q;
+							N[1] ++;
+							break;
+						case bam_heap_entry_base_G:
+							T[2] += p;
+							T[0] += q;
+							T[1] += q;
+							T[3] += q;
+							T[4] += q;
+							T[5] += q;
+							N[2] ++;
+							break;
+						case bam_heap_entry_base_T:
+							T[3] += p;
+							T[0] += q;
+							T[1] += q;
+							T[2] += q;
+							T[4] += q;
+							T[5] += q;
+							N[3] ++;
+							break;
+						case bam_heap_entry_base_N:
+							T[3] += p;
+							T[0] += q;
+							T[1] += q;
+							T[2] += q;
+							T[4] += q;
+							T[5] += q;
+							N[4] ++;
+							break;
+						case bam_heap_entry_base_DEL:
+							T[5] += p;
+							T[0] += q;
+							T[1] += q;
+							T[2] += q;
+							T[3] += q;
+							T[4] += q;
+							N[5] ++;
+							break;
+					}
+					
 					std::cerr << entry->baseheap[i].first;
+					std::cerr << "(" << p << ")";
 				}
+				
+				double const maxT = std::max(std::max(std::max(T[0],T[1]),std::max(T[2],T[3])),std::max(T[4],T[5]));
+				int maxind[6] = {-1,-1,-1,-1,-1,-1};
+				unsigned int nummax = 0;
+				for ( unsigned int i = 0; i < sizeof(T)/sizeof(T[0]); ++i )
+					if ( T[i] == maxT )
+					{
+						maxind[nummax++] = i;
+					}
+				assert ( nummax );
+				
+				std::cerr << " ";
+				for ( unsigned int i = 0; i < nummax; ++i )
+				{
+					double const p = T[maxind[i]]/entry->baseheap.size();
+					unsigned int const n = N[maxind[i]];
+
+					std::cerr << static_cast<bam_heap_entry_base>(maxind[i]);
+					std::cerr << "(" << p << "/" << n << ")";
+				}
+
 				std::cerr << "\n";
 			}
 			#endif
@@ -376,6 +464,7 @@ int bamheap(libmaus::util::ArgInfo const & arginfo)
 	uint64_t c = 0;	
 	int64_t prevrefid = -1;
 	std::vector< std::pair<uint8_t,uint8_t> * > pendinginserts;
+	unsigned int const delqual = 40;
 	
 	while ( dec.readAlignment() )
 	{
@@ -458,7 +547,11 @@ int bamheap(libmaus::util::ArgInfo const & arginfo)
 						for ( uint64_t i = 0; i < ciglen; ++i )
 						{
 							BamHeapEntry * entry = entcnt.getEntry(refpos);
-							entry->baseheap.push_back(std::pair<bam_heap_entry_base,uint8_t>(bam_heap_entry_base_DEL,qual[readpos]));
+							entry->baseheap.push_back(
+								std::pair<bam_heap_entry_base,uint8_t>
+								(
+									bam_heap_entry_base_DEL,delqual)
+								);
 						
 							refpos++;
 						}
