@@ -1,3 +1,9 @@
+biobambam (0.0.140) unstable; urgency=low
+
+  * fix compilation for non current gcc 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Wed, 07 May 2014 12:14:58 +0100
+
 biobambam (0.0.139) unstable; urgency=low
 
   * add option to keep the sort order in bamreset
