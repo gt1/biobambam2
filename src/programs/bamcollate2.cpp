@@ -34,9 +34,12 @@
 #include <libmaus/bambam/ProgramHeaderLineSet.hpp>
 #include <libmaus/bambam/BamAuxFilterVector.hpp>
 #include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
+#include <libmaus/bambam/BamMultiAlignmentDecoderFactory.hpp>
+#include <libmaus/aio/PosixFdInputStream.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static std::string getDefaultInputFormat() { return "bam"; }
+static uint64_t getDefaultInputBufferSize() { return 64*1024; }
 
 #include <libmaus/lz/BgzfDeflateOutputCallbackMD5.hpp>
 #include <libmaus/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
@@ -308,53 +311,15 @@ void bamcollate2NonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::ba
 
 void bamcollate2NonCollating(libmaus::util::ArgInfo const & arginfo)
 {
-	std::string const inputformat = arginfo.getValue<std::string>("inputformat",getDefaultInputFormat());
-	std::string const inputfilename = arginfo.getValue<std::string>("filename","-");
-	uint64_t const numthreads = arginfo.getValue<uint64_t>("threads",0);
-	
-	if ( inputformat == "bam" )
-	{
-		if ( arginfo.hasArg("ranges") )
-		{
-			libmaus::bambam::BamRangeDecoder bamdec(inputfilename,arginfo.getUnparsedValue("ranges",""));
-			bamcollate2NonCollating(arginfo,bamdec);
-		}
-		else
-		{
-			BamToFastQInputFileStream bamin(inputfilename);
-			if ( numthreads > 0 )
-			{
-				libmaus::bambam::BamParallelDecoderWrapper bamdecwrap(bamin.in,numthreads);
-				bamcollate2NonCollating(arginfo,bamdecwrap.getDecoder());	
-			}
-			else
-			{
-				libmaus::bambam::BamDecoder bamdec(bamin.in);
-				bamcollate2NonCollating(arginfo,bamdec);
-			}
-		}
-	}
-	#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
-	else if ( inputformat == "sam" )
-	{
-		libmaus::bambam::ScramDecoder bamdec(inputfilename,"r","");
-		bamcollate2NonCollating(arginfo,bamdec);
-	}
-	else if ( inputformat == "cram" )
-	{
-		std::string const reference = arginfo.getValue<std::string>("reference","");
-		libmaus::bambam::ScramDecoder bamdec(inputfilename,"rc",reference);
-		bamcollate2NonCollating(arginfo,bamdec);
-	}
-	#endif
-	else
-	{
-		libmaus::exception::LibMausException se;
-		se.getStream() << "unknown input format " << inputformat << std::endl;
-		se.finish();
-		throw se;
-	}
-		
+	uint64_t const inputbuffersize = arginfo.getValueUnsignedNumeric<uint64_t>("inputbuffersize",getDefaultInputBufferSize());
+	libmaus::aio::PosixFdInputStream PFIS(STDIN_FILENO,inputbuffersize);
+	libmaus::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
+		libmaus::bambam::BamMultiAlignmentDecoderFactory::construct(
+			arginfo,false /* put rank */, 0 /* copy stream */, PFIS
+		)
+	);
+	bamcollate2NonCollating(arginfo,decwrapper->getDecoder());
+
 	std::cout.flush();
 }
 
@@ -682,77 +647,19 @@ void bamcollate2Collating(libmaus::util::ArgInfo const & arginfo)
 	libmaus::util::TempFileRemovalContainer::setup();
 	std::string const tmpfilename = arginfo.getValue<std::string>("T",arginfo.getDefaultTmpFileName());
 	libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilename);
-	std::string const inputformat = arginfo.getValue<std::string>("inputformat",getDefaultInputFormat());
-	std::string const inputfilename = arginfo.getValue<std::string>("filename","-");
-	uint64_t const numthreads = arginfo.getValue<uint64_t>("threads",0);
-
+	
 	unsigned int const hlog = arginfo.getValue<unsigned int>("colhlog",18);
 	uint64_t const sbs = arginfo.getValueUnsignedNumeric<uint64_t>("colsbs",128ull*1024ull*1024ull);
 
-	if ( inputformat == "bam" )
-	{
-		if ( arginfo.hasArg("ranges") )
-		{
-			libmaus::bambam::BamRangeCircularHashCollatingBamDecoder CHCBD(inputfilename,arginfo.getUnparsedValue("ranges",""),tmpfilename,excludeflags,false,hlog,sbs);
-			bamcollate2Collating(arginfo,CHCBD);
-		}
-		else
-		{
-			BamToFastQInputFileStream bamin(inputfilename);
-
-			if ( numthreads > 0 )
-			{
-				libmaus::bambam::BamParallelCircularHashCollatingBamDecoder CHCBD(
-					bamin.in,
-					numthreads,
-					tmpfilename,excludeflags,
-					false, /* put rank */
-					hlog,
-					sbs
-					);
-				bamcollate2Collating(arginfo,CHCBD);
-			}
-			else
-			{
-				libmaus::bambam::BamCircularHashCollatingBamDecoder CHCBD(
-					bamin.in,
-					tmpfilename,excludeflags,
-					false, /* put rank */
-					hlog,
-					sbs
-					);
-				bamcollate2Collating(arginfo,CHCBD);
-			}
-		}
-	}
-	#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
-	else if ( inputformat == "sam" )
-	{
-		libmaus::bambam::ScramCircularHashCollatingBamDecoder CHCBD(inputfilename,"r","",
-			tmpfilename,excludeflags,
-			false, /* put rank */
-			hlog,sbs
-		);
-		bamcollate2Collating(arginfo,CHCBD);
-	}
-	else if ( inputformat == "cram" )
-	{
-		std::string const reference = arginfo.getValue<std::string>("reference","");
-		libmaus::bambam::ScramCircularHashCollatingBamDecoder CHCBD(inputfilename,"rc",reference,
-			tmpfilename,excludeflags,
-			false, /* put rank */
-			hlog,sbs
-		);
-		bamcollate2Collating(arginfo,CHCBD);
-	}
-	#endif
-	else
-	{
-		libmaus::exception::LibMausException se;
-		se.getStream() << "unknown input format " << inputformat << std::endl;
-		se.finish();
-		throw se;
-	}
+	uint64_t const inputbuffersize = arginfo.getValueUnsignedNumeric<uint64_t>("inputbuffersize",getDefaultInputBufferSize());
+	libmaus::aio::PosixFdInputStream PFIS(STDIN_FILENO,inputbuffersize);
+	libmaus::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
+		libmaus::bambam::BamMultiAlignmentDecoderFactory::construct(
+			arginfo,false /* put rank */, 0 /* copy stream */, PFIS
+		)
+	);
+	libmaus::bambam::CircularHashCollatingBamDecoder CHCBD(decwrapper->getDecoder(),tmpfilename,excludeflags,hlog,sbs);
+	bamcollate2Collating(arginfo,CHCBD);
 	
 	std::cout.flush();
 }
@@ -1399,7 +1306,11 @@ void bamcollate2CollatingPostRanking(libmaus::util::ArgInfo const & arginfo)
 
 void bamcollate2(libmaus::util::ArgInfo const & arginfo)
 {
-	if ( arginfo.hasArg("ranges") && arginfo.getValue("inputformat", getDefaultInputFormat()) != "bam" )
+	if ( 
+		arginfo.hasArg("ranges") && arginfo.getValue("inputformat", getDefaultInputFormat()) != "bam" 
+		&&
+		arginfo.hasArg("ranges") && arginfo.getValue("inputformat", getDefaultInputFormat()) != "cram" 
+	)
 	{
 		libmaus::exception::LibMausException se;
 		se.getStream() << "ranges are only supported for inputformat=bam" << std::endl;
@@ -1453,8 +1364,8 @@ int main(int argc, char * argv[])
 	{
 		libmaus::timing::RealTimeClock rtc; rtc.start();
 		
-		::libmaus::util::ArgInfo const arginfo(argc,argv);
-		
+		::libmaus::util::ArgInfo arginfo(argc,argv);
+	
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
 			if ( 
 				arginfo.restargs[i] == "-v"
@@ -1487,7 +1398,11 @@ int main(int argc, char * argv[])
 				#else
 				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<[bam]>", "input format: bam" ) );
 				#endif
-				V.push_back ( std::pair<std::string,std::string> ( "ranges=<[]>", "input ranges (bam input only, default: read complete file)" ) );
+				#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
+				V.push_back ( std::pair<std::string,std::string> ( "ranges=<[]>", "input ranges (bam/cram input only, collate<2 only, default: read complete file)" ) );
+				#else
+				V.push_back ( std::pair<std::string,std::string> ( "ranges=<[]>", "input ranges (bam input only, collate<2 only, default: read complete file)" ) );
+				#endif
 				V.push_back ( std::pair<std::string,std::string> ( "exclude=<[SECONDARY,SUPPLEMENTARY]>", "exclude alignments matching any of the given flags" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "disablevalidation=<[0]>", "disable validation of input data" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "colhlog=<[18]>", "base 2 logarithm of hash table size used for collation" ) );
@@ -1506,6 +1421,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( std::string("outputformat=<[")+libmaus::bambam::BamBlockWriterBaseFactory::getDefaultOutputFormat()+"]>", std::string("output format (") + libmaus::bambam::BamBlockWriterBaseFactory::getValidOutputFormats() + ")" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "O=<[stdout]>", "output filename (standard output if unset)" ) );				
 				V.push_back ( std::pair<std::string,std::string> ( "outputthreads=<[1]>", "output helper threads (for outputformat=bam only, default: 1)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("inputbuffersize=<[")+::biobambam::Licensing::formatNumber(getDefaultInputBufferSize())+"]>", "input buffer size" ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 
@@ -1515,8 +1431,38 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;
 			}
-		
-			
+
+		if ( arginfo.hasArg("filename") )
+		{
+			std::string const fn = arginfo.getUnparsedValue("filename",std::string());
+			arginfo.argmap["I"] = fn;
+			arginfo.argmultimap.insert(std::pair<std::string,std::string>(std::string("I"),fn));
+		}
+		if ( arginfo.hasArg("I") && !arginfo.hasArg("filename") )
+		{
+			std::string const fn = arginfo.getUnparsedValue("I",std::string());		
+			arginfo.argmap["filename"] = fn;
+			arginfo.argmultimap.insert(std::pair<std::string,std::string>(std::string("filename"),fn));
+		}
+		if ( arginfo.hasArg("ranges") )
+		{
+			std::string const range = arginfo.getUnparsedValue("ranges",std::string());
+			arginfo.argmap["range"] = range;
+			arginfo.argmultimap.insert(std::pair<std::string,std::string>(std::string("range"),range));
+		}
+		if ( arginfo.hasArg("range") && !arginfo.hasArg("ranges") )
+		{
+			std::string const range = arginfo.getUnparsedValue("range",std::string());		
+			arginfo.argmap["ranges"] = range;
+			arginfo.argmultimap.insert(std::pair<std::string,std::string>(std::string("ranges"),range));
+		}
+		if ( arginfo.hasArg("threads") )
+		{
+			std::string const threads = arginfo.getUnparsedValue("threads",std::string());		
+			arginfo.argmap["inputthreads"] = threads;
+			arginfo.argmultimap.insert(std::pair<std::string,std::string>(std::string("inputthreads"),threads));
+		}
+					
 		bamcollate2(arginfo);
 		
 		std::cerr << "[V] " << libmaus::util::MemUsage() << " wall clock time " << rtc.formatTime(rtc.getElapsedSeconds()) << std::endl;		

@@ -975,7 +975,11 @@ int main(int argc, char * argv[])
 				#else
 				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<[bam]>", "input format: bam" ) );
 				#endif
+				#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
+				V.push_back ( std::pair<std::string,std::string> ( "ranges=<[]>", "input ranges (bam and cram input only, default: read complete file)" ) );
+				#else
 				V.push_back ( std::pair<std::string,std::string> ( "ranges=<[]>", "input ranges (bam input only, default: read complete file)" ) );
+				#endif
 				V.push_back ( std::pair<std::string,std::string> ( "exclude=<[SECONDARY,SUPPLEMENTARY]>", "exclude alignments matching any of the given flags" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "disablevalidation=<[0]>", "disable validation of input data" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "colhlog=<[18]>", "base 2 logarithm of hash table size used for collation" ) );
