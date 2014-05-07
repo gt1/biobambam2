@@ -217,6 +217,29 @@ enum fastq_name_scheme_type {
 	fastq_name_scheme_pairedfiles
 };
 
+std::ostream & operator<<(std::ostream & out, fastq_name_scheme_type const namescheme)
+{
+	switch ( namescheme )
+	{
+		case fastq_name_scheme_generic:
+			out << "generic";
+			break;
+		case fastq_name_scheme_casava18_single:
+			out << "c18s";
+			break;
+		case fastq_name_scheme_casava18_paired_end:
+			out << "c18pe";
+			break;
+		case fastq_name_scheme_pairedfiles:
+			out << "pairedfiles";
+			break;
+		default:
+			out << "unknown";
+			break;
+	}
+	return out;
+}
+
 static fastq_name_scheme_type parseNameScheme(std::string const & schemename)
 {
 	if ( schemename == "generic" )
@@ -326,7 +349,7 @@ struct NameInfo
 				if ( l0c != 6 || l1c != 3 )
 				{
 					::libmaus::exception::LibMausException se;
-					se.getStream() << "malformed read name " << name << " (wrong number of colon separated fields)" << std::endl;
+					se.getStream() << "malformed read name " << name << " (wrong number of colon separated fields) for name scheme " << namescheme << std::endl;
 					se.finish();
 					throw se;
 				}
@@ -355,7 +378,7 @@ struct NameInfo
 					if ( (! fragidlen) || (fragid<1) || (fragid>2) || name[p] != ':' )
 					{
 						::libmaus::exception::LibMausException se;
-						se.getStream() << "malformed read name " << name << " (malformed fragment id)" << std::endl;
+						se.getStream() << "malformed read name " << name << " (malformed fragment id) for name scheme" << namescheme << std::endl;
 						se.finish();
 						throw se;	
 					}
@@ -729,14 +752,14 @@ void fastqtobamPairTemplate(
 				if ( (!NI_1.ispair) || (!NI_1.isfirst) )
 				{
 					libmaus::exception::LibMausException ex;
-					ex.getStream() << "name " << name_1 << " does not look like a first mate read name" << std::endl;
+					ex.getStream() << "name " << name_1 << " does not look like a first mate read name in name scheme " << namescheme << ". Please check the namescheme parameter." << std::endl;
 					ex.finish();
 					throw ex;		
 				}
 				if ( NI_2.isfirst )
 				{
 					libmaus::exception::LibMausException ex;
-					ex.getStream() << "name " << name_2 << " does not look like a second mate read name" << std::endl;
+					ex.getStream() << "name " << name_2 << " does not look like a second mate read name in name scheme " << namescheme << ". Please check the namescheme parameter." << std::endl;
 					ex.finish();
 					throw ex;		
 				}
