@@ -1,3 +1,12 @@
+biobambam (0.0.139) unstable; urgency=low
+
+  * add option to keep the sort order in bamreset
+  * add option for quality histogram in fastqtobam
+  * improve error messages in to fastqtobam
+  * add CRAM sub range support in bamtofastq and bamcollate2 via io_lib 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Wed, 07 May 2014 10:29:39 +0100
+
 biobambam (0.0.138) unstable; urgency=low
 
   * fix read duplication bug in fastqtobam
