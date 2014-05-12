@@ -221,7 +221,7 @@ struct EntriesContainer
 			uint64_t const prevrefpos = entries[entryptr]->refpos;
 			
 			uint64_t const elementstomove = entries.size() - entryptr + 1;
-			entries.push_back(0);
+			entries.push_back(reinterpret_cast<BamHeapEntry *>(0));
 			for ( uint64_t i = 0; i < elementstomove; ++i )
 				entries[entries.size()-i-1] = entries[entries.size()-i-2];
 				
