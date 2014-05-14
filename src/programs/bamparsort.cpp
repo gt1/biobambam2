@@ -39,6 +39,7 @@
 #include <libmaus/lz/ZlibDecompressorObjectFactory.hpp>
 #include <libmaus/parallel/LockedBool.hpp>
 #include <libmaus/parallel/LockedQueue.hpp>
+#include <libmaus/parallel/NumCpus.hpp>
 #include <libmaus/parallel/SimpleThreadPool.hpp>
 #include <libmaus/parallel/SimpleThreadPoolWorkPackageFreeList.hpp>
 #include <libmaus/sorting/ParallelStableSort.hpp>
@@ -1861,11 +1862,7 @@ MergeInfo produceSortedBlocks(libmaus::util::ArgInfo const & arginfo)
 		
 	bool const verbose = arginfo.getValue<unsigned int>("verbose",getDefaultVerbose());
 
-	#if defined(_OPENMP)
-	uint64_t const numthreads = omp_get_max_threads();
-	#else
-	uint64_t const numthreads = 1;
-	#endif
+	uint64_t const numthreads = arginfo.getValue<unsigned int>("numthreads", libmaus::parallel::NumCpus::getNumLogicalProcessors());
 
 	// thread pool	
 	libmaus::parallel::SimpleThreadPool TP(numthreads);
@@ -1912,11 +1909,7 @@ void mergeSortedBlocksNoThreadPool(libmaus::util::ArgInfo const & arginfo, Merge
 {
 	typedef _order_type order_type;
 
-	#if defined(_OPENMP)
-	uint64_t const numthreads = omp_get_max_threads();
-	#else
-	uint64_t const numthreads = 1;
-	#endif
+	uint64_t const numthreads = arginfo.getValue<unsigned int>("numthreads", libmaus::parallel::NumCpus::getNumLogicalProcessors());
 
 	libmaus::autoarray::AutoArray<libmaus::aio::CheckedInputStream::unique_ptr_type> inputfiles(mergeinfo.tmpfilenames.size());
 	libmaus::lz::ZlibDecompressorObjectFactory decfact;
@@ -4064,11 +4057,7 @@ int bamparsortTemplate(libmaus::util::ArgInfo const & arginfo, std::string const
 		std::string const tmpfilenamebase = 
 			arginfo.getUnparsedValue("tmpfileprefix",arginfo.getDefaultTmpFileName());
 
-		#if defined(_OPENMP)
-		uint64_t const numthreads = omp_get_max_threads();
-		#else
-		uint64_t const numthreads = 1;
-		#endif
+		uint64_t const numthreads = arginfo.getValue<unsigned int>("numthreads", libmaus::parallel::NumCpus::getNumLogicalProcessors());
 
 		// thread pool	
 		libmaus::parallel::SimpleThreadPool TP(numthreads);
@@ -4161,15 +4150,22 @@ int main(int argc, char * argv[])
 {
 	try
 	{
-		libmaus::util::ArgInfo const arginfo(argc,argv);
+		libmaus::util::ArgInfo arginfo(argc,argv);
 		
 		std::cerr << "\n[V] - THIS PROGRAM IS HIGHLY EXPERIMENTAL -\n" << std::endl;
 
-		#if defined(_OPENMP)
-		unsigned int const maxthreads = omp_get_max_threads();
-		unsigned int const numthreads = arginfo.getValue<unsigned int>("numthreads", maxthreads);
-		omp_set_num_threads(numthreads);
-		#endif
+		uint64_t const numthreads = arginfo.getValue<unsigned int>("numthreads", libmaus::parallel::NumCpus::getNumLogicalProcessors());
+		
+		if ( ! arginfo.hasArg("numthreads") )
+		{
+			std::ostringstream snumthreads;
+			snumthreads << numthreads;
+			
+			arginfo.argmap["numthreads"] = snumthreads.str();
+			arginfo.argmultimap.insert(
+				std::pair<std::string,std::string>("numthreads",snumthreads.str())
+			);
+		}
 		
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
 			if ( 
@@ -4200,7 +4196,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "mem=<["+libmaus::util::ArgInfo::numToUnitNum(getDefaultMem())+"]>", "memory size target" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "tmpfileprefix=<filename>", "prefix for temporary files, default: create files in current directory" ) );
 				#if defined(_OPENMP)
-				V.push_back ( std::pair<std::string,std::string> ( "numthreads=<["+::biobambam::Licensing::formatNumber(maxthreads)+"]>", "number of threads" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "numthreads=<["+::biobambam::Licensing::formatNumber(arginfo.getValue<unsigned int>("numthreads",1))+"]>", "number of threads" ) );
 				#endif
 				
 				::biobambam::Licensing::printMap(std::cerr,V);
