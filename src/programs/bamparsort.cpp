@@ -818,7 +818,11 @@ struct BamThreadPoolDecodeReadPackageDispatcher : public libmaus::parallel::Simp
 			
 			uint64_t baseid;
 
-			while (  contextbase.inflateBasesFreeList.trydeque(baseid) )
+			while (  
+				(!contextbase.readComplete.get())
+				&&
+				contextbase.inflateBasesFreeList.trydeque(baseid) 
+			)
 			{
 				uint64_t const nextInputBlockId = (contextbase.nextInputBlockId++);
 
@@ -830,6 +834,8 @@ struct BamThreadPoolDecodeReadPackageDispatcher : public libmaus::parallel::Simp
 				
 				{			
 					libmaus::parallel::ScopePosixSpinLock slock(contextbase.inputLock);
+					if ( contextbase.readComplete.get() )
+						break;
 					blockmeta = contextbase.inflateBases[baseid]->readBlock(contextbase.in);
 
 					#if 0
