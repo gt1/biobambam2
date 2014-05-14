@@ -4195,9 +4195,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "mem=<["+libmaus::util::ArgInfo::numToUnitNum(getDefaultMem())+"]>", "memory size target" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "tmpfileprefix=<filename>", "prefix for temporary files, default: create files in current directory" ) );
-				#if defined(_OPENMP)
 				V.push_back ( std::pair<std::string,std::string> ( "numthreads=<["+::biobambam::Licensing::formatNumber(arginfo.getValue<unsigned int>("numthreads",1))+"]>", "number of threads" ) );
-				#endif
 				
 				::biobambam::Licensing::printMap(std::cerr,V);
 
