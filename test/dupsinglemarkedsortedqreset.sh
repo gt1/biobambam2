@@ -1,7 +1,9 @@
 #! /bin/bash
+source base64decode.sh
+
 function dupsinglemarkedsortedqreset
 {
-cat <<EOF | base64 -d
+cat <<EOF | base64 ${BASE64DEC}
 H4sIBAAAAAAA/wYAQkMCAG8V5V1LryO5dS4DDpBr5IFiCISbAE1OLWoz3VI9VQMYMEsExAESzwAW
 si3c8bQdI+7xuHscI0sSXPA3JUAS5IE8gGSTn5AfkpAq6aokValO6YUGcgxPd+vqSuer73znHLJI
 Vs3/7Hv/870g+JEUT3/+48/mr7Onn3zx2a9/8/b9X3/z/O7tD3705erpc/HZV799fvryx5s/3Ltm
