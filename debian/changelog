@@ -1,3 +1,13 @@
+biobambam (0.0.141) unstable; urgency=low
+
+  * do not use variable length arrays in bamseqchksum
+  * make null pointer cast explicit in bamheap (gcc 4.3 compat)
+  * avoid generation of spurious eof exceptions in bamparsort
+  * do not rely on OpenMP to detect number of processors in bamparsort
+  * fix check/test target on Darwin (different base64 decoding parameter)
+
+ -- German Tischler <gt1@sanger.ac.uk>  Wed, 14 May 2014 15:09:29 +0100
+
 biobambam (0.0.140) unstable; urgency=low
 
   * fix compilation for non current gcc 
