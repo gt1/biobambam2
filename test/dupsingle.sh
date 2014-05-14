@@ -1,7 +1,9 @@
 #! /bin/bash
+source base64decode.sh
+
 function dupsingle
 {
-cat <<EOF | base64 -d
+cat <<EOF | base64 ${BASE64DEC}
 H4sIBAAAAAAA/wYAQkMCAMMAc3L0ZbzEwMDgEODO6elilVSeyBngB6bC/KwM9Mz1zBJ1i0yMjTmd
 faz0i/PTSsoTi1L1MwoS0/WBivQhKvSTMvNAXIXc1FyFosS8FL20RChdyAU1uTi5KDE3KScVZDyC
 HQCzylDP0FjPFNWWpMSU9NQisOEwHQq6ngrFibkKuv4KSUCKyyE4kDPYzwpkV35uvKGBgQGnD9Aw

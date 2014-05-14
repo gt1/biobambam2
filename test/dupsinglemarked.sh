@@ -1,7 +1,9 @@
 #! /bin/bash
+source base64decode.sh
+
 function dupsinglemarked
 {
-cat <<EOF | base64 -d
+cat <<EOF | base64 ${BASE64DEC}
 H4sIBAAAAAAA/wYAQkMCANwZ1V1brOXWWd5zJlTdUSC1sRpLtOrYcYWRmhnfL0NVZdkWdmgyGTQ7
 AULBPTOZhqidSTrTNEhchC2DLCHxhIQKEkKFB5AKgofQB4KQoHlB8NACTStISQqkgQYEpTwgIcKy
 vZbtvW3/tvdltuLR0Zyc2fvE3/7++/+v3x565MzDZxaLB6Ng+fili+p5Y3nl0YvP3fz4zWeev3n3

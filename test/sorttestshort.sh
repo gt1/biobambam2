@@ -1,7 +1,9 @@
 #! /bin/bash
+source base64decode.sh
+
 function sorttestshort
 {
-cat <<EOF | base64 -d
+cat <<EOF | base64 ${BASE64DEC}
 H4sIBAAAAAAA/wYAQkMCAJcAc3L0ZaxlYGBw8HDhDPOzMtQz4Az2tyrNy87LL8/jcghw5/R0sSpO
 LkrMTcpJ5QzwQ7DBqg2N9Uw5nX2s9Ivz00rKE4tS9ZMSU9JTi/STMvP0YUoVdD0VihNzFXT9FZKA
 FJdDcCBnMFA3pw+QMDAw4GIEOoAJiA0ZXjAzMAAAHyESBpMAAAAfiwgEAAAAAAD/BgBCQwIAaAAz
