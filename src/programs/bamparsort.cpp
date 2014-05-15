@@ -633,7 +633,7 @@ struct BamThreadPoolDecodeContextBase : public BamThreadPoolDecodeContextBaseCon
 
 	std::vector<std::string> tmpfilenames;
 	libmaus::autoarray::AutoArray<libmaus::aio::CheckedOutputStream::unique_ptr_type> tmpfiles;
-	libmaus::lz::ZlibCompressorObjectFactory compressorFactory;
+	libmaus::lz::CompressorObjectFactory & compressorFactory;
 	libmaus::autoarray::AutoArray<libmaus::lz::SimpleCompressedOutputStream<std::ostream>::unique_ptr_type> compressedTmpFiles;
 	libmaus::parallel::PosixSpinLock tmpfileblockslock;
 	std::vector< std::vector< libmaus::lz::SimpleCompressedStreamInterval > > tmpfileblocks;
@@ -692,7 +692,8 @@ struct BamThreadPoolDecodeContextBase : public BamThreadPoolDecodeContextBaseCon
 		std::string const & tmpfilenamebase,
 		uint64_t const numthreads,
 		libmaus::parallel::SimpleThreadPool & rTP,
-		bool const rverbose
+		bool const rverbose,
+		libmaus::lz::CompressorObjectFactory & rcompressorFactory
 	)
 	:
 	  inputLock(),
@@ -730,7 +731,8 @@ struct BamThreadPoolDecodeContextBase : public BamThreadPoolDecodeContextBaseCon
 	  bamSortComplete(false),
 	  tmpfilenames(numthreads),
 	  tmpfiles(numthreads),
-	  compressorFactory(Z_DEFAULT_COMPRESSION),
+	  compressorFactory(rcompressorFactory),
+	  // compressorFactory(Z_DEFAULT_COMPRESSION),
 	  compressedTmpFiles(numthreads),
 	  tmpfileblockcntsumsacc(0),
 	  writesNext(numthreads,0),
@@ -1838,9 +1840,14 @@ struct BamThreadPoolDecodeContext : public BamThreadPoolDecodeContextBase<_order
 		std::string const & tmpfilenamebase,
 		uint64_t const numthreads,
 		libmaus::parallel::SimpleThreadPool & rTP,
-		bool const verbose
+		bool const verbose,
+		libmaus::lz::CompressorObjectFactory & rcompressorFactory
 	)
-	: BamThreadPoolDecodeContextBase<order_type>(rin,numInflateBases,numProcessBuffers,processBufferSize,tmpfilenamebase,numthreads,rTP,verbose), TP(rTP) 
+	: BamThreadPoolDecodeContextBase<order_type>(
+		rin,numInflateBases,numProcessBuffers,
+		processBufferSize,tmpfilenamebase,numthreads,rTP,verbose,
+		rcompressorFactory
+	), TP(rTP) 
 	{
 	
 	}
@@ -1859,7 +1866,10 @@ struct BamThreadPoolDecodeContext : public BamThreadPoolDecodeContextBase<_order
 
 
 template<typename _order_type>
-MergeInfo produceSortedBlocks(libmaus::util::ArgInfo const & arginfo)
+MergeInfo produceSortedBlocks(
+	libmaus::util::ArgInfo const & arginfo,
+	libmaus::lz::CompressorObjectFactory & rcompressorFactory
+)
 {
 	typedef _order_type order_type;
 
@@ -1893,7 +1903,7 @@ MergeInfo produceSortedBlocks(libmaus::util::ArgInfo const & arginfo)
 	assert ( processBufferSize <= std::numeric_limits<BamProcessBuffer::pointer_type>::max() );
 
 	libmaus::aio::PosixFdInputStream PFIS(STDIN_FILENO,64*1024);
-	BamThreadPoolDecodeContext<order_type> context(PFIS,16*numthreads /* inflate bases */,numProcessBuffers,processBufferSize,tmpfilenamebase,numthreads,TP,verbose);
+	BamThreadPoolDecodeContext<order_type> context(PFIS,16*numthreads /* inflate bases */,numProcessBuffers,processBufferSize,tmpfilenamebase,numthreads,TP,verbose,rcompressorFactory);
 	context.startup();
 	
 	TP.join();
@@ -1911,14 +1921,16 @@ MergeInfo produceSortedBlocks(libmaus::util::ArgInfo const & arginfo)
 }
 
 template<typename _order_type>
-void mergeSortedBlocksNoThreadPool(libmaus::util::ArgInfo const & arginfo, MergeInfo const & mergeinfo, std::string const & neworder)
+void mergeSortedBlocksNoThreadPool(
+	libmaus::util::ArgInfo const & arginfo, MergeInfo const & mergeinfo, std::string const & neworder,
+	libmaus::lz::DecompressorObjectFactory & decfact
+)
 {
 	typedef _order_type order_type;
 
 	uint64_t const numthreads = arginfo.getValue<unsigned int>("numthreads", libmaus::parallel::NumCpus::getNumLogicalProcessors());
 
 	libmaus::autoarray::AutoArray<libmaus::aio::CheckedInputStream::unique_ptr_type> inputfiles(mergeinfo.tmpfilenames.size());
-	libmaus::lz::ZlibDecompressorObjectFactory decfact;
 	for ( uint64_t i = 0; i < inputfiles.size(); ++i )
 	{
 		libmaus::aio::CheckedInputStream::unique_ptr_type tptr(new libmaus::aio::CheckedInputStream(mergeinfo.tmpfilenames[i]));
@@ -3898,10 +3910,9 @@ struct BamThreadPoolMergeContext : public BamThreadPoolMergeContextBase<_order_t
 };
 
 template<typename _order_type>
-void checkSortedBlocks(MergeInfo const & mergeinfo)
+void checkSortedBlocks(MergeInfo const & mergeinfo, libmaus::lz::DecompressorObjectFactory & decfact)
 {
 	libmaus::autoarray::AutoArray<libmaus::aio::CheckedInputStream::unique_ptr_type> inputfiles(mergeinfo.tmpfilenames.size());
-	libmaus::lz::ZlibDecompressorObjectFactory decfact;
 	for ( uint64_t i = 0; i < inputfiles.size(); ++i )
 	{
 		libmaus::aio::CheckedInputStream::unique_ptr_type tptr(new libmaus::aio::CheckedInputStream(mergeinfo.tmpfilenames[i]));
@@ -3954,14 +3965,13 @@ void checkSortedBlocks(MergeInfo const & mergeinfo)
 }
 
 template<typename _order_type>
-void checkSortedBlocksByBlocks(MergeInfo const & mergeinfo)
+void checkSortedBlocksByBlocks(MergeInfo const & mergeinfo, libmaus::lz::DecompressorObjectFactory & decfact)
 {
 	for ( uint64_t i = 0; i < mergeinfo.tmpfilenamedblocks.size(); ++i )
 	{
 		std::cerr << "block " << (i) << "/" << mergeinfo.tmpfilenamedblocks.size() << std::endl;
 		
 		libmaus::lz::SimpleCompressedInputBlockConcat conc(mergeinfo.tmpfilenamedblocks[i]);
-		libmaus::lz::ZlibDecompressorObjectFactory decfact;
 		libmaus::lz::SimpleCompressedInputBlockConcatBlock block(decfact);
 		std::ostringstream ostr;
 		
@@ -4023,17 +4033,82 @@ void checkSortedBlocksByBlocks(MergeInfo const & mergeinfo)
 	}	
 }
 
+static bool startsWith(std::string const & a, std::string const & b)
+{
+	return	a.size() >= b.size() && a.substr(0,b.size()) == b;
+}
+
+static std::string getDefaultTempComp()
+{
+	return "zlib:-1";
+}
+
 template<typename _order_type>
 int bamparsortTemplate(libmaus::util::ArgInfo const & arginfo, std::string const & neworder)
 {
-	typedef _order_type order_type;
-	MergeInfo const mergeinfo = produceSortedBlocks<order_type>(arginfo);
-	
 	bool const verbose = arginfo.getValue<unsigned int>("verbose",getDefaultVerbose());
+	
+	libmaus::lz::CompressorObjectFactory::unique_ptr_type PcompressorFactory;
+	libmaus::lz::DecompressorObjectFactory::unique_ptr_type PdecompressorFactory;
+	
+	std::string const tempcomp = arginfo.getValue<std::string>("tempcomp",getDefaultTempComp());
+
+	if ( startsWith(tempcomp,"snappy") )
+	{
+		libmaus::lz::CompressorObjectFactory::unique_ptr_type TcompressorFactory(new libmaus::lz::SnappyCompressorObjectFactory());
+		PcompressorFactory = UNIQUE_PTR_MOVE(TcompressorFactory);
+		libmaus::lz::DecompressorObjectFactory::unique_ptr_type TdecompressorFactory(new libmaus::lz::SnappyDecompressorObjectFactory);
+		PdecompressorFactory = UNIQUE_PTR_MOVE(TdecompressorFactory);
+	}
+	else if ( startsWith(tempcomp,"zlib:") )
+	{
+		std::string const levelstr = tempcomp.substr(strlen("zlib:"));
+		std::istringstream levelistr(levelstr);
+		int64_t templevel = -1;
+		levelistr >> templevel;
+		
+		if ( ! levelistr )
+		{
+			libmaus::exception::LibMausException lme;
+			lme.getStream() << "Cannot parse compression setting in " << tempcomp << std::endl;
+			lme.finish();
+			throw lme;
+		}
+		
+		if ( templevel < -1 || templevel > 9 )
+		{
+			libmaus::exception::LibMausException lme;
+			lme.getStream() << "Invalid zlib compression level in " << tempcomp << std::endl;
+			lme.finish();
+			throw lme;		
+		}
+	
+		libmaus::lz::CompressorObjectFactory::unique_ptr_type TcompressorFactory(new libmaus::lz::ZlibCompressorObjectFactory(templevel));
+		PcompressorFactory = UNIQUE_PTR_MOVE(TcompressorFactory);
+		libmaus::lz::DecompressorObjectFactory::unique_ptr_type TdecompressorFactory(new libmaus::lz::ZlibDecompressorObjectFactory);
+		PdecompressorFactory = UNIQUE_PTR_MOVE(TdecompressorFactory);
+	}
+	else
+	{
+		libmaus::exception::LibMausException lme;
+		lme.getStream() << "Unsupported temp file compression scheme in " << tempcomp << std::endl;
+		lme.finish();
+		throw lme;	
+	}
+		
+	libmaus::lz::CompressorObjectFactory & compressorFactory = *PcompressorFactory;
+	libmaus::lz::DecompressorObjectFactory & decompressorFactory = *PdecompressorFactory;
+
+	std::cerr << "[V] using " << compressorFactory.getDescription() << " to compress temporary files." << std::endl;
+	
+	typedef _order_type order_type;
+	MergeInfo const mergeinfo = produceSortedBlocks<order_type>(arginfo,compressorFactory);
+	
 
 	#if 0
-	mergeSortedBlocksNoThreadPool<order_type>(arginfo,mergeinfo,neworder);
+	mergeSortedBlocksNoThreadPool<order_type>(arginfo,mergeinfo,neworder,decompressorFactory);
 	#else
+	
 	// write bam header
 	{
 		std::ostringstream headerostr;
@@ -4082,7 +4157,6 @@ int bamparsortTemplate(libmaus::util::ArgInfo const & arginfo, std::string const
 		BamThreadPoolMergeWritePackageDispatcher<order_type> writedispatcher;
 		TP.registerDispatcher(BamThreadPoolMergeContextBaseConstantsBase::bamthreadpooldecodecontextbase_dispatcher_id_write,&writedispatcher);
 
-		libmaus::lz::ZlibDecompressorObjectFactory decfact;
 		uint64_t const numblocks = mergeinfo.tmpfilenamedblocks.size();
 		uint64_t const mem = arginfo.getValueUnsignedNumeric<uint64_t>("mem",getDefaultMem());
 		int const level = arginfo.getValue<int>("level",getDefaultLevel());;
@@ -4106,7 +4180,7 @@ int bamparsortTemplate(libmaus::util::ArgInfo const & arginfo, std::string const
 			std::cerr << "[V] numDeflateBlocks:       " << numDeflateBlocks << std::endl;
 		}
 
-		BamThreadPoolMergeContext<order_type> mergecontext(TP,mergeinfo,decfact,
+		BamThreadPoolMergeContext<order_type> mergecontext(TP,mergeinfo,decompressorFactory,
 			inputBlocksPerBlock,
 			processBuffersPerBlock,processBuffersSize,
 			numDeflateBlocks,
@@ -4138,17 +4212,26 @@ int bamparsortTemplate(libmaus::util::ArgInfo const & arginfo, std::string const
 
 int bamparsort(libmaus::util::ArgInfo const & arginfo)
 {
+	libmaus::timing::RealTimeClock rtc;
+	rtc.start();
+	
 	std::string const sortorder = arginfo.getValue<std::string>("SO",getDefaultSortOrder());
+	int r = EXIT_FAILURE;
 		
 	if ( sortorder == "coordinate" )
-		return bamparsortTemplate<libmaus::bambam::BamAlignmentPosComparator>(arginfo,"coordinate");
+		r = bamparsortTemplate<libmaus::bambam::BamAlignmentPosComparator>(arginfo,"coordinate");
 	else if ( sortorder == "queryname" )
-		return bamparsortTemplate<libmaus::bambam::BamAlignmentNameComparator>(arginfo,"queryname");
+		r = bamparsortTemplate<libmaus::bambam::BamAlignmentNameComparator>(arginfo,"queryname");
 	else
 	{
 		std::cerr << "[E] unknown sort order " << sortorder << std::endl;
-		return EXIT_FAILURE;
+		r = EXIT_FAILURE;
 	}
+	
+	if ( r != EXIT_FAILURE )
+		std::cerr << "[V] processing finished in time " << rtc.formatTime(rtc.getElapsedSeconds()) << std::endl;
+
+	return r;
 }
 
 
@@ -4202,6 +4285,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "mem=<["+libmaus::util::ArgInfo::numToUnitNum(getDefaultMem())+"]>", "memory size target" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "tmpfileprefix=<filename>", "prefix for temporary files, default: create files in current directory" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "numthreads=<["+::biobambam::Licensing::formatNumber(arginfo.getValue<unsigned int>("numthreads",1))+"]>", "number of threads" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("tempcomp=<[")+getDefaultTempComp()+"]>", "compression setting for temporary files (zlib:{-1,0,...,9},snappy)" ) );
 				
 				::biobambam::Licensing::printMap(std::cerr,V);
 
