@@ -1,3 +1,9 @@
+biobambam (0.0.142) unstable; urgency=low
+
+  * fix duplicate marking metrics for multiple libraries 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Sat, 17 May 2014 23:10:37 +0100
+
 biobambam (0.0.141) unstable; urgency=low
 
   * do not use variable length arrays in bamseqchksum
