@@ -66,6 +66,92 @@ static int getDefaultMD5() { return 0; }
 static int getDefaultIndex() { return 0; }
 static std::string getProgId() { return "bammarkduplicates"; }
 
+struct MarkDuplicatesRewriteRequest
+{
+	libmaus::util::ArgInfo const arginfo;
+	bool const verbose;
+	libmaus::bambam::BamHeader const bamheader;
+	int64_t const maxrank;
+	uint64_t const mod;
+	int const level;
+	::libmaus::bambam::DupSetCallbackVector const DSCV;
+	std::string const tmpfilesnappyreads;
+	unsigned int const rewritebam;
+	std::string const tmpfileindex;
+	std::string const progid;
+	std::string const packageversion;
+	bool const rmdup;
+	bool const md5;
+	bool const index;
+	uint64_t const markthreads;
+	
+	MarkDuplicatesRewriteRequest(std::istream & in)
+	:
+		arginfo(in),
+		verbose(libmaus::util::NumberSerialisation::deserialiseNumber(in)),
+		bamheader(libmaus::util::StringSerialisation::deserialiseString(in)),
+		maxrank(libmaus::util::NumberSerialisation::deserialiseSignedNumber(in)),
+		mod(libmaus::util::NumberSerialisation::deserialiseNumber(in)),
+		level(libmaus::util::NumberSerialisation::deserialiseSignedNumber(in)),
+		DSCV(in),
+		tmpfilesnappyreads(libmaus::util::StringSerialisation::deserialiseString(in)),
+		rewritebam(libmaus::util::NumberSerialisation::deserialiseNumber(in)),
+		tmpfileindex(libmaus::util::StringSerialisation::deserialiseString(in)),
+		progid(libmaus::util::StringSerialisation::deserialiseString(in)),
+		packageversion(libmaus::util::StringSerialisation::deserialiseString(in)),
+		rmdup(libmaus::util::NumberSerialisation::deserialiseNumber(in)),
+		md5(libmaus::util::NumberSerialisation::deserialiseNumber(in)),
+		index(libmaus::util::NumberSerialisation::deserialiseNumber(in)),
+		markthreads(libmaus::util::NumberSerialisation::deserialiseNumber(in))
+	{	
+	}
+
+	static void serialise(
+		std::ostream & out,
+		libmaus::util::ArgInfo const & arginfo,
+		bool const verbose,
+		libmaus::bambam::BamHeader const & bamheader,
+		int64_t const maxrank,
+		uint64_t const mod,
+		int const level,
+		::libmaus::bambam::DupSetCallbackVector const & DSCV,
+		std::string const & tmpfilesnappyreads,
+		unsigned int const rewritebam,
+		std::string const & tmpfileindex,
+		std::string const & progid,
+		std::string const & packageversion,
+		bool const rmdup,
+		bool const md5,
+		bool const index,
+		uint64_t const markthreads
+	)
+	{
+		arginfo.serialise(out);
+		libmaus::util::NumberSerialisation::serialiseNumber(out,verbose);
+		libmaus::util::StringSerialisation::serialiseString(out,bamheader.text);
+		libmaus::util::NumberSerialisation::serialiseSignedNumber(out,maxrank);
+		libmaus::util::NumberSerialisation::serialiseNumber(out,mod);
+		libmaus::util::NumberSerialisation::serialiseSignedNumber(out,level);
+		DSCV.serialise(out);
+		libmaus::util::StringSerialisation::serialiseString(out,tmpfilesnappyreads);
+		libmaus::util::NumberSerialisation::serialiseNumber(out,rewritebam);
+		libmaus::util::StringSerialisation::serialiseString(out,tmpfileindex);
+		libmaus::util::StringSerialisation::serialiseString(out,progid);
+		libmaus::util::StringSerialisation::serialiseString(out,packageversion);
+		libmaus::util::NumberSerialisation::serialiseNumber(out,rmdup);
+		libmaus::util::NumberSerialisation::serialiseNumber(out,md5);
+		libmaus::util::NumberSerialisation::serialiseNumber(out,index);
+		libmaus::util::NumberSerialisation::serialiseNumber(out,markthreads);
+	}
+	
+	void dispatch() const
+	{
+		libmaus::bambam::DupMarkBase::markDuplicatesInFile(
+			arginfo,verbose,bamheader,maxrank,mod,level,DSCV,tmpfilesnappyreads,rewritebam,tmpfileindex,
+			progid,packageversion,rmdup,md5,index,markthreads);
+	}
+};
+
 static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 {
 	libmaus::timing::RealTimeClock globrtc; globrtc.start();
