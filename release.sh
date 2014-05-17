@@ -1,6 +1,6 @@
 #! /bin/bash
 git checkout master
-VERSION=`grep <configure.in "AC_INIT" | perl -p -e "s/.*AC_INIT\(//" | awk -F ',' '{print $2}'`
+VERSION=`grep <configure.ac "AC_INIT" | perl -p -e "s/.*AC_INIT\(//" | awk -F ',' '{print $2}'`
 DATE=`date +"%Y%m%d%H%M%S"`
 RELEASE=${VERSION}-release-${DATE}
 PATH=/software/hpag/autotools/bin:${PATH} autoreconf -i -f
