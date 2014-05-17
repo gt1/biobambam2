@@ -788,7 +788,7 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 			}
 			else
 			{
-				std::cerr << "WARNING: expunge on flush (this should not happen)" << std::endl;
+				// std::cerr << "WARNING: expunge on flush (this should not happen)" << std::endl;
 				expungeActiveFrontPairs(pairREC,header);
 			}
 		}
@@ -811,7 +811,7 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 			}
 			else
 			{
-				std::cerr << "WARNING: expunge on flush (this should not happen)" << std::endl;
+				// std::cerr << "WARNING: expunge on flush (this should not happen)" << std::endl;
 				expungeActiveFrontFrags(fragREC,header);
 			}
 		}
@@ -1728,7 +1728,6 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	/*
 	 * end of metrics file writing
 	 */
-
 
 	/*
 	 * mark the duplicates
