@@ -125,7 +125,7 @@ int bamsplitmod(libmaus::util::ArgInfo const & arginfo)
 		{
 			algn.serialise ( writers [ (c++) % div ] -> getStream() );
 			
-			if ( ((++c) & ((1ull<<20)-1)) == 0 )
+			if ( ((c) & ((1ull<<20)-1)) == 0 )
 				std::cerr << "[V] " << c << std::endl;
 		}
 		std::cerr << "[V] " << c << std::endl;
