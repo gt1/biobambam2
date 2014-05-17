@@ -3,7 +3,7 @@ Maintainer: German Tischler <gt1@sanger.ac.uk>
 Section: universe/misc
 Priority: optional
 Standards-Version: 3.9.2
-Build-Depends: debhelper (>= 7),  autoconf (>= 2.61), automake (>= 1.10), libtool (>= 2.2.6), pkg-config (>= 0.22), libmaus-dev (>= 0.0.122), zlib1g-dev (>= 1.2.3), libsnappy-dev (>= 1.0.3)
+Build-Depends: debhelper (>= 7),  autoconf (>= 2.61), automake (>= 1.10), libtool (>= 2.2.6), pkg-config (>= 0.22), libmaus-dev (>= 0.0.124), zlib1g-dev (>= 1.2.3), libsnappy-dev (>= 1.0.3)
 
 Package: biobambam
 Architecture: any
