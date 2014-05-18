@@ -2363,6 +2363,33 @@ struct BamThreadPoolMergeHeapComparator
 	}
 };
 
+struct LockedBitVector
+{
+	libmaus::parallel::PosixSpinLock lock;
+	std::vector<bool> B;
+	
+	LockedBitVector(uint64_t const n) : lock(), B(n) {}
+	~LockedBitVector() {}
+	
+	bool get(uint64_t const i)
+	{	
+		bool b;
+		
+		{
+			libmaus::parallel::ScopePosixSpinLock slock(lock);
+			b = B[i];
+		}
+		
+		return b;
+	}
+	
+	void set(uint64_t const i, bool const b)
+	{
+		libmaus::parallel::ScopePosixSpinLock slock(lock);
+		B[i] = b;
+	}
+};
+
 template<typename _order_type>
 struct BamThreadPoolMergeContextBase : public BamThreadPoolMergeContextBaseConstantsBase
 {
@@ -2393,7 +2420,7 @@ struct BamThreadPoolMergeContextBase : public BamThreadPoolMergeContextBaseConst
 	libmaus::autoarray::AutoArray<uint64_t> readSeqIds;
 	libmaus::autoarray::AutoArray<libmaus::lz::SimpleCompressedInputBlockConcat::unique_ptr_type> blockReaders;
 	libmaus::parallel::SynchronousCounter<uint64_t> blockReadersFinished;
-	libmaus::bitio::BitVector blockReadersFinishedVector;
+	LockedBitVector blockReadersFinishedVector;
 	libmaus::parallel::LockedBool readFinished;
 	
 	typedef std::priority_queue<
@@ -2501,6 +2528,7 @@ struct BamThreadPoolMergeContextBase : public BamThreadPoolMergeContextBaseConst
 
 	libmaus::parallel::SynchronousCounter<uint64_t> mergeWriteIn;
 	uint64_t mergeWriteOut;
+	libmaus::parallel::PosixSpinLock mergeWriteOutLock;
 	
 	bool const verbose;
 		
@@ -2567,6 +2595,7 @@ struct BamThreadPoolMergeContextBase : public BamThreadPoolMergeContextBaseConst
 		out(rout),
 		mergeWriteIn(0),
 		mergeWriteOut(0),
+		mergeWriteOutLock(),
 		verbose(rverbose)
 	{
 		assert ( inputBlocksPerBlock );
@@ -2685,7 +2714,7 @@ struct BamThreadPoolMergeReadPackageDispatcher : public libmaus::parallel::Simpl
 					// reading for this block is finished, so quit read loop after this one
 					finishedLoop = true;
 					// set finished flag for this block
-					contextbase.blockReadersFinishedVector.setSync(blockid,true);
+					contextbase.blockReadersFinishedVector.set(blockid,true);
 					// increment number of finished readers
 					uint64_t const numfinished = ++(contextbase.blockReadersFinished);
 					
@@ -3813,7 +3842,9 @@ struct BamThreadPoolMergeWritePackageDispatcher : public libmaus::parallel::Simp
 			compsize
 		);
 
+		contextbase.mergeWriteOutLock.lock();
 		contextbase.mergeWriteOut += 1;
+		contextbase.mergeWriteOutLock.unlock();
 		
 		{
 			libmaus::parallel::ScopePosixSpinLock ldeflateBufferNextLock(contextbase.deflateBufferNextLock);
@@ -3855,19 +3886,23 @@ struct BamThreadPoolMergeWritePackageDispatcher : public libmaus::parallel::Simp
 		if ( contextbase.mergeStallList.trydeque(mergepack) )
 			tpi.enque(mergepack);
 		
-		if (
-			contextbase.mergeFinished.get() &&
-			(contextbase.mergeWriteIn.get() == contextbase.mergeWriteOut)
-		)
 		{
-			if ( contextbase.verbose )
-			{
-				contextbase.cerrlock.lock();
-				std::cerr << "[V] writing complete" << std::endl;
-				contextbase.cerrlock.unlock();
-			}
+			libmaus::parallel::ScopePosixSpinLock lmergeWriteOutLock(contextbase.mergeWriteOutLock);
 			
-			tpi.terminate();
+			if (
+				contextbase.mergeFinished.get() &&
+				(contextbase.mergeWriteIn.get() == contextbase.mergeWriteOut)
+			)
+			{
+				if ( contextbase.verbose )
+				{
+					contextbase.cerrlock.lock();
+					std::cerr << "[V] writing complete" << std::endl;
+					contextbase.cerrlock.unlock();
+				}
+				
+				tpi.terminate();
+			}
 		}
 		
 		contextbase.writeFreeList.returnPackage(dynamic_cast<BamThreadPoolMergeWritePackage<order_type> *>(P));
