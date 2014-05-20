@@ -562,6 +562,8 @@ struct MergeInfo
 	}
 };
 
+#include <libmaus/aio/LinuxStreamingPosixFdOutputStreamBuffer.hpp>
+#include <libmaus/aio/PosixFdOutputStreamBuffer.hpp>
 
 template<typename _order_type>
 struct BamThreadPoolDecodeContextBase : public BamThreadPoolDecodeContextBaseConstantsBase
@@ -632,7 +634,7 @@ struct BamThreadPoolDecodeContextBase : public BamThreadPoolDecodeContextBaseCon
 	libmaus::parallel::LockedBool bamSortComplete;
 
 	std::vector<std::string> tmpfilenames;
-	libmaus::autoarray::AutoArray<libmaus::aio::CheckedOutputStream::unique_ptr_type> tmpfiles;
+	libmaus::autoarray::AutoArray<libmaus::aio::CheckedOutputStream::unique_ptr_type> tmpfilesCOS;
 	libmaus::lz::CompressorObjectFactory & compressorFactory;
 	libmaus::autoarray::AutoArray<libmaus::lz::SimpleCompressedOutputStream<std::ostream>::unique_ptr_type> compressedTmpFiles;
 	libmaus::parallel::PosixSpinLock tmpfileblockslock;
@@ -730,7 +732,7 @@ struct BamThreadPoolDecodeContextBase : public BamThreadPoolDecodeContextBaseCon
 	  buffersSorted(0),
 	  bamSortComplete(false),
 	  tmpfilenames(numthreads),
-	  tmpfiles(numthreads),
+	  tmpfilesCOS(numthreads),
 	  compressorFactory(rcompressorFactory),
 	  // compressorFactory(Z_DEFAULT_COMPRESSION),
 	  compressedTmpFiles(numthreads),
@@ -763,13 +765,12 @@ struct BamThreadPoolDecodeContextBase : public BamThreadPoolDecodeContextBaseCon
 			std::string const fn = ostr.str();
 			tmpfilenames[i] = fn;
 			libmaus::util::TempFileRemovalContainer::addTempFile(fn);
-			libmaus::aio::CheckedOutputStream::unique_ptr_type tptr(
-				new libmaus::aio::CheckedOutputStream(fn)
-			);
-			tmpfiles[i] = UNIQUE_PTR_MOVE(tptr);
+			
+			libmaus::aio::CheckedOutputStream::unique_ptr_type tptr(new libmaus::aio::CheckedOutputStream(fn));
+			tmpfilesCOS[i] = UNIQUE_PTR_MOVE(tptr);
 			
 			libmaus::lz::SimpleCompressedOutputStream<std::ostream>::unique_ptr_type tcptr(
-				new libmaus::lz::SimpleCompressedOutputStream<std::ostream>(*tmpfiles[i],compressorFactory)
+				new libmaus::lz::SimpleCompressedOutputStream<std::ostream>(*tmpfilesCOS[i],compressorFactory)
 			);
 			
 			compressedTmpFiles[i] = UNIQUE_PTR_MOVE(tcptr);
@@ -1805,8 +1806,11 @@ struct BamThreadPoolDecodeBamWritePackageDispatcher : public libmaus::parallel::
 				{
 					contextbase.compressedTmpFiles[i]->flush();
 					contextbase.compressedTmpFiles[i].reset();
-					contextbase.tmpfiles[i]->flush();
-					contextbase.tmpfiles[i].reset();
+					if ( contextbase.tmpfilesCOS[i] )
+					{
+						contextbase.tmpfilesCOS[i]->flush();
+						contextbase.tmpfilesCOS[i].reset();
+					}
 				}
 
 				#if 0
