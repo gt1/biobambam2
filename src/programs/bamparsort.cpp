@@ -562,8 +562,11 @@ struct MergeInfo
 	}
 };
 
-#include <libmaus/aio/LinuxStreamingPosixFdOutputStreamBuffer.hpp>
+#if defined(__linux__)
+#include <libmaus/aio/IsKnownLocalFileSystem.hpp>
+#include <libmaus/aio/LinuxStreamingPosixFdOutputStream.hpp>
 #include <libmaus/aio/PosixFdOutputStreamBuffer.hpp>
+#endif
 
 template<typename _order_type>
 struct BamThreadPoolDecodeContextBase : public BamThreadPoolDecodeContextBaseConstantsBase
@@ -635,6 +638,9 @@ struct BamThreadPoolDecodeContextBase : public BamThreadPoolDecodeContextBaseCon
 
 	std::vector<std::string> tmpfilenames;
 	libmaus::autoarray::AutoArray<libmaus::aio::CheckedOutputStream::unique_ptr_type> tmpfilesCOS;
+	#if defined(__linux__)
+	libmaus::autoarray::AutoArray<libmaus::aio::LinuxStreamingPosixFdOutputStream::unique_ptr_type> tmpfilesLSPFDOSB;
+	#endif
 	libmaus::lz::CompressorObjectFactory & compressorFactory;
 	libmaus::autoarray::AutoArray<libmaus::lz::SimpleCompressedOutputStream<std::ostream>::unique_ptr_type> compressedTmpFiles;
 	libmaus::parallel::PosixSpinLock tmpfileblockslock;
@@ -685,7 +691,10 @@ struct BamThreadPoolDecodeContextBase : public BamThreadPoolDecodeContextBaseCon
 	libmaus::parallel::SimpleThreadPool & TP;
 	
 	bool const verbose;
-		
+
+	typedef libmaus::lz::SimpleCompressedOutputStream<std::ostream> comp_stream_type;
+	typedef comp_stream_type::unique_ptr_type comp_stream_ptr_type;
+	
 	BamThreadPoolDecodeContextBase(
 		std::istream & rin,
 		uint64_t const numInflateBases,
@@ -733,8 +742,10 @@ struct BamThreadPoolDecodeContextBase : public BamThreadPoolDecodeContextBaseCon
 	  bamSortComplete(false),
 	  tmpfilenames(numthreads),
 	  tmpfilesCOS(numthreads),
+	  #if defined(__linux__)
+	  tmpfilesLSPFDOSB(numthreads),
+	  #endif
 	  compressorFactory(rcompressorFactory),
-	  // compressorFactory(Z_DEFAULT_COMPRESSION),
 	  compressedTmpFiles(numthreads),
 	  tmpfileblockcntsumsacc(0),
 	  writesNext(numthreads,0),
@@ -766,13 +777,28 @@ struct BamThreadPoolDecodeContextBase : public BamThreadPoolDecodeContextBaseCon
 			tmpfilenames[i] = fn;
 			libmaus::util::TempFileRemovalContainer::addTempFile(fn);
 			
-			libmaus::aio::CheckedOutputStream::unique_ptr_type tptr(new libmaus::aio::CheckedOutputStream(fn));
-			tmpfilesCOS[i] = UNIQUE_PTR_MOVE(tptr);
+			bool const local = libmaus::aio::IsKnownLocalFileSystem::isKnownLocalFileSystemCreate(fn);
+			std::ostream * out = 0;
+
+			#if defined(__linux__)
+			if ( local )
+			{
+				libmaus::aio::LinuxStreamingPosixFdOutputStream::unique_ptr_type tptr
+				(
+					new libmaus::aio::LinuxStreamingPosixFdOutputStream(fn,8*1024*1024)
+				);
+				tmpfilesLSPFDOSB[i] = UNIQUE_PTR_MOVE(tptr);
+				out = tmpfilesLSPFDOSB[i].get();
+			}
+			else
+			#endif
+			{
+				libmaus::aio::CheckedOutputStream::unique_ptr_type tptr(new libmaus::aio::CheckedOutputStream(fn));
+				tmpfilesCOS[i] = UNIQUE_PTR_MOVE(tptr);
+				out = tmpfilesCOS[i].get();
+			}
 			
-			libmaus::lz::SimpleCompressedOutputStream<std::ostream>::unique_ptr_type tcptr(
-				new libmaus::lz::SimpleCompressedOutputStream<std::ostream>(*tmpfilesCOS[i],compressorFactory)
-			);
-			
+			comp_stream_ptr_type tcptr(new comp_stream_type(*out,compressorFactory));
 			compressedTmpFiles[i] = UNIQUE_PTR_MOVE(tcptr);
 		}
 	}
@@ -1811,6 +1837,13 @@ struct BamThreadPoolDecodeBamWritePackageDispatcher : public libmaus::parallel::
 						contextbase.tmpfilesCOS[i]->flush();
 						contextbase.tmpfilesCOS[i].reset();
 					}
+					#if defined(__linux__)
+					if ( contextbase.tmpfilesLSPFDOSB[i] )
+					{
+						contextbase.tmpfilesLSPFDOSB[i]->flush();
+						contextbase.tmpfilesLSPFDOSB[i].reset();
+					}
+					#endif
 				}
 
 				#if 0
