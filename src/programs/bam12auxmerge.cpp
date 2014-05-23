@@ -113,7 +113,7 @@ int bam12auxmerge(::libmaus::util::ArgInfo const & arginfo)
 	::libmaus::bambam::BamHeader const & preheader = bampredec.getHeader();
 
 	std::string const headertext(header.text);
-	std::string const preheadertext(preheader.text);
+	std::string const preheadertext(libmaus::bambam::HeaderLine::removeSequenceLines(preheader.text));
 	
 	libmaus::bambam::ProgramHeaderLineSet headerlines(headertext);
 	libmaus::bambam::ProgramHeaderLineSet preheaderlines(preheadertext);
