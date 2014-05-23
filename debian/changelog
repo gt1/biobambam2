@@ -1,3 +1,9 @@
+biobambam (0.0.143) unstable; urgency=low
+
+  * improve header merging in bam12auxmerge 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Fri, 23 May 2014 16:27:46 +0100
+
 biobambam (0.0.142) unstable; urgency=low
 
   * fix duplicate marking metrics for multiple libraries 
