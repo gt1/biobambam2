@@ -71,6 +71,11 @@ uint64_t getDefaultMem()
 	return 2ull * 1024ull * 1024ull * 1024ull;
 }
 
+uint64_t getDefaultProcessBuffers()
+{
+	return 4;
+}
+
 struct BamThreadPoolDecodeBamParseQueueInfo
 {
 	uint64_t packageid;
@@ -1934,7 +1939,7 @@ MergeInfo produceSortedBlocks(
 	BamThreadPoolDecodeBamWritePackageDispatcher<order_type> bamwritedispatcher;
 	TP.registerDispatcher(BamThreadPoolDecodeContext<order_type>::bamthreadpooldecodecontextbase_dispatcher_id_bamwrite,&bamwritedispatcher);
 
-	uint64_t numProcessBuffers = 4; // 2*numthreads;
+	uint64_t numProcessBuffers = arginfo.getValueUnsignedNumeric<uint64_t>("processbuffers",getDefaultProcessBuffers());; // 2*numthreads;
 	uint64_t processBufferMemory = arginfo.getValueUnsignedNumeric<uint64_t>("mem",getDefaultMem());
 	uint64_t processBufferSize = (processBufferMemory + numProcessBuffers-1)/numProcessBuffers;
 	assert ( processBufferSize <= std::numeric_limits<BamProcessBuffer::pointer_type>::max() );
