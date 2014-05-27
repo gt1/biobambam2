@@ -1,3 +1,9 @@
+biobambam (0.0.144) unstable; urgency=low
+
+  * add blastn xml format to BAM converter 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Tue, 27 May 2014 19:11:07 +0100
+
 biobambam (0.0.143) unstable; urgency=low
 
   * improve header merging in bam12auxmerge 
