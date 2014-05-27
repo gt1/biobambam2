@@ -242,6 +242,37 @@ if test \( "${ISNATIVE}" -eq 1 \) -a \( "${BASHPROG}" != "no" \) -a \( "${BASE64
 	TESTDIR=test
 fi
 
+AC_ARG_WITH([xerces-c],
+            [AS_HELP_STRING([--with-xerces-c@<:@=PATH@:>@], [path to installed xerces-c library @<:@default=no@:>@])],
+            [with_xerces_c=${withval}],
+            [with_xerces_c=no])
+
+BIOBAMBAM_HAVE_XERCES_C=
+xerces_c_CFLAGS=
+xerces_c_LIBS=
+BLASTNXMLTOBAM=
+if test "${with_xerces_c}" != "no" ; then
+	if test ! -z "${with_xerces_c}" ; then
+		PKGCONFIGPATHSAVE="${PKG_CONFIG_PATH}"
+		if test -z "${PKG_CONFIG_PATH}" ; then
+			export PKG_CONFIG_PATH="${with_xerces_c}/lib/pkgconfig"
+		else
+			export PKG_CONFIG_PATH="${with_xerces_c}/lib/pkgconfig:${PKG_CONFIG_PATH}"
+		fi
+	fi
+
+	PKG_CHECK_MODULES([xerces_c],[xerces-c >= 3.1.1])
+
+	if test ! -z "${with_xerces_c}" ; then
+		if test ! -z "${PKGCONFIGPATHSAVE}" ; then
+			export PKG_CONFIG_PATH="${PKGCONFIGPATHSAVE}"
+		fi
+	fi
+	
+	BIOBAMBAM_HAVE_XERCES_C="#define BIOBAMBAM_HAVE_XERCES_C"
+	BLASTNXMLTOBAM="blastnxmltobam"
+fi
+
 AC_MSG_NOTICE([Using flags ${CFLAGS} for C compiler ${CC}])
 AC_MSG_NOTICE([Using flags ${CXXFLAGS} for C++ compiler ${CXX}])
 
@@ -265,5 +296,10 @@ AC_SUBST([BAMREFDEPTHPEAKS])
 AC_SUBST([BAMPARSORTINSTEXP])
 AC_SUBST([BAMPARSORTNOINSTEXP])
 AC_SUBST([TESTDIR])
+#
+AC_SUBST([xerces_c_CFLAGS])
+AC_SUBST([xerces_c_LIBS])
+AC_SUBST([BIOBAMBAM_HAVE_XERCES_C])
+AC_SUBST([BLASTNXMLTOBAM])
 # 
 AC_OUTPUT(Makefile src/Makefile test/Makefile src/biobambam/BamBamConfig.hpp)

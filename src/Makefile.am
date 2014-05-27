@@ -59,9 +59,9 @@ bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamr
 
 noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments bamtoname \
 	bamdisthist bamrefdepth fastabgzfextract bamfilternames @BAMREFDEPTHPEAKS@ \
-	@BAMPARSORTNOINSTEXP@ bamheap bamfrontback bamclipextract
+	@BAMPARSORTNOINSTEXP@ bamheap bamfrontback bamclipextract @BLASTNXMLTOBAM@ bamalignmentoffsets
 	
-EXTRA_PROGRAMS = bamrefdepthpeaks bamparsort
+EXTRA_PROGRAMS = bamrefdepthpeaks bamparsort blastnxmltobam
 
 bamcollate_SOURCES = programs/bamcollate.cpp biobambam/Licensing.cpp
 bamcollate_LDADD = ${LIBMAUSLIBS}
@@ -317,3 +317,13 @@ bamclipextract_SOURCES = programs/bamclipextract.cpp biobambam/Licensing.cpp bio
 bamclipextract_LDADD = ${LIBMAUSLIBS}
 bamclipextract_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
 bamclipextract_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+blastnxmltobam_SOURCES = programs/blastnxmltobam.cpp biobambam/Licensing.cpp
+blastnxmltobam_LDADD = ${LIBMAUSLIBS} @xerces_c_LIBS@
+blastnxmltobam_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+blastnxmltobam_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} @xerces_c_CFLAGS@
+
+bamalignmentoffsets_SOURCES = programs/bamalignmentoffsets.cpp biobambam/Licensing.cpp
+bamalignmentoffsets_LDADD = ${LIBMAUSLIBS}
+bamalignmentoffsets_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+bamalignmentoffsets_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
