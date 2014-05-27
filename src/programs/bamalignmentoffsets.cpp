@@ -168,13 +168,13 @@ std::vector<libmaus::bambam::BamAlignment::shared_ptr_type> handleChain(std::vec
 		{	
 			std::string prevread = getClippedRead(*(outchain.back()));
 			uint64_t const prevreadkeep = std::min(
-				prevread.size(),static_cast<uint64_t>(5*-offset)
+				static_cast<uint64_t>(prevread.size()),static_cast<uint64_t>(5*-offset)
 			);
 			prevread = prevread.substr(prevread.size()-prevreadkeep);
 
 			std::string thisread = getClippedRead(algn);
 			uint64_t const thisreadkeep = std::min(
-				thisread.size(),static_cast<uint64_t>(5*-offset)
+				static_cast<uint64_t>(thisread.size()),static_cast<uint64_t>(5*-offset)
 			);
 			thisread = thisread.substr(0,thisreadkeep);
 				::libmaus::lcs::SuffixPrefix SP(prevread.size(),thisread.size());

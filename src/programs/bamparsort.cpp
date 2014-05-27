@@ -567,11 +567,13 @@ struct MergeInfo
 	}
 };
 
-#if defined(__linux__)
 #include <libmaus/aio/IsKnownLocalFileSystem.hpp>
+
+#if defined(__linux__)
 #include <libmaus/aio/LinuxStreamingPosixFdOutputStream.hpp>
 #include <libmaus/aio/PosixFdOutputStreamBuffer.hpp>
 #endif
+
 
 template<typename _order_type>
 struct BamThreadPoolDecodeContextBase : public BamThreadPoolDecodeContextBaseConstantsBase
