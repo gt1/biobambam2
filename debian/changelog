@@ -1,3 +1,9 @@
+biobambam (0.0.145) unstable; urgency=low
+
+  * fix compilation on Darwin 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Tue, 27 May 2014 19:28:26 +0100
+
 biobambam (0.0.144) unstable; urgency=low
 
   * add blastn xml format to BAM converter 
