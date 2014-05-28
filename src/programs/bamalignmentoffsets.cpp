@@ -267,6 +267,35 @@ std::vector<libmaus::bambam::BamAlignment::shared_ptr_type> handleChain(std::vec
 	return outchain;
 }
 
+void printChain(std::vector<libmaus::bambam::BamAlignment::shared_ptr_type> const & chain)
+{
+	int64_t previd = -1;
+	int64_t prevend = -1;
+	
+	for ( uint64_t i = 0; i < chain.size(); ++i )
+	{
+		libmaus::bambam::BamAlignment const & algn = *(chain[i]);
+
+		int64_t const thisid = algn.getRefID();
+		int64_t const thispos = algn.getPos();
+		int64_t const thisend = algn.getAlignmentEnd();
+
+		std::cerr << algn.getName() << "\t" << "[" << thispos << "," << thisend << "]" << "\t" 
+			<< (thisend-thispos+1) << "\t" << algn.getAuxAsString("ZJ");
+
+		int64_t const offset = ( thisid == previd && thisid >= 0 ) ? (thispos-prevend) : std::numeric_limits<int64_t>::min();
+		if ( thisid == previd && thisid >= 0 )
+		{
+			std::cerr << "\t" << offset;
+			
+		}
+		std::cerr << std::endl;
+
+		previd = thisid;
+		prevend = algn.getAlignmentEnd();
+	}
+}
+
 std::pair<bool,std::string> chainToContig(std::vector<libmaus::bambam::BamAlignment::shared_ptr_type> const & chain)
 {
 	int64_t previd = -1;
@@ -308,6 +337,7 @@ static int bamalignmentoffsets(libmaus::util::ArgInfo const & arginfo)
 {
 	uint64_t const ioblocksize = arginfo.getValueUnsignedNumeric<uint64_t>("ioblocksize",getDefaultIOBlockSize());
 	int64_t const contigsplit = arginfo.getValueUnsignedNumeric<uint64_t>("contigsplit",20000);
+	bool const modify = arginfo.getValue<unsigned int>("modify",0);
 	std::string const fn = arginfo.restargs.at(0);
 	::libmaus::aio::PosixFdInputStream PFIS(fn,ioblocksize);
 	libmaus::bambam::BamDecoder bamdec(PFIS);
@@ -362,52 +392,74 @@ static int bamalignmentoffsets(libmaus::util::ArgInfo const & arginfo)
 		}
 	}
 	
-	libmaus::bambam::BamWriter bw(std::cout,header);
-	
-	uint64_t contigid = 0;
-	libmaus::aio::CheckedOutputStream faout(fn+".fa");
-	
-	if ( maxchainid >= 0 )
+	if ( modify )
 	{
-		std::cerr << "[I] maximum chain length " << maxchainlength << std::endl;
-		chains[maxchainid] = handleChain(chains[maxchainid]);
-		for ( uint64_t i = 0; i < chains[maxchainid].size(); ++i )
-			chains[maxchainid][i]->serialise(bw.getStream());
-
-		std::pair<bool,std::string> contig = chainToContig(chains[maxchainid]);
-		if ( contig.first )
+		libmaus::bambam::BamWriter bw(std::cout,header);
+		
+		uint64_t contigid = 0;
+		libmaus::aio::CheckedOutputStream faout(fn+".fa");
+		
+		if ( maxchainid >= 0 )
 		{
-			faout << ">contig_" << contigid++ << " " << contig.second.size() << "\n";
-			faout << contig.second << "\n";
+			std::cerr << "[I] maximum chain length " << maxchainlength << std::endl;
+			chains[maxchainid] = handleChain(chains[maxchainid]);
+			for ( uint64_t i = 0; i < chains[maxchainid].size(); ++i )
+				chains[maxchainid][i]->serialise(bw.getStream());
+
+			std::pair<bool,std::string> contig = chainToContig(chains[maxchainid]);
+			if ( contig.first )
+			{
+				faout << ">contig_" << contigid++ << " " << contig.second.size() << "\n";
+				faout << contig.second << "\n";
+			}
+			
+			for ( uint64_t j = 0; j < chains.size(); ++j )
+				if ( static_cast<int64_t>(j) != maxchainid && static_cast<int64_t>(chains[j].size()) == maxchainsize )
+				{
+					int64_t chainlength = 0;
+					for ( uint64_t i = 0; i < chains[j].size(); ++i )
+						chainlength += (chains[j][i]->getAlignmentEnd() - chains[j][i]->getPos())+1;
+						
+					std::cerr << "[I] equivalent chain length " << chainlength << std::endl;	
+					chains[j] = handleChain(chains[j]);
+
+					for ( uint64_t i = 0; i < chains[j].size(); ++i )
+						chains[j][i]->serialise(bw.getStream());
+
+					std::pair<bool,std::string> contig = chainToContig(chains[maxchainid]);
+					if ( contig.first )
+					{
+						faout << ">contig_" << contigid++ << " " << contig.second.size() << "\n";
+						faout << contig.second << "\n";
+					}
+				}
 		}
 		
-		for ( uint64_t j = 0; j < chains.size(); ++j )
-			if ( static_cast<int64_t>(j) != maxchainid && static_cast<int64_t>(chains[j].size()) == maxchainsize )
-			{
-				int64_t chainlength = 0;
-				for ( uint64_t i = 0; i < chains[j].size(); ++i )
-					chainlength += (chains[j][i]->getAlignmentEnd() - chains[j][i]->getPos())+1;
-					
-				std::cerr << "[I] equivalent chain length " << chainlength << std::endl;	
-				chains[j] = handleChain(chains[j]);
-
-				for ( uint64_t i = 0; i < chains[j].size(); ++i )
-					chains[j][i]->serialise(bw.getStream());
-
-				std::pair<bool,std::string> contig = chainToContig(chains[maxchainid]);
-				if ( contig.first )
-				{
-					faout << ">contig_" << contigid++ << " " << contig.second.size() << "\n";
-					faout << contig.second << "\n";
-				}
-			}
+		faout.flush();
+		faout.close();
+		
+		if ( ! contigid )
+			remove((fn+".fa").c_str());
 	}
-	
-	faout.flush();
-	faout.close();
-	
-	if ( ! contigid )
-		remove((fn+".fa").c_str());
+	else
+	{
+		if ( maxchainid >= 0 )
+		{
+			std::cerr << "[I] maximum chain length " << maxchainlength << std::endl;
+			printChain(chains[maxchainid]);
+
+			for ( uint64_t j = 0; j < chains.size(); ++j )
+				if ( static_cast<int64_t>(j) != maxchainid && static_cast<int64_t>(chains[j].size()) == maxchainsize )
+				{
+					int64_t chainlength = 0;
+					for ( uint64_t i = 0; i < chains[j].size(); ++i )
+						chainlength += (chains[j][i]->getAlignmentEnd() - chains[j][i]->getPos())+1;
+						
+					std::cerr << "[I] equivalent chain length " << chainlength << std::endl;	
+					printChain(chains[j]);
+				}
+		}
+	}
 
 	return EXIT_SUCCESS;
 }
