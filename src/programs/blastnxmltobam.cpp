@@ -182,9 +182,12 @@ class StdISOInputSource : public xercesc::InputSource
 	}
 };
 
+#include <libmaus/util/ToUpperTable.hpp>
 
 struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::ErrorHandler
 {
+	libmaus::util::ToUpperTable const toup;
+	
 	std::map<std::string,std::string> const & ref;
 	std::map<std::string,std::string> const & queries;
 
@@ -573,10 +576,11 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 		// std::cerr << "start of element " << utf8transcoder.transcodeStringToUtf8(xname) << std::endl;
 	}
 	
-	static int64_t parseNumber(std::string const & s)
+	template<typename number_type>
+	static number_type parseNumber(std::string const & s)
 	{
 		std::istringstream istr(s);
-		int64_t i;
+		number_type i;
 		istr >>i;
 		
 		if ( ! istr )
@@ -632,7 +636,7 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 				hspHSeqObtained &&
 				(queries.find(readName) != queries.end());
 
-			int64_t const thisHitScore = hspScoreObtained ?  parseNumber(hspScore) : -1;
+			int64_t const thisHitScore = hspScoreObtained ?  parseNumber<int64_t>(hspScore) : -1;
 				
 			if ( hspId == 0 )
 				hitFirstScore = thisHitScore;
@@ -641,15 +645,15 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 				(hspId == 0 || (thisHitScore >= hitFrac * hitFirstScore))
 			)
 			{
-				int64_t queryFrame = parseNumber(hspQueryFrame);
-				int64_t hitFrame = parseNumber(hspHitFrame);
+				int64_t queryFrame = parseNumber<int64_t>(hspQueryFrame);
+				int64_t hitFrame = parseNumber<int64_t>(hspHitFrame);
 				bool const rc = (queryFrame * hitFrame) < 0;
 				// hit coord
-				int64_t hitFrom = parseNumber(hspHitFrom);
-				int64_t hitTo = parseNumber(hspHitTo);
+				int64_t hitFrom = parseNumber<int64_t>(hspHitFrom);
+				int64_t hitTo = parseNumber<int64_t>(hspHitTo);
 				// query coord
-				int64_t queryFrom = parseNumber(hspQueryFrom);
-				int64_t queryTo = parseNumber(hspQueryTo);
+				int64_t queryFrom = parseNumber<int64_t>(hspQueryFrom);
+				int64_t queryTo = parseNumber<int64_t>(hspQueryTo);
 				
 				// hit start and end
 				int64_t hitStart = std::min(hitFrom,hitTo)-1;
@@ -749,9 +753,17 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 						}
 					
 						if ( hspQSeq[i] != '-' )
-							assert ( hspQSeq[i] == qsub[iq++] );
+							assert ( 
+								toup(static_cast<uint8_t>(hspQSeq[i]))
+								== 
+								toup(static_cast<uint8_t>(qsub[iq++]))
+							);
 						if ( hspHSeq[i] != '-' )
-							assert ( hspHSeq[i] == hsub[ih++] );
+							assert ( 
+								toup(static_cast<uint8_t>(hspHSeq[i]))
+								== 
+								toup(static_cast<uint8_t>(hsub[ih++]))
+							);
 														
 						#if 0
 						std::cerr << "(" << hspQSeq[i] << "," << hspHSeq[i] << ",";
@@ -822,6 +834,19 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 						0
 					);
 					bamwriter.putAuxNumber("AS", 'i', thisHitScore);
+					bamwriter.putAuxNumber("ZA", 'f', parseNumber<double>(hspBitScore));
+					bamwriter.putAuxNumber("ZB", 'i', parseNumber<int64_t>(hspScore));
+					bamwriter.putAuxNumber("ZC", 'f', parseNumber<double>(hspEvalue));
+					bamwriter.putAuxNumber("ZD", 'i', parseNumber<int64_t>(hspQueryFrom));
+					bamwriter.putAuxNumber("ZE", 'i', parseNumber<int64_t>(hspQueryTo));
+					bamwriter.putAuxNumber("ZF", 'i', parseNumber<int64_t>(hspHitFrom));
+					bamwriter.putAuxNumber("ZG", 'i', parseNumber<int64_t>(hspHitTo));
+					bamwriter.putAuxNumber("ZH", 'i', parseNumber<int64_t>(hspQueryFrame));
+					bamwriter.putAuxNumber("ZI", 'i', parseNumber<int64_t>(hspHitFrame));
+					bamwriter.putAuxNumber("ZJ", 'i', parseNumber<int64_t>(hspIdentity));
+					bamwriter.putAuxNumber("ZK", 'i', parseNumber<int64_t>(hspPositive));
+					bamwriter.putAuxNumber("ZL", 'i', parseNumber<int64_t>(hspGaps));
+					bamwriter.putAuxNumber("ZM", 'i', parseNumber<int64_t>(hspAlignLen));
 					bamwriter.commit();
 					
 					#if 0
