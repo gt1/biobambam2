@@ -1,3 +1,9 @@
+biobambam (0.0.146) unstable; urgency=low
+
+  * add BAM validation program 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Thu, 29 May 2014 08:40:24 +0100
+
 biobambam (0.0.145) unstable; urgency=low
 
   * fix compilation on Darwin 
