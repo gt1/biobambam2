@@ -45,3 +45,6 @@ src/*/.dirstamp
 *.fq
 *.fa
 *.bam
+src/blastnxmltobam
+test/.deps
+test-driver
