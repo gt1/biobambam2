@@ -1,6 +1,11 @@
 #! /bin/bash
-source dupsingle.sh
-source dupsinglemarked.sh
+SCRIPTDIR=`dirname "${BASH_SOURCE[0]}"`
+pushd ${SCRIPTDIR}
+SCRIPTDIR=`pwd`
+popd
+
+source ${SCRIPTDIR}/dupsingle.sh
+source ${SCRIPTDIR}/dupsinglemarked.sh
 
 function runmark
 {

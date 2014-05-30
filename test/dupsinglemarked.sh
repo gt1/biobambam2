@@ -1,5 +1,10 @@
 #! /bin/bash
-source base64decode.sh
+SCRIPTDIR=`dirname "${BASH_SOURCE[0]}"`
+pushd ${SCRIPTDIR}
+SCRIPTDIR=`pwd`
+popd
+
+source ${SCRIPTDIR}/base64decode.sh
 
 function dupsinglemarked
 {

@@ -1,5 +1,10 @@
 #! /bin/bash
-source sorttestshort.sh
+SCRIPTDIR=`dirname "${BASH_SOURCE[0]}"`
+pushd ${SCRIPTDIR}
+SCRIPTDIR=`pwd`
+popd
+
+source ${SCRIPTDIR}/sorttestshort.sh
 
 sorttestshort | ../src/bamsort SO=queryname | ../src/bamchecksort
 

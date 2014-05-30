@@ -1,6 +1,11 @@
 #! /bin/bash
-source dupsinglemarked.sh
-source dupsinglemarkedsortedqreset.sh
+SCRIPTDIR=`dirname "${BASH_SOURCE[0]}"`
+pushd ${SCRIPTDIR}
+SCRIPTDIR=`pwd`
+popd
+
+source ${SCRIPTDIR}/dupsinglemarked.sh
+source ${SCRIPTDIR}/dupsinglemarkedsortedqreset.sh
 
 function reset
 {
