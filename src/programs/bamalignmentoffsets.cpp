@@ -280,7 +280,10 @@ void printChain(std::vector<libmaus::bambam::BamAlignment::shared_ptr_type> cons
 		int64_t const thispos = algn.getPos();
 		int64_t const thisend = algn.getAlignmentEnd();
 
-		std::cerr << algn.getName() << "\t" << "[" << thispos << "," << thisend << "]" << "\t" 
+		std::cerr << algn.getName() 
+			<< "\t" << algn.getFrontSoftClipping()
+			<< "\t" << algn.getBackSoftClipping()
+			<< "\t" << "[" << thispos << "," << thisend << "]" << "\t" 
 			<< (thisend-thispos+1) << "\t" << algn.getAuxAsString("ZJ");
 
 		int64_t const offset = ( thisid == previd && thisid >= 0 ) ? (thispos-prevend) : std::numeric_limits<int64_t>::min();
@@ -456,6 +459,17 @@ static int bamalignmentoffsets(libmaus::util::ArgInfo const & arginfo)
 						chainlength += (chains[j][i]->getAlignmentEnd() - chains[j][i]->getPos())+1;
 						
 					std::cerr << "[I] equivalent chain length " << chainlength << std::endl;	
+					printChain(chains[j]);
+				}
+
+			for ( uint64_t j = 0; j < chains.size(); ++j )
+				if ( static_cast<int64_t>(j) != maxchainid && static_cast<int64_t>(chains[j].size()) != maxchainsize )
+				{
+					int64_t chainlength = 0;
+					for ( uint64_t i = 0; i < chains[j].size(); ++i )
+						chainlength += (chains[j][i]->getAlignmentEnd() - chains[j][i]->getPos())+1;
+						
+					std::cerr << "[I] shorter chain length " << chainlength << std::endl;	
 					printChain(chains[j]);
 				}
 		}
