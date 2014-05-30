@@ -29,6 +29,7 @@
 
 #include <libmaus/fastx/acgtnMap.hpp>
 #include <libmaus/bambam/BamWriter.hpp>
+#include <libmaus/bambam/CramRange.hpp>
 #include <libmaus/util/ArgInfo.hpp>
 
 #include <iostream>
@@ -280,6 +281,24 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
         <Hsp_gaps>17</Hsp_gaps>
         <Hsp_align-len>21778</Hsp_align-len>
 	#endif            
+	
+	std::vector<libmaus::bambam::CramRange> const * ranges;
+	
+	bool inRange(std::string const & refname, int64_t const hitstart, int64_t const hitend)
+	{
+		if ( ! ranges )
+			return true;
+		
+		for ( uint64_t i = 0; i < ranges->size(); ++i )
+			if ( 
+				!(((*ranges)[i]).intersect(libmaus::bambam::CramRange(refname,hitstart,hitend)).empty())
+			)
+				return true;
+		
+		std::cerr << "[E] dropping " << refname << ":" << hitstart << "-" << hitend << std::endl;
+		
+		return false;
+	}
 
 	BlastNDocumentHandler(
 		std::map<std::string,std::string> const & rref,
@@ -287,7 +306,8 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 		std::map<std::string,uint64_t> rrefnametoid,
 		std::map<std::string,uint64_t> rqueriesnametoid,
 		libmaus::bambam::BamWriter & rbamwriter,
-		double const rhitFrac
+		double const rhitFrac,
+		std::vector<libmaus::bambam::CramRange> const * rranges
 	) : ref(rref), queries(rqueries), utf8transcoder(), readNameGatheringActive(false), readName(), readNameObtained(false), 
 		hitDefObtained(false), hitDefGatheringActive(false), hitDef(),
 		hitLenObtained(false), hitLenGatheringActive(false), hitLen(),	
@@ -310,7 +330,8 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 		refnametoid(rrefnametoid), queriesnametoid(rqueriesnametoid),
 		bamwriter(rbamwriter),
 		hitFirstScore(-1),
-		hitFrac(rhitFrac)
+		hitFrac(rhitFrac),
+		ranges(rranges)
 	{
 	
 	}
@@ -640,25 +661,33 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 				
 			if ( hspId == 0 )
 				hitFirstScore = thisHitScore;
+
+			// reference
+			std::map<std::string,std::string>::const_iterator hita = 
+				ok ? ref.find(hitDef) : std::map<std::string,std::string>::const_iterator();
+			// hit coord
+			int64_t hitFrom = ok ? parseNumber<int64_t>(hspHitFrom) : -1;
+			int64_t hitTo = ok ? parseNumber<int64_t>(hspHitTo) : -1;
+
+			// hit start and end
+			int64_t hitStart = std::min(hitFrom,hitTo)-1;
+			int64_t hitEnd = std::max(hitFrom,hitTo)-1;
+			int64_t hitLen = hitEnd-hitStart+1;
 			
 			if ( ok && 
-				(hspId == 0 || (thisHitScore >= hitFrac * hitFirstScore))
+				(hspId == 0 || (thisHitScore >= hitFrac * hitFirstScore)) && 
+				inRange(hita->first, hitStart, hitEnd)
 			)
 			{
+				// hita->first refseq
+
 				int64_t queryFrame = parseNumber<int64_t>(hspQueryFrame);
 				int64_t hitFrame = parseNumber<int64_t>(hspHitFrame);
 				bool const rc = (queryFrame * hitFrame) < 0;
-				// hit coord
-				int64_t hitFrom = parseNumber<int64_t>(hspHitFrom);
-				int64_t hitTo = parseNumber<int64_t>(hspHitTo);
 				// query coord
 				int64_t queryFrom = parseNumber<int64_t>(hspQueryFrom);
 				int64_t queryTo = parseNumber<int64_t>(hspQueryTo);
 				
-				// hit start and end
-				int64_t hitStart = std::min(hitFrom,hitTo)-1;
-				int64_t hitEnd = std::max(hitFrom,hitTo)-1;
-				int64_t hitLen = hitEnd-hitStart+1;
 				
 				// query start and end
 				int64_t queryStart = std::min(queryFrom,queryTo)-1;
@@ -683,7 +712,6 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 				for ( uint64_t i = 0; i < hspHSeq.size(); ++i )
 					hlen += hspHSeq[i] != '-';
 						
-				std::map<std::string,std::string>::const_iterator hita = ref.find(hitDef);
 				
 				if ( qita != queries.end() && hita != ref.end() )
 				{
@@ -1095,6 +1123,25 @@ int main(int argc, char * argv[])
 			std::string const reffn = arginfo.restargs.at(0);
 			std::string const queriesfn = arginfo.restargs.at(1);
 			
+			libmaus::util::unique_ptr< std::vector<libmaus::bambam::CramRange> >::type Pranges;
+			std::vector<libmaus::bambam::CramRange> * ranges = 0;
+			
+			if ( arginfo.hasArg("range") )
+			{
+				libmaus::util::unique_ptr< std::vector<libmaus::bambam::CramRange> >::type Tranges(
+					new std::vector<libmaus::bambam::CramRange>
+				);
+				Pranges = UNIQUE_PTR_MOVE(Tranges);
+				
+				Pranges->push_back(
+					libmaus::bambam::CramRange(
+						arginfo.getUnparsedValue("range",std::string())
+					)
+				);
+				
+				ranges = Pranges.get();
+			}
+			
 			std::map<std::string,std::string> ref;
 			std::vector< std::pair<std::string,uint64_t> > refmeta;
 			std::map<std::string,uint64_t> refnametoid;
@@ -1127,7 +1174,7 @@ int main(int argc, char * argv[])
 			xercesc::SAXParser saxparser;
 			saxparser.setValidationScheme(xercesc::SAXParser::Val_Never);
 			saxparser.setLoadExternalDTD(false);
-			BlastNDocumentHandler blasthandler(ref,queries,refnametoid,queriesnametoid,writer,hitfrac);
+			BlastNDocumentHandler blasthandler(ref,queries,refnametoid,queriesnametoid,writer,hitfrac,ranges);
 			saxparser.setDocumentHandler(&blasthandler);
 			saxparser.setErrorHandler(&blasthandler);
 			saxparser.parse(in);
