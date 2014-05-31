@@ -34,6 +34,7 @@ static int getDefaultVerbose() { return 1; }
 #include <libmaus/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
 static int getDefaultMD5() { return 0; }
 static int getDefaultIndex() { return 0; }
+static int getDefaultStreaming() { return 0; }
 
 ::libmaus::bambam::BamHeader::unique_ptr_type updateHeader(
 	::libmaus::util::ArgInfo const & arginfo,
@@ -69,6 +70,7 @@ int bamcat(libmaus::util::ArgInfo const & arginfo)
 
 	int const level = arginfo.getValue<int>("level",getDefaultLevel());
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
+	int const streaming = arginfo.getValue<int>("streaming",getDefaultStreaming());
 	
 	switch ( level )
 	{
@@ -97,7 +99,7 @@ int bamcat(libmaus::util::ArgInfo const & arginfo)
 	for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
 		inputfilenames.push_back(arginfo.restargs[i]);
 	
-	libmaus::bambam::BamCat bamdec(inputfilenames /* ,true */);
+	libmaus::bambam::BamCat bamdec(inputfilenames, false /* put rank */, streaming);
 	libmaus::bambam::BamAlignment const & algn = bamdec.getAlignment();
 	libmaus::bambam::BamHeader const & header = bamdec.getHeader();
 	::libmaus::bambam::BamHeader::unique_ptr_type uphead(updateHeader(arginfo,header));
@@ -221,6 +223,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "indexfilename=<filename>", "file name for BAM index file (default: extend output file name)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "tmpfile=<filename>", "prefix for temporary files, default: create files in current directory" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "streaming=<["+::biobambam::Licensing::formatNumber(getDefaultStreaming())+"]>", "streaming mode (0: off, 1: on)" ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 
