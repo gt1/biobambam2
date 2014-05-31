@@ -1,3 +1,9 @@
+biobambam (0.0.147) unstable; urgency=low
+
+  * streaming input support for bammerge and bamcat (by option) 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Sat, 31 May 2014 17:26:42 +0100
+
 biobambam (0.0.146) unstable; urgency=low
 
   * add BAM validation program 
