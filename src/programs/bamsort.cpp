@@ -90,28 +90,7 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 	bool const disablevalidation = arginfo.getValue<int>("disablevalidation",getDefaultDisableValidation());
 
 	std::string const inputformat = arginfo.getUnparsedValue("inputformat",getDefaultInputFormat());
-	int const level = arginfo.getValue<int>("level",getDefaultLevel());
-	switch ( level )
-	{
-		case Z_NO_COMPRESSION:
-		case Z_BEST_SPEED:
-		case Z_BEST_COMPRESSION:
-		case Z_DEFAULT_COMPRESSION:
-			break;
-		default:
-		{
-			::libmaus::exception::LibMausException se;
-			se.getStream()
-				<< "Unknown compression level, please use"
-				<< " level=" << Z_DEFAULT_COMPRESSION << " (default) or"
-				<< " level=" << Z_BEST_SPEED << " (fast) or"
-				<< " level=" << Z_BEST_COMPRESSION << " (best) or"
-				<< " level=" << Z_NO_COMPRESSION << " (no compression)" << std::endl;
-			se.finish();
-			throw se;
-		}
-			break;
-	}
+	int const level = libmaus::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
 
 	// prefix for tmp files
 	std::string const tmpfilenamebase = arginfo.getValue<std::string>("tmpfile",arginfo.getDefaultTmpFileName());

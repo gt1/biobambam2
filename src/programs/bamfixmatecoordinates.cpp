@@ -18,6 +18,7 @@
 **/
 #include <config.h>
 
+#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
 #include <libmaus/bambam/BamWriter.hpp>
 #include <libmaus/bambam/BamFlagBase.hpp>
 #include <libmaus/bambam/EncoderBase.hpp>
@@ -65,32 +66,9 @@ int bamfixmatecoordinates(::libmaus::util::ArgInfo const & arginfo)
 	bool const verbose = arginfo.getValue<unsigned int>("verbose",getDefaultVerbose());
 	unsigned int const colhashbits = arginfo.getValue<unsigned int>("colhashbits",getDefaultColHashBits());
 	unsigned int const collistsize = arginfo.getValue<unsigned int>("collistsize",getDefaultColListSize());
-	int const level = arginfo.getValue<int>("level",getDefaultLevel());
+	int const level = libmaus::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
 	std::string const tmpfilenamebase = arginfo.getValue<std::string>("tmpfile",arginfo.getDefaultTmpFileName());
 	
-	switch ( level )
-	{
-		case Z_NO_COMPRESSION:
-		case Z_BEST_SPEED:
-		case Z_BEST_COMPRESSION:
-		case Z_DEFAULT_COMPRESSION:
-			break;
-		default:
-		{
-			::libmaus::exception::LibMausException se;
-			se.getStream()
-				<< "Unknown compression level, please use"
-				<< " level=" << Z_DEFAULT_COMPRESSION << " (default) or"
-				<< " level=" << Z_BEST_SPEED << " (fast) or"
-				<< " level=" << Z_BEST_COMPRESSION << " (best) or"
-				<< " level=" << Z_NO_COMPRESSION << " (no compression)" << std::endl;
-			se.finish();
-			throw se;
-		}
-			break;
-	}
-
-
 	std::string const tmpfilename = tmpfilenamebase + "_bamcollate";
 	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilename);
 	

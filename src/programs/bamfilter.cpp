@@ -18,6 +18,7 @@
 **/
 #include <config.h>
 #include <libmaus/bambam/CollatingBamDecoder.hpp>
+#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
 #include <libmaus/bambam/BamWriter.hpp>
 #include <libmaus/bambam/BamHeaderUpdate.hpp>
 #include <libmaus/util/ArgInfo.hpp>
@@ -39,30 +40,8 @@ int bamfilter(libmaus::util::ArgInfo const & arginfo)
 	uint64_t const minmapped = arginfo.getValue<uint64_t>("minmapped",getDefaultMinMapped());
 	uint64_t const maxmapped = arginfo.getValue<uint64_t>("maxmapped",getDefaultMaxMapped());
 	uint64_t const minlen = arginfo.getValue<uint64_t>("minlen",getDefaultMinLen());
-	int const level = arginfo.getValue<int>("level",getDefaultLevel());
+	int const level = libmaus::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
 	
-	switch ( level )
-	{
-		case Z_NO_COMPRESSION:
-		case Z_BEST_SPEED:
-		case Z_BEST_COMPRESSION:
-		case Z_DEFAULT_COMPRESSION:
-			break;
-		default:
-		{
-			::libmaus::exception::LibMausException se;
-			se.getStream()
-				<< "Unknown compression level, please use"
-				<< " level=" << Z_DEFAULT_COMPRESSION << " (default) or"
-				<< " level=" << Z_BEST_SPEED << " (fast) or"
-				<< " level=" << Z_BEST_COMPRESSION << " (best) or"
-				<< " level=" << Z_NO_COMPRESSION << " (no compression)" << std::endl;
-			se.finish();
-			throw se;
-		}
-			break;
-	}
-
 	::libmaus::bambam::BamDecoder BD(std::cin);
 	::libmaus::bambam::BamHeader const & bamheader = BD.getHeader();
 	::libmaus::bambam::BamAlignment & alignment = BD.getAlignment();

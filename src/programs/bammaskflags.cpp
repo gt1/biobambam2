@@ -17,6 +17,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 #include <libmaus/bambam/CollatingBamDecoder.hpp>
+#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
 #include <libmaus/bambam/BamWriter.hpp>
 #include <libmaus/bambam/ProgramHeaderLineSet.hpp>
 #include <libmaus/util/ArgInfo.hpp>
@@ -63,31 +64,9 @@ int bammaskflags(::libmaus::util::ArgInfo const & arginfo)
 		std::cerr << "Erasing all flags." << std::endl;
 	}
 
-	int const level = arginfo.getValue<int>("level",getDefaultLevel());
+	int const level = libmaus::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
 	int const resetmatecoord = arginfo.getValue<int>("resetmatecoord",0);
 	
-	switch ( level )
-	{
-		case Z_NO_COMPRESSION:
-		case Z_BEST_SPEED:
-		case Z_BEST_COMPRESSION:
-		case Z_DEFAULT_COMPRESSION:
-			break;
-		default:
-		{
-			::libmaus::exception::LibMausException se;
-			se.getStream()
-				<< "Unknown compression level, please use"
-				<< " level=" << Z_DEFAULT_COMPRESSION << " (default) or"
-				<< " level=" << Z_BEST_SPEED << " (fast) or"
-				<< " level=" << Z_BEST_COMPRESSION << " (best) or"
-				<< " level=" << Z_NO_COMPRESSION << " (no compression)" << std::endl;
-			se.finish();
-			throw se;
-		}
-			break;
-	}
-
 	::libmaus::bambam::BamDecoder BD(std::cin);
 	::libmaus::bambam::BamHeader const & bamheader = BD.getHeader();
 

@@ -29,6 +29,7 @@
 #include <libmaus/bambam/CircularHashCollatingBamDecoder.hpp>
 #include <libmaus/bambam/BamToFastqOutputFileSet.hpp>
 #include <libmaus/bambam/BamWriter.hpp>
+#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
 #include <libmaus/util/TempFileRemovalContainer.hpp>
 #include <libmaus/util/MemUsage.hpp>
 #include <libmaus/bambam/ProgramHeaderLineSet.hpp>

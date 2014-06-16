@@ -26,6 +26,7 @@
 #include <libmaus/fastx/FastAIndex.hpp>
 #include <libmaus/fastx/StreamFastAReader.hpp>
 #include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
+#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
 #include <libmaus/bambam/BamDecoder.hpp>
 #include <libmaus/bambam/BamWriter.hpp>
 #include <libmaus/bambam/BamHeaderUpdate.hpp>

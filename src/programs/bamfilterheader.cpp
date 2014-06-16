@@ -17,6 +17,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
 #include <libmaus/bambam/BamMultiAlignmentDecoderFactory.hpp>
 #include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
 #include <libmaus/bitio/BitVector.hpp>

@@ -21,6 +21,7 @@
 #include <libmaus/bambam/BamAlignment.hpp>
 #include <libmaus/bambam/BamAlignmentHeapComparator.hpp>
 #include <libmaus/bambam/BamAlignmentPosComparator.hpp>
+#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
 #include <libmaus/bambam/BamDecoder.hpp>
 #include <libmaus/bambam/BamHeader.hpp>
 #include <libmaus/bambam/BamWriter.hpp>
@@ -4145,7 +4146,7 @@ int bamparsortTemplate(libmaus::util::ArgInfo const & arginfo, std::string const
 		std::istringstream levelistr(levelstr);
 		int64_t templevel = -1;
 		levelistr >> templevel;
-		
+
 		if ( ! levelistr )
 		{
 			libmaus::exception::LibMausException lme;
@@ -4154,13 +4155,7 @@ int bamparsortTemplate(libmaus::util::ArgInfo const & arginfo, std::string const
 			throw lme;
 		}
 		
-		if ( templevel < -1 || templevel > 9 )
-		{
-			libmaus::exception::LibMausException lme;
-			lme.getStream() << "Invalid zlib compression level in " << tempcomp << std::endl;
-			lme.finish();
-			throw lme;		
-		}
+		templevel = libmaus::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(templevel);
 	
 		libmaus::lz::CompressorObjectFactory::unique_ptr_type TcompressorFactory(new libmaus::lz::ZlibCompressorObjectFactory(templevel));
 		PcompressorFactory = UNIQUE_PTR_MOVE(TcompressorFactory);
@@ -4238,7 +4233,7 @@ int bamparsortTemplate(libmaus::util::ArgInfo const & arginfo, std::string const
 
 		uint64_t const numblocks = mergeinfo.tmpfilenamedblocks.size();
 		uint64_t const mem = arginfo.getValueUnsignedNumeric<uint64_t>("mem",getDefaultMem());
-		int const level = arginfo.getValue<int>("level",getDefaultLevel());;
+		int const level = libmaus::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));;
 		// input blocks, output blocks, process buffers
 		uint64_t const inputBlockMemory = 0.1 * mem;
 		uint64_t const inputMemoryPerBlock = std::max ( static_cast<uint64_t>(1), (inputBlockMemory + numblocks-1)/numblocks);

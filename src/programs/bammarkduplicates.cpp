@@ -23,6 +23,7 @@
 #include <libmaus/aio/CheckedOutputStream.hpp>
 #include <libmaus/bambam/BamAlignmentInputCallbackBam.hpp>
 #include <libmaus/bambam/BamAlignmentInputCallbackSnappy.hpp>
+#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
 #include <libmaus/bambam/BamHeaderUpdate.hpp>
 #include <libmaus/bambam/BamParallelRewrite.hpp>
 #include <libmaus/bambam/BamWriter.hpp>
@@ -184,7 +185,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	bool const verbose = arginfo.getValue<unsigned int>("verbose",getDefaultVerbose());
 	// rewritten file should be in bam format, if input is given via stdin
 	unsigned int const rewritebam = arginfo.getValue<unsigned int>("rewritebam",getDefaultRewriteBam());
-	int const rewritebamlevel = arginfo.getValue<int>("rewritebamlevel",getDefaultRewriteBamLevel());
+	int const rewritebamlevel = libmaus::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("rewritebamlevel",getDefaultRewriteBamLevel()));
 
 	// prefix for tmp files
 	std::string const tmpfilenamebase = arginfo.getValue<std::string>("tmpfile",arginfo.getDefaultTmpFileName());
@@ -199,50 +200,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	std::string const tmpfileindex = tmpfilenamebase + "_index";
 	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
 
-	int const level = arginfo.getValue<int>("level",getDefaultLevel());
-	
-	switch ( level )
-	{
-		case Z_NO_COMPRESSION:
-		case Z_BEST_SPEED:
-		case Z_BEST_COMPRESSION:
-		case Z_DEFAULT_COMPRESSION:
-			break;
-		default:
-		{
-			::libmaus::exception::LibMausException se;
-			se.getStream()
-				<< "Unknown compression level, please use"
-				<< " level=" << Z_DEFAULT_COMPRESSION << " (default) or"
-				<< " level=" << Z_BEST_SPEED << " (fast) or"
-				<< " level=" << Z_BEST_COMPRESSION << " (best) or"
-				<< " level=" << Z_NO_COMPRESSION << " (no compression)" << std::endl;
-			se.finish();
-			throw se;
-		}
-			break;
-	}
-	switch ( rewritebamlevel )
-	{
-		case Z_NO_COMPRESSION:
-		case Z_BEST_SPEED:
-		case Z_BEST_COMPRESSION:
-		case Z_DEFAULT_COMPRESSION:
-			break;
-		default:
-		{
-			::libmaus::exception::LibMausException se;
-			se.getStream()
-				<< "Unknown value for rewritebamlevel, please use"
-				<< " level=" << Z_DEFAULT_COMPRESSION << " (default) or"
-				<< " level=" << Z_BEST_SPEED << " (fast) or"
-				<< " level=" << Z_BEST_COMPRESSION << " (best) or"
-				<< " level=" << Z_NO_COMPRESSION << " (no compression)" << std::endl;
-			se.finish();
-			throw se;
-		}
-			break;
-	}
+	int const level = libmaus::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
 	
 	if ( verbose )
 		std::cerr << "[V] output compression level " << level << std::endl;

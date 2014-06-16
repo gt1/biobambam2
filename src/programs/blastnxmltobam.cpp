@@ -781,11 +781,17 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 						}
 					
 						if ( hspQSeq[i] != '-' )
-							assert ( 
+						{
+							bool const ok = ( 
 								toup(static_cast<uint8_t>(hspQSeq[i]))
 								== 
 								toup(static_cast<uint8_t>(qsub[iq++]))
 							);
+							
+							if ( ! ok )
+								std::cerr << "[W] " << toup(static_cast<uint8_t>(hspQSeq[i])) << " != "
+									<< toup(static_cast<uint8_t>(qsub[iq-1])) << std::endl;
+						}
 						if ( hspHSeq[i] != '-' )
 							assert ( 
 								toup(static_cast<uint8_t>(hspHSeq[i]))

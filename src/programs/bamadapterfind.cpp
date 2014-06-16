@@ -25,6 +25,7 @@
 
 #include <libmaus/bambam/AdapterFilter.hpp>
 #include <libmaus/bambam/BamAlignment.hpp>
+#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
 #include <libmaus/bambam/BamDecoder.hpp>
 #include <libmaus/bambam/BamWriter.hpp>
 #include <libmaus/bambam/ProgramHeaderLineSet.hpp>
@@ -142,7 +143,7 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 	double   const pG = arginfo.getValue<double>("pG",getDefaultpG());
 	double   const pT = arginfo.getValue<double>("pT",getDefaultpT());
 
-	int const level = arginfo.getValue<int>("level",getDefaultLevel());
+	int const level = libmaus::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
 	int const clip = arginfo.getValue<int>("clip",getDefaultClip());
 	uint64_t const mod = arginfo.getValue<int>("mod",getDefaultMod());
@@ -159,28 +160,6 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 	uint64_t const minoverlap = arginfo.getValue<uint64_t>("MIN_OVERLAP",getDefaultMIN_OVERLAP());
 	// maximum number of adapter bases to be compared
 	uint64_t const almax = arginfo.getValue<uint64_t>("ADAPTER_MATCH",getDefaultADAPTER_MATCH());
-		
-	switch ( level )
-	{
-		case Z_NO_COMPRESSION:
-		case Z_BEST_SPEED:
-		case Z_BEST_COMPRESSION:
-		case Z_DEFAULT_COMPRESSION:
-			break;
-		default:
-		{
-			::libmaus::exception::LibMausException se;
-			se.getStream()
-				<< "Unknown compression level, please use"
-				<< " level=" << Z_DEFAULT_COMPRESSION << " (default) or"
-				<< " level=" << Z_BEST_SPEED << " (fast) or"
-				<< " level=" << Z_BEST_COMPRESSION << " (best) or"
-				<< " level=" << Z_NO_COMPRESSION << " (no compression)" << std::endl;
-			se.finish();
-			throw se;
-		}
-			break;
-	}
 
 	libmaus::bambam::AdapterFilter::unique_ptr_type AF;
 	
