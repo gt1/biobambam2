@@ -156,7 +156,7 @@ int main(int argc, char * argv[])
 				
 				std::vector< std::pair<std::string,std::string> > V;
 				
-				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", "compression settings for output bam file (0=uncompressed,1=fast,9=best,-1=zlib default)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
 				V.push_back ( std::pair<std::string,std::string> ( "minmapped=<["+::biobambam::Licensing::formatNumber(getDefaultMinMapped())+"]>", "minimum number of mapped fragments in a template" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "maxmapped=<["+::biobambam::Licensing::formatNumber(getDefaultMaxMapped())+"]>", "maximum number of mapped fragments in a template" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "minlen=<["+::biobambam::Licensing::formatNumber(getDefaultMinLen())+"]>", "minimum sequence length" ) );
