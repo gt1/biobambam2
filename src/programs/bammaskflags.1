@@ -11,7 +11,7 @@ with the flags field of each read/alignment and writes the resulting data to sta
 .PP
 The following key=value pairs can be given:
 .PP
-.B level=<-1|0|1|9>:
+.B level=<-1|0|1|9|11>:
 set compression level of the output BAM file. Valid
 values are
 .IP -1:
@@ -22,6 +22,12 @@ uncompressed
 zlib/gzip level 1 (fast) compression
 .IP 9:
 zlib/gzip level 9 (best) compression
+.P
+If libmaus has been compiled with support for igzip (see
+https://software.intel.com/en-us/articles/igzip-a-high-performance-deflate-compressor-with-optimizations-for-genomic-data)
+then an additional valid value is
+.IP 11:
+igzip compression
 .PP
 .B maskneg=<0>
 mask of flags to be removed (a bit wise and is computed between the bit

@@ -33,7 +33,7 @@ name of the metrics file (metrics are written to standard error if not set)
 .B tmpfile=<filename>: 
 prefix for temporary files. By default the temporary files are created in the current directory
 .PP
-.B level=<-1|0|1|9>:
+.B level=<-1|0|1|9|11>:
 set compression level of the output BAM file. Valid
 values are
 .IP -1:
@@ -44,6 +44,12 @@ uncompressed
 zlib/gzip level 1 (fast) compression
 .IP 9:
 zlib/gzip level 9 (best) compression
+.P
+If libmaus has been compiled with support for igzip (see
+https://software.intel.com/en-us/articles/igzip-a-high-performance-deflate-compressor-with-optimizations-for-genomic-data)
+then an additional valid value is
+.IP 11:
+igzip compression
 .PP
 .B markthreads=<1>: 
 Number of threads used during marking duplicate alignments.
@@ -67,7 +73,7 @@ gzip/BAM, recompress input and store it as a BAM file
 .IP 2:
 copy, produce a 1/1 copy of the input stream as a temporary file
 .PP
-.B rewritebamlevel=<-1|0|1|9>:
+.B rewritebamlevel=<-1|0|1|9|11>:
 compression level of temporary BAM file if rewritebam is 1 (see level key for possible values).
 .PP
 .B colhashbits=<20>:

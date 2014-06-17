@@ -26,7 +26,7 @@ if bgzf=1 this key can be used for giving the file name for the index file
 allowing (pseudo) random access in the output file. If the key is not given
 when bgzf=1, then no index is written.
 .PP
-.B level=<-1|0|1|9>:
+.B level=<-1|0|1|9|11>:
 set compression level of the output file if bgzf=1. Valid
 values are
 .IP -1:
@@ -37,6 +37,12 @@ uncompressed
 zlib/gzip level 1 (fast) compression
 .IP 9:
 zlib/gzip level 9 (best) compression
+.P
+If libmaus has been compiled with support for igzip (see
+https://software.intel.com/en-us/articles/igzip-a-high-performance-deflate-compressor-with-optimizations-for-genomic-data)
+then an additional valid value is
+.IP 11:
+igzip compression
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"

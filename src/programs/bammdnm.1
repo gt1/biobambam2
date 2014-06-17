@@ -26,7 +26,7 @@ The index optionally created by normalisefasta when setting the index key is
 required for bammdnm. The index file has to be stored as ref.fa.bgzf.idx
 for a compressed reference file name of ref.fa.bgzf.
 .PP
-.B level=<-1|0|1|9>:
+.B level=<-1|0|1|9|11>:
 set compression level of the output BAM file. Valid
 values are
 .IP -1:
@@ -37,6 +37,12 @@ uncompressed
 zlib/gzip level 1 (fast) compression
 .IP 9:
 zlib/gzip level 9 (best) compression
+.P
+If libmaus has been compiled with support for igzip (see
+https://software.intel.com/en-us/articles/igzip-a-high-performance-deflate-compressor-with-optimizations-for-genomic-data)
+then an additional valid value is
+.IP 11:
+igzip compression
 .PP
 .B verbose=<0|1>:
 print progress report while processing the file. Valid values are
