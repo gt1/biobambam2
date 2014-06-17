@@ -1,3 +1,9 @@
+biobambam (0.0.148) unstable; urgency=low
+
+  * add support for igzip compression 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Tue, 17 Jun 2014 14:49:03 +0100
+
 biobambam (0.0.147) unstable; urgency=low
 
   * streaming input support for bammerge and bamcat (by option) 
