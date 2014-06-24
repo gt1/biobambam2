@@ -1,3 +1,9 @@
+biobambam (0.0.149) unstable; urgency=low
+
+  * add bamflagsplit program 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Tue, 24 Jun 2014 09:55:17 +0100
+
 biobambam (0.0.148) unstable; urgency=low
 
   * add support for igzip compression 
