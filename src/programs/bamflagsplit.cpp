@@ -336,6 +336,15 @@ int bamflagsplit(::libmaus::util::ArgInfo const & arginfo)
 	::libmaus::util::TempFileRemovalContainer::setup();
 	
 	bool const inputisstdin = (!arginfo.hasArg("I")) || (arginfo.getUnparsedValue("I","-") == "-");
+
+	if ( isatty(STDIN_FILENO) && inputisstdin && (arginfo.getValue<std::string>("inputformat","bam") != "sam") )
+	{
+		::libmaus::exception::LibMausException se;
+		se.getStream() << "Refusing to read binary data from terminal, please redirect standard input to pipe or file." << std::endl;
+		se.finish();
+		throw se;
+	}
+
 	std::string const inputformat = arginfo.getUnparsedValue("inputformat",getDefaultInputFormat());
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
 	int const level = libmaus::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
@@ -357,13 +366,6 @@ int bamflagsplit(::libmaus::util::ArgInfo const & arginfo)
 		dec.disableValidation();
 	::libmaus::bambam::BamHeader const & header = dec.getHeader();
 
-	if ( isatty(STDIN_FILENO) && inputisstdin && (arginfo.getValue<std::string>("inputformat","bam") != "sam") )
-	{
-		::libmaus::exception::LibMausException se;
-		se.getStream() << "Refusing to read binary data from terminal, please redirect standard input to pipe or file." << std::endl;
-		se.finish();
-		throw se;
-	}
 	
 	// prefix for tmp files
 	std::string const tmpfilenamebase = arginfo.getValue<std::string>("tmpfile",arginfo.getDefaultTmpFileName());
