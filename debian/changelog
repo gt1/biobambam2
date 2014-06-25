@@ -1,3 +1,9 @@
+biobambam (0.0.150) unstable; urgency=low
+
+  * add bamintervalcomment program 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Wed, 25 Jun 2014 14:35:58 +0100
+
 biobambam (0.0.149) unstable; urgency=low
 
   * add bamflagsplit program 
