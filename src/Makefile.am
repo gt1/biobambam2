@@ -19,7 +19,8 @@ MANPAGES = programs/bamtofastq.1 programs/bamsort.1 programs/bammarkduplicates.1
 	programs/bamsplitdiv.1 programs/bamchecksort.1 programs/fastqtobam.1 \
 	programs/bamfixmateinformation.1 programs/normalisefasta.1 \
 	programs/bamfilterheader.1 programs/bammdnm.1 \
-	programs/bamseqchksum.1 programs/bamvalidate.1
+	programs/bamseqchksum.1 programs/bamvalidate.1 \
+	programs/bamflagsplit.1 bamintervalcomment.1
 
 man_MANS = ${MANPAGES}
 
@@ -57,7 +58,8 @@ bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamr
 	bammdnm @BAMPARSORTINSTEXP@ \
 	bammapdist \
 	bamvalidate \
-	bamflagsplit
+	bamflagsplit \
+	bamintervalcomment
 
 noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments bamtoname \
 	bamdisthist bamrefdepth fastabgzfextract bamfilternames @BAMREFDEPTHPEAKS@ \
@@ -339,3 +341,8 @@ bamflagsplit_SOURCES = programs/bamflagsplit.cpp biobambam/Licensing.cpp
 bamflagsplit_LDADD = ${LIBMAUSLIBS}
 bamflagsplit_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
 bamflagsplit_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+bamintervalcomment_SOURCES = programs/bamintervalcomment.cpp biobambam/Licensing.cpp
+bamintervalcomment_LDADD = ${LIBMAUSLIBS}
+bamintervalcomment_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+bamintervalcomment_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
