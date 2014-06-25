@@ -585,8 +585,8 @@ int bamintervalcomment(::libmaus::util::ArgInfo const & arginfo)
 	);
 
 	libmaus::bambam::BamAlignment & curalgn = dec.getAlignment();
-	libmaus::bambam::BamAuxFilterVector MQfilter;
-	MQfilter.set("MQ");
+	libmaus::bambam::BamAuxFilterVector COfilter;
+	COfilter.set("CO");
 	uint64_t c = 0;
 	std::vector<uint64_t> matchingIntervals;
 	
@@ -601,6 +601,7 @@ int bamintervalcomment(::libmaus::util::ArgInfo const & arginfo)
 			{
 				ostr << ((i>0)?";":"") << NIGS.meta[NIGS.intervals[matchingIntervals[i]].name];
 			}
+			curalgn.filterOutAux(COfilter);
 			curalgn.putAuxString("CO",ostr.str());
 		}
 		

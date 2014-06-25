@@ -21,10 +21,13 @@ gives the name of the reference sequence containing the interval
 give the interval on the reference sequence designated by the third column
 as a pair of non negative integers. Both borders are included.
 .PP
+For each alignment the matching interval designators are stored in the CO (comment) auxiliary field
+in the form of a semicolon separated list, where each list element is a pair
+(A,B) given the two id columns of the respective interval.
 An example of an interval file can be found at
 http://hgdownload.cse.ucsc.edu/goldenPath/hg19/database/refFlat.txt.gz . 
 .PP
-The following key=value pairs can be given:
+The following key=value pairs can be given when running the program:
 .PP
 .B level=<-1|0|1|9|11>:
 set compression level of the output BAM file. Valid
