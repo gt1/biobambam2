@@ -90,7 +90,7 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 	bool const disablevalidation = arginfo.getValue<int>("disablevalidation",getDefaultDisableValidation());
 
 	std::string const inputformat = arginfo.getUnparsedValue("inputformat",getDefaultInputFormat());
-	int const level = libmaus::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
+	// int const level = libmaus::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
 
 	// prefix for tmp files
 	std::string const tmpfilenamebase = arginfo.getValue<std::string>("tmpfile",arginfo.getDefaultTmpFileName());
