@@ -128,17 +128,23 @@ CRAM input supports a single range only.
 .B gz=<[0|1]>: 
 compress output files using gzip. By default output is uncompressed.
 .PP
-.B level=<-1|0|1|9>:
-set compression level of the compressed output files if gz=1. Valid
+.B level=<-1|0|1|9|11>:
+set compression level of the output FastQ/FastA files if gz=1. Valid
 values are
 .IP -1:
 zlib/gzip default compression level
 .IP 0:
-uncompressed (data is still wrapped in gzip format)
+uncompressed
 .IP 1:
 zlib/gzip level 1 (fast) compression
 .IP 9:
 zlib/gzip level 9 (best) compression
+.P
+If libmaus has been compiled with support for igzip (see
+https://software.intel.com/en-us/articles/igzip-a-high-performance-deflate-compressor-with-optimizations-for-genomic-data)
+then an additional valid value is
+.IP 11:
+igzip compression
 .PP
 .B fasta=<0|1>:
 output FastA instead of FastQ if fasta=1.

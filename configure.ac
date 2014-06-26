@@ -1,4 +1,4 @@
-AC_INIT(biobambam,0.0.147,[gt1@sanger.ac.uk],[biobambam],[http://www.sanger.ac.uk])
+AC_INIT(biobambam,0.0.150,[gt1@sanger.ac.uk],[biobambam],[http://www.sanger.ac.uk])
 AC_CANONICAL_SYSTEM
 AC_PROG_LIBTOOL
 
@@ -145,7 +145,7 @@ if test ! -z "${with_libmaus}" ; then
 	fi
 fi
 
-PKG_CHECK_MODULES([libmaus],[libmaus >= 0.0.127])
+PKG_CHECK_MODULES([libmaus],[libmaus >= 0.0.131])
 
 if test ! -z "${with_libmaus}" ; then
 	if test ! -z "${PKGCONFIGPATHSAVE}" ; then

@@ -90,7 +90,6 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 	bool const disablevalidation = arginfo.getValue<int>("disablevalidation",getDefaultDisableValidation());
 
 	std::string const inputformat = arginfo.getUnparsedValue("inputformat",getDefaultInputFormat());
-	// int const level = libmaus::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
 
 	// prefix for tmp files
 	std::string const tmpfilenamebase = arginfo.getValue<std::string>("tmpfile",arginfo.getDefaultTmpFileName());
@@ -423,7 +422,7 @@ int main(int argc, char * argv[])
 				
 				std::vector< std::pair<std::string,std::string> > V;
 			
-				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", "compression settings for output bam file (0=uncompressed,1=fast,9=best,-1=zlib default)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
 				V.push_back ( std::pair<std::string,std::string> ( "SO=<["+getDefaultSortOrder()+"]>", "sorting order (coordinate or queryname)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "blockmb=<["+::biobambam::Licensing::formatNumber(getDefaultBlockSize())+"]>", "size of internal memory buffer used for sorting in MiB" ) );

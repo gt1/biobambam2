@@ -83,7 +83,7 @@ void normalisefastaBgzf(libmaus::util::ArgInfo const & arginfo, std::ostream & o
 {
 	libmaus::fastx::StreamFastAReaderWrapper in(std::cin);
 	libmaus::fastx::StreamFastAReaderWrapper::pattern_type pattern;
-	int const level = arginfo.getValue("level",getDefaultLevel());
+	int const level = libmaus::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue("level",getDefaultLevel()));
 	std::string const indexfn = arginfo.getUnparsedValue("index","");
 
 	::libmaus::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(level);
@@ -204,7 +204,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( std::string("cols=<[")+libmaus::util::NumberSerialisation::formatNumber(getDefaultCols(),0)+"]>", "column width" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("bgzf=<[")+libmaus::util::NumberSerialisation::formatNumber(getDefaultBgzf(),0)+"]>", "compress output" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("index=<>"), "file name for index if bgzf=1 (no index is created if key is not given)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( std::string("level=<[")+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", "compression level if bgzf=1" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("level=<[")+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", std::string("compression level if bgzf=1 (") + libmaus::bambam::BamBlockWriterBaseFactory::getLevelHelpText() + std::string(")") ) );
 				
 				::biobambam::Licensing::printMap(std::cerr,V);
 

@@ -190,7 +190,7 @@ int main(int argc, char * argv[])
 				
 				std::vector< std::pair<std::string,std::string> > V;
 			
-				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", "compression settings for output bam file (0=uncompressed,1=fast,9=best,-1=zlib default)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
 				V.push_back ( std::pair<std::string,std::string> ( "maskneg=<["+::biobambam::Licensing::formatNumber(getDefaultMaskNeg())+"]>", "flag masking bitmask (bits set are removed)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "md5filename=<filename>", "file name for md5 check sum (default: extend output file name)" ) );

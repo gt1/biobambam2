@@ -151,7 +151,7 @@ int main(int argc, char * argv[])
 			
 				V.push_back ( std::pair<std::string,std::string> ( "n=<["+::biobambam::Licensing::formatNumber(getDefaultN())+"]>", "number of entries" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "prefix=<["+getDefaultFilePrefix(arginfo)+"]>", "default output file prefix" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", "compression settings for output bam file (0=uncompressed,1=fast,9=best,-1=zlib default)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);

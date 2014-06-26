@@ -31,8 +31,8 @@ input files are sorted by coordinate. The created output file will be sorted by 
 .IP queryname:
 input files are sorted by query name. The created output file will be sorted by query name as well.
 .PP
-.B level=<-1|0|1|9>:
-set compression level of the output BAM file. Default value is -1. Valid
+.B level=<-1|0|1|9|11>:
+set compression level of the output BAM file. Valid
 values are
 .IP -1:
 zlib/gzip default compression level
@@ -42,6 +42,12 @@ uncompressed
 zlib/gzip level 1 (fast) compression
 .IP 9:
 zlib/gzip level 9 (best) compression
+.P
+If libmaus has been compiled with support for igzip (see
+https://software.intel.com/en-us/articles/igzip-a-high-performance-deflate-compressor-with-optimizations-for-genomic-data)
+then an additional valid value is
+.IP 11:
+igzip compression
 .PP
 .B verbose=<1>:
 Valid values are

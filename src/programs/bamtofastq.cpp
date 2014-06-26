@@ -32,6 +32,7 @@
 #include <libmaus/lz/GzipOutputStream.hpp>
 #include <libmaus/aio/PosixFdInputStream.hpp>
 #include <libmaus/aio/PosixFdOutputStream.hpp>
+#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
 
 static std::string getDefaultInputFormat()
 {
@@ -127,7 +128,7 @@ void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::bam
 
 	libmaus::timing::RealTimeClock rtc; rtc.start();
 	bool const gz = arginfo.getValue<int>("gz",0);
-	int const level = std::min(9,std::max(-1,arginfo.getValue<int>("level",Z_DEFAULT_COMPRESSION)));
+	int const level = libmaus::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",Z_DEFAULT_COMPRESSION));
 	uint32_t const excludeflags = libmaus::bambam::BamFlagBase::stringToFlags(arginfo.getValue<std::string>("exclude","SECONDARY,SUPPLEMENTARY"));
 	libmaus::bambam::BamAlignment const & algn = bamdec.getAlignment();
 	::libmaus::autoarray::AutoArray<uint8_t> T;
@@ -986,7 +987,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( std::string("colsbs=<[")+libmaus::util::NumberSerialisation::formatNumber(32ull*1024*1024,0)+"]>", "size of hash table overflow list in bytes" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("T=<[") + arginfo.getDefaultTmpFileName() + "]>" , "temporary file name" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "gz=<[0]>", "compress output streams in gzip format (default: 0)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "level=<[-1]>", "compression setting if gz=1 (default: -1, zlib default settings)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "level=<[-1]>", std::string("compression setting if gz=1 (") + libmaus::bambam::BamBlockWriterBaseFactory::getLevelHelpText() + std::string(")")  ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("fasta=<[")+libmaus::util::NumberSerialisation::formatNumber(getDefaultFastA(),0)+"]>", "output FastA instead of FastQ" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "inputbuffersize=<["+::biobambam::Licensing::formatNumber(BamToFastQInputFileStream::getDefaultBufferSize())+"]>", "size of input buffer" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "outputperreadgroup=<["+::biobambam::Licensing::formatNumber(getDefaultOutputPerReadgroup())+"]>", "split output per read group (for collate=1 only)" ) );

@@ -1,30 +1,33 @@
-.TH BAMVALIDATE 1 "May 2014" BIOBAMBAM
+.TH BAMINTERVALCOMMENT 1 "June 2014" BIOBAMBAM
 .SH NAME
-bamvalidate - validate BAM file
+bamintervalcomment - sort BAM files by coordinate or query name
 .SH SYNOPSIS
 .PP
-.B bamvalidate
+.B bamintervalcomment
 [options]
 .SH DESCRIPTION
-bamvalidate reads a BAM, SAM or CRAM file and checks the contained
-alignments for validity. If all the alignments in the source file pass
-validation, then the program exits with code 0, otherwise it exits with a
-non-zero code. By default no data is produced on the standard output
-channel, if the passthrough parameter is set to 1, then the alignments are
-recoded to standard output according to the given output parameters.
+bamintervalcomment reads a BAM, SAM or CRAM file and a file containing
+a list of named intervals, marks each line in the input with the list of all
+matching intervals and stores the resulting file in BAM, SAM or CRAM format.
+The intervals file needs to be given using the intervals key. The file can
+be either plain or compressed using gzip. The intervals file is expected to
+contain one interval per line. Each line is assumed to contain a tab
+separated list of values, where the following columns are used by the program:
+.IP first\ and\ second\ column
+contain a pair of names which form the id of the interval
+.IP third\ column
+gives the name of the reference sequence containing the interval
+.IP fifth\ and\ sixth\ column
+give the interval on the reference sequence designated by the third column
+as a pair of non negative integers. Both borders are included.
 .PP
-The following key=value pairs can be given:
+For each alignment the matching interval designators are stored in the CO (comment) auxiliary field
+in the form of a semicolon separated list, where each list element is a pair
+(A,B) given the two id columns of the respective interval.
+An example of an interval file can be found at
+http://hgdownload.cse.ucsc.edu/goldenPath/hg19/database/refFlat.txt.gz . 
 .PP
-.B verbose=<0|1>:
-Valid values are
-.IP 1:
-print statistics on the standard error channel at the end of a succesfull run
-.IP 0:
-do not print statistics
-.PP
-.B passthrough=<0|1>:
-recode alignments to standard output if passthorugh=1. Default is
-passthorugh=0.
+The following key=value pairs can be given when running the program:
 .PP
 .B level=<-1|0|1|9|11>:
 set compression level of the output BAM file. Valid
@@ -44,8 +47,22 @@ then an additional valid value is
 .IP 11:
 igzip compression
 .PP
+.B verbose=<1>:
+Valid values are
+.IP 1:
+print progress report on standard error
+.IP 0:
+do not print progress report
+.PP
 .B tmpfile=<filename>:
 set the prefix for temporary file names
+.PP
+.B disablevalidation=<0|1>:
+sets whether input validation is performed. Valid values are
+.IP 0:
+validation is enabled (default)
+.IP 1:
+validation is disabled
 .PP
 .B md5=<0|1>:
 md5 checksum creation for output file. This option can only be given if
@@ -72,7 +89,7 @@ written to the given file. If indexfilename is unset, then no BAM index will be 
 file name for output BAM index if index=1.
 .PP
 .B inputformat=<bam>: input file format.
-All versions of bamsort come with support for the BAM input format. If
+All versions of bamintervalcomment come with support for the BAM input format. If
 the program in addition is linked to the io_lib package, then the following
 options are valid:
 .IP bam:
@@ -83,7 +100,7 @@ SAM (see http://samtools.sourceforge.net/SAM1.pdf)
 CRAM (see http://www.ebi.ac.uk/ena/about/cram_toolkit)
 .PP
 .B outputformat=<bam>: output file format.
-All versions of bamsort come with support for the BAM output format. If
+All versions of bamintervalcomment come with support for the BAM output format. If
 the program in addition is linked to the io_lib package, then the following
 options are valid:
 .IP bam:
@@ -110,6 +127,9 @@ reference FastA file for inputformat=cram and outputformat=cram. An index file (
 .PP
 .B range=<>:
 input range to be processed. This option is only valid if the input is a coordinate sorted and indexed BAM file
+.PP
+.B intervals=<>:
+file name of intervals file
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"

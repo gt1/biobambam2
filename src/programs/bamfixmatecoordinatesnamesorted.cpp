@@ -28,6 +28,7 @@
 
 #include <libmaus/lz/BgzfDeflateOutputCallbackMD5.hpp>
 #include <libmaus/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
+#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
 
 #include <biobambam/Licensing.hpp>
 
@@ -43,7 +44,7 @@ int bamfixmatecoordinatesnamesorted(::libmaus::util::ArgInfo const & arginfo)
 	::libmaus::timing::RealTimeClock rtc; rtc.start();
 	
 	// gzip compression level for output
-	int const level = arginfo.getValue<int>("level",getDefaultLevel());
+	int const level = libmaus::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
 	
 	::libmaus::bambam::BamDecoder bamfile(std::cin);
 	std::string const headertext(bamfile.getHeader().text);
@@ -270,7 +271,7 @@ int main(int argc, char * argv[])
 				std::vector< std::pair<std::string,std::string> > V;
 				
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report (default: 1)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", "compression settings for output bam file (0=uncompressed,1=fast,9=best,-1=zlib default)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
 				V.push_back ( std::pair<std::string,std::string> ( "tmpfile=<filename>", "prefix for temporary files, default: create files in current directory" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "md5filename=<filename>", "file name for md5 check sum (default: extend output file name)" ) );
