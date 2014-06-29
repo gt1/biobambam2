@@ -82,22 +82,22 @@ std::string getDefaultReadGroupSuffixS(bool const gz)
 struct BamToFastQInputFileStream
 {
 	std::string const fn;
-	uint64_t const inputbuffersize;
+	int64_t const inputbuffersize;
 	libmaus::aio::PosixFdInputStream::unique_ptr_type CIS;
 	std::istream & in;
 	
-	static uint64_t getDefaultBufferSize()
+	static int64_t getDefaultBufferSize()
 	{
-		return 2*1024*1024;
+		return -1;
 	}
 	
-	static libmaus::aio::PosixFdInputStream::unique_ptr_type openFile(std::string const & fn, uint64_t const bufsize = getDefaultBufferSize())
+	static libmaus::aio::PosixFdInputStream::unique_ptr_type openFile(std::string const & fn, int64_t const bufsize = getDefaultBufferSize())
 	{
 		libmaus::aio::PosixFdInputStream::unique_ptr_type ptr(new libmaus::aio::PosixFdInputStream(fn,bufsize,0));
 		return UNIQUE_PTR_MOVE(ptr);
 	}
 
-	static libmaus::aio::PosixFdInputStream::unique_ptr_type openFile(int const fd, uint64_t const bufsize = getDefaultBufferSize())
+	static libmaus::aio::PosixFdInputStream::unique_ptr_type openFile(int const fd, int64_t const bufsize = getDefaultBufferSize())
 	{
 		libmaus::aio::PosixFdInputStream::unique_ptr_type ptr(new libmaus::aio::PosixFdInputStream(fd,bufsize,0));
 		return UNIQUE_PTR_MOVE(ptr);
@@ -105,17 +105,21 @@ struct BamToFastQInputFileStream
 	
 	BamToFastQInputFileStream(libmaus::util::ArgInfo const & arginfo)
 	: fn(arginfo.getValue<std::string>("filename","-")),
-	  inputbuffersize(arginfo.getValueUnsignedNumeric<uint64_t>("inputbuffersize",getDefaultBufferSize())),
+	  inputbuffersize(arginfo.hasArg("inputbuffersize") ? arginfo.getValueUnsignedNumeric<uint64_t>("inputbuffersize",getDefaultBufferSize()) : -1),
 	  CIS(
 		(fn != "-") ? openFile(fn) : openFile(STDIN_FILENO)
-	  ), in(*CIS) {}
+	  ), in(*CIS) 
+	{
+        }
 
-	BamToFastQInputFileStream(std::string const & rfn, uint64_t const rinputbuffersize = getDefaultBufferSize())
+	BamToFastQInputFileStream(std::string const & rfn, int64_t const rinputbuffersize = getDefaultBufferSize())
 	: fn(rfn),
-	  inputbuffersize(rinputbuffersize), 
+	  inputbuffersize(rinputbuffersize),
 	  CIS(
 		(fn != "-") ? openFile(fn) : openFile(STDIN_FILENO)
-	), in(*CIS) {}
+	), in(*CIS) 
+	{
+	}
 };
 
 enum bamtofastq_conversion_type { bamtofastq_conversion_type_fastq, bamtofastq_conversion_type_fasta, bamtofastq_conversion_type_fastq_try_oq };
@@ -204,7 +208,8 @@ void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::bam
 
 void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo)
 {
-	uint64_t const inputbuffersize = arginfo.getValueUnsignedNumeric<uint64_t>("inputbuffersize",BamToFastQInputFileStream::getDefaultBufferSize());
+	int64_t const inputbuffersize =
+		arginfo.hasArg("inputbuffersize") ? arginfo.getValueUnsignedNumeric<uint64_t>("inputbuffersize",BamToFastQInputFileStream::getDefaultBufferSize()) : -1;
 
 	bool const fasta = arginfo.getValue<int>("fasta",getDefaultFastA());
 	bool const tryoq = arginfo.getValue<int>("tryoq",getDefaultTryOQ());	
@@ -352,7 +357,7 @@ void bamtofastqCollating(
 				outputfilenamevector.push_back(outputdir + readgroups[i].ID + *ita);
 				
 		assert ( outputfilenamevector.size() == numoutputfiles );
-		uint64_t const posixoutbufsize = 256*1024;
+		int64_t const posixoutbufsize = 256*1024;
 		libmaus::autoarray::AutoArray< ::libmaus::aio::PosixFdOutputStream::unique_ptr_type > APFOS(numoutputfiles);
 		libmaus::autoarray::AutoArray< libmaus::lz::GzipOutputStream::unique_ptr_type > AGZOS(numoutputfiles);
 		libmaus::autoarray::AutoArray< std::ostream * > AOS(numoutputfiles);
@@ -687,7 +692,8 @@ void bamtofastqCollating(libmaus::util::ArgInfo const & arginfo)
 	std::string const inputfilename = arginfo.getValue<std::string>("filename","-");
 
 	// input buffer size (if input is not via io_lib)
-	uint64_t const inputbuffersize = arginfo.getValueUnsignedNumeric<uint64_t>("inputbuffersize",BamToFastQInputFileStream::getDefaultBufferSize());
+	int64_t const inputbuffersize =
+		arginfo.hasArg("inputbuffersize") ? arginfo.getValueUnsignedNumeric<uint64_t>("inputbuffersize",BamToFastQInputFileStream::getDefaultBufferSize()) : -1;
 	
 	bool const fasta = arginfo.getValue<int>("fasta",getDefaultFastA());
 	bool const tryoq = arginfo.getValue<int>("tryoq",getDefaultTryOQ());	
@@ -813,7 +819,8 @@ void bamtofastqCollatingRanking(libmaus::util::ArgInfo const & arginfo)
 	std::string const inputformat = arginfo.getValue<std::string>("inputformat",getDefaultInputFormat());
 	std::string const inputfilename = arginfo.getValue<std::string>("filename","-");
 	uint64_t const numthreads = arginfo.getValue<uint64_t>("threads",0);
-	uint64_t const inputbuffersize = arginfo.getValueUnsignedNumeric<uint64_t>("inputbuffersize",BamToFastQInputFileStream::getDefaultBufferSize());
+	int64_t const inputbuffersize =
+		arginfo.hasArg("inputbuffersize") ? arginfo.getValueUnsignedNumeric<uint64_t>("inputbuffersize",BamToFastQInputFileStream::getDefaultBufferSize()) : -1;
 
 	unsigned int const hlog = arginfo.getValue<unsigned int>("colhlog",18);
 	uint64_t const sbs = arginfo.getValueUnsignedNumeric<uint64_t>("colsbs",32ull*1024ull*1024ull);
