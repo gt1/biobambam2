@@ -1687,7 +1687,7 @@ struct BamThreadPoolDecodeBamWritePackageDispatcher : public libmaus::parallel::
 						(static_cast<uint32_t>((ca + *pa)[1]) << 8) |
 						(static_cast<uint32_t>((ca + *pa)[2]) << 16) |
 						(static_cast<uint32_t>((ca + *pa)[3]) << 24),
-						contextbase.header.chromosomes,
+						contextbase.header,
 						aux
 					)
 				<< std::endl;
@@ -2329,9 +2329,9 @@ struct BamThreadPoolMergeProcessBufferInfo
 				{
 					std::cerr << "*order broken* " << std::endl;
 					std::cerr << libmaus::bambam::BamAlignmentDecoderBase::formatAlignment(
-						ca,la,header.chromosomes,aux) << std::endl;
+						ca,la,header,aux) << std::endl;
 					std::cerr << libmaus::bambam::BamAlignmentDecoderBase::formatAlignment(
-						cb,lb,header.chromosomes,aux) << std::endl;
+						cb,lb,header,aux) << std::endl;
 				}
 			}
 			
@@ -2531,7 +2531,7 @@ struct BamThreadPoolMergeContextBase : public BamThreadPoolMergeContextBaseConst
 			::libmaus::bambam::BamFormatAuxiliary aux;
 			std::cerr << "[D]*\t" << libmaus::bambam::BamAlignmentDecoderBase::formatAlignment(
 				aldat,blocksize,
-				mergeinfo.sheader->chromosomes,
+				*(mergeinfo.sheader),
 				aux
 			) << std::endl;
 			
@@ -3472,14 +3472,14 @@ struct BamThreadPoolMergeMergePackageDispatcher : public libmaus::parallel::Simp
 				::libmaus::bambam::BamFormatAuxiliary aux;
 				libmaus::bambam::BamAlignmentDecoderBase::formatAlignment(
 					alp,blocklen,
-					contextbase.mergeinfo.sheader->chromosomes,
+					*(contextbase.mergeinfo.sheader),
 					aux
 				);
 				
 				contextbase.cerrlock.lock();
 				std::cerr << "[D]\t" << libmaus::bambam::BamAlignmentDecoderBase::formatAlignment(
 						alp,blocklen,
-						contextbase.mergeinfo.sheader->chromosomes,
+						*(contextbase.mergeinfo.sheader),
 						aux
 					)
 					<< std::endl;

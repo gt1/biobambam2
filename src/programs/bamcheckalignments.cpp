@@ -48,7 +48,7 @@ bool checkCigarValid(
 		return false;
 	}
 	
-	if ( alignment.getRefID() < 0 || alignment.getRefID() >= static_cast<int64_t>(bamheader.chromosomes.size()) )
+	if ( alignment.getRefID() < 0 || alignment.getRefID() >= static_cast<int64_t>(bamheader.getNumRef()) )
 	{
 		std::cerr << "[E] reference id " << alignment.getRefID() << " out of range for " << alignment.getName() << std::endl;
 		return false;
@@ -194,16 +194,15 @@ int main(int argc, char * argv[])
 
 		::libmaus::bambam::BamDecoder decoder(std::cin);
 		::libmaus::bambam::BamHeader const & bamheader = decoder.getHeader();
-		// std::vector< ::libmaus::bambam::Chromosome > chromosomes
 
 		::libmaus::autoarray::AutoArray<uint8_t> uptab(256,false);
 		for ( uint64_t j = 0; j < uptab.size(); ++j )
 			uptab[j] = toupper(j);
 		
-		::libmaus::autoarray::AutoArray < ::libmaus::autoarray::AutoArray<uint8_t>::unique_ptr_type > text(bamheader.chromosomes.size());
-		for ( uint64_t i = 0; i < bamheader.chromosomes.size(); ++i )
+		::libmaus::autoarray::AutoArray < ::libmaus::autoarray::AutoArray<uint8_t>::unique_ptr_type > text(bamheader.getNumRef());
+		for ( uint64_t i = 0; i < bamheader.getNumRef(); ++i )
 		{
-			std::string const bamchrname = bamheader.chromosomes[i].name;
+			std::string const bamchrname = bamheader.getRefIDName(i);
 			if ( fachr.find(bamchrname) == fachr.end() )
 			{
 				::libmaus::exception::LibMausException se;
@@ -212,15 +211,15 @@ int main(int argc, char * argv[])
 				throw se;
 			}
 			uint64_t const faid = fachr.find(bamchrname)->second;
-			if ( bamheader.chromosomes[i].len != info[faid].seqlen )
+			if ( bamheader.getRefIDLength(i) != static_cast<int64_t>(info[faid].seqlen) )
 			{
 				::libmaus::exception::LibMausException se;
-				se.getStream() << "Reference sequence " << bamchrname << " has len " << bamheader.chromosomes[i].len << " in bam file but " << info[faid].seqlen << " in fa file." << std::endl;
+				se.getStream() << "Reference sequence " << bamchrname << " has len " << bamheader.getRefIDLength(i) << " in bam file but " << info[faid].seqlen << " in fa file." << std::endl;
 				se.finish();
 				throw se;
 			}
 			
-			if ( bamheader.chromosomes.size() < 100 )
+			if ( bamheader.getNumRef() < 100 )
 				std::cerr << "Loading sequence " << bamchrname << " of length " << info[faid].seqlen << std::endl;
 			::libmaus::autoarray::AutoArray<uint8_t>::unique_ptr_type ttext(new ::libmaus::autoarray::AutoArray<uint8_t>(info[faid].seqlen,false));
 			text [ i ] = UNIQUE_PTR_MOVE(ttext);
@@ -237,9 +236,9 @@ int main(int argc, char * argv[])
 				*pa = uptab[*pa];
 		}
 		
-		for ( uint64_t i = 0; i < bamheader.chromosomes.size(); ++i )
+		for ( uint64_t i = 0; i < bamheader.getNumRef(); ++i )
 		{
-			assert ( text[i]->size() == bamheader.chromosomes[i].len );
+			assert ( static_cast<int64_t>(text[i]->size()) == bamheader.getRefIDLength(i) );
 		}
 		
 		uint64_t decoded = 0;

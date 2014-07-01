@@ -54,7 +54,7 @@ void getUsedRefSeqs(
 	::libmaus::bambam::BamAlignmentDecoder & dec = *ppdec;
 	::libmaus::bambam::BamHeader const & header = dec.getHeader();
 	::libmaus::bambam::BamAlignment const & algn = dec.getAlignment();
-	uint64_t const numrefseq = header.chromosomes.size();	
+	uint64_t const numrefseq = header.getNumRef();	
 	libmaus::bitio::IndexedBitVector::unique_ptr_type tusedrefseq(new libmaus::bitio::IndexedBitVector(numrefseq));
 	libmaus::bitio::IndexedBitVector::unique_ptr_type tusedrg(new libmaus::bitio::IndexedBitVector(header.getNumReadGroups()));
 	
@@ -219,7 +219,7 @@ uint64_t bamheaderfilter(libmaus::util::ArgInfo const & arginfo)
 			assert ( algn.getRefID() >= 0 );
 			assert ( algn.getRefID() < static_cast<int64_t>(usedrefseq->size()) );
 			assert ( usedrefseq->get(algn.getRefID()) );
-			assert ( usedrefseq->rank1(algn.getRefID())-1 < uphead.chromosomes.size() );
+			assert ( usedrefseq->rank1(algn.getRefID())-1 < uphead.getNumRef() );
 			algn.putRefId(usedrefseq->rank1(algn.getRefID())-1);
 		}
 		if ( algn.isPaired() && algn.isMapped() )
@@ -227,7 +227,7 @@ uint64_t bamheaderfilter(libmaus::util::ArgInfo const & arginfo)
 			assert ( algn.getRefID() >= 0 );
 			assert ( algn.getRefID() < static_cast<int64_t>(usedrefseq->size()) );
 			assert ( usedrefseq->get(algn.getRefID()) );
-			assert ( usedrefseq->rank1(algn.getRefID())-1 < uphead.chromosomes.size() );
+			assert ( usedrefseq->rank1(algn.getRefID())-1 < uphead.getNumRef() );
 			algn.putRefId(usedrefseq->rank1(algn.getRefID())-1);
 		}
 		if ( algn.isPaired() && algn.isMateMapped() )
@@ -235,7 +235,7 @@ uint64_t bamheaderfilter(libmaus::util::ArgInfo const & arginfo)
 			assert ( algn.getNextRefID() >= 0 );
 			assert ( algn.getNextRefID() < static_cast<int64_t>(usedrefseq->size()) );
 			assert ( usedrefseq->get(algn.getNextRefID()) );
-			assert ( usedrefseq->rank1(algn.getNextRefID())-1 < uphead.chromosomes.size() );
+			assert ( usedrefseq->rank1(algn.getNextRefID())-1 < uphead.getNumRef() );
 			algn.putNextRefId(usedrefseq->rank1(algn.getNextRefID())-1);
 		}
 		

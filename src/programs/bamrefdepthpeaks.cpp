@@ -418,7 +418,7 @@ void generateGPL(std::deque<float> const & Q, std::vector< PeakInfo > const & pe
 	// uint64_t blocksize = (Q.size() + numblocks-1)/numblocks;
 	
 	std::ostringstream depthstr;
-	// depthstr << "plot_" << header.chromosomes[previd].name << ".gpl";
+	// depthstr << "plot_" << header.getRefIDName(previd) << ".gpl";
 	depthstr << "plot_" << seqname << ".gpl";
 	std::ostringstream depthpeakstr;
 	depthpeakstr << "plot_" << seqname << "_peaks.gpl";
@@ -523,7 +523,7 @@ int bamrefdepth(libmaus::util::ArgInfo const & arginfo)
 	int64_t previd = -1;
 	
 	std::vector < std::string > refnames;
-	for ( uint64_t i = 0; i < header.chromosomes.size(); ++i )
+	for ( uint64_t i = 0; i < header.getNumRef(); ++i )
 		refnames.push_back(header.getRefIDName(i));
                         	
 	while ( bamdec.readAlignment() )
@@ -560,14 +560,14 @@ int bamrefdepth(libmaus::util::ArgInfo const & arginfo)
 		// next reference sequence
 		if ( hasprev && (algn.getRefID() != prevalgn.getRefID()) )
 		{
-			uint64_t const len = header.chromosomes[previd].len;
+			uint64_t const len = header.getRefIDLength(previd);
 			while ( Q.size() < len )
 				Q.push_back(0);
 				
 			ztrim(Q,2);
 				
 			std::vector< PeakInfo > const peaks = analyse(Q,refnames[previd],peakthres,minpeakwidth,maxpeakwidth);
-			generateGPL(Q,peaks,header.chromosomes[previd].name);
+			generateGPL(Q,peaks,header.getRefIDName(previd));
 			// std::cerr << refnames[prevalgn.getRefID()] << " size " << Q.size() << std::endl;
 			Q.resize(0);
 			
@@ -674,7 +674,7 @@ int bamrefdepth(libmaus::util::ArgInfo const & arginfo)
 	if ( Q.size() )
 	{
 		//std::cerr << refnames[prevalgn.getRefID()] << " size " << Q.size() << std::endl;
-		uint64_t const len = header.chromosomes[previd].len;
+		uint64_t const len = header.getRefIDLength(previd);
 		while ( Q.size() < len )
 			Q.push_back(0);
 
@@ -682,7 +682,7 @@ int bamrefdepth(libmaus::util::ArgInfo const & arginfo)
 
 		std::vector< PeakInfo > peaks = analyse(Q,refnames[previd],peakthres,minpeakwidth,maxpeakwidth);
 
-		generateGPL(Q,peaks,header.chromosomes[previd].name);
+		generateGPL(Q,peaks,header.getRefIDName(previd));
 
 		Q.resize(0);
 		

@@ -50,7 +50,7 @@ int bamrefdepth(libmaus::util::ArgInfo const & arginfo)
 	libmaus::autoarray::AutoArray<char> decread;
 	
 	std::vector < std::string > refnames;
-	for ( uint64_t i = 0; i < header.chromosomes.size(); ++i )
+	for ( uint64_t i = 0; i < header.getNumRef(); ++i )
 		refnames.push_back(header.getRefIDName(i));
                         	
 	while ( bamdec.readAlignment() )
