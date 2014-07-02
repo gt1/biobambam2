@@ -38,6 +38,7 @@
 #include <libmaus/bambam/BamMultiAlignmentDecoderFactory.hpp>
 #include <libmaus/aio/PosixFdInputStream.hpp>
 
+static int getDefaultVerbose() { return 1; }
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static std::string getDefaultInputFormat() { return "bam"; }
 static uint64_t getDefaultInputBufferSize() { return 64*1024; }
@@ -199,6 +200,7 @@ void bamcollate2NonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::ba
 	if ( arginfo.getValue<unsigned int>("disablevalidation",0) )
 		bamdec.disableValidation();
 
+	bool const verbose = arginfo.getValue<unsigned int>("verbose",getDefaultVerbose());
 	libmaus::timing::RealTimeClock rtc; rtc.start();
 	uint32_t const excludeflags = libmaus::bambam::BamFlagBase::stringToFlags(arginfo.getValue<std::string>("exclude","SECONDARY,SUPPLEMENTARY"));
 	libmaus::bambam::BamAlignment & algn = bamdec.getAlignment();
@@ -290,12 +292,15 @@ void bamcollate2NonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::ba
 			writer->writeAlignment(algn);
 		}
 
-		if ( precnt >> verbshift != cnt >> verbshift )
+		if ( (precnt >> verbshift != cnt >> verbshift) && verbose )
 			std::cerr 
 				<< (cnt >> 20) 
 				<< "\t"
 				<< "\t" << static_cast<double>(cnt)/rtc.getElapsedSeconds() << std::endl;
 	}
+
+	if ( verbose )
+		std::cerr << "[V] " << cnt << std::endl;
 	
 	writer.reset();
 
@@ -333,6 +338,7 @@ void bamcollate2Collating(
 		CHCBD.disableValidation();
 
 	libmaus::bambam::CircularHashCollatingBamDecoder::OutputBufferEntry * ob = 0;
+	bool const verbose = arginfo.getValue<unsigned int>("verbose",getDefaultVerbose());
 	
 	// number of alignments written to files
 	uint64_t cnt = 0;
@@ -616,7 +622,7 @@ void bamcollate2Collating(
 			}
 		}
 		
-		if ( precnt >> verbshift != cnt >> verbshift )
+		if ( (precnt >> verbshift != cnt >> verbshift) && verbose )
 		{
 			std::cerr 
 				<< "[V] "
@@ -627,7 +633,8 @@ void bamcollate2Collating(
 		}
 	}
 	
-	std::cerr << "[V] " << cnt << std::endl;
+	if ( verbose )
+		std::cerr << "[V] " << cnt << std::endl;
 
 	writer.reset();
 
@@ -679,6 +686,7 @@ void bamcollate2CollatingRanking(
 	uint64_t cnt = 0;
 	// number of bytes written to files
 	uint64_t bcnt = 0;
+	bool const verbose = arginfo.getValue<unsigned int>("verbose",getDefaultVerbose());
 	unsigned int const verbshift = 20;
 	libmaus::timing::RealTimeClock rtc; rtc.start();
 	::libmaus::autoarray::AutoArray<uint8_t> T;
@@ -834,7 +842,7 @@ void bamcollate2CollatingRanking(
 			cnt += 1;
 		}
 		
-		if ( precnt >> verbshift != cnt >> verbshift )
+		if ( (precnt >> verbshift != cnt >> verbshift) && verbose )
 		{
 			std::cerr 
 				<< "[V] "
@@ -845,7 +853,8 @@ void bamcollate2CollatingRanking(
 		}
 	}
 	
-	std::cerr << "[V] " << cnt << std::endl;
+	if ( verbose )
+		std::cerr << "[V] " << cnt << std::endl;
 	
 	writer.reset();
 
@@ -950,6 +959,7 @@ void bamcollate2CollatingPostRanking(
 	// number of alignments written to files
 	uint64_t cnt = 0;
 	unsigned int const verbshift = 20;
+	bool const verbose = arginfo.getValue<unsigned int>("verbose",getDefaultVerbose());
 	libmaus::timing::RealTimeClock rtc; rtc.start();
 	::libmaus::autoarray::AutoArray<uint8_t> T;
 	libmaus::bambam::BamAlignment algn;
@@ -1209,7 +1219,7 @@ void bamcollate2CollatingPostRanking(
 			cnt += 1;
 		}
 		
-		if ( precnt >> verbshift != cnt >> verbshift )
+		if ( (precnt >> verbshift != cnt >> verbshift) && verbose )
 		{
 			std::cerr 
 				<< "[V] "
@@ -1218,7 +1228,8 @@ void bamcollate2CollatingPostRanking(
 		}
 	}
 	
-	std::cerr << "[V] " << cnt << std::endl;
+	if ( verbose )
+		std::cerr << "[V] " << cnt << std::endl;
 
 	writer.reset();
 
@@ -1466,7 +1477,8 @@ int main(int argc, char * argv[])
 					
 		bamcollate2(arginfo);
 		
-		std::cerr << "[V] " << libmaus::util::MemUsage() << " wall clock time " << rtc.formatTime(rtc.getElapsedSeconds()) << std::endl;		
+		if ( arginfo.getValue<unsigned int>("verbose",getDefaultVerbose()) )
+			std::cerr << "[V] " << libmaus::util::MemUsage() << " wall clock time " << rtc.formatTime(rtc.getElapsedSeconds()) << std::endl;		
 	}
 	catch(std::exception const & ex)
 	{
