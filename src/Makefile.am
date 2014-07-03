@@ -62,7 +62,8 @@ bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamr
 	bammapdist \
 	bamvalidate \
 	bamflagsplit \
-	bamintervalcomment
+	bamintervalcomment \
+	bamintervalcommenthist
 
 noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments bamtoname \
 	bamdisthist bamrefdepth fastabgzfextract bamfilternames @BAMREFDEPTHPEAKS@ \
@@ -354,3 +355,8 @@ bamintervalcomment_SOURCES = programs/bamintervalcomment.cpp biobambam/Licensing
 bamintervalcomment_LDADD = ${LIBMAUSLIBS}
 bamintervalcomment_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
 bamintervalcomment_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+bamintervalcommenthist_SOURCES = programs/bamintervalcommenthist.cpp biobambam/Licensing.cpp
+bamintervalcommenthist_LDADD = ${LIBMAUSLIBS}
+bamintervalcommenthist_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+bamintervalcommenthist_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
