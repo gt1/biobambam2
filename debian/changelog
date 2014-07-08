@@ -1,3 +1,9 @@
+biobambam (0.0.152) unstable; urgency=low
+
+  * compilation fixes in libmaus 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Tue, 08 Jul 2014 10:19:02 +0100
+
 biobambam (0.0.151) unstable; urgency=low
 
   * add bamintervalcommenthist program 
