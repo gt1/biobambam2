@@ -1,3 +1,9 @@
+biobambam (0.0.153) unstable; urgency=low
+
+  * fix header rewriting in bamfilterheader2 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Tue, 08 Jul 2014 13:40:00 +0100
+
 biobambam (0.0.152) unstable; urgency=low
 
   * compilation fixes in libmaus 
