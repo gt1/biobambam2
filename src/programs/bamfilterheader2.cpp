@@ -109,9 +109,13 @@ static void filterBamUsedSequences(
 	);
 	libmaus::lz::BgzfDeflate<std::ostream> & bgzfout = *Pbgzfout;
 	
+	if ( verbose )
+		std::cerr << "[V] writing filtered header...";
 	PBHLM->serialiseSequenceSubset(bgzfout,IBV,"bamfilterheader2" /* id */,"bamfilterheader2" /* pn */,
 		arginfo.commandline /* pgCL */, PACKAGE_VERSION /* pgVN */
 	);
+	if ( verbose )
+		std::cerr << "done." << std::endl;
 
 	::libmaus::bambam::BamAlignment algn;
 	uint64_t c = 0;
@@ -158,15 +162,7 @@ static void filterBamUsedSequences(
 
 int bamfilterheader2(libmaus::util::ArgInfo const & arginfo)
 {
-	if ( ! arginfo.hasArg("I") )
-	{
-		libmaus::exception::LibMausException lme;
-		lme.getStream() << "Mandatory key I (input file) is not set.\n";
-		lme.finish();
-		throw lme;
-	}
-	
-	std::string const fn = arginfo.restargs.at(0);
+	std::string const fn = arginfo.getUnparsedRestArg(0);
 	
 	::libmaus::bitio::IndexedBitVector::unique_ptr_type PIBV;
 
