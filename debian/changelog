@@ -1,3 +1,9 @@
+biobambam (0.0.154) unstable; urgency=low
+
+  * fix outputformat=cram in factory class based alignment output 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Wed, 09 Jul 2014 00:09:32 +0100
+
 biobambam (0.0.153) unstable; urgency=low
 
   * fix header rewriting in bamfilterheader2 
