@@ -22,8 +22,7 @@
 #include <iostream>
 #include <zlib.h>
 
-#include <libmaus/bambam/BamDecoder.hpp>
-#include <libmaus/bambam/ScramDecoder.hpp>
+#include <libmaus/bambam/BamMultiAlignmentDecoderFactory.hpp>
 
 #include <libmaus/util/ArgInfo.hpp>
 
@@ -245,32 +244,19 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
 	std::string const inputformat = arginfo.getValue<std::string>("inputformat",getDefaultInputFormat());
 
-	::libmaus::bambam::BamAlignmentDecoder::unique_ptr_type const pdec
-	(
-		#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
-		//
-		inputformat == "sam"  ? new ::libmaus::bambam::ScramDecoder("/dev/stdin","r","") :
-		inputformat == "cram" ? new ::libmaus::bambam::ScramDecoder("/dev/stdin","rc", arginfo.getValue<std::string>("reference","")) :
-		inputformat == "sbam" ? new ::libmaus::bambam::ScramDecoder("/dev/stdin","rb","") :
-		#endif
-		inputformat == "bam"  ? static_cast< ::libmaus::bambam::BamAlignmentDecoder*>(new ::libmaus::bambam::BamDecoder(std::cin,false)) : NULL
-	);
-	if ( ! pdec)
-	{
-		::libmaus::exception::LibMausException se;
-		se.getStream() << "Unsupported input format \"" << inputformat << "\"" << std::endl;
-		se.finish();
-		throw se;
-	}
+	// input decoder wrapper
+	libmaus::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
+		libmaus::bambam::BamMultiAlignmentDecoderFactory::construct(arginfo));
+	::libmaus::bambam::BamAlignmentDecoder & dec = decwrapper->getDecoder();
 
-	::libmaus::bambam::BamHeader const & header = pdec->getHeader();
+	::libmaus::bambam::BamHeader const & header = dec.getHeader();
 
-	::libmaus::bambam::BamAlignment & algn = pdec->getAlignment();
+	::libmaus::bambam::BamAlignment & algn = dec.getAlignment();
 	OrderIndependentSeqDataChecksums chksums;
 	libmaus::autoarray::AutoArray<OrderIndependentSeqDataChecksums> readgroup_chksums(1 + header.getNumReadGroups(),false);
 	
 	uint64_t c = 0;
-	while ( pdec->readAlignment() )
+	while ( dec.readAlignment() )
 	{
 		chksums.push(algn);
 		readgroup_chksums[algn.getReadGroupId(header)+1].push(algn);
