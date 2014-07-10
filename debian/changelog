@@ -1,3 +1,9 @@
+biobambam (0.0.155) unstable; urgency=low
+
+  * use alignment decoder factory class in bamseqchksum 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Thu, 10 Jul 2014 15:26:42 +0100
+
 biobambam (0.0.154) unstable; urgency=low
 
   * fix outputformat=cram in factory class based alignment output 
