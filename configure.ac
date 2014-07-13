@@ -36,12 +36,11 @@ AC_ARG_ENABLE(install-experimental,
 if test "${install_experimental}" = "yes" ; then
 	BAMPARSORTINSTEXP=bamparsort
 	BAMALIGNMENTOFFSETSINSTEXP=bamalignmentoffsets
-	BLASTXMLTOBAMINSTEXP=blastnxmltobam
 else
 	BAMPARSORTNOINSTEXP=bamparsort
 	BAMALIGNMENTOFFSETSNOINSTEXP=bamalignmentoffsets	
-	BLASTXMLTOBAMNOINSTEXP=blastnxmltobam
 fi
+
 
 # check for C compiler
 CFLAGS_SAVE="${CFLAGS}"
@@ -275,6 +274,12 @@ if test "${with_xerces_c}" != "no" ; then
 	
 	BIOBAMBAM_HAVE_XERCES_C="#define BIOBAMBAM_HAVE_XERCES_C"
 	BLASTNXMLTOBAM="blastnxmltobam"
+fi
+
+if test "${install_experimental}" = "yes" ; then
+	BLASTXMLTOBAMINSTEXP=${BLASTNXMLTOBAM}
+else
+	BLASTXMLTOBAMNOINSTEXP=${BLASTNXMLTOBAM}
 fi
 
 AC_MSG_NOTICE([Using flags ${CFLAGS} for C compiler ${CC}])
