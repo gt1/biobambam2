@@ -28,16 +28,20 @@
 #include <libmaus/bambam/BamHeaderUpdate.hpp>
 #include <libmaus/bambam/BamMultiAlignmentDecoderFactory.hpp>
 #include <libmaus/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
+#include <libmaus/bambam/GeneFlatFile.hpp>
 #include <libmaus/bambam/MdNmRecalculation.hpp>
 
 #include <libmaus/lz/BgzfDeflateOutputCallbackMD5.hpp>
 #include <libmaus/lz/BufferedGzipStream.hpp>
+
+#include <libmaus/regex/PosixRegex.hpp>
 
 #include <libmaus/util/ArgInfo.hpp>
 #include <libmaus/util/TempFileRemovalContainer.hpp>
 
 #include <biobambam/BamBamConfig.hpp>
 #include <biobambam/Licensing.hpp>
+
 
 static int getDefaultMD5() { return 0; }
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
@@ -120,7 +124,10 @@ struct NamedIntervalGeneMeta
 
 std::ostream & operator<<(std::ostream & out, NamedIntervalGeneMeta const & N)
 {
-	return out << "(" << N.genename << "," << N.name << ")";
+	if ( N.genename == N.name )
+		return out << "(" << N.genename << ")";
+	else
+		return out << "(" << N.genename << "," << N.name << ")";
 }
 
 struct NamedIntervalGeneSet
@@ -161,26 +168,194 @@ struct NamedIntervalGeneSet
 			
 		return n;
 	}
+	
+	static std::string unifyTranscripts(std::string const & fn, std::string const & refregex)
+	{
+		libmaus::regex::PosixRegex regex(refregex);
+		libmaus::bambam::GeneFlatFile::unique_ptr_type PGFF(libmaus::bambam::GeneFlatFile::construct(fn));
+		std::ostringstream ostr;
+		libmaus::bambam::GeneFlatFileEntry entry;
+		
+		// compute map of chromosomes per gene
+		std::map< std::string, std::set<std::string> > genechroms;
 
+		for ( uint64_t i = 0; i < PGFF->size(); ++i )
+		{
+			PGFF->get(i,entry);
+			std::string const chrom(entry.chrom.first,entry.chrom.second);
 
-	NamedIntervalGeneSet(std::string const & fn, libmaus::bambam::BamHeader const & header)
+			if ( regex.findFirstMatch(chrom.c_str()) != -1 )
+			{
+				std::string const geneName(entry.geneName.first,entry.geneName.second);
+				genechroms[geneName].insert(chrom);
+			}
+		}
+
+		std::map< std::string,std::pair<uint64_t,uint64_t> > geneCoord;
+		std::map< std::string,std::vector<uint64_t> > geneInst;
+		
+		for ( uint64_t i = 0; i < PGFF->size(); ++i )
+		{
+			PGFF->get(i,entry);
+			std::string const chrom(entry.chrom.first,entry.chrom.second);
+
+			if ( regex.findFirstMatch(chrom.c_str()) != -1 )
+			{
+				std::string geneName(entry.geneName.first,entry.geneName.second);
+
+				// append ref seq name if gene appears on multiple ref seqs
+				if ( genechroms.find(geneName)->second.size() > 1 )
+				{
+					uint64_t minsize = std::numeric_limits<uint64_t>::max();
+					
+					for ( std::set<std::string>::const_iterator ita = genechroms.find(geneName)->second.begin();
+						ita != genechroms.find(geneName)->second.end(); ++ita )
+						minsize = std::min(minsize,ita->size());
+						
+					uint64_t minsizecnt = 0;
+					for ( std::set<std::string>::const_iterator ita = genechroms.find(geneName)->second.begin();
+						ita != genechroms.find(geneName)->second.end(); ++ita )
+						if ( ita->size() == minsize )
+							minsizecnt++;
+					
+					if ( 
+						minsizecnt > 1 
+						||
+						chrom.size() > minsize
+					)
+						geneName += (std::string("_")+chrom);
+				}
+				
+				std::map< std::string,std::pair<uint64_t,uint64_t> >::iterator ita =
+					geneCoord.find(geneName);
+			
+				if ( ita == geneCoord.end() )
+					geneCoord[geneName] = std::pair<uint64_t,uint64_t>(entry.txStart,entry.txEnd);
+				else
+				{
+					ita->second.first  = std::min(ita->second.first ,entry.txStart);
+					ita->second.second = std::max(ita->second.second,entry.txEnd);
+				}
+
+				geneInst[geneName].push_back(i);
+			}
+			else
+			{
+				// std::cerr << "[V] dropping " << chrom << std::endl; 
+			}		
+		}
+		
+		uint64_t nonuniquecnt = 0;
+		for ( std::map< std::string,std::vector<uint64_t> >::const_iterator ita = geneInst.begin(); ita != geneInst.end(); ++ita )
+		{
+			std::string const & geneName = ita->first;
+			std::vector<uint64_t> const & inst = ita->second;
+			
+			assert ( inst.size() > 0 );
+			
+			// single instance?
+			if ( inst.size() == 1 )
+			{
+				PGFF->get(inst[0],entry);
+				entry.geneName.first  = geneName.c_str();
+				entry.geneName.second = geneName.c_str() + geneName.size();
+				ostr << entry << "\n";
+			}
+			else
+			{
+				std::pair<uint64_t,uint64_t> maxcoord = geneCoord.find(geneName)->second;
+				uint64_t maxcnt = 0, maxid = inst.size();
+				
+				for ( uint64_t i = 0; i < inst.size(); ++i )
+				{
+					PGFF->get(inst[i],entry);
+					
+					if ( entry.txStart == maxcoord.first && entry.txEnd == maxcoord.second )
+					{
+						maxcnt++;
+						maxid = i;
+					}
+				}
+				
+				if ( maxcnt )
+				{
+					PGFF->get(inst[maxid],entry);
+					
+					entry.geneName.first  = geneName.c_str();
+					entry.geneName.second = geneName.c_str() + geneName.size();
+
+					if ( maxcnt > 1 )
+					{
+						entry.txStart = entry.cdsStart = maxcoord.first;
+						entry.txEnd   = entry.cdsEnd   = maxcoord.second;
+						entry.name = entry.geneName;
+						entry.exons.resize(0);
+					}
+					ostr << entry << "\n";		
+				}
+				else
+				{
+					nonuniquecnt++;
+
+					PGFF->get(inst[0],entry);
+
+					entry.geneName.first  = geneName.c_str();
+					entry.geneName.second = geneName.c_str() + geneName.size();
+
+					entry.txStart = entry.cdsStart = maxcoord.first;
+					entry.txEnd   = entry.cdsEnd   = maxcoord.second;
+					entry.name    = entry.geneName;
+					entry.exons.resize(0);
+
+					ostr << entry << "\n";		
+				}
+			}
+		}
+		
+		// std::cerr << "[V] found " << nonuniquecnt << " non unique transcript genes" << std::endl;
+		
+		// std::cerr << ostr.str();
+		
+		return ostr.str();
+	}
+
+	NamedIntervalGeneSet(
+		std::string const & fn, libmaus::bambam::BamHeader const & header,
+		bool const unify = false,
+		std::string const chromregex = ".*"
+	)
 	: ilog(-1), intervals(), meta()
 	{
-		bool const isgz = libmaus::bambam::MdNmRecalculation::isGzip(fn);
 		
+		std::istream * Pistr = 0;
+		libmaus::util::unique_ptr<std::istringstream>::type Puistr;		
 		libmaus::aio::CheckedInputStream CIS(fn);
 		libmaus::lz::BufferedGzipStream::unique_ptr_type PBGS;
-		std::istream * Pistr = 0;
-		
-		if ( isgz )
+		std::string unif;
+
+		// std::cerr << "unify " << unify << std::endl;
+
+		if ( unify )
 		{
-			libmaus::lz::BufferedGzipStream::unique_ptr_type TBGS(new libmaus::lz::BufferedGzipStream(CIS));
-			PBGS = UNIQUE_PTR_MOVE(TBGS);
-			Pistr = PBGS.get();
+			unif = unifyTranscripts(fn,chromregex);
+			libmaus::util::unique_ptr<std::istringstream>::type Tuistr(new std::istringstream(unif));
+			Puistr = UNIQUE_PTR_MOVE(Tuistr);
+			Pistr = Puistr.get();
 		}
 		else
 		{
-			Pistr = &CIS;
+			bool const isgz = libmaus::bambam::MdNmRecalculation::isGzip(fn);
+			
+			if ( isgz )
+			{
+				libmaus::lz::BufferedGzipStream::unique_ptr_type TBGS(new libmaus::lz::BufferedGzipStream(CIS));
+				PBGS = UNIQUE_PTR_MOVE(TBGS);
+				Pistr = PBGS.get();
+			}
+			else
+			{
+				Pistr = &CIS;
+			}
 		}
 		
 		std::istream & istr = *Pistr;
@@ -537,7 +712,10 @@ int bamintervalcomment(::libmaus::util::ArgInfo const & arginfo)
 		dec.disableValidation();
 	::libmaus::bambam::BamHeader const & header = dec.getHeader();
 	
-	NamedIntervalGeneSet const NIGS(arginfo.getUnparsedValue("intervals","not set"),header);
+	std::string const chromregex = arginfo.getUnparsedValue("chromregex",".*");
+	bool const unifytranscripts = arginfo.getValue<unsigned int>("unifytranscripts",false);
+	
+	NamedIntervalGeneSet const NIGS(arginfo.getUnparsedValue("intervals","not set"),header,unifytranscripts,chromregex);
 	
 	// prefix for tmp files
 	std::string const tmpfilenamebase = arginfo.getValue<std::string>("tmpfile",arginfo.getDefaultTmpFileName());
