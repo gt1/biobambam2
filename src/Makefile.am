@@ -63,13 +63,15 @@ bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamr
 	bamvalidate \
 	bamflagsplit \
 	bamintervalcomment \
-	bamintervalcommenthist
+	bamintervalcommenthist \
+	@BAMALIGNMENTOFFSETSINSTEXP@ @BLASTXMLTOBAMINSTEXP@
 
 noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments bamtoname \
 	bamdisthist bamrefdepth fastabgzfextract bamfilternames @BAMREFDEPTHPEAKS@ \
-	@BAMPARSORTNOINSTEXP@ bamheap bamfrontback bamclipextract @BLASTNXMLTOBAM@ bamalignmentoffsets
+	@BAMPARSORTNOINSTEXP@ bamheap bamfrontback bamclipextract \
+	@BAMALIGNMENTOFFSETSNOINSTEXP@ @BLASTXMLTOBAMNOINSTEXP@
 	
-EXTRA_PROGRAMS = bamrefdepthpeaks bamparsort blastnxmltobam
+EXTRA_PROGRAMS = bamrefdepthpeaks bamparsort blastnxmltobam bamalignmentoffsets
 
 bamcollate_SOURCES = programs/bamcollate.cpp biobambam/Licensing.cpp
 bamcollate_LDADD = ${LIBMAUSLIBS}
