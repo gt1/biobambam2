@@ -210,7 +210,10 @@ struct NamedIntervalGeneSet
 					
 					for ( std::set<std::string>::const_iterator ita = genechroms.find(geneName)->second.begin();
 						ita != genechroms.find(geneName)->second.end(); ++ita )
-						minsize = std::min(minsize,ita->size());
+						minsize = std::min(
+							static_cast<uint64_t>(minsize),
+							static_cast<uint64_t>(ita->size())
+						);
 						
 					uint64_t minsizecnt = 0;
 					for ( std::set<std::string>::const_iterator ita = genechroms.find(geneName)->second.begin();
