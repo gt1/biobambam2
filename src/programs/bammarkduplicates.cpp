@@ -213,6 +213,10 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	{
 		libmaus::trie::SimpleTrie::unique_ptr_type Ttagtrie(new libmaus::trie::SimpleTrie);
 		Ptagtrie = UNIQUE_PTR_MOVE(Ttagtrie);
+		
+		// allocate tag id 0 for empty tag
+		uint8_t const * p = 0;
+		Ptagtrie->insert(p,p);
 	}
 
 	// prefix for tmp files
