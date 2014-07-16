@@ -1,3 +1,9 @@
+biobambam (0.0.157) unstable; urgency=low
+
+  * add tag option in bammarkduplicates and bammarkduplicates2 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Wed, 16 Jul 2014 14:33:51 +0100
+
 biobambam (0.0.156) unstable; urgency=low
 
   * try to avoid collation failure due to too many open files
