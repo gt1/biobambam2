@@ -55,6 +55,7 @@
 #include <libmaus/math/iabs.hpp>
 #include <libmaus/math/numbits.hpp>
 #include <libmaus/timing/RealTimeClock.hpp>
+#include <libmaus/trie/SimpleTrie.hpp>
 #include <libmaus/util/ArgInfo.hpp>
 #include <libmaus/util/ContainerGetObject.hpp>
 #include <libmaus/util/MemUsage.hpp>
@@ -864,7 +865,8 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 	void addAlignmentPair(
 		::libmaus::bambam::BamAlignment const & A, ::libmaus::bambam::BamAlignment const & B,
 		::libmaus::bambam::ReadEndsContainer * pairREC,
-		::libmaus::bambam::BamHeader const & header
+		::libmaus::bambam::BamHeader const & header,
+		uint64_t tagid
 	)
 	{
 		active_count_type const bkey(B.getRefID(),B.getCoordinate(),0,0);
@@ -920,7 +922,7 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 								<< B.formatAlignment(header) << "\n";
 							#endif
 							expungeUntilPairs(B,pairREC,header);
-							pairREC->putPair(A,B,header);
+							pairREC->putPair(A,B,header,tagid);
 							excntpairs += 1;
 						}
 					}
@@ -932,7 +934,7 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 						// BamAlignmentPairListNode * ptr = APFLpairs.get();
 						active_count_type::list_node_type * ptr = APFLpairs.get();
 						#if defined(POS_READ_ENDS)
-						libmaus::bambam::ReadEndsBase::fillFragPair(A,B,header,ptr->A);
+						libmaus::bambam::ReadEndsBase::fillFragPair(A,B,header,ptr->A,tagid);
 						#else
 						ptr->A[0].copyFrom(A);
 						ptr->A[1].copyFrom(B);
@@ -949,7 +951,7 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 			{
 				// interval was already handled and this read pair
 				// is too late, handle it by writing it out
-				pairREC->putPair(A,B,header);
+				pairREC->putPair(A,B,header,tagid);
 				excntpairs += 1;
 				done = true;
 			}
@@ -962,7 +964,8 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 	void addAlignmentFrag(
 		::libmaus::bambam::BamAlignment const & B,
 		::libmaus::bambam::ReadEndsContainer * fragREC,
-		::libmaus::bambam::BamHeader const & header
+		::libmaus::bambam::BamHeader const & header,
+		uint64_t const tagid
 	)
 	{
 		if ( B.getLseq() > maxreadlength )
@@ -1007,7 +1010,7 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 					// copy alignments
 					active_count_type::list_node_type * ptr = APFLfrags.get();
 					ptr->A.reset();
-					libmaus::bambam::ReadEndsBase::fillFrag(B,header,ptr->A);
+					libmaus::bambam::ReadEndsBase::fillFrag(B,header,ptr->A,tagid);
 					ita->addAlignmentPair(ptr);
 					ita->incOut();
 
@@ -1019,7 +1022,7 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 			{
 				// interval was already handled and this frag
 				// is too late, handle it by writing it out
-				fragREC->putFrag(B,header);
+				fragREC->putFrag(B,header,tagid);
 				excntfrags += 1;
 				done = true;
 			}
@@ -1152,6 +1155,34 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 
 	// buffer size for fragment and pair data
 	uint64_t const maxreadlength = arginfo.getValueUnsignedNumeric<uint64_t>("maxreadlength",getDefaultMaxReadLength());
+
+	// tag field
+	bool const havetag = arginfo.hasArg("tag");
+	std::string const tag = arginfo.getUnparsedValue("tag","no tag");
+	libmaus::trie::SimpleTrie::unique_ptr_type Ptagtrie;
+	
+	if ( havetag 
+		&& 
+			(
+				tag.size() != 2 
+				||
+				(!isalpha(tag[0]))
+				||
+				(!isalnum(tag[1]))
+			)
+	)
+	{
+		::libmaus::exception::LibMausException se;
+		se.getStream() << "tag " << tag << " is invalid" << std::endl;
+		se.finish();
+		throw se;			
+	}
+	
+	if ( havetag )
+	{
+		libmaus::trie::SimpleTrie::unique_ptr_type Ttagtrie(new libmaus::trie::SimpleTrie);
+		Ptagtrie = UNIQUE_PTR_MOVE(Ttagtrie);
+	}
 
 	// prefix for tmp files
 	std::string const tmpfilenamebase = arginfo.getValue<std::string>("tmpfile",arginfo.getDefaultTmpFileName());
@@ -1381,6 +1412,13 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	
 	PTI->setDupSetCallback(&DSCV);
 	PTI->setMaxReadLength(maxreadlength);
+
+	char const * ctag = havetag ? tag.c_str() : 0;
+	char const * tag1 = 0;
+	char const * tag2 = 0;
+	libmaus::autoarray::AutoArray<char> tagbuffer;
+	uint64_t taglen = 0;
+	uint64_t tagid = 0;
 	
 	while ( CBD->tryPair(P) )
 	{
@@ -1434,7 +1472,52 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 				met.unpaired++;
 			}
 		}
-	
+
+		// try to extract tag if any was given
+		if ( havetag )
+		{
+			// length of tags for read1 and read2
+			uint64_t l1 = 0, l2 = 0;
+			
+			// aux lookup for read1
+			if ( P.first )
+			{
+				tag1 = P.first->getAuxString(ctag);
+				l1 = tag1 ? strlen(tag1) : 0;
+			}
+			// aux lookup for read2
+			if ( P.second )
+			{
+				tag2 = P.second->getAuxString(ctag);
+				l2 = tag2 ? strlen(tag2) : 0;
+			}
+			
+			// length of concatenated tag
+			taglen = l1 + l2 + 2;
+			// expand buffer if necessary
+			if ( taglen > tagbuffer.size() )
+				tagbuffer = libmaus::autoarray::AutoArray<char>(taglen,false);
+
+			// concatenate tags
+			char * outptr = tagbuffer.begin();
+
+			memcpy(outptr,tag1,l1);
+			outptr += l1;
+			*(outptr++) = 0;
+
+			memcpy(outptr,tag2,l2);
+			outptr += l2;
+			*(outptr++) = 0;
+
+			assert ( outptr - tagbuffer.begin() == static_cast<ptrdiff_t>(taglen) );
+
+			// look up tag id			
+			tagid = Ptagtrie->insert(
+				tagbuffer.begin(),
+				outptr
+			);
+		}
+
 		// we are not interested in unmapped reads, ignore them
 		if ( P.first && P.first->isUnmap() )
 		{
@@ -1496,7 +1579,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 			// simple one, register it
 			if (  BamAlignmentInputPositionCallbackDupMark::isSimplePair(*(P.second)) )
 			{
-				PTI->addAlignmentPair(*(P.first),*(P.second),pairREC.get(),bamheader);
+				PTI->addAlignmentPair(*(P.first),*(P.second),pairREC.get(),bamheader,tagid);
 				PTI->checkFinishedPairs(pairREC.get(),bamheader);
 			}
 			// strangely mapped pairs, mark right coordinate as expunged
@@ -1504,7 +1587,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 			{
 				PTI->setExpungePairs(*(P.second));
 				PTI->strcntpairs += 1;
-				pairREC->putPair(*(P.first),*(P.second),bamheader);
+				pairREC->putPair(*(P.first),*(P.second),bamheader,tagid);
 			}
 
 			paircnt++;
@@ -1512,12 +1595,12 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 		
 		if ( P.first )
 		{
-			PTI->addAlignmentFrag(*(P.first),fragREC.get(),bamheader);
+			PTI->addAlignmentFrag(*(P.first),fragREC.get(),bamheader,tagid);
 			fragcnt++;
 		}
 		if ( P.second )
 		{
-			PTI->addAlignmentFrag(*(P.second),fragREC.get(),bamheader);
+			PTI->addAlignmentFrag(*(P.second),fragREC.get(),bamheader,tagid);
 			fragcnt++;
 		}	
 		
@@ -1762,6 +1845,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "indexfilename=<filename>", "file name for BAM index file (default: extend output file name)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "trackfreelistsize=<["+::biobambam::Licensing::formatNumber(PositionTrackCallback::getDefaultFreeListSize())+"]>", "tracking lists free pool size" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "inputbuffersize=<["+::biobambam::Licensing::formatNumber(getDefaultInputBufferSize())+"]>", "size of input buffer" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "tag=<[a-zA-Z][a-zA-Z0-9]>", "aux field id for tag string extraction" ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 

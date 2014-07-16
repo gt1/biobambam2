@@ -1,7 +1,7 @@
 /**
     bambam
-    Copyright (C) 2009-2013 German Tischler
-    Copyright (C) 2011-2013 Genome Research Limited
+    Copyright (C) 2009-2014 German Tischler
+    Copyright (C) 2011-2014 Genome Research Limited
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -47,6 +47,7 @@
 #include <libmaus/math/iabs.hpp>
 #include <libmaus/math/numbits.hpp>
 #include <libmaus/timing/RealTimeClock.hpp>
+#include <libmaus/trie/SimpleTrie.hpp>
 #include <libmaus/util/ArgInfo.hpp>
 #include <libmaus/util/ContainerGetObject.hpp>
 #include <libmaus/util/MemUsage.hpp>
@@ -186,6 +187,33 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	// rewritten file should be in bam format, if input is given via stdin
 	unsigned int const rewritebam = arginfo.getValue<unsigned int>("rewritebam",getDefaultRewriteBam());
 	int const rewritebamlevel = libmaus::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("rewritebamlevel",getDefaultRewriteBamLevel()));
+	// tag field
+	bool const havetag = arginfo.hasArg("tag");
+	std::string const tag = arginfo.getUnparsedValue("tag","no tag");
+	libmaus::trie::SimpleTrie::unique_ptr_type Ptagtrie;
+	
+	if ( havetag 
+		&& 
+			(
+				tag.size() != 2 
+				||
+				(!isalpha(tag[0]))
+				||
+				(!isalnum(tag[1]))
+			)
+	)
+	{
+		::libmaus::exception::LibMausException se;
+		se.getStream() << "tag " << tag << " is invalid" << std::endl;
+		se.finish();
+		throw se;			
+	}
+	
+	if ( havetag )
+	{
+		libmaus::trie::SimpleTrie::unique_ptr_type Ttagtrie(new libmaus::trie::SimpleTrie);
+		Ptagtrie = UNIQUE_PTR_MOVE(Ttagtrie);
+	}
 
 	// prefix for tmp files
 	std::string const tmpfilenamebase = arginfo.getValue<std::string>("tmpfile",arginfo.getDefaultTmpFileName());
@@ -374,6 +402,12 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	#endif
 	
 	libmaus::timing::RealTimeClock readinrtc; readinrtc.start();
+	char const * ctag = havetag ? tag.c_str() : 0;
+	char const * tag1 = 0;
+	char const * tag2 = 0;
+	libmaus::autoarray::AutoArray<char> tagbuffer;
+	uint64_t taglen = 0;
+	uint64_t tagid = 0;
 	
 	while ( CBD->tryPair(P) )
 	{
@@ -421,8 +455,53 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 				met.unpaired++;
 			}
 		}
-	
-		// we are not interested in unmapped reads, ignore them
+
+		// try to extract tag if any was given
+		if ( havetag )
+		{
+			// length of tags for read1 and read2
+			uint64_t l1 = 0, l2 = 0;
+			
+			// aux lookup for read1
+			if ( P.first )
+			{
+				tag1 = P.first->getAuxString(ctag);
+				l1 = tag1 ? strlen(tag1) : 0;
+			}
+			// aux lookup for read2
+			if ( P.second )
+			{
+				tag2 = P.second->getAuxString(ctag);
+				l2 = tag2 ? strlen(tag2) : 0;
+			}
+			
+			// length of concatenated tag
+			taglen = l1 + l2 + 2;
+			// expand buffer if necessary
+			if ( taglen > tagbuffer.size() )
+				tagbuffer = libmaus::autoarray::AutoArray<char>(taglen,false);
+
+			// concatenate tags
+			char * outptr = tagbuffer.begin();
+
+			memcpy(outptr,tag1,l1);
+			outptr += l1;
+			*(outptr++) = 0;
+
+			memcpy(outptr,tag2,l2);
+			outptr += l2;
+			*(outptr++) = 0;
+
+			assert ( outptr - tagbuffer.begin() == static_cast<ptrdiff_t>(taglen) );
+
+			// look up tag id			
+			tagid = Ptagtrie->insert(
+				tagbuffer.begin(),
+				outptr
+			);
+		}
+			
+		// we are not interested in unmapped reads below, ignore them
 		if ( P.first && P.first->isUnmap() )
 		{
 			P.first = 0;
@@ -466,18 +545,18 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 				std::swap(P.first,P.second);
 			}
 		
-			pairREC->putPair(*(P.first),*(P.second),bamheader);
+			pairREC->putPair(*(P.first),*(P.second),bamheader,tagid);
 			paircnt++;
 		}
 	
 		if ( P.first )
 		{
-			fragREC->putFrag(*(P.first),bamheader);				
+			fragREC->putFrag(*(P.first),bamheader,tagid);
 			fragcnt++;
 		}
 		if ( P.second )
 		{
-			fragREC->putFrag(*(P.second),bamheader);
+			fragREC->putFrag(*(P.second),bamheader,tagid);
 			fragcnt++;
 		}	
 		
@@ -704,6 +783,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "md5filename=<filename>", "file name for md5 check sum (default: extend output file name)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "indexfilename=<filename>", "file name for BAM index file (default: extend output file name)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "tag=<[a-zA-Z][a-zA-Z0-9]>", "aux field id for tag string extraction" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "colhashbits=<["+::biobambam::Licensing::formatNumber(getDefaultColHashBits())+"]>", "log_2 of size of hash table used for collation" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "collistsize=<["+::biobambam::Licensing::formatNumber(getDefaultColListSize())+"]>", "output list size for collation" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "fragbufsize=<["+::biobambam::Licensing::formatNumber(getDefaultFragBufSize())+"]>", "size of each fragment/pair file buffer in bytes" ) );
