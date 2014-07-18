@@ -48,6 +48,7 @@
 #include <libmaus/bambam/ProgramHeaderLineSet.hpp>
 #include <libmaus/bambam/ReadEndsContainer.hpp>
 #include <libmaus/bambam/SortedFragDecoder.hpp>
+#include <libmaus/fastx/FastATwoBitTable.hpp>
 #include <libmaus/bitio/BitVector.hpp>
 #include <libmaus/lz/BgzfInflateDeflateParallel.hpp>
 #include <libmaus/lz/BgzfRecode.hpp>
@@ -1156,21 +1157,19 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	// buffer size for fragment and pair data
 	uint64_t const maxreadlength = arginfo.getValueUnsignedNumeric<uint64_t>("maxreadlength",getDefaultMaxReadLength());
 
+	enum tag_type_enum
+	{
+		tag_type_none,
+		tag_type_string,
+		tag_type_nucleotide
+	};
+
 	// tag field
 	bool const havetag = arginfo.hasArg("tag");
 	std::string const tag = arginfo.getUnparsedValue("tag","no tag");
 	libmaus::trie::SimpleTrie::unique_ptr_type Ptagtrie;
-	
-	if ( havetag 
-		&& 
-			(
-				tag.size() != 2 
-				||
-				(!isalpha(tag[0]))
-				||
-				(!isalnum(tag[1]))
-			)
-	)
+
+	if ( havetag && (tag.size() != 2 || (!isalpha(tag[0])) || (!isalnum(tag[1])) ) )
 	{
 		::libmaus::exception::LibMausException se;
 		se.getStream() << "tag " << tag << " is invalid" << std::endl;
@@ -1187,6 +1186,44 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 		uint8_t const * p = 0;
 		Ptagtrie->insert(p,p);
 	}
+
+	// nucl tag field
+	bool const havenucltag = arginfo.hasArg("nucltag");
+	std::string const nucltag = arginfo.getUnparsedValue("nucltag","no tag");
+
+	if ( havenucltag && (nucltag.size() != 2 || (!isalpha(nucltag[0])) || (!isalnum(nucltag[1])) ) )
+	{
+		::libmaus::exception::LibMausException se;
+		se.getStream() << "nucltag " << tag << " is invalid" << std::endl;
+		se.finish();
+		throw se;			
+	}
+	
+	if ( havetag && havenucltag )
+	{
+		::libmaus::exception::LibMausException se;
+		se.getStream() << "tag and nucltag are mutually exclusive" << std::endl;
+		se.finish();
+		throw se;					
+	}
+	
+	tag_type_enum tag_type;
+	
+	if ( havetag )
+		tag_type = tag_type_string;
+	else if ( havenucltag )
+		tag_type = tag_type_nucleotide;
+	else
+		tag_type = tag_type_none;
+
+	char const * ctag = havetag ? tag.c_str() : 0;
+	char const * cnucltag = havenucltag ? nucltag.c_str() : 0;
+	char const * tag1 = 0;
+	char const * tag2 = 0;
+	libmaus::autoarray::AutoArray<char> tagbuffer;
+	uint64_t taglen = 0;
+	uint64_t tagid = 0;
+	libmaus::fastx::FastATwoBitTable const FATBT;
 
 	// prefix for tmp files
 	std::string const tmpfilenamebase = arginfo.getValue<std::string>("tmpfile",arginfo.getDefaultTmpFileName());
@@ -1417,12 +1454,6 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	PTI->setDupSetCallback(&DSCV);
 	PTI->setMaxReadLength(maxreadlength);
 
-	char const * ctag = havetag ? tag.c_str() : 0;
-	char const * tag1 = 0;
-	char const * tag2 = 0;
-	libmaus::autoarray::AutoArray<char> tagbuffer;
-	uint64_t taglen = 0;
-	uint64_t tagid = 0;
 	
 	while ( CBD->tryPair(P) )
 	{
@@ -1476,50 +1507,72 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 				met.unpaired++;
 			}
 		}
-
-		// try to extract tag if any was given
-		if ( havetag )
+		
+		switch ( tag_type )
 		{
-			// length of tags for read1 and read2
-			uint64_t l1 = 0, l2 = 0;
-			
-			// aux lookup for read1
-			if ( P.first )
+			case tag_type_string:
 			{
-				tag1 = P.first->getAuxString(ctag);
-				l1 = tag1 ? strlen(tag1) : 0;
+				// length of tags for read1 and read2
+				uint64_t l1 = 0, l2 = 0;
+				
+				// aux lookup for read1
+				if ( P.first )
+				{
+					tag1 = P.first->getAuxString(ctag);
+					l1 = tag1 ? strlen(tag1) : 0;
+				}
+				// aux lookup for read2
+				if ( P.second )
+				{
+					tag2 = P.second->getAuxString(ctag);
+					l2 = tag2 ? strlen(tag2) : 0;
+				}
+				
+				// length of concatenated tag
+				taglen = l1 + l2 + 2;
+				// expand buffer if necessary
+				if ( taglen > tagbuffer.size() )
+					tagbuffer = libmaus::autoarray::AutoArray<char>(taglen,false);
+
+				// concatenate tags
+				char * outptr = tagbuffer.begin();
+
+				memcpy(outptr,tag1,l1);
+				outptr += l1;
+				*(outptr++) = 0;
+
+				memcpy(outptr,tag2,l2);
+				outptr += l2;
+				*(outptr++) = 0;
+
+				assert ( outptr - tagbuffer.begin() == static_cast<ptrdiff_t>(taglen) );
+
+				// look up tag id			
+				tagid = Ptagtrie->insert(
+					tagbuffer.begin(),
+					outptr
+				);
+
+				break;
 			}
-			// aux lookup for read2
-			if ( P.second )
+			case tag_type_nucleotide:
 			{
-				tag2 = P.second->getAuxString(ctag);
-				l2 = tag2 ? strlen(tag2) : 0;
+				// aux lookup for read1
+				if ( P.first )
+					tag1 = P.first->getAuxString(cnucltag);
+				// aux lookup for read2
+				if ( P.second )
+					tag2 = P.second->getAuxString(cnucltag);
+
+				tagid = (FATBT(tag1) << 32) | FATBT(tag2);
+				
+				break;
 			}
-			
-			// length of concatenated tag
-			taglen = l1 + l2 + 2;
-			// expand buffer if necessary
-			if ( taglen > tagbuffer.size() )
-				tagbuffer = libmaus::autoarray::AutoArray<char>(taglen,false);
-
-			// concatenate tags
-			char * outptr = tagbuffer.begin();
-
-			memcpy(outptr,tag1,l1);
-			outptr += l1;
-			*(outptr++) = 0;
-
-			memcpy(outptr,tag2,l2);
-			outptr += l2;
-			*(outptr++) = 0;
-
-			assert ( outptr - tagbuffer.begin() == static_cast<ptrdiff_t>(taglen) );
-
-			// look up tag id			
-			tagid = Ptagtrie->insert(
-				tagbuffer.begin(),
-				outptr
-			);
+			default:
+			{
+				tagid = 0;
+				break;
+			}
 		}
 
 		// we are not interested in unmapped reads, ignore them
@@ -1850,6 +1903,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "trackfreelistsize=<["+::biobambam::Licensing::formatNumber(PositionTrackCallback::getDefaultFreeListSize())+"]>", "tracking lists free pool size" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "inputbuffersize=<["+::biobambam::Licensing::formatNumber(getDefaultInputBufferSize())+"]>", "size of input buffer" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "tag=<[a-zA-Z][a-zA-Z0-9]>", "aux field id for tag string extraction" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "nucltag=<[a-zA-Z][a-zA-Z0-9]>", "aux field id for nucleotide tag extraction" ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 

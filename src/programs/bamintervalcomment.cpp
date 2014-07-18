@@ -770,6 +770,7 @@ int bamintervalcomment(::libmaus::util::ArgInfo const & arginfo)
 	COfilter.set("CO");
 	uint64_t c = 0;
 	std::vector<uint64_t> matchingIntervals;
+	bool const coord = arginfo.getValue<unsigned int>("coord",0);
 	
 	while ( dec.readAlignment() )
 	{
@@ -780,7 +781,31 @@ int bamintervalcomment(::libmaus::util::ArgInfo const & arginfo)
 			std::ostringstream ostr;
 			for ( uint64_t i = 0; i < matchingIntervals.size(); ++i )
 			{
-				ostr << ((i>0)?";":"") << NIGS.meta[NIGS.intervals[matchingIntervals[i]].name];
+				ostr << ((i>0)?";":"");
+				
+				NamedInterval const & NI = NIGS.intervals[matchingIntervals[i]];
+				uint64_t const nameid = NI.name;
+				NamedIntervalGeneMeta const & meta = NIGS.meta[nameid];
+				
+				if ( coord )
+				{
+					ostr << "(";
+
+					#if 0					
+					if ( meta.name != meta.genename )
+						ostr << meta.genename << "," << meta.name;
+					else
+					#endif
+						ostr << meta.genename;
+					
+					ostr << "," << header.getRefIDName(NI.refseq);
+					ostr << "," << NI.from;
+					ostr << "," << NI.to;
+					
+					ostr << ")";					
+				}
+				else
+					ostr << NIGS.meta[nameid];
 			}
 			curalgn.filterOutAux(COfilter);
 			curalgn.putAuxString("CO",ostr.str());
