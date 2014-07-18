@@ -1,3 +1,9 @@
+biobambam (0.0.159) unstable; urgency=low
+
+  * add nucltag option in bammarkduplicates and bammarkduplicates2 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Fri, 18 Jul 2014 20:07:14 +0100
+
 biobambam (0.0.158) unstable; urgency=low
 
   * assign unique tag id to reads without a tag field in bammarkduplicates and bammarkduplicates2 
