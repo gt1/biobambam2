@@ -140,6 +140,27 @@ nucleotides (A,C,G or T) as tags. The length of each tag sequence is not
 allowed to exceed 15 bases. All tags are required to have the same length.
 Each non nucleotide symbol is mapped to A. In constrast to the tag option, 
 nucltag uses less memory for processing and can be expected to be faster.
+.PP
+.B D
+ouptut file name for removed duplicates if rmdup=1. By default the reads and
+read pairs marked as duplicates are discarded when rmdup=1. If the D key is
+set, then the sequence of reads which is not written to the output file is
+written to a separate file. The name of this separate file is the value of
+the D key.
+.PP
+.B dupmd5=<0|1>:
+compute md5 checksum of file given by D key if rmdup=1. By default no md5
+checksum is computed for this file.
+.PP
+.B dupmd5filename:
+file name for storing the md5 checksum of the D file if rmdup=1, D is set and dupmd5=1.
+.PP
+.B dupindex=<0|1>:
+compute BAM index for file given by D key if rmdup=1. By default no index
+is compute for this file.
+.PP
+.B dupindexfilename:
+file name for storing the BAM index of the D file if rmdup=1, D is set and dupmd5=1.
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"
