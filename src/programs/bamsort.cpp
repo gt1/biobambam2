@@ -62,6 +62,7 @@ static int getDefaultSortThreads() { return 1; }
 static int getDefaultCalMdNm() { return 0; }
 static int getDefaultCalMdNmRecompIndetOnly() { return 0; }
 static int getDefaultCalMdNmWarnChange() { return 0; }
+static int getDefaultAddDupMarkSupport() { return 0; }
 
 int bamsort(::libmaus::util::ArgInfo const & arginfo)
 {
@@ -98,6 +99,7 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 	uint64_t blockmem = arginfo.getValue<uint64_t>("blockmb",getDefaultBlockSize())*1024*1024;
 	std::string const sortorder = arginfo.getValue<std::string>("SO","coordinate");
 	bool const fixmates = arginfo.getValue<int>("fixmates",getDefaultFixMates());
+	bool const addMSMC = arginfo.getValue<int>("adddupmarksupport",getDefaultAddDupMarkSupport());
 	uint64_t sortthreads = arginfo.getValue<uint64_t>("sortthreads",getDefaultSortThreads());
 
 	// input decoder wrapper
@@ -198,7 +200,11 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 			bool prevalgnvalid = false;
 			// MQ field filter
 			libmaus::bambam::BamAuxFilterVector MQfilter;
+			libmaus::bambam::BamAuxFilterVector MSfilter;
+			libmaus::bambam::BamAuxFilterVector MCfilter;
 			MQfilter.set("MQ");
+			MSfilter.set("MS");
+			MCfilter.set("MC");
 			
 			while ( dec.readAlignment() )
 			{
@@ -218,6 +224,13 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 					else
 					{
 						libmaus::bambam::BamAlignment::fixMateInformation(prevalgn,curalgn,MQfilter);
+
+						if ( addMSMC )
+						{
+							libmaus::bambam::BamAlignment::addMateBaseScore(prevalgn,curalgn,MSfilter);
+							libmaus::bambam::BamAlignment::addMateCoordinate(prevalgn,curalgn,MCfilter);
+						}
+
 						BEC.putAlignment(prevalgn);
 						BEC.putAlignment(curalgn);
 						prevalgnvalid = false;
@@ -262,7 +275,11 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 			bool prevalgnvalid = false;
 			// MQ field filter
 			libmaus::bambam::BamAuxFilterVector MQfilter;
+			libmaus::bambam::BamAuxFilterVector MSfilter;
+			libmaus::bambam::BamAuxFilterVector MCfilter;
 			MQfilter.set("MQ");
+			MSfilter.set("MS");
+			MCfilter.set("MC");
 			
 			while ( dec.readAlignment() )
 			{
@@ -282,6 +299,13 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 					else
 					{
 						libmaus::bambam::BamAlignment::fixMateInformation(prevalgn,curalgn,MQfilter);
+
+						if ( addMSMC )
+						{
+							libmaus::bambam::BamAlignment::addMateBaseScore(prevalgn,curalgn,MSfilter);
+							libmaus::bambam::BamAlignment::addMateCoordinate(prevalgn,curalgn,MCfilter);
+						}
+
 						BEC.putAlignment(prevalgn);
 						BEC.putAlignment(curalgn);
 						prevalgnvalid = false;
@@ -445,6 +469,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( std::string("calmdnmreference=<[]>"), "reference for calculating MD and NM aux fields (calmdnm=1 only)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("calmdnmrecompindetonly=<[")+::biobambam::Licensing::formatNumber(getDefaultCalMdNm())+"]>", "only recalculate MD and NM in the presence of indeterminate bases (calmdnm=1 only)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("calmdnmwarnchange=<[")+::biobambam::Licensing::formatNumber(getDefaultCalMdNmWarnChange())+"]>", "warn when changing existing MD/NM fields (calmdnm=1 only)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("adddupmarksupport=<[")+::biobambam::Licensing::formatNumber(getDefaultAddDupMarkSupport())+"]>", "add info for streaming duplicate marking (for name collated input only, ignored for fixmate=0, disabled by default)" ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 
