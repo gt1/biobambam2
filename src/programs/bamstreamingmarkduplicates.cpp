@@ -29,6 +29,7 @@
 #include <libmaus/bambam/BamDecoder.hpp>
 #include <libmaus/bambam/BamWriter.hpp>
 #include <libmaus/bambam/BamHeaderUpdate.hpp>
+#include <libmaus/bambam/DuplicationMetrics.hpp>
 #include <libmaus/bambam/ReadEnds.hpp>
 #include <libmaus/lru/SparseLRUFileBunch.hpp>
 #include <libmaus/types/types.hpp>
@@ -625,13 +626,27 @@ int main(int argc, char *argv[])
 		pair_fragment_hash_type Hpairfragments;
 		
 		uint64_t cnt = 0;
-		uint64_t nextout = 0;
-				
+
+		std::map<uint64_t,::libmaus::bambam::DuplicationMetrics> metrics;
+		
+		libmaus::timing::RealTimeClock globalrtc;
+		globalrtc.start();
+		libmaus::timing::RealTimeClock batchrtc;
+		batchrtc.start();
+					
 		while ( dec.readAlignment() )
 		{
 			int64_t const thisref = algn.getRefID();
 			int64_t const thispos = algn.getPos();
+
+			uint64_t const thislib = algn.getLibraryId(header);
+			::libmaus::bambam::DuplicationMetrics & met = metrics[thislib];
 			
+			if ( ! algn.isMapped() )
+				++met.unmapped;
+                        else if ( (!algn.isPaired()) || algn.isMateUnmap() )
+                        	++met.unpaired;
+
 			if ( 
 				// supplementary alignment
 				algn.isSupplementary() 
@@ -660,6 +675,9 @@ int main(int argc, char *argv[])
 				algn.isMateMapped()
 			)
 			{
+				if ( algn.isRead1() )
+					met.readpairsexamined++;
+			
 				/* 
 				 * build the hash key containing
 				 *
@@ -722,7 +740,10 @@ int main(int argc, char *argv[])
 						std::cerr << "tscore=" << tscore << " oscore=" << oscore << " tscoreadd=" << tscoreadd << std::endl;
 					}
 					#endif
-					
+
+					// update metrics
+					met.readpairduplicates++;
+
 					// this score is greater
 					if ( (tscore+tscoreadd) > oscore )
 					{
@@ -774,6 +795,9 @@ int main(int argc, char *argv[])
 					int64_t const oscore = oalgn->getScore();
 					// score for this alignment
 					int64_t const tscore = algn.getScore();
+
+					// update metrics
+					met.unpairedreadduplicates += 1;
 					
 					// this score is greater
 					if ( tscore > oscore )
@@ -848,7 +872,12 @@ int main(int argc, char *argv[])
 				libmaus::bambam::BamAlignment * palgn = it->second;
 				
 				if ( Hpairfragments.find(HK) != Hpairfragments.end() )
+				{
+					// update metrics
+					met.unpairedreadduplicates += 1;
+					
 					palgn->putFlags(palgn->getFlags() | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FDUP);				
+				}
 			
 				OQ.push(palgn);
 				
@@ -876,7 +905,20 @@ int main(int argc, char *argv[])
 			}
 			
 			if ( (++cnt % (1024*1024)) == 0 )
-				std::cerr << "[V] " << cnt << " " << OQ.nextout << " " << Qpair.size() << " " << Qfragment.size() << " " << libmaus::util::MemUsage() << std::endl;
+			{
+				std::cerr 
+					<< "[V] " 
+					<< cnt << " " 
+					<< OQ.nextout << " " 
+					<< Qpair.size() << " " 
+					<< Qfragment.size() << " " 
+					<< libmaus::util::MemUsage() << " "
+					<< globalrtc.formatTime(globalrtc.getElapsedSeconds()) << " "
+					<< batchrtc.formatTime(batchrtc.getElapsedSeconds())
+					<< std::endl;
+				
+				batchrtc.start();
+			}
 		}
 
 		while ( Qpair.size () )
@@ -902,7 +944,12 @@ int main(int argc, char *argv[])
 			libmaus::bambam::BamAlignment * palgn = it->second;
 			
 			if ( Hpairfragments.find(HK) != Hpairfragments.end() )
+			{
+				// update metrics
+				metrics[HK.getLibrary()].unpairedreadduplicates += 1;
+				
 				palgn->putFlags(palgn->getFlags() | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FDUP);				
+			}
 		
 			OQ.push(palgn);
 			
@@ -922,6 +969,50 @@ int main(int argc, char *argv[])
 		}
 
 		OQ.flush();
+
+		// we have counted duplicated pairs for both ends, so divide by two
+		for ( std::map<uint64_t,::libmaus::bambam::DuplicationMetrics>::iterator ita = metrics.begin(); ita != metrics.end();
+			++ita )
+			ita->second.readpairduplicates /= 2;
+
+		/**
+		 * write metrics
+		 **/
+		::libmaus::aio::CheckedOutputStream::unique_ptr_type pM;
+		std::ostream * pmetricstr = 0;
+		
+		if ( arginfo.hasArg("M") && (arginfo.getValue<std::string>("M","") != "") )
+		{
+			::libmaus::aio::CheckedOutputStream::unique_ptr_type tpM(
+					new ::libmaus::aio::CheckedOutputStream(arginfo.getValue<std::string>("M",std::string("M")))
+				);
+			pM = UNIQUE_PTR_MOVE(tpM);
+			pmetricstr = pM.get();
+		}
+		else
+		{
+			pmetricstr = & std::cerr;
+		}
+
+		std::ostream & metricsstr = *pmetricstr;
+
+		::libmaus::bambam::DuplicationMetrics::printFormatHeader(arginfo.commandline,metricsstr);
+		for ( std::map<uint64_t,::libmaus::bambam::DuplicationMetrics>::const_iterator ita = metrics.begin(); ita != metrics.end();
+			++ita )
+			ita->second.format(metricsstr, header.getLibraryName(ita->first));
+		
+		if ( metrics.size() == 1 )
+		{
+			metricsstr << std::endl;
+			metricsstr << "## HISTOGRAM\nBIN\tVALUE" << std::endl;
+			metrics.begin()->second.printHistogram(metricsstr);
+		}
+		
+		metricsstr.flush();
+		pM.reset();
+		/*
+		 * end of metrics file writing
+		 */
 	}
 	catch(std::exception const & ex)
 	{
