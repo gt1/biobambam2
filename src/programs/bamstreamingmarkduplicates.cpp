@@ -36,7 +36,8 @@
 #include <libmaus/util/ArgInfo.hpp>
 #include <libmaus/util/GrowingFreeList.hpp>
 #include <libmaus/util/MemUsage.hpp>
-#include <libmaus/util/SimpleHashMap.hpp>
+#include <libmaus/util/SimpleHashMapInsDel.hpp>
+#include <libmaus/util/SimpleHashSetInsDel.hpp>
 #include <libmaus/util/unordered_map.hpp>
 #include <libmaus/util/unordered_set.hpp>
 
@@ -590,6 +591,209 @@ struct OutputQueue
 	}
 };
 
+namespace libmaus
+{
+	namespace util
+	{
+		template<>
+		struct SimpleHashMapConstants< PairHashKeyType >
+		{
+			typedef PairHashKeyType::key_type key_type;
+
+			PairHashKeyType const unusedValue;
+			PairHashKeyType const deletedValue;
+			
+			static PairHashKeyType computeUnusedValue()
+			{
+				key_type U;
+				key_type Ulow(std::numeric_limits<uint64_t>::max());
+				
+				for ( unsigned int i = 0; i < key_type::words; ++i )
+				{
+					U <<= 64;
+					U |= Ulow;
+				}
+				
+				PairHashKeyType PHKT;
+				PHKT.key = U;
+				
+				return PHKT;
+			}
+
+			static PairHashKeyType computeDeletedValue()
+			{
+				// get full mask
+				PairHashKeyType U = computeUnusedValue();
+				// erase top bit
+				U.key.setBit(key_type::words*64-1, 0);
+				return U;
+			}
+						
+			PairHashKeyType const & unused() const
+			{
+				return unusedValue;
+			}
+
+			PairHashKeyType const & deleted() const
+			{
+				return deletedValue;
+			}
+
+			bool isFree(PairHashKeyType const & v) const
+			{
+				return (v.key & deletedValue.key) == deletedValue.key;
+			}
+			
+			bool isInUse(PairHashKeyType const & v) const
+			{
+				return !isFree(v);
+			}
+			
+			SimpleHashMapConstants() 
+			: unusedValue(computeUnusedValue()), deletedValue(computeDeletedValue()) {}
+			virtual ~SimpleHashMapConstants() {}
+		};
+	}
+}
+
+
+namespace libmaus
+{
+	namespace util
+	{	
+		template<>
+		struct SimpleHashMapHashCompute<PairHashKeyType>
+		{
+			typedef PairHashKeyType key_type;
+			
+			inline static uint64_t hash(key_type const v)
+			{
+				return libmaus::hashing::EvaHash::hash642(&v.key.A[0],v.key.words);
+			}
+		};
+	}
+}
+
+
+namespace libmaus
+{
+	namespace util
+	{
+		template<>
+		struct SimpleHashMapNumberCast<PairHashKeyType>
+		{
+			typedef PairHashKeyType key_type;
+		
+			static uint64_t cast(key_type const & key)
+			{
+				return key.key.A[0];
+			}
+		};
+	}
+}
+
+namespace libmaus
+{
+	namespace util
+	{
+		template<>
+		struct SimpleHashMapConstants< FragmentHashKeyType >
+		{
+			typedef FragmentHashKeyType::key_type key_type;
+
+			FragmentHashKeyType const unusedValue;
+			FragmentHashKeyType const deletedValue;
+			
+			static FragmentHashKeyType computeUnusedValue()
+			{
+				key_type U;
+				key_type Ulow(std::numeric_limits<uint64_t>::max());
+				
+				for ( unsigned int i = 0; i < key_type::words; ++i )
+				{
+					U <<= 64;
+					U |= Ulow;
+				}
+				
+				FragmentHashKeyType PHKT;
+				PHKT.key = U;
+				
+				return PHKT;
+			}
+
+			static FragmentHashKeyType computeDeletedValue()
+			{
+				// get full mask
+				FragmentHashKeyType U = computeUnusedValue();
+				// erase top bit
+				U.key.setBit(key_type::words*64-1, 0);
+				return U;
+			}
+						
+			FragmentHashKeyType const & unused() const
+			{
+				return unusedValue;
+			}
+
+			FragmentHashKeyType const & deleted() const
+			{
+				return deletedValue;
+			}
+
+			bool isFree(FragmentHashKeyType const & v) const
+			{
+				return (v.key & deletedValue.key) == deletedValue.key;
+			}
+			
+			bool isInUse(FragmentHashKeyType const & v) const
+			{
+				return !isFree(v);
+			}
+			
+			SimpleHashMapConstants() 
+			: unusedValue(computeUnusedValue()), deletedValue(computeDeletedValue()) {}
+			virtual ~SimpleHashMapConstants() {}
+		};
+	}
+}
+
+
+namespace libmaus
+{
+	namespace util
+	{	
+		template<>
+		struct SimpleHashMapHashCompute<FragmentHashKeyType>
+		{
+			typedef FragmentHashKeyType key_type;
+			
+			inline static uint64_t hash(key_type const v)
+			{
+				return libmaus::hashing::EvaHash::hash642(&v.key.A[0],v.key.words);
+			}
+		};
+	}
+}
+
+
+namespace libmaus
+{
+	namespace util
+	{
+		template<>
+		struct SimpleHashMapNumberCast<FragmentHashKeyType>
+		{
+			typedef FragmentHashKeyType key_type;
+		
+			static uint64_t cast(key_type const & key)
+			{
+				return key.key.A[0];
+			}
+		};
+	}
+}
+
+
 int main(int argc, char *argv[])
 {
 	try
@@ -617,13 +821,15 @@ int main(int argc, char *argv[])
 		typedef libmaus::util::unordered_set<FragmentHashKeyType, FragmentHashKeyTypeHashFunction>::type pair_fragment_hash_type;
 
 		std::priority_queue< PairHashKeyType, std::vector<PairHashKeyType>, PairHashKeyHeapComparator > Qpair;
-		pair_hash_type Hpair;
+		libmaus::util::SimpleHashMapInsDel<PairHashKeyType,libmaus::bambam::BamAlignment *> SHpair(0);
 
 		std::priority_queue< FragmentHashKeyType, std::vector<FragmentHashKeyType>, FragmentHashKeyHeapComparator > Qfragment;
 		fragment_hash_type Hfragment;
+		libmaus::util::SimpleHashMapInsDel<FragmentHashKeyType,libmaus::bambam::BamAlignment *> SHfragment(0);
 		
 		std::priority_queue< FragmentHashKeyType, std::vector<FragmentHashKeyType>, FragmentHashKeyHeapComparator > Qpairfragments;
-		pair_fragment_hash_type Hpairfragments;
+		// pair_fragment_hash_type Hpairfragments;
+		libmaus::util::SimpleHashSetInsDel<FragmentHashKeyType> SHpairfragments(0);
 		
 		uint64_t cnt = 0;
 
@@ -633,6 +839,8 @@ int main(int argc, char *argv[])
 		globalrtc.start();
 		libmaus::timing::RealTimeClock batchrtc;
 		batchrtc.start();
+		
+		double const hashloadfactor = .8;
 					
 		while ( dec.readAlignment() )
 		{
@@ -677,7 +885,23 @@ int main(int argc, char *argv[])
 			{
 				if ( algn.isRead1() )
 					met.readpairsexamined++;
-			
+
+				FragmentHashKeyType HK1(algn,header);
+				if ( !SHpairfragments.contains(HK1) )
+				{
+					SHpairfragments.insertExtend(HK1,hashloadfactor);
+					Qpairfragments.push(HK1);					
+					assert ( SHpairfragments.contains(HK1) );
+				}
+				#if 0
+				if ( Hpairfragments.find(HK1) == Hpairfragments.end() )
+				{
+					Hpairfragments.insert(HK1);
+					Qpairfragments.push(HK1);					
+					assert ( Hpairfragments.find(HK1) != Hpairfragments.end() );
+				}
+				#endif
+				
 				/* 
 				 * build the hash key containing
 				 *
@@ -692,36 +916,12 @@ int main(int argc, char *argv[])
 				 * - mate tag
 				 */
 				PairHashKeyType HK(algn,header);
-				
-				pair_hash_type::iterator it = Hpair.find(HK);		
+								
+				libmaus::bambam::BamAlignment * oalgn = 0;
 
-				FragmentHashKeyType HK1(algn,header,false);
-				if ( Hpairfragments.find(HK1) == Hpairfragments.end() )
-				{
-					Hpairfragments.insert(HK1);
-					Qpairfragments.push(HK1);
-
-					// std::cerr << "Adding " << HK1 << std::endl;
-					
-					assert ( Hpairfragments.find(HK1) != Hpairfragments.end() );
-				}
-				FragmentHashKeyType HK2(algn,header,true);
-				if ( Hpairfragments.find(HK2) == Hpairfragments.end() )
-				{
-					Hpairfragments.insert(HK2);
-					Qpairfragments.push(HK2);
-
-					// std::cerr << "Adding " << HK2 << std::endl;
-
-					assert ( Hpairfragments.find(HK2) != Hpairfragments.end() );
-				}
-				
 				// type has been seen before
-				if ( it != Hpair.end() )
+				if ( SHpair.contains(HK,oalgn) )
 				{
-					// other alignment
-					libmaus::bambam::BamAlignment * oalgn = it->second;
-
 					// score for other alignment
 					int64_t const oscore = oalgn->getScore() + oalgn->getAuxAsNumber<int32_t>("MS");
 					// score for this alignment
@@ -776,8 +976,9 @@ int main(int argc, char *argv[])
 					libmaus::bambam::BamAlignment * palgn = BAFL.get();
 					palgn->swap(algn);
 					
-					Hpair[HK] = palgn;
 					Qpair.push(HK);
+					
+					SHpair.insertExtend(HK,palgn,hashloadfactor);
 				}
 			}
 			// single end or pair with one end mapping only
@@ -785,12 +986,16 @@ int main(int argc, char *argv[])
 			{
 				FragmentHashKeyType HK(algn,header);
 								
-				fragment_hash_type::iterator it = Hfragment.find(HK);		
+				// fragment_hash_type::iterator it = Hfragment.find(HK);
+				
+				libmaus::bambam::BamAlignment * oalgn;
 		
-				if ( it != Hfragment.end() )
+				if ( SHfragment.contains(HK,oalgn) )
 				{
+					#if 0
 					// other alignment
 					libmaus::bambam::BamAlignment * oalgn = it->second;
+					#endif
 					// score for other alignment
 					int64_t const oscore = oalgn->getScore();
 					// score for this alignment
@@ -828,7 +1033,8 @@ int main(int argc, char *argv[])
 					libmaus::bambam::BamAlignment * palgn = BAFL.get();
 					palgn->swap(algn);
 					
-					Hfragment[HK] = palgn;
+					//Hfragment[HK] = palgn;
+					SHfragment.insertExtend(HK,palgn,hashloadfactor);
 					Qfragment.push(HK);
 				}
 			}
@@ -845,13 +1051,12 @@ int main(int argc, char *argv[])
 			{
 				PairHashKeyType const HK = Qpair.top(); Qpair.pop();
 
-				pair_hash_type::iterator it = Hpair.find(HK);
-				assert ( it != Hpair.end() );
+				uint64_t const SHpairindex = SHpair.getIndexUnchecked(HK);
+				libmaus::bambam::BamAlignment * palgn = SHpair.getValue(SHpairindex);
 				
-				libmaus::bambam::BamAlignment * palgn = it->second;
 				OQ.push(palgn);
 
-				Hpair.erase(it);
+				SHpair.eraseIndex(SHpairindex);
 			}
 
 			while ( 
@@ -866,12 +1071,17 @@ int main(int argc, char *argv[])
 			{
 				FragmentHashKeyType const HK = Qfragment.top(); Qfragment.pop();
 
+				uint64_t const SHfragmentindex = SHfragment.getIndexUnchecked(HK);
+				libmaus::bambam::BamAlignment * palgn = SHfragment.getValue(SHfragmentindex);
+
+				#if 0
 				fragment_hash_type::iterator it = Hfragment.find(HK);
 				assert ( it != Hfragment.end() );
-				
 				libmaus::bambam::BamAlignment * palgn = it->second;
+				#endif
 				
-				if ( Hpairfragments.find(HK) != Hpairfragments.end() )
+				// if ( Hpairfragments.find(HK) != Hpairfragments.end() )
+				if ( SHpairfragments.contains(HK) )
 				{
 					// update metrics
 					met.unpairedreadduplicates += 1;
@@ -881,7 +1091,10 @@ int main(int argc, char *argv[])
 			
 				OQ.push(palgn);
 				
+				#if 0
 				Hfragment.erase(it);
+				#endif
+				SHfragment.eraseIndex(SHfragmentindex);
 			}
 
 			while ( 
@@ -890,17 +1103,19 @@ int main(int argc, char *argv[])
 				(
 					(Qpairfragments.top().getRefId() != thisref)
 					||
-					(Qpairfragments.top().getRefId() == thisref && Qpairfragments.top().getCoord()+3*maxreadlen < thispos)
+					(Qpairfragments.top().getRefId() == thisref && Qpairfragments.top().getCoord()+maxreadlen < thispos)
 				)
 			)
 			{
 				FragmentHashKeyType const & HK = Qpairfragments.top();
-								
+				
+				#if 0				
 				pair_fragment_hash_type::iterator it = Hpairfragments.find(HK);
-				
 				assert ( it != Hpairfragments.end() );
-				
 				Hpairfragments.erase(it);
+				#endif
+				SHpairfragments.eraseIndex(SHpairfragments.getIndexUnchecked(HK));
+				
 				Qpairfragments.pop();
 			}
 			
@@ -915,6 +1130,7 @@ int main(int argc, char *argv[])
 					<< libmaus::util::MemUsage() << " "
 					<< globalrtc.formatTime(globalrtc.getElapsedSeconds()) << " "
 					<< batchrtc.formatTime(batchrtc.getElapsedSeconds())
+					<< " " << SHpair.getTableSize()
 					<< std::endl;
 				
 				batchrtc.start();
@@ -924,26 +1140,30 @@ int main(int argc, char *argv[])
 		while ( Qpair.size () )
 		{
 			PairHashKeyType const HK = Qpair.top(); Qpair.pop();
-
-			pair_hash_type::iterator it = Hpair.find(HK);
-			assert ( it != Hpair.end() );
 			
-			libmaus::bambam::BamAlignment * palgn = it->second;
+			uint64_t const SHpairindex = SHpair.getIndexUnchecked(HK);
+			libmaus::bambam::BamAlignment * palgn = SHpair.getValue(SHpairindex);
+				
 			OQ.push(palgn);
 
-			Hpair.erase(it);
+			SHpair.eraseIndex(SHpairindex);
 		}
 
 		while ( Qfragment.size () )
 		{
 			FragmentHashKeyType const HK = Qfragment.top(); Qfragment.pop();
 
+			uint64_t const SHfragmentindex = SHfragment.getIndexUnchecked(HK);
+			libmaus::bambam::BamAlignment * palgn = SHfragment.getValue(SHfragmentindex);
+
+			#if 0
 			fragment_hash_type::iterator it = Hfragment.find(HK);
 			assert ( it != Hfragment.end() );
-			
 			libmaus::bambam::BamAlignment * palgn = it->second;
+			#endif
 			
-			if ( Hpairfragments.find(HK) != Hpairfragments.end() )
+			// if ( Hpairfragments.find(HK) != Hpairfragments.end() )
+			if ( SHpairfragments.contains(HK) )
 			{
 				// update metrics
 				metrics[HK.getLibrary()].unpairedreadduplicates += 1;
@@ -952,19 +1172,25 @@ int main(int argc, char *argv[])
 			}
 		
 			OQ.push(palgn);
-			
+
+			#if 0			
 			Hfragment.erase(it);
+			#endif
+			SHfragment.eraseIndex(SHfragmentindex);
 		}
 
 		while ( Qpairfragments.size () )
 		{
 			FragmentHashKeyType const & HK = Qpairfragments.top();
-							
-			pair_fragment_hash_type::iterator it = Hpairfragments.find(HK);
 			
+			#if 0				
+			pair_fragment_hash_type::iterator it = Hpairfragments.find(HK);			
 			assert ( it != Hpairfragments.end() );
-			
 			Hpairfragments.erase(it);
+			#endif
+
+			SHpairfragments.eraseIndex(SHpairfragments.getIndexUnchecked(HK));
+
 			Qpairfragments.pop();
 		}
 
