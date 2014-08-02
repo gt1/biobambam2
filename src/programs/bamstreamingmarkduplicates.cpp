@@ -32,12 +32,15 @@
 #include <libmaus/bambam/DuplicationMetrics.hpp>
 #include <libmaus/bambam/ReadEnds.hpp>
 #include <libmaus/lru/SparseLRUFileBunch.hpp>
+#include <libmaus/sorting/SortingBufferedOutputFile.hpp>
 #include <libmaus/types/types.hpp>
 #include <libmaus/util/ArgInfo.hpp>
+#include <libmaus/util/FreeList.hpp>
 #include <libmaus/util/GrowingFreeList.hpp>
 #include <libmaus/util/MemUsage.hpp>
 #include <libmaus/util/SimpleHashMapInsDel.hpp>
 #include <libmaus/util/SimpleHashSetInsDel.hpp>
+#include <libmaus/util/TempFileRemovalContainer.hpp>
 #include <libmaus/util/unordered_map.hpp>
 #include <libmaus/util/unordered_set.hpp>
 
@@ -56,6 +59,7 @@ struct SignCoding
 	}
 };
 
+
 struct PairHashKeyType : public SignCoding
 {
 	typedef PairHashKeyType this_type;
@@ -65,7 +69,7 @@ struct PairHashKeyType : public SignCoding
 	key_type key;
 
 	enum pair_orientation_type { pair_orientaton_FF=0, pair_orientaton_FR=1, pair_orientaton_RF=2, pair_orientaton_RR=3 };
-
+	
 	PairHashKeyType() : key() {}
 	
 	PairHashKeyType(
@@ -152,6 +156,7 @@ struct PairHashKeyType : public SignCoding
 		return key == o.key;
 	}
 
+
 	int32_t getRefId() const
 	{
 		return signDecode(key.A[0] >> 32);
@@ -185,6 +190,16 @@ struct PairHashKeyType : public SignCoding
 	int32_t getLeft() const
 	{
 		return (((key.A[2] & 0xFFFFFFFFUL) & 1) == 0);
+	}
+
+	uint64_t getTag1() const
+	{
+		return key.A[3];
+	}
+
+	uint64_t getTag2() const
+	{
+		return key.A[4];
 	}
 };
 
@@ -757,7 +772,6 @@ namespace libmaus
 	}
 }
 
-
 namespace libmaus
 {
 	namespace util
@@ -774,7 +788,6 @@ namespace libmaus
 		};
 	}
 }
-
 
 namespace libmaus
 {
@@ -793,6 +806,365 @@ namespace libmaus
 	}
 }
 
+struct OpticalInfoListNode
+{
+	OpticalInfoListNode * next;
+
+	uint16_t readgroup;	
+	uint16_t tile;
+	uint32_t x;
+	uint32_t y;
+	
+	OpticalInfoListNode()
+	: next(0), readgroup(0), tile(0), x(0), y(0)
+	{
+	
+	}
+	
+	OpticalInfoListNode(OpticalInfoListNode * rnext, uint16_t rreadgroup, uint16_t rtile, uint32_t rx, uint32_t ry)
+	: next(rnext), readgroup(rreadgroup), tile(rtile), x(rx), y(ry)
+	{
+	
+	}
+	
+	bool operator<(OpticalInfoListNode const & o) const
+	{
+		if ( readgroup != o.readgroup )
+			return readgroup < o.readgroup;
+		else if ( tile != o.tile )
+			return tile < o.tile;
+		else if ( x != o.x )
+			return x < o.x;
+		else
+			return y < o.y;
+	}
+};
+
+std::ostream & operator<<(std::ostream & out, OpticalInfoListNode const & O)
+{
+	out << "OpticalInfoListNode(";
+	
+	out << O.readgroup << "," << O.tile << "," << O.x << "," << O.y;
+	
+	out << ")";
+	return out;
+}
+
+struct OpticalInfoListNodeComparator
+{
+	bool operator()(OpticalInfoListNode const * A, OpticalInfoListNode const * B) const
+	{
+		return A->operator<(*B);
+	}	
+};
+
+struct OpticalExternalInfoElement
+{
+	uint64_t key[PairHashKeyType::key_type::words];
+	uint16_t readgroup;
+	uint16_t tile;
+	uint32_t x;
+	uint32_t y;
+	
+	OpticalExternalInfoElement()
+	{
+	
+	}
+	
+	OpticalExternalInfoElement(PairHashKeyType const & HK, uint16_t const rreadgroup, uint16_t const rtile, uint32_t const rx, uint32_t const ry)
+	: readgroup(rreadgroup), tile(rtile), x(rx), y(ry)
+	{
+		for ( uint64_t i = 0; i < PairHashKeyType::key_type::words; ++i )
+			key[i] = HK.key.A[i];
+	}
+
+	OpticalExternalInfoElement(PairHashKeyType const & HK, OpticalInfoListNode const & O)
+	: readgroup(O.readgroup), tile(O.tile), x(O.x), y(O.y)
+	{
+		for ( uint64_t i = 0; i < PairHashKeyType::key_type::words; ++i )
+			key[i] = HK.key.A[i];
+	}
+	
+	bool operator<(OpticalExternalInfoElement const & o) const
+	{
+		for ( uint64_t i = 0; i < PairHashKeyType::key_type::words; ++i )
+			if ( key[i] != o.key[i] )
+				return key[i] < o.key[i];
+		
+		if ( readgroup != o.readgroup )
+			return readgroup < o.readgroup;
+		else if ( tile != o.tile )
+			return tile < o.tile;
+		else if ( x != o.x )
+			return x < o.x;
+		else
+			return y < o.y;
+	}
+	
+	bool operator==(OpticalExternalInfoElement const & o) const
+	{
+		for ( uint64_t i = 0; i < PairHashKeyType::key_type::words; ++i )
+			if ( key[i] != o.key[i] )
+				return false;
+		
+		if ( readgroup != o.readgroup )
+			return false;
+		else if ( tile != o.tile )
+			return false;
+		else if ( x != o.x )
+			return false;
+		else
+			return y == o.y;
+	}
+	
+	bool operator!=(OpticalExternalInfoElement const & o) const
+	{
+		return ! operator==(o);
+	}
+
+	bool sameTile(OpticalExternalInfoElement const & o) const
+	{
+		for ( uint64_t i = 0; i < PairHashKeyType::key_type::words; ++i )
+			if ( key[i] != o.key[i] )
+				return false;
+		
+		if ( readgroup != o.readgroup )
+			return false;
+		else 
+			return tile == o.tile;
+	}
+};
+
+#include <libmaus/math/iabs.hpp>
+
+struct OpticalInfoList
+{
+	OpticalInfoListNode * optlist;
+	bool expunged;
+	
+	OpticalInfoList() : optlist(0), expunged(false) {}
+	
+	static void markYLevel(
+		OpticalInfoListNode ** const b,
+		OpticalInfoListNode ** l,
+		OpticalInfoListNode ** const t,
+		bool * const B,
+		unsigned int const optminpixeldif
+	)
+	{
+		for ( OpticalInfoListNode ** c = l+1; c != t; ++c )
+			if (
+				libmaus::math::iabs(
+					static_cast<int64_t>((*l)->y)
+					-
+					static_cast<int64_t>((*c)->y)
+				)
+				<= optminpixeldif
+			)
+			{
+				B[c-b] = true;			
+			}
+	}
+	
+	static void markXLevel(
+		OpticalInfoListNode ** const b,
+		OpticalInfoListNode ** l,
+		OpticalInfoListNode ** const t,
+		bool * const B,
+		unsigned int const optminpixeldif
+	)
+	{
+		for ( ; l != t; ++l )
+		{
+			OpticalInfoListNode ** h = l+1;
+			
+			while ( (h != t) && ((*h)->x-(*l)->x <= optminpixeldif) )
+				++h;
+				
+			markYLevel(b,l,h,B,optminpixeldif);
+		}
+	}
+
+	static void markTileLevel(
+		OpticalInfoListNode ** const b,
+		OpticalInfoListNode ** l,
+		OpticalInfoListNode ** const t,
+		bool * const B,
+		unsigned int const optminpixeldif
+	)
+	{
+		while ( l != t )
+		{
+			OpticalInfoListNode ** h = l+1;
+			
+			while ( h != t && (*h)->tile == (*l)->tile )
+				++h;
+			
+			markXLevel(b,l,h,B,optminpixeldif);
+				
+			l = h;
+		}
+	}
+
+	static void markReadGroupLevel(
+		OpticalInfoListNode ** l,
+		OpticalInfoListNode ** const t,
+		bool * const B,
+		unsigned int const optminpixeldif
+	)
+	{
+		OpticalInfoListNode ** const b = l;
+	
+		while ( l != t )
+		{
+			OpticalInfoListNode ** h = l+1;
+			
+			while ( h != t && (*h)->readgroup == (*l)->readgroup )
+				++h;
+
+			markTileLevel(b,l,h,B,optminpixeldif);
+				
+			l = h;
+		}	
+	}
+	
+	uint64_t countOpticalDuplicates(
+		libmaus::autoarray::AutoArray<OpticalInfoListNode *> & A, 
+		libmaus::autoarray::AutoArray<bool> & B, 
+		unsigned int const optminpixeldif = 100
+	)
+	{
+		uint64_t opt = 0;
+
+		if ( ! expunged )
+		{
+			uint64_t n = 0;
+			for ( OpticalInfoListNode * cur = optlist; cur; cur = cur->next )
+				++n;
+			if ( n > A.size() )
+				A = libmaus::autoarray::AutoArray<OpticalInfoListNode *>(n);
+			if ( n > B.size() )
+				B = libmaus::autoarray::AutoArray<bool>(n);
+
+			n = 0;
+			for ( OpticalInfoListNode * cur = optlist; cur; cur = cur->next )
+				A[n++] = cur;
+				
+			std::sort ( A.begin(), A.begin()+n, OpticalInfoListNodeComparator() );
+			std::fill ( B.begin(), B.begin()+n, false);
+			
+			markReadGroupLevel(A.begin(),A.begin()+n,B.begin(),optminpixeldif);
+			
+			for ( uint64_t i = 0; i < n; ++i )
+				opt += B[i];
+		}
+			
+		return opt;
+	}
+
+	void addOpticalInfo(
+		libmaus::bambam::BamAlignment const & algn,
+		libmaus::util::FreeList<OpticalInfoListNode> & OILNFL,
+		PairHashKeyType const & HK,
+		libmaus::sorting::SortingBufferedOutputFile<OpticalExternalInfoElement> & optSBOF,
+		libmaus::bambam::BamHeader const & header
+	)
+	{
+		if ( algn.isRead1() )
+		{
+			uint16_t tile = 0;
+			uint32_t x = 0, y = 0;
+			if ( libmaus::bambam::ReadEndsBase::parseOptical(reinterpret_cast<uint8_t const *>(algn.getName()),tile,x,y) )
+			{
+				int64_t const rg = algn.getReadGroupId(header);
+				OpticalInfoListNode const newnode(optlist,rg+1,tile,x,y);
+				
+				if ( expunged || OILNFL.empty() )
+				{
+					if ( optlist )
+					{
+						for ( OpticalInfoListNode * cur = optlist; cur; cur = cur->next )
+						{
+							OpticalExternalInfoElement E(HK,*cur);
+							optSBOF.put(E);
+						}
+						deleteOpticalInfo(OILNFL);
+					}
+					
+					expunged = true;
+
+					OpticalExternalInfoElement E(HK,newnode);
+					optSBOF.put(E);
+				}
+				else
+				{
+					OpticalInfoListNode * node = OILNFL.get();
+					*node = newnode;
+					optlist = node;
+				}
+			} 
+		}
+	}
+
+	uint64_t deleteOpticalInfo(libmaus::util::FreeList<OpticalInfoListNode> & OILNFL)
+	{
+		OpticalInfoListNode * node = optlist;
+		uint64_t n = 0;
+		
+		while ( node )
+		{
+			OpticalInfoListNode * next = node->next;
+			OILNFL.put(node);
+			node = next;
+			++n;
+		}
+		
+		optlist = 0;
+				
+		return n;			
+	}
+};
+
+void processOpticalList(
+	std::vector<OpticalExternalInfoElement> & optlist,
+	std::vector<bool> & optb,
+	libmaus::bambam::BamHeader const & header,
+	std::map<uint64_t,::libmaus::bambam::DuplicationMetrics> & metrics,
+	unsigned int const optminpixeldif
+)
+{
+	// erase boolean vector
+	for ( uint64_t i = 0; i < std::min(optb.size(),optlist.size()); ++i )
+		optb[i] = false;
+
+	for ( uint64_t i = 0; i+1 < optlist.size(); ++i )
+		for ( uint64_t j = i+1; j < optlist.size(); ++j )
+			if (
+				optlist[j].x - optlist[i].x <= optminpixeldif
+				&&
+				libmaus::math::iabs(static_cast<int64_t>(optlist[j].y)-static_cast<int64_t>(optlist[i].y)) <= optminpixeldif
+			)
+			{
+				while ( j >= optb.size() )
+					optb.push_back(false);
+
+				optb[j] = true;
+			}
+			
+	uint64_t opt = 0;
+	for ( uint64_t i = 1; i < optlist.size(); ++i )
+		if ( optb[i] )
+			opt += 1;
+			
+	if ( opt )
+	{
+		int64_t const thislib = header.getLibraryId(static_cast<int64_t>(optlist[0].readgroup));
+		::libmaus::bambam::DuplicationMetrics & met = metrics[thislib];		
+		met.opticalduplicates += opt;
+	}
+	
+	optlist.resize(0);
+}
 
 int main(int argc, char *argv[])
 {
@@ -812,25 +1184,28 @@ int main(int argc, char *argv[])
 		int64_t const maxreadlen = arginfo.getValue<uint64_t>("maxreadlen",300);
 	
 		libmaus::util::GrowingFreeList<libmaus::bambam::BamAlignment> BAFL;
+		libmaus::util::FreeList<OpticalInfoListNode> OILNFL(32*1024);	
 
 		std::string const tmpfilenamebase = arginfo.getUnparsedValue("tmpfile",arginfo.getDefaultTmpFileName());	
 		OutputQueue<libmaus::bambam::BamWriter> OQ(wr,BAFL,tmpfilenamebase);
 
-		typedef libmaus::util::unordered_map<PairHashKeyType, libmaus::bambam::BamAlignment *, PairHashKeyTypeHashFunction>::type pair_hash_type;
-		typedef libmaus::util::unordered_map<FragmentHashKeyType, libmaus::bambam::BamAlignment *,FragmentHashKeyTypeHashFunction>::type fragment_hash_type;
-		typedef libmaus::util::unordered_set<FragmentHashKeyType, FragmentHashKeyTypeHashFunction>::type pair_fragment_hash_type;
+		std::string const optfn = tmpfilenamebase+"_opt";
+		libmaus::sorting::SortingBufferedOutputFile<OpticalExternalInfoElement> optSBOF(optfn);
+		libmaus::util::TempFileRemovalContainer::addTempFile(optfn);
 
 		std::priority_queue< PairHashKeyType, std::vector<PairHashKeyType>, PairHashKeyHeapComparator > Qpair;
-		libmaus::util::SimpleHashMapInsDel<PairHashKeyType,libmaus::bambam::BamAlignment *> SHpair(0);
+		libmaus::util::SimpleHashMapInsDel<PairHashKeyType,std::pair<libmaus::bambam::BamAlignment *, OpticalInfoList> > SHpair(0);
 
 		std::priority_queue< FragmentHashKeyType, std::vector<FragmentHashKeyType>, FragmentHashKeyHeapComparator > Qfragment;
-		fragment_hash_type Hfragment;
 		libmaus::util::SimpleHashMapInsDel<FragmentHashKeyType,libmaus::bambam::BamAlignment *> SHfragment(0);
 		
 		std::priority_queue< FragmentHashKeyType, std::vector<FragmentHashKeyType>, FragmentHashKeyHeapComparator > Qpairfragments;
-		// pair_fragment_hash_type Hpairfragments;
 		libmaus::util::SimpleHashSetInsDel<FragmentHashKeyType> SHpairfragments(0);
-		
+
+		libmaus::autoarray::AutoArray<OpticalInfoListNode *> optA;
+		libmaus::autoarray::AutoArray<bool> optB;
+		unsigned int const optminpixeldif = arginfo.getValue<unsigned int>("optminpixeldif",100);
+
 		uint64_t cnt = 0;
 
 		std::map<uint64_t,::libmaus::bambam::DuplicationMetrics> metrics;
@@ -883,25 +1258,6 @@ int main(int argc, char *argv[])
 				algn.isMateMapped()
 			)
 			{
-				if ( algn.isRead1() )
-					met.readpairsexamined++;
-
-				FragmentHashKeyType HK1(algn,header);
-				if ( !SHpairfragments.contains(HK1) )
-				{
-					SHpairfragments.insertExtend(HK1,hashloadfactor);
-					Qpairfragments.push(HK1);					
-					assert ( SHpairfragments.contains(HK1) );
-				}
-				#if 0
-				if ( Hpairfragments.find(HK1) == Hpairfragments.end() )
-				{
-					Hpairfragments.insert(HK1);
-					Qpairfragments.push(HK1);					
-					assert ( Hpairfragments.find(HK1) != Hpairfragments.end() );
-				}
-				#endif
-				
 				/* 
 				 * build the hash key containing
 				 *
@@ -916,30 +1272,36 @@ int main(int argc, char *argv[])
 				 * - mate tag
 				 */
 				PairHashKeyType HK(algn,header);
-								
-				libmaus::bambam::BamAlignment * oalgn = 0;
+
+				if ( algn.isRead1() )
+					met.readpairsexamined++;
+
+				// pair fragment for marking single mappings on same coordinate as duplicates
+				FragmentHashKeyType HK1(algn,header);
+				if ( !SHpairfragments.contains(HK1) )
+				{
+					SHpairfragments.insertExtend(HK1,hashloadfactor);
+					Qpairfragments.push(HK1);					
+					assert ( SHpairfragments.contains(HK1) );
+				}
+				
+				uint64_t keyindex;
 
 				// type has been seen before
-				if ( SHpair.contains(HK,oalgn) )
+				if ( SHpair.containsKey(HK,keyindex) )
 				{
+					// pair reference
+					std::pair<libmaus::bambam::BamAlignment *, OpticalInfoList> & SHpairinfo = SHpair.getValue(keyindex);
+					// add optical info
+					SHpairinfo.second.addOpticalInfo(algn,OILNFL,HK,optSBOF,header);
+					// stored previous alignment
+					libmaus::bambam::BamAlignment * oalgn = SHpairinfo.first;
 					// score for other alignment
 					int64_t const oscore = oalgn->getScore() + oalgn->getAuxAsNumber<int32_t>("MS");
 					// score for this alignment
 					int64_t const tscore =   algn.getScore() +   algn.getAuxAsNumber<int32_t>("MS");
 					// decide on read name if score is the same
 					int64_t const tscoreadd = (tscore == oscore) ? ((strcmp(algn.getName(),oalgn->getName()) < 0)?1:-1) : 0;
-
-					#if 0
-					std::cerr << "[V] Comparing for hash key " << HK << "\n" << algn.formatAlignment(dec.getHeader()) << "\n" << 
-						oalgn->formatAlignment(dec.getHeader()) << std::endl;
-					#endif
-					
-					#if 0
-					if ( tscore == oscore )
-					{
-						std::cerr << "tscore=" << tscore << " oscore=" << oscore << " tscoreadd=" << tscoreadd << std::endl;
-					}
-					#endif
 
 					// update metrics
 					met.readpairduplicates++;
@@ -978,24 +1340,26 @@ int main(int argc, char *argv[])
 					
 					Qpair.push(HK);
 					
-					SHpair.insertExtend(HK,palgn,hashloadfactor);
+					keyindex = SHpair.insertExtend(
+						HK,
+						std::pair<libmaus::bambam::BamAlignment *, OpticalInfoList>(palgn,OpticalInfoList()),
+						hashloadfactor
+					);
+					// pair reference
+					std::pair<libmaus::bambam::BamAlignment *, OpticalInfoList> & SHpairinfo = SHpair.getValue(keyindex);
+					// add optical info
+					SHpairinfo.second.addOpticalInfo(*(SHpairinfo.first),OILNFL,HK,optSBOF,header);
 				}
 			}
 			// single end or pair with one end mapping only
 			else
 			{
 				FragmentHashKeyType HK(algn,header);
-								
-				// fragment_hash_type::iterator it = Hfragment.find(HK);
-				
+
 				libmaus::bambam::BamAlignment * oalgn;
 		
 				if ( SHfragment.contains(HK,oalgn) )
 				{
-					#if 0
-					// other alignment
-					libmaus::bambam::BamAlignment * oalgn = it->second;
-					#endif
 					// score for other alignment
 					int64_t const oscore = oalgn->getScore();
 					// score for this alignment
@@ -1033,7 +1397,6 @@ int main(int argc, char *argv[])
 					libmaus::bambam::BamAlignment * palgn = BAFL.get();
 					palgn->swap(algn);
 					
-					//Hfragment[HK] = palgn;
 					SHfragment.insertExtend(HK,palgn,hashloadfactor);
 					Qfragment.push(HK);
 				}
@@ -1052,10 +1415,21 @@ int main(int argc, char *argv[])
 				PairHashKeyType const HK = Qpair.top(); Qpair.pop();
 
 				uint64_t const SHpairindex = SHpair.getIndexUnchecked(HK);
-				libmaus::bambam::BamAlignment * palgn = SHpair.getValue(SHpairindex);
+				std::pair<libmaus::bambam::BamAlignment *, OpticalInfoList> SHpairinfo = SHpair.getValue(SHpairindex);
+				libmaus::bambam::BamAlignment * palgn = SHpairinfo.first;
+
+				uint64_t const opt = SHpairinfo.second.countOpticalDuplicates(optA,optB,optminpixeldif);
 				
+				if ( opt )
+				{
+					uint64_t const thislib = palgn->getLibraryId(header);
+					::libmaus::bambam::DuplicationMetrics & met = metrics[thislib];	
+					met.opticalduplicates += opt;
+				}
+
 				OQ.push(palgn);
 
+				SHpairinfo.second.deleteOpticalInfo(OILNFL);
 				SHpair.eraseIndex(SHpairindex);
 			}
 
@@ -1073,14 +1447,7 @@ int main(int argc, char *argv[])
 
 				uint64_t const SHfragmentindex = SHfragment.getIndexUnchecked(HK);
 				libmaus::bambam::BamAlignment * palgn = SHfragment.getValue(SHfragmentindex);
-
-				#if 0
-				fragment_hash_type::iterator it = Hfragment.find(HK);
-				assert ( it != Hfragment.end() );
-				libmaus::bambam::BamAlignment * palgn = it->second;
-				#endif
 				
-				// if ( Hpairfragments.find(HK) != Hpairfragments.end() )
 				if ( SHpairfragments.contains(HK) )
 				{
 					// update metrics
@@ -1091,9 +1458,6 @@ int main(int argc, char *argv[])
 			
 				OQ.push(palgn);
 				
-				#if 0
-				Hfragment.erase(it);
-				#endif
 				SHfragment.eraseIndex(SHfragmentindex);
 			}
 
@@ -1109,11 +1473,6 @@ int main(int argc, char *argv[])
 			{
 				FragmentHashKeyType const & HK = Qpairfragments.top();
 				
-				#if 0				
-				pair_fragment_hash_type::iterator it = Hpairfragments.find(HK);
-				assert ( it != Hpairfragments.end() );
-				Hpairfragments.erase(it);
-				#endif
 				SHpairfragments.eraseIndex(SHpairfragments.getIndexUnchecked(HK));
 				
 				Qpairfragments.pop();
@@ -1142,10 +1501,21 @@ int main(int argc, char *argv[])
 			PairHashKeyType const HK = Qpair.top(); Qpair.pop();
 			
 			uint64_t const SHpairindex = SHpair.getIndexUnchecked(HK);
-			libmaus::bambam::BamAlignment * palgn = SHpair.getValue(SHpairindex);
+			std::pair<libmaus::bambam::BamAlignment *, OpticalInfoList> SHpairinfo = SHpair.getValue(SHpairindex);
+			libmaus::bambam::BamAlignment * palgn = SHpairinfo.first;
 				
 			OQ.push(palgn);
 
+			uint64_t const opt = SHpairinfo.second.countOpticalDuplicates(optA,optB,optminpixeldif);
+				
+			if ( opt )
+			{
+				uint64_t const thislib = palgn->getLibraryId(header);
+				::libmaus::bambam::DuplicationMetrics & met = metrics[thislib];		
+				met.opticalduplicates += opt;
+			}
+
+			SHpairinfo.second.deleteOpticalInfo(OILNFL);
 			SHpair.eraseIndex(SHpairindex);
 		}
 
@@ -1155,14 +1525,7 @@ int main(int argc, char *argv[])
 
 			uint64_t const SHfragmentindex = SHfragment.getIndexUnchecked(HK);
 			libmaus::bambam::BamAlignment * palgn = SHfragment.getValue(SHfragmentindex);
-
-			#if 0
-			fragment_hash_type::iterator it = Hfragment.find(HK);
-			assert ( it != Hfragment.end() );
-			libmaus::bambam::BamAlignment * palgn = it->second;
-			#endif
 			
-			// if ( Hpairfragments.find(HK) != Hpairfragments.end() )
 			if ( SHpairfragments.contains(HK) )
 			{
 				// update metrics
@@ -1173,9 +1536,6 @@ int main(int argc, char *argv[])
 		
 			OQ.push(palgn);
 
-			#if 0			
-			Hfragment.erase(it);
-			#endif
 			SHfragment.eraseIndex(SHfragmentindex);
 		}
 
@@ -1183,19 +1543,34 @@ int main(int argc, char *argv[])
 		{
 			FragmentHashKeyType const & HK = Qpairfragments.top();
 			
-			#if 0				
-			pair_fragment_hash_type::iterator it = Hpairfragments.find(HK);			
-			assert ( it != Hpairfragments.end() );
-			Hpairfragments.erase(it);
-			#endif
-
 			SHpairfragments.eraseIndex(SHpairfragments.getIndexUnchecked(HK));
 
 			Qpairfragments.pop();
 		}
 
 		OQ.flush();
+		
+		// process expunged optical data
+		libmaus::sorting::SortingBufferedOutputFile<OpticalExternalInfoElement>::merger_ptr_type Poptmerger =
+			optSBOF.getMerger();
+		libmaus::sorting::SortingBufferedOutputFile<OpticalExternalInfoElement>::merger_type & optmerger =
+			*Poptmerger;
 
+		OpticalExternalInfoElement optin;
+		std::vector<OpticalExternalInfoElement> optlist;
+		std::vector<bool> optb;
+		
+		while ( optmerger.getNext(optin) )
+		{
+			if ( optlist.size() && !optlist.back().sameTile(optin) )
+				processOpticalList(optlist,optb,header,metrics,optminpixeldif);
+			
+			optlist.push_back(optin);
+		}
+		
+		if ( optlist.size() )
+			processOpticalList(optlist,optb,header,metrics,optminpixeldif);
+		
 		// we have counted duplicated pairs for both ends, so divide by two
 		for ( std::map<uint64_t,::libmaus::bambam::DuplicationMetrics>::iterator ita = metrics.begin(); ita != metrics.end();
 			++ita )
