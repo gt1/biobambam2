@@ -26,12 +26,17 @@
 #include <vector>
 
 // libmaus
+#include <libmaus/aio/PosixFdInputStream.hpp>
 #include <libmaus/bambam/BamDecoder.hpp>
+#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
+#include <libmaus/bambam/BamMultiAlignmentDecoderFactory.hpp>
 #include <libmaus/bambam/BamWriter.hpp>
 #include <libmaus/bambam/BamHeaderUpdate.hpp>
+#include <libmaus/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
 #include <libmaus/bambam/DuplicationMetrics.hpp>
 #include <libmaus/bambam/ReadEnds.hpp>
 #include <libmaus/lru/SparseLRUFileBunch.hpp>
+#include <libmaus/lz/BgzfDeflateOutputCallbackMD5.hpp>
 #include <libmaus/sorting/SortingBufferedOutputFile.hpp>
 #include <libmaus/types/types.hpp>
 #include <libmaus/util/ArgInfo.hpp>
@@ -43,6 +48,16 @@
 #include <libmaus/util/TempFileRemovalContainer.hpp>
 #include <libmaus/util/unordered_map.hpp>
 #include <libmaus/util/unordered_set.hpp>
+
+#include <biobambam/BamBamConfig.hpp>
+#include <biobambam/Licensing.hpp>
+
+static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
+static int getDefaultVerbose() { return true; }
+static int getDefaultMD5() { return 0; }
+static int getDefaultIndex() { return 0 ; }
+static int getDefaultMaxReadLen() { return 300; }
+static int getDefaultOptMinPixelDif() { return 100; }
 
 struct SignCoding
 {
@@ -453,7 +468,8 @@ struct OutputQueue
 		{
 			libmaus::bambam::BamAlignment * palgn = OL[i];
 			palgn->filterOutAux(zrtag);
-			palgn->serialise(wr.getStream());
+			wr.writeAlignment(*palgn);
+			// palgn->serialise(wr.getStream());
 			BAFL.put(palgn);
 		}
 		
@@ -497,7 +513,8 @@ struct OutputQueue
 		for ( uint64_t i = 0; i < n; ++i )
 		{
 			algns[i].second->filterOutAux(zrtag);
-			algns[i].second->serialise(wr.getStream());
+			// algns[i].second->serialise(wr.getStream());
+			wr.writeAlignment(*(algns[i].second));
 			BAFL.put(algns[i].second);
 		}
 		
@@ -1220,368 +1237,379 @@ void processOpticalList(
 }
 
 
-int main(int argc, char *argv[])
+int bamstreamingmarkduplicates(libmaus::util::ArgInfo const & arginfo)
 {
-	try
+	int64_t const maxreadlen = arginfo.getValue<uint64_t>("maxreadlen",getDefaultMaxReadLen());
+	bool const verbose = arginfo.getValue<uint64_t>("verbose",getDefaultVerbose());
+	std::string const tmpfilenamebase = arginfo.getUnparsedValue("tmpfile",arginfo.getDefaultTmpFileName());	
+	unsigned int const optminpixeldif = arginfo.getValue<unsigned int>("optminpixeldif",getDefaultOptMinPixelDif());
+
+	libmaus::aio::PosixFdInputStream PFIS(STDIN_FILENO);
+	libmaus::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
+		libmaus::bambam::BamMultiAlignmentDecoderFactory::construct(
+			arginfo,true /* put rank */, 0 /* copy stream */, PFIS
+		)
+	);
+	libmaus::bambam::BamAlignmentDecoder & dec = decwrapper->getDecoder();
+
+	libmaus::bambam::BamHeader const & header = dec.getHeader();
+
+	::libmaus::bambam::BamHeader::unique_ptr_type genuphead(
+		libmaus::bambam::BamHeaderUpdate::updateHeader(arginfo,dec.getHeader(),"bamstreamingmarkduplicates",std::string(PACKAGE_VERSION))
+	);
+
+
+	// libmaus::bambam::BamWriter wr(std::cout,*genuphead,level);
+
+	/*
+	 * start index/md5 callbacks
+	 */
+	std::string const tmpfileindex = tmpfilenamebase + "_index";
+	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
+
+	std::string md5filename;
+	std::string indexfilename;
+
+	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > cbs;
+	::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
+	if ( arginfo.getValue<unsigned int>("md5",getDefaultMD5()) )
 	{
-		libmaus::util::ArgInfo const arginfo(argc,argv);
-		int const level = arginfo.getValue<int>("level",-1);
-	
-		libmaus::bambam::BamDecoder dec(std::cin,true /* put rank */);
-		libmaus::bambam::BamHeader const & header = dec.getHeader();
-		::libmaus::bambam::BamHeader::unique_ptr_type genuphead(
-			libmaus::bambam::BamHeaderUpdate::updateHeader(arginfo,dec.getHeader(),"bamstreamingmarkduplicates",std::string(PACKAGE_VERSION))
-		);
-		libmaus::bambam::BamWriter wr(std::cout,*genuphead,level);
-		libmaus::bambam::BamAlignment & algn = dec.getAlignment();
-		
-		int64_t const maxreadlen = arginfo.getValue<uint64_t>("maxreadlen",300);
-	
-		libmaus::util::GrowingFreeList<libmaus::bambam::BamAlignment> BAFL;
-		libmaus::util::FreeList<OpticalInfoListNode> OILNFL(32*1024);	
+		if ( arginfo.hasArg("md5filename") &&  arginfo.getUnparsedValue("md5filename","") != "" )
+			md5filename = arginfo.getUnparsedValue("md5filename","");
+		else
+			std::cerr << "[V] no filename for md5 given, not creating hash" << std::endl;
 
-		std::string const tmpfilenamebase = arginfo.getUnparsedValue("tmpfile",arginfo.getDefaultTmpFileName());	
-		OutputQueue<libmaus::bambam::BamWriter> OQ(wr,BAFL,tmpfilenamebase);
-
-		std::string const optfn = tmpfilenamebase+"_opt";
-		libmaus::sorting::SortingBufferedOutputFile<OpticalExternalInfoElement> optSBOF(optfn);
-		libmaus::util::TempFileRemovalContainer::addTempFile(optfn);
-
-		std::priority_queue< PairHashKeyType, std::vector<PairHashKeyType>, PairHashKeyHeapComparator > Qpair;
-		libmaus::util::SimpleHashMapInsDel<PairHashKeyType,std::pair<libmaus::bambam::BamAlignment *, OpticalInfoList> > SHpair(0);
-
-		std::priority_queue< FragmentHashKeyType, std::vector<FragmentHashKeyType>, FragmentHashKeyHeapComparator > Qfragment;
-		libmaus::util::SimpleHashMapInsDel<FragmentHashKeyType,libmaus::bambam::BamAlignment *> SHfragment(0);
-		
-		std::priority_queue< FragmentHashKeyType, std::vector<FragmentHashKeyType>, FragmentHashKeyHeapComparator > Qpairfragments;
-		libmaus::util::SimpleHashSetInsDel<FragmentHashKeyType> SHpairfragments(0);
-
-		libmaus::autoarray::AutoArray<OpticalInfoListNode *> optA;
-		libmaus::autoarray::AutoArray<bool> optB;
-		unsigned int const optminpixeldif = arginfo.getValue<unsigned int>("optminpixeldif",100);
-
-		uint64_t cnt = 0;
-
-		std::map<uint64_t,::libmaus::bambam::DuplicationMetrics> metrics;
-		
-		libmaus::timing::RealTimeClock globalrtc;
-		globalrtc.start();
-		libmaus::timing::RealTimeClock batchrtc;
-		batchrtc.start();
-		
-		double const hashloadfactor = .8;
-					
-		while ( dec.readAlignment() )
+		if ( md5filename.size() )
 		{
-			int64_t const thisref = algn.getRefID();
-			int64_t const thispos = algn.getPos();
+			::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5cb(new ::libmaus::lz::BgzfDeflateOutputCallbackMD5);
+			Pmd5cb = UNIQUE_PTR_MOVE(Tmd5cb);
+			cbs.push_back(Pmd5cb.get());
+		}
+	}
+	libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Pindex;
+	if ( arginfo.getValue<unsigned int>("index",getDefaultIndex()) )
+	{
+		if ( arginfo.hasArg("indexfilename") &&  arginfo.getUnparsedValue("indexfilename","") != "" )
+			indexfilename = arginfo.getUnparsedValue("indexfilename","");
+		else
+			std::cerr << "[V] no filename for index given, not creating index" << std::endl;
 
-			uint64_t const thislib = algn.getLibraryId(header);
-			::libmaus::bambam::DuplicationMetrics & met = metrics[thislib];
-			
-			if ( ! algn.isMapped() )
-				++met.unmapped;
-                        else if ( (!algn.isPaired()) || algn.isMateUnmap() )
-                        	++met.unpaired;
+		if ( indexfilename.size() )
+		{
+			libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Tindex(new libmaus::bambam::BgzfDeflateOutputCallbackBamIndex(tmpfileindex));
+			Pindex = UNIQUE_PTR_MOVE(Tindex);
+			cbs.push_back(Pindex.get());
+		}
+	}
+	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
+	if ( cbs.size() )
+		Pcbs = &cbs;
+	/*
+	 * end md5/index callbacks
+	 */
 
-			if ( 
-				// supplementary alignment
-				algn.isSupplementary() 
-				|| 
-				// secondary alignment
-				algn.isSecondary() 
-				||
-				// single, unmapped
-				((!algn.isPaired()) && (!algn.isMapped()))
-				||
-				// paired, end unmapped
-				(algn.isPaired() && (!algn.isMapped()))
-			)
-			{
-				// pass through
-				libmaus::bambam::BamAlignment * palgn = BAFL.get();
-				palgn->swap(algn);
-				OQ.push(palgn);
-			}
-			// paired end, both mapped
-			else if ( 
-				algn.isPaired()
-				&&
-				algn.isMapped()
-				&&
-				algn.isMateMapped()
-			)
-			{
-				/* 
-				 * build the hash key containing
-				 *
-				 * - ref id
-				 * - coordinate (position plus softclipping)
-				 * - mate ref id
-				 * - mate coordinate (position plus softclipping)
-				 * - library id
-				 * - flag whether right side read of pair (the one with the higher coordinate)
-				 * - orientation
-				 * - tag
-				 * - mate tag
-				 */
-				PairHashKeyType HK(algn,header);
+	// construct writer
+	libmaus::bambam::BamBlockWriterBase::unique_ptr_type Pwriter(
+		libmaus::bambam::BamBlockWriterBaseFactory::construct(*genuphead,arginfo,Pcbs)
+	);
+	libmaus::bambam::BamBlockWriterBase & wr = *Pwriter;
 
-				if ( algn.isRead1() )
-					met.readpairsexamined++;
+	libmaus::bambam::BamAlignment & algn = dec.getAlignment();
+	
 
-				// pair fragment for marking single mappings on same coordinate as duplicates
-				FragmentHashKeyType HK1(algn,header);
-				if ( !SHpairfragments.contains(HK1) )
-				{
-					SHpairfragments.insertExtend(HK1,hashloadfactor);
-					Qpairfragments.push(HK1);					
-					assert ( SHpairfragments.contains(HK1) );
-				}
+	libmaus::util::GrowingFreeList<libmaus::bambam::BamAlignment> BAFL;
+	libmaus::util::FreeList<OpticalInfoListNode> OILNFL(32*1024);	
+
+	OutputQueue<libmaus::bambam::BamBlockWriterBase> OQ(wr,BAFL,tmpfilenamebase);
+
+	std::string const optfn = tmpfilenamebase+"_opt";
+	libmaus::sorting::SortingBufferedOutputFile<OpticalExternalInfoElement> optSBOF(optfn);
+	libmaus::util::TempFileRemovalContainer::addTempFile(optfn);
+
+	std::priority_queue< PairHashKeyType, std::vector<PairHashKeyType>, PairHashKeyHeapComparator > Qpair;
+	libmaus::util::SimpleHashMapInsDel<PairHashKeyType,std::pair<libmaus::bambam::BamAlignment *, OpticalInfoList> > SHpair(0);
+
+	std::priority_queue< FragmentHashKeyType, std::vector<FragmentHashKeyType>, FragmentHashKeyHeapComparator > Qfragment;
+	libmaus::util::SimpleHashMapInsDel<FragmentHashKeyType,libmaus::bambam::BamAlignment *> SHfragment(0);
+	
+	std::priority_queue< FragmentHashKeyType, std::vector<FragmentHashKeyType>, FragmentHashKeyHeapComparator > Qpairfragments;
+	libmaus::util::SimpleHashSetInsDel<FragmentHashKeyType> SHpairfragments(0);
+
+	libmaus::autoarray::AutoArray<OpticalInfoListNode *> optA;
+	libmaus::autoarray::AutoArray<bool> optB;
+
+	uint64_t cnt = 0;
+
+	std::map<uint64_t,::libmaus::bambam::DuplicationMetrics> metrics;
+	
+	libmaus::timing::RealTimeClock globalrtc;
+	globalrtc.start();
+	libmaus::timing::RealTimeClock batchrtc;
+	batchrtc.start();
+	
+	double const hashloadfactor = .8;
+	int64_t prevcheckrefid = std::numeric_limits<int64_t>::min();
+	int64_t prevcheckpos = std::numeric_limits<int64_t>::min();
 				
-				uint64_t keyindex;
+	while ( dec.readAlignment() )
+	{
+		int64_t const thisref = algn.getRefID();
+		int64_t const thispos = algn.getPos();
 
-				// type has been seen before
-				if ( SHpair.containsKey(HK,keyindex) )
-				{
-					// pair reference
-					std::pair<libmaus::bambam::BamAlignment *, OpticalInfoList> & SHpairinfo = SHpair.getValue(keyindex);
-					// add optical info
-					SHpairinfo.second.addOpticalInfo(algn,OILNFL,HK,optSBOF,header);
-					// stored previous alignment
-					libmaus::bambam::BamAlignment * oalgn = SHpairinfo.first;
-					// score for other alignment
-					int64_t const oscore = oalgn->getScore() + oalgn->getAuxAsNumber<int32_t>("MS");
-					// score for this alignment
-					int64_t const tscore =   algn.getScore() +   algn.getAuxAsNumber<int32_t>("MS");
-					// decide on read name if score is the same
-					int64_t const tscoreadd = (tscore == oscore) ? ((strcmp(algn.getName(),oalgn->getName()) < 0)?1:-1) : 0;
-
-					// update metrics
-					met.readpairduplicates++;
-
-					// this score is greater
-					if ( (tscore+tscoreadd) > oscore )
-					{
-						// mark previous alignment as duplicate
-						oalgn->putFlags(oalgn->getFlags() | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FDUP);
-
-						// get alignment from free list
-						libmaus::bambam::BamAlignment * palgn = BAFL.get();
-						// swap 
-						palgn->swap(*oalgn);
-						// 
-						OQ.push(palgn);
-						
-						// swap alignment data
-						oalgn->swap(algn);
-					}
-					// other score is greater, mark this alignment as duplicate
-					else
-					{
-						algn.putFlags(algn.getFlags() | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FDUP);
-						
-						libmaus::bambam::BamAlignment * palgn = BAFL.get();
-						palgn->swap(algn);
-						OQ.push(palgn);
-					}
-				}
-				// type is new
-				else
-				{
-					libmaus::bambam::BamAlignment * palgn = BAFL.get();
-					palgn->swap(algn);
+		// map negative to maximum positive for checking order
+		int64_t const thischeckrefid = (thisref >= 0) ? thisref : std::numeric_limits<int64_t>::max();
+		int64_t const thischeckpos   = (thispos >= 0) ? thispos : std::numeric_limits<int64_t>::max();
 					
-					Qpair.push(HK);
-					
-					keyindex = SHpair.insertExtend(
-						HK,
-						std::pair<libmaus::bambam::BamAlignment *, OpticalInfoList>(palgn,OpticalInfoList()),
-						hashloadfactor
-					);
-					// pair reference
-					std::pair<libmaus::bambam::BamAlignment *, OpticalInfoList> & SHpairinfo = SHpair.getValue(keyindex);
-					// add optical info
-					SHpairinfo.second.addOpticalInfo(*(SHpairinfo.first),OILNFL,HK,optSBOF,header);
-				}
-			}
-			// single end or pair with one end mapping only
-			else
-			{
-				FragmentHashKeyType HK(algn,header);
+		// true iff order is ok
+		bool const orderok =
+			(thischeckrefid > prevcheckrefid)
+			||
+			(thischeckrefid == prevcheckrefid && thischeckpos >= prevcheckpos);
 
-				libmaus::bambam::BamAlignment * oalgn;
-		
-				if ( SHfragment.contains(HK,oalgn) )
-				{
-					// score for other alignment
-					int64_t const oscore = oalgn->getScore();
-					// score for this alignment
-					int64_t const tscore = algn.getScore();
-
-					// update metrics
-					met.unpairedreadduplicates += 1;
-					
-					// this score is greater
-					if ( tscore > oscore )
-					{
-						// mark previous alignment as duplicate
-						oalgn->putFlags(oalgn->getFlags() | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FDUP);
-
-						// put oalgn value in output queue
-						libmaus::bambam::BamAlignment * palgn = BAFL.get();
-						palgn->swap(*oalgn);
-						OQ.push(palgn);
-
-						// swap alignment data
-						oalgn->swap(algn);
-					}
-					// other score is greater, mark this alignment as duplicate
-					else
-					{
-						algn.putFlags(algn.getFlags() | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FDUP);
-
-						libmaus::bambam::BamAlignment * palgn = BAFL.get();
-						palgn->swap(algn);
-						OQ.push(palgn);
-					}
-				}
-				else
-				{
-					libmaus::bambam::BamAlignment * palgn = BAFL.get();
-					palgn->swap(algn);
-					
-					SHfragment.insertExtend(HK,palgn,hashloadfactor);
-					Qfragment.push(HK);
-				}
-			}
-			
-			while ( 
-				Qpair.size ()
-				&&
-				(
-					(Qpair.top().getRefId() != thisref)
-					||
-					(Qpair.top().getRefId() == thisref && Qpair.top().getCoord()+maxreadlen < thispos)
-				)
-			)
-			{
-				PairHashKeyType const HK = Qpair.top(); Qpair.pop();
-
-				uint64_t const SHpairindex = SHpair.getIndexUnchecked(HK);
-				std::pair<libmaus::bambam::BamAlignment *, OpticalInfoList> SHpairinfo = SHpair.getValue(SHpairindex);
-				libmaus::bambam::BamAlignment * palgn = SHpairinfo.first;
-
-				uint64_t const opt = SHpairinfo.second.countOpticalDuplicates(optA,optB,optminpixeldif);
-				
-				if ( opt )
-				{
-					uint64_t const thislib = palgn->getLibraryId(header);
-					::libmaus::bambam::DuplicationMetrics & met = metrics[thislib];	
-					met.opticalduplicates += opt;
-					
-					#if 0		
-					printOpt(std::cerr,HK,opt);
-					#endif
-				}
-
-				OQ.push(palgn);
-
-				SHpairinfo.second.deleteOpticalInfo(OILNFL);
-				SHpair.eraseIndex(SHpairindex);
-			}
-
-			while ( 
-				Qfragment.size ()
-				&&
-				(
-					(Qfragment.top().getRefId() != thisref)
-					||
-					(Qfragment.top().getRefId() == thisref && Qfragment.top().getCoord()+maxreadlen < thispos)
-				)
-			)
-			{
-				FragmentHashKeyType const HK = Qfragment.top(); Qfragment.pop();
-
-				uint64_t const SHfragmentindex = SHfragment.getIndexUnchecked(HK);
-				libmaus::bambam::BamAlignment * palgn = SHfragment.getValue(SHfragmentindex);
-				
-				if ( SHpairfragments.contains(HK) )
-				{
-					// update metrics
-					met.unpairedreadduplicates += 1;
-					
-					palgn->putFlags(palgn->getFlags() | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FDUP);				
-				}
-			
-				OQ.push(palgn);
-				
-				SHfragment.eraseIndex(SHfragmentindex);
-			}
-
-			while ( 
-				Qpairfragments.size ()
-				&&
-				(
-					(Qpairfragments.top().getRefId() != thisref)
-					||
-					(Qpairfragments.top().getRefId() == thisref && Qpairfragments.top().getCoord()+maxreadlen < thispos)
-				)
-			)
-			{
-				FragmentHashKeyType const & HK = Qpairfragments.top();
-				
-				SHpairfragments.eraseIndex(SHpairfragments.getIndexUnchecked(HK));
-				
-				Qpairfragments.pop();
-			}
-			
-			if ( (++cnt % (1024*1024)) == 0 )
-			{
-				std::cerr 
-					<< "[V] " 
-					<< cnt << " " 
-					<< OQ.nextout << " " 
-					<< Qpair.size() << " " 
-					<< Qfragment.size() << " " 
-					<< libmaus::util::MemUsage() << " "
-					<< globalrtc.formatTime(globalrtc.getElapsedSeconds()) << " "
-					<< batchrtc.formatTime(batchrtc.getElapsedSeconds())
-					<< " " << SHpair.getTableSize()
-					<< std::endl;
-				
-				batchrtc.start();
-			}
+		if ( ! orderok )
+		{
+			libmaus::exception::LibMausException lme;
+			lme.getStream() << "[E] input file is not coordinate sorted." << std::endl;
+			lme.finish();
+			throw lme;
 		}
 
-		while ( Qpair.size () )
+		prevcheckrefid = thischeckrefid;
+		prevcheckpos = thischeckpos;
+
+		if ( algn.getLseq() > maxreadlen )
+		{
+			libmaus::exception::LibMausException lme;
+			lme.getStream() << "[E] file contains read of length " << algn.getLseq() << " > maxreadlen=" << maxreadlen << std::endl;
+			lme.getStream() << "[E] please increase the maxreadlen option accordingly." << std::endl;
+			lme.finish();
+			throw lme;		
+		}
+
+		uint64_t const thislib = algn.getLibraryId(header);
+		::libmaus::bambam::DuplicationMetrics & met = metrics[thislib];
+		
+		if ( ! algn.isMapped() )
+			++met.unmapped;
+		else if ( (!algn.isPaired()) || algn.isMateUnmap() )
+			++met.unpaired;
+
+		if ( 
+			// supplementary alignment
+			algn.isSupplementary() 
+			|| 
+			// secondary alignment
+			algn.isSecondary() 
+			||
+			// single, unmapped
+			((!algn.isPaired()) && (!algn.isMapped()))
+			||
+			// paired, end unmapped
+			(algn.isPaired() && (!algn.isMapped()))
+		)
+		{
+			// pass through
+			libmaus::bambam::BamAlignment * palgn = BAFL.get();
+			palgn->swap(algn);
+			OQ.push(palgn);
+		}
+		// paired end, both mapped
+		else if ( 
+			algn.isPaired()
+			&&
+			algn.isMapped()
+			&&
+			algn.isMateMapped()
+		)
+		{
+			/* 
+			 * build the hash key containing
+			 *
+			 * - ref id
+			 * - coordinate (position plus softclipping)
+			 * - mate ref id
+			 * - mate coordinate (position plus softclipping)
+			 * - library id
+			 * - flag whether right side read of pair (the one with the higher coordinate)
+			 * - orientation
+			 * - tag
+			 * - mate tag
+			 */
+			PairHashKeyType HK(algn,header);
+
+			if ( algn.isRead1() )
+				met.readpairsexamined++;
+
+			// pair fragment for marking single mappings on same coordinate as duplicates
+			FragmentHashKeyType HK1(algn,header);
+			if ( !SHpairfragments.contains(HK1) )
+			{
+				SHpairfragments.insertExtend(HK1,hashloadfactor);
+				Qpairfragments.push(HK1);					
+				assert ( SHpairfragments.contains(HK1) );
+			}
+			
+			uint64_t keyindex;
+
+			// type has been seen before
+			if ( SHpair.containsKey(HK,keyindex) )
+			{
+				// pair reference
+				std::pair<libmaus::bambam::BamAlignment *, OpticalInfoList> & SHpairinfo = SHpair.getValue(keyindex);
+				// add optical info
+				SHpairinfo.second.addOpticalInfo(algn,OILNFL,HK,optSBOF,header);
+				// stored previous alignment
+				libmaus::bambam::BamAlignment * oalgn = SHpairinfo.first;
+				// score for other alignment
+				int64_t const oscore = oalgn->getScore() + oalgn->getAuxAsNumber<int32_t>("MS");
+				// score for this alignment
+				int64_t const tscore =   algn.getScore() +   algn.getAuxAsNumber<int32_t>("MS");
+				// decide on read name if score is the same
+				int64_t const tscoreadd = (tscore == oscore) ? ((strcmp(algn.getName(),oalgn->getName()) < 0)?1:-1) : 0;
+
+				// update metrics
+				met.readpairduplicates++;
+
+				// this score is greater
+				if ( (tscore+tscoreadd) > oscore )
+				{
+					// mark previous alignment as duplicate
+					oalgn->putFlags(oalgn->getFlags() | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FDUP);
+
+					// get alignment from free list
+					libmaus::bambam::BamAlignment * palgn = BAFL.get();
+					// swap 
+					palgn->swap(*oalgn);
+					// 
+					OQ.push(palgn);
+					
+					// swap alignment data
+					oalgn->swap(algn);
+				}
+				// other score is greater, mark this alignment as duplicate
+				else
+				{
+					algn.putFlags(algn.getFlags() | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FDUP);
+					
+					libmaus::bambam::BamAlignment * palgn = BAFL.get();
+					palgn->swap(algn);
+					OQ.push(palgn);
+				}
+			}
+			// type is new
+			else
+			{
+				libmaus::bambam::BamAlignment * palgn = BAFL.get();
+				palgn->swap(algn);
+				
+				Qpair.push(HK);
+				
+				keyindex = SHpair.insertExtend(
+					HK,
+					std::pair<libmaus::bambam::BamAlignment *, OpticalInfoList>(palgn,OpticalInfoList()),
+					hashloadfactor
+				);
+				// pair reference
+				std::pair<libmaus::bambam::BamAlignment *, OpticalInfoList> & SHpairinfo = SHpair.getValue(keyindex);
+				// add optical info
+				SHpairinfo.second.addOpticalInfo(*(SHpairinfo.first),OILNFL,HK,optSBOF,header);
+			}
+		}
+		// single end or pair with one end mapping only
+		else
+		{
+			FragmentHashKeyType HK(algn,header);
+
+			libmaus::bambam::BamAlignment * oalgn;
+	
+			if ( SHfragment.contains(HK,oalgn) )
+			{
+				// score for other alignment
+				int64_t const oscore = oalgn->getScore();
+				// score for this alignment
+				int64_t const tscore = algn.getScore();
+
+				// update metrics
+				met.unpairedreadduplicates += 1;
+				
+				// this score is greater
+				if ( tscore > oscore )
+				{
+					// mark previous alignment as duplicate
+					oalgn->putFlags(oalgn->getFlags() | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FDUP);
+
+					// put oalgn value in output queue
+					libmaus::bambam::BamAlignment * palgn = BAFL.get();
+					palgn->swap(*oalgn);
+					OQ.push(palgn);
+
+					// swap alignment data
+					oalgn->swap(algn);
+				}
+				// other score is greater, mark this alignment as duplicate
+				else
+				{
+					algn.putFlags(algn.getFlags() | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FDUP);
+
+					libmaus::bambam::BamAlignment * palgn = BAFL.get();
+					palgn->swap(algn);
+					OQ.push(palgn);
+				}
+			}
+			else
+			{
+				libmaus::bambam::BamAlignment * palgn = BAFL.get();
+				palgn->swap(algn);
+				
+				SHfragment.insertExtend(HK,palgn,hashloadfactor);
+				Qfragment.push(HK);
+			}
+		}
+		
+		while ( 
+			Qpair.size ()
+			&&
+			(
+				(Qpair.top().getRefId() != thisref)
+				||
+				(Qpair.top().getRefId() == thisref && Qpair.top().getCoord()+maxreadlen < thispos)
+			)
+		)
 		{
 			PairHashKeyType const HK = Qpair.top(); Qpair.pop();
-			
+
 			uint64_t const SHpairindex = SHpair.getIndexUnchecked(HK);
 			std::pair<libmaus::bambam::BamAlignment *, OpticalInfoList> SHpairinfo = SHpair.getValue(SHpairindex);
 			libmaus::bambam::BamAlignment * palgn = SHpairinfo.first;
-				
-			OQ.push(palgn);
 
 			uint64_t const opt = SHpairinfo.second.countOpticalDuplicates(optA,optB,optminpixeldif);
-				
+			
 			if ( opt )
 			{
 				uint64_t const thislib = palgn->getLibraryId(header);
-				::libmaus::bambam::DuplicationMetrics & met = metrics[thislib];		
+				::libmaus::bambam::DuplicationMetrics & met = metrics[thislib];	
 				met.opticalduplicates += opt;
-
-				#if 0
+				
+				#if 0		
 				printOpt(std::cerr,HK,opt);
 				#endif
 			}
+
+			OQ.push(palgn);
 
 			SHpairinfo.second.deleteOpticalInfo(OILNFL);
 			SHpair.eraseIndex(SHpairindex);
 		}
 
-		while ( Qfragment.size () )
+		while ( 
+			Qfragment.size ()
+			&&
+			(
+				(Qfragment.top().getRefId() != thisref)
+				||
+				(Qfragment.top().getRefId() == thisref && Qfragment.top().getCoord()+maxreadlen < thispos)
+			)
+		)
 		{
 			FragmentHashKeyType const HK = Qfragment.top(); Qfragment.pop();
 
@@ -1591,91 +1619,262 @@ int main(int argc, char *argv[])
 			if ( SHpairfragments.contains(HK) )
 			{
 				// update metrics
-				metrics[HK.getLibrary()].unpairedreadduplicates += 1;
+				met.unpairedreadduplicates += 1;
 				
 				palgn->putFlags(palgn->getFlags() | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FDUP);				
 			}
 		
 			OQ.push(palgn);
-
+			
 			SHfragment.eraseIndex(SHfragmentindex);
 		}
 
-		while ( Qpairfragments.size () )
+		while ( 
+			Qpairfragments.size ()
+			&&
+			(
+				(Qpairfragments.top().getRefId() != thisref)
+				||
+				(Qpairfragments.top().getRefId() == thisref && Qpairfragments.top().getCoord()+maxreadlen < thispos)
+			)
+		)
 		{
 			FragmentHashKeyType const & HK = Qpairfragments.top();
 			
 			SHpairfragments.eraseIndex(SHpairfragments.getIndexUnchecked(HK));
-
+			
 			Qpairfragments.pop();
 		}
-
-		OQ.flush();
 		
-		// process expunged optical data
-		libmaus::sorting::SortingBufferedOutputFile<OpticalExternalInfoElement>::merger_ptr_type Poptmerger =
-			optSBOF.getMerger();
-		libmaus::sorting::SortingBufferedOutputFile<OpticalExternalInfoElement>::merger_type & optmerger =
-			*Poptmerger;
-
-		OpticalExternalInfoElement optin;
-		std::vector<OpticalExternalInfoElement> optlist;
-		std::vector<bool> optb;
-		
-		while ( optmerger.getNext(optin) )
+		if ( verbose && ((++cnt % (1024*1024)) == 0) )
 		{
-			if ( optlist.size() && !optlist.back().sameTile(optin) )
-				processOpticalList(optlist,optb,header,metrics,optminpixeldif);
+			std::cerr 
+				<< "[V] " 
+				<< cnt << " " 
+				<< OQ.nextout << " " 
+				<< Qpair.size() << " " 
+				<< Qfragment.size() << " " 
+				<< libmaus::util::MemUsage() << " "
+				<< globalrtc.formatTime(globalrtc.getElapsedSeconds()) << " "
+				<< batchrtc.formatTime(batchrtc.getElapsedSeconds())
+				<< " " << SHpair.getTableSize()
+				<< std::endl;
 			
-			optlist.push_back(optin);
+			batchrtc.start();
 		}
+	}
+
+	// flush remaining pair information
+	while ( Qpair.size () )
+	{
+		PairHashKeyType const HK = Qpair.top(); Qpair.pop();
 		
-		if ( optlist.size() )
+		uint64_t const SHpairindex = SHpair.getIndexUnchecked(HK);
+		std::pair<libmaus::bambam::BamAlignment *, OpticalInfoList> SHpairinfo = SHpair.getValue(SHpairindex);
+		libmaus::bambam::BamAlignment * palgn = SHpairinfo.first;
+			
+		OQ.push(palgn);
+
+		uint64_t const opt = SHpairinfo.second.countOpticalDuplicates(optA,optB,optminpixeldif);
+			
+		if ( opt )
+		{
+			uint64_t const thislib = palgn->getLibraryId(header);
+			::libmaus::bambam::DuplicationMetrics & met = metrics[thislib];		
+			met.opticalduplicates += opt;
+
+			#if 0
+			printOpt(std::cerr,HK,opt);
+			#endif
+		}
+
+		SHpairinfo.second.deleteOpticalInfo(OILNFL);
+		SHpair.eraseIndex(SHpairindex);
+	}
+
+	// flush remaining fragment information
+	while ( Qfragment.size () )
+	{
+		FragmentHashKeyType const HK = Qfragment.top(); Qfragment.pop();
+
+		uint64_t const SHfragmentindex = SHfragment.getIndexUnchecked(HK);
+		libmaus::bambam::BamAlignment * palgn = SHfragment.getValue(SHfragmentindex);
+		
+		if ( SHpairfragments.contains(HK) )
+		{
+			// update metrics
+			metrics[HK.getLibrary()].unpairedreadduplicates += 1;
+			
+			palgn->putFlags(palgn->getFlags() | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FDUP);				
+		}
+	
+		OQ.push(palgn);
+
+		SHfragment.eraseIndex(SHfragmentindex);
+	}
+
+	// clear pair fragment data structures
+	while ( Qpairfragments.size () )
+	{
+		FragmentHashKeyType const & HK = Qpairfragments.top();
+		
+		SHpairfragments.eraseIndex(SHpairfragments.getIndexUnchecked(HK));
+
+		Qpairfragments.pop();
+	}
+
+	// flush output queue
+	OQ.flush();
+	
+	// reset BAM writer
+	Pwriter.reset();
+
+	if ( Pmd5cb )
+	{
+		Pmd5cb->saveDigestAsFile(md5filename);
+	}
+	if ( Pindex )
+	{
+		Pindex->flush(std::string(indexfilename));
+	}
+	
+	// process expunged optical data
+	libmaus::sorting::SortingBufferedOutputFile<OpticalExternalInfoElement>::merger_ptr_type Poptmerger =
+		optSBOF.getMerger();
+	libmaus::sorting::SortingBufferedOutputFile<OpticalExternalInfoElement>::merger_type & optmerger =
+		*Poptmerger;
+
+	OpticalExternalInfoElement optin;
+	std::vector<OpticalExternalInfoElement> optlist;
+	std::vector<bool> optb;
+	
+	while ( optmerger.getNext(optin) )
+	{
+		if ( optlist.size() && !optlist.back().sameTile(optin) )
 			processOpticalList(optlist,optb,header,metrics,optminpixeldif);
 		
-		// we have counted duplicated pairs for both ends, so divide by two
-		for ( std::map<uint64_t,::libmaus::bambam::DuplicationMetrics>::iterator ita = metrics.begin(); ita != metrics.end();
-			++ita )
-			ita->second.readpairduplicates /= 2;
+		optlist.push_back(optin);
+	}
+	
+	if ( optlist.size() )
+		processOpticalList(optlist,optb,header,metrics,optminpixeldif);
+	
+	// we have counted duplicated pairs for both ends, so divide by two
+	for ( std::map<uint64_t,::libmaus::bambam::DuplicationMetrics>::iterator ita = metrics.begin(); ita != metrics.end();
+		++ita )
+		ita->second.readpairduplicates /= 2;
 
-		/**
-		 * write metrics
-		 **/
-		::libmaus::aio::CheckedOutputStream::unique_ptr_type pM;
-		std::ostream * pmetricstr = 0;
+	/**
+	 * write metrics
+	 **/
+	::libmaus::aio::CheckedOutputStream::unique_ptr_type pM;
+	std::ostream * pmetricstr = 0;
+	
+	if ( arginfo.hasArg("M") && (arginfo.getValue<std::string>("M","") != "") )
+	{
+		::libmaus::aio::CheckedOutputStream::unique_ptr_type tpM(
+				new ::libmaus::aio::CheckedOutputStream(arginfo.getValue<std::string>("M",std::string("M")))
+			);
+		pM = UNIQUE_PTR_MOVE(tpM);
+		pmetricstr = pM.get();
+	}
+	else
+	{
+		pmetricstr = & std::cerr;
+	}
+
+	std::ostream & metricsstr = *pmetricstr;
+
+	::libmaus::bambam::DuplicationMetrics::printFormatHeader(arginfo.commandline,metricsstr);
+	for ( std::map<uint64_t,::libmaus::bambam::DuplicationMetrics>::const_iterator ita = metrics.begin(); ita != metrics.end();
+		++ita )
+		ita->second.format(metricsstr, header.getLibraryName(ita->first));
+	
+	if ( metrics.size() == 1 )
+	{
+		metricsstr << std::endl;
+		metricsstr << "## HISTOGRAM\nBIN\tVALUE" << std::endl;
+		metrics.begin()->second.printHistogram(metricsstr);
+	}
+	
+	metricsstr.flush();
+	pM.reset();
+	/*
+	 * end of metrics file writing
+	 */
+
+	return EXIT_SUCCESS;
+}
+
+int main(int argc, char *argv[])
+{
+	try
+	{
+		libmaus::util::ArgInfo const arginfo(argc,argv);
+
 		
-		if ( arginfo.hasArg("M") && (arginfo.getValue<std::string>("M","") != "") )
-		{
-			::libmaus::aio::CheckedOutputStream::unique_ptr_type tpM(
-					new ::libmaus::aio::CheckedOutputStream(arginfo.getValue<std::string>("M",std::string("M")))
+		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
+			if ( 
+				arginfo.restargs[i] == "-v"
+				||
+				arginfo.restargs[i] == "--version"
+			)
+			{
+				std::cerr << ::biobambam::Licensing::license();
+				return EXIT_SUCCESS;
+			}
+			else if ( 
+				arginfo.restargs[i] == "-h"
+				||
+				arginfo.restargs[i] == "--help"
+			)
+			{
+				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << std::endl;
+				std::cerr << "Key=Value pairs:" << std::endl;
+				std::cerr << std::endl;
+				
+				std::vector< std::pair<std::string,std::string> > V;
+			
+				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
+				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "tmpfile=<filename>", "prefix for temporary files, default: create files in current directory" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "md5filename=<filename>", "file name for md5 check sum" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "indexfilename=<filename>", "file name for BAM index file" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("inputformat=<[")+libmaus::bambam::BamAlignmentDecoderInfo::getDefaultInputFormat()+"]>", std::string("input format (") + libmaus::bambam::BamMultiAlignmentDecoderFactory::getValidInputFormats() + ")" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("outputformat=<[")+libmaus::bambam::BamBlockWriterBaseFactory::getDefaultOutputFormat()+"]>", std::string("output format (") + libmaus::bambam::BamBlockWriterBaseFactory::getValidOutputFormats() + ")" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "I=<[stdin]>", "input filename (standard input if unset)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "inputthreads=<[1]>", "input helper threads (for inputformat=bam only, default: 1)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "reference=<>", "reference FastA (.fai file required, for cram i/o only)" ) );
+				#if 0
+				V.push_back ( std::pair<std::string,std::string> ( "range=<>", "coordinate range to be processed (for coordinate sorted indexed BAM input only)" ) );
+				#endif
+				V.push_back ( std::pair<std::string,std::string> ( "outputthreads=<[1]>", "output helper threads (for outputformat=bam only, default: 1)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "O=<[stdout]>", "output filename (standard output if unset)" ) );
+
+				V.push_back ( 
+					std::pair<std::string,std::string> ( 
+						std::string("maxreadlen=<[")+::biobambam::Licensing::formatNumber(getDefaultMaxReadLen())+"]>", 
+						std::string("maximum read length (default ") + ::biobambam::Licensing::formatNumber(getDefaultMaxReadLen()) + ")" 
+					)
 				);
-			pM = UNIQUE_PTR_MOVE(tpM);
-			pmetricstr = pM.get();
-		}
-		else
-		{
-			pmetricstr = & std::cerr;
-		}
+				V.push_back ( 
+					std::pair<std::string,std::string> ( 
+						std::string("optminpixeldif=<[")+::biobambam::Licensing::formatNumber(getDefaultOptMinPixelDif())+"]>", 
+						std::string("maximum distance for optical duplicates (default ") + ::biobambam::Licensing::formatNumber(getDefaultOptMinPixelDif()) + ")" 
+					)
+				);
 
-		std::ostream & metricsstr = *pmetricstr;
+				::biobambam::Licensing::printMap(std::cerr,V);
 
-		::libmaus::bambam::DuplicationMetrics::printFormatHeader(arginfo.commandline,metricsstr);
-		for ( std::map<uint64_t,::libmaus::bambam::DuplicationMetrics>::const_iterator ita = metrics.begin(); ita != metrics.end();
-			++ita )
-			ita->second.format(metricsstr, header.getLibraryName(ita->first));
-		
-		if ( metrics.size() == 1 )
-		{
-			metricsstr << std::endl;
-			metricsstr << "## HISTOGRAM\nBIN\tVALUE" << std::endl;
-			metrics.begin()->second.printHistogram(metricsstr);
-		}
-		
-		metricsstr.flush();
-		pM.reset();
-		/*
-		 * end of metrics file writing
-		 */
+				std::cerr << std::endl;
+				return EXIT_SUCCESS;
+			}
+
+
+		return bamstreamingmarkduplicates(arginfo);
 	}
 	catch(std::exception const & ex)
 	{
