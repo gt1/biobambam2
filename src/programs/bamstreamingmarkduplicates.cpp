@@ -72,6 +72,11 @@ struct PairHashKeyType : public SignCoding
 	
 	PairHashKeyType() : key() {}
 	
+	PairHashKeyType(uint64_t const rkey[key_type::words])
+	{
+		std::copy(&rkey[0],&rkey[key_type::words],&key.A[0]);
+	}
+	
 	PairHashKeyType(
 		libmaus::bambam::BamAlignment const & algn,
 		libmaus::bambam::BamHeader const & header
@@ -155,7 +160,6 @@ struct PairHashKeyType : public SignCoding
 	{
 		return key == o.key;
 	}
-
 
 	int32_t getRefId() const
 	{
@@ -867,8 +871,9 @@ struct OpticalExternalInfoElement
 	uint32_t y;
 	
 	OpticalExternalInfoElement()
+	: readgroup(0), tile(0), x(0), y(0)
 	{
-	
+		std::fill(&key[0],&key[PairHashKeyType::key_type::words],0);
 	}
 	
 	OpticalExternalInfoElement(PairHashKeyType const & HK, uint16_t const rreadgroup, uint16_t const rtile, uint32_t const rx, uint32_t const ry)
@@ -934,6 +939,20 @@ struct OpticalExternalInfoElement
 			return tile == o.tile;
 	}
 };
+
+std::ostream & operator<<(std::ostream & out, OpticalExternalInfoElement const & O)
+{
+	PairHashKeyType HK(O.key);
+	out << "OpticalExternalInfoElement(";
+	out << HK << ",";
+	out << O.readgroup << ",";
+	out << O.tile << ",";
+	out << O.x << ",";
+	out << O.y;
+	out << ")";
+	
+	return out;
+}
 
 #include <libmaus/math/iabs.hpp>
 
@@ -1070,7 +1089,7 @@ struct OpticalInfoList
 		libmaus::bambam::BamHeader const & header
 	)
 	{
-		if ( algn.isRead1() )
+		if ( HK.getLeft() )
 		{
 			uint16_t tile = 0;
 			uint32_t x = 0, y = 0;
@@ -1125,6 +1144,35 @@ struct OpticalInfoList
 	}
 };
 
+std::ostream & printOpt(std::ostream & out, PairHashKeyType const & HK, uint64_t const opt)
+{
+	bool const isleft = 
+		(HK.getRefId()  < HK.getMateRefId()) ||
+		(HK.getRefId() == HK.getMateRefId() && HK.getCoord() < HK.getMateCoord())
+	;
+	
+	if ( isleft )
+		std::cerr << "\nopt " 
+			<< HK.getLibrary()+1 << " "
+			<< HK.getRefId()+1 << " "
+			<< HK.getCoord()+1 << " "
+			<< HK.getMateRefId()+1 << " "
+			<< HK.getMateCoord()+1 << " "
+			<< opt
+			<< std::endl;
+	else
+		std::cerr << "\nopt " 
+			<< HK.getLibrary()+1 << " "
+			<< HK.getMateRefId()+1 << " "
+			<< HK.getMateCoord()+1 << " "
+			<< HK.getRefId()+1 << " "
+			<< HK.getCoord()+1 << " "
+			<< opt
+			<< std::endl;
+
+	return out;
+}
+
 void processOpticalList(
 	std::vector<OpticalExternalInfoElement> & optlist,
 	std::vector<bool> & optb,
@@ -1152,19 +1200,25 @@ void processOpticalList(
 			}
 			
 	uint64_t opt = 0;
-	for ( uint64_t i = 1; i < optlist.size(); ++i )
+	for ( uint64_t i = 1; i < std::min(optb.size(),optlist.size()); ++i )
 		if ( optb[i] )
 			opt += 1;
 			
 	if ( opt )
 	{
-		int64_t const thislib = header.getLibraryId(static_cast<int64_t>(optlist[0].readgroup));
+		int64_t const thislib = header.getLibraryId(static_cast<int64_t>(optlist[0].readgroup)-1);
 		::libmaus::bambam::DuplicationMetrics & met = metrics[thislib];		
 		met.opticalduplicates += opt;
+
+		#if 0
+		PairHashKeyType const HK(optlist[0].key);
+		printOpt(std::cerr,HK,opt);
+		#endif
 	}
 	
 	optlist.resize(0);
 }
+
 
 int main(int argc, char *argv[])
 {
@@ -1425,6 +1479,10 @@ int main(int argc, char *argv[])
 					uint64_t const thislib = palgn->getLibraryId(header);
 					::libmaus::bambam::DuplicationMetrics & met = metrics[thislib];	
 					met.opticalduplicates += opt;
+					
+					#if 0		
+					printOpt(std::cerr,HK,opt);
+					#endif
 				}
 
 				OQ.push(palgn);
@@ -1513,6 +1571,10 @@ int main(int argc, char *argv[])
 				uint64_t const thislib = palgn->getLibraryId(header);
 				::libmaus::bambam::DuplicationMetrics & met = metrics[thislib];		
 				met.opticalduplicates += opt;
+
+				#if 0
+				printOpt(std::cerr,HK,opt);
+				#endif
 			}
 
 			SHpairinfo.second.deleteOpticalInfo(OILNFL);
