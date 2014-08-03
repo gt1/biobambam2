@@ -164,6 +164,11 @@ all mapped alignments if calmdnm=1.
 .B calmdnmwarnchange=<0|1>:
 warn if MD/NM field which was computed is differing from a previously
 existing field. By default no warnings are produced.
+.PP
+.B adddupmarksupport=<0|1>:
+add information required for streaming duplicate marking in the aux fields
+MS and MC. Input is assumed to be collated by query name. This option is
+ignored unless fixmates=1. By default it is disabled.
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"
