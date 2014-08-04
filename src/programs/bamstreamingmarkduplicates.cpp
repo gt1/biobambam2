@@ -43,11 +43,13 @@
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return true; }
 static int getDefaultMD5() { return 0; }
-static int getDefaultIndex() { return 0 ; }
+static int getDefaultIndex() { return 0; }
+static int getDefaultResetDupFlag() { return 0; }
 
 int bamstreamingmarkduplicates(libmaus::util::ArgInfo const & arginfo)
 {
 	bool const verbose = arginfo.getValue<uint64_t>("verbose",getDefaultVerbose());
+	bool const resetdupflag = arginfo.getValue<uint64_t>("resetdupflag",getDefaultResetDupFlag());
 	std::string const tmpfilenamebase = arginfo.getUnparsedValue("tmpfile",arginfo.getDefaultTmpFileName());	
 
 	libmaus::aio::PosixFdInputStream PFIS(STDIN_FILENO);
@@ -124,9 +126,17 @@ int bamstreamingmarkduplicates(libmaus::util::ArgInfo const & arginfo)
 	globalrtc.start();
 	libmaus::timing::RealTimeClock batchrtc;
 	batchrtc.start();
+
+	uint32_t const flagmask = ~static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FDUP);
 				
 	while ( dec.readAlignment() )
 	{
+		if ( resetdupflag )
+		{
+			uint32_t const flags = algn.getFlags();
+			algn.putFlags(flags&flagmask);
+		}
+	
 		BSMD.addAlignment(algn);
 		
 		if ( verbose && ((++cnt % (1024*1024)) == 0) )
@@ -218,6 +228,12 @@ int main(int argc, char *argv[])
 					std::pair<std::string,std::string> ( 
 						std::string("optminpixeldif=<[")+::biobambam::Licensing::formatNumber(libmaus::bambam::BamStreamingMarkDuplicates::getDefaultOptMinPixelDif())+"]>", 
 						std::string("maximum distance for optical duplicates (default ") + ::biobambam::Licensing::formatNumber(libmaus::bambam::BamStreamingMarkDuplicates::getDefaultOptMinPixelDif()) + ")" 
+					)
+				);
+				V.push_back ( 
+					std::pair<std::string,std::string> ( 
+						std::string("resetdupflag=<[")+::biobambam::Licensing::formatNumber(getDefaultResetDupFlag())+"]>", 
+						std::string("reset dup flag before checking for duplicates (default ") + ::biobambam::Licensing::formatNumber(getDefaultResetDupFlag()) + ")" 
 					)
 				);
 
