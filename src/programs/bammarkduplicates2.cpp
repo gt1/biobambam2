@@ -1265,11 +1265,15 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 
 	uint64_t const markthreads = 
 		std::max(static_cast<uint64_t>(1),arginfo.getValue<uint64_t>("markthreads",getDefaultMarkThreads()));
+
+	uint64_t const colexcludeflags =
+		libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY |
+		libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSUPPLEMENTARY;
 	
 	if ( arginfo.getPairCount("I") > 1 )
 	{
 		std::vector<std::string> const inputfilenames = arginfo.getPairValues("I");
-		col_base_ptr_type tCBD(new merge_col_type(inputfilenames,tmpfilename,0/* exclude */,true,colhashbits,collistsize));
+		col_base_ptr_type tCBD(new merge_col_type(inputfilenames,tmpfilename,colexcludeflags,true,colhashbits,collistsize));
 		CBD = UNIQUE_PTR_MOVE(tCBD);
 	}
 	// if we are reading the input from a file
@@ -1286,7 +1290,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
                                 *PFIS,
                                 markthreads,
                                 tmpfilename,
-                                /* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY      | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL*/ 0,
+                                colexcludeflags,
                                 true /* put rank */,
                                 colhashbits,collistsize));
 			CBD = UNIQUE_PTR_MOVE(tCBD);
@@ -1298,7 +1302,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
                                 *CIS,
                                 // numthreads
                                 tmpfilename,
-                                /* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY      | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL*/ 0,
+                                colexcludeflags,
                                 true /* put rank */,
                                 colhashbits,collistsize));
                         #else	
@@ -1306,7 +1310,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
                                 *PFIS,
                                 // numthreads
                                 tmpfilename,
-                                /* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY      | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL*/ 0,
+                                colexcludeflags,
                                 true /* put rank */,
                                 colhashbits,collistsize));	
 			#endif
@@ -1331,7 +1335,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
                                                 *copybamstr,
                                                 markthreads,
                                                 tmpfilename,
-                                                /* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY      | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL */ 0,
+                                                colexcludeflags,
                                                 true /* put rank */,
                                                 colhashbits,collistsize));
 					CBD = UNIQUE_PTR_MOVE(tCBD);
@@ -1341,7 +1345,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 					col_base_ptr_type tCBD(new col_type(std::cin,
                                                 *copybamstr,
                                                 tmpfilename,
-                                                /* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY      | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL */ 0,
+                                                colexcludeflags,
                                                 true /* put rank */,
                                                 colhashbits,collistsize));
 					CBD = UNIQUE_PTR_MOVE(tCBD);
@@ -1356,7 +1360,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 				{
 					col_base_ptr_type tCBD(new par_col_type(std::cin,markthreads,
                                                 tmpfilename,
-                                                /* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY      | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL */ 0,
+                                                colexcludeflags,
                                                 true /* put rank */,
                                                 colhashbits,collistsize));
 					CBD = UNIQUE_PTR_MOVE(tCBD);
@@ -1365,7 +1369,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 				{
 					col_base_ptr_type tCBD(new col_type(std::cin,
                                                 tmpfilename,
-                                                /* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY      | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL */ 0,
+                                                colexcludeflags,
                                                 true /* put rank */,
                                                 colhashbits,collistsize));
 					CBD = UNIQUE_PTR_MOVE(tCBD);
@@ -1384,7 +1388,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 		{
 			col_base_ptr_type tCBD(new col_type(std::cin,
                                 tmpfilename,
-                                /* libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY      | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL */ 0,
+                                colexcludeflags,
                                 true /* put rank */,
                                 colhashbits,collistsize));
 			CBD = UNIQUE_PTR_MOVE(tCBD);
