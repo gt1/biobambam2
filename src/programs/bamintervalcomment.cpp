@@ -50,6 +50,40 @@ static bool getDefaultDisableValidation() { return false; }
 static std::string getDefaultInputFormat() { return "bam"; }
 static int getDefaultIndex() { return 0; }
 
+struct Interval
+{
+	int64_t from;
+	int64_t to;
+	
+	Interval() : from(0), to(0) {}
+	Interval(int64_t const rfrom, int64_t const rto) : from(rfrom), to(rto) {}
+	
+	bool empty() const
+	{
+		return to < from;
+	}
+	
+	static Interval intersection(Interval const & A, Interval const & B)
+	{
+		if ( A.empty() || B.empty() )
+			return Interval(0,-1);
+		if ( A.from > B.from )
+			return intersection(B,A);
+		
+		assert ( A.from <= B.from );
+		
+		if ( A.to < B.from )
+			return Interval(0,-1);
+			
+		return Interval(B.from,std::min(B.to,A.to));
+	}
+	
+	Interval intersection(Interval const & B) const
+	{
+		return intersection(*this,B);
+	}
+};
+
 struct NamedInterval
 {
 	uint64_t name;
@@ -176,16 +210,21 @@ struct NamedIntervalGeneSet
 		std::ostringstream ostr;
 		libmaus::bambam::GeneFlatFileEntry entry;
 		
-		// compute map of chromosomes per gene
+		// compute map gene -> set of chromosomes
 		std::map< std::string, std::set<std::string> > genechroms;
 
+		// iterate over all lines
 		for ( uint64_t i = 0; i < PGFF->size(); ++i )
 		{
+			// get entry
 			PGFF->get(i,entry);
+			// get chromosome name
 			std::string const chrom(entry.chrom.first,entry.chrom.second);
 
+			// if chromosome is not excluded
 			if ( regex.findFirstMatch(chrom.c_str()) != -1 )
 			{
+				// gene name
 				std::string const geneName(entry.geneName.first,entry.geneName.second);
 				genechroms[geneName].insert(chrom);
 			}
@@ -194,13 +233,18 @@ struct NamedIntervalGeneSet
 		std::map< std::string,std::pair<uint64_t,uint64_t> > geneCoord;
 		std::map< std::string,std::vector<uint64_t> > geneInst;
 		
+		// iterate over all lines
 		for ( uint64_t i = 0; i < PGFF->size(); ++i )
 		{
+			// get entry
 			PGFF->get(i,entry);
+			// chromosome name
 			std::string const chrom(entry.chrom.first,entry.chrom.second);
 
+			// if not excluded
 			if ( regex.findFirstMatch(chrom.c_str()) != -1 )
 			{
+				// gene name
 				std::string geneName(entry.geneName.first,entry.geneName.second);
 
 				// append ref seq name if gene appears on multiple ref seqs
@@ -208,19 +252,22 @@ struct NamedIntervalGeneSet
 				{
 					uint64_t minsize = std::numeric_limits<uint64_t>::max();
 					
+					// find length of shortest chromosome name gene is on
 					for ( std::set<std::string>::const_iterator ita = genechroms.find(geneName)->second.begin();
 						ita != genechroms.find(geneName)->second.end(); ++ita )
 						minsize = std::min(
 							static_cast<uint64_t>(minsize),
 							static_cast<uint64_t>(ita->size())
 						);
-						
+					
+					// number of chromosome names with minimum size
 					uint64_t minsizecnt = 0;
 					for ( std::set<std::string>::const_iterator ita = genechroms.find(geneName)->second.begin();
 						ita != genechroms.find(geneName)->second.end(); ++ita )
 						if ( ita->size() == minsize )
 							minsizecnt++;
 					
+					// append name of chromosome if not the unique shortest one
 					if ( 
 						minsizecnt > 1 
 						||
@@ -232,12 +279,31 @@ struct NamedIntervalGeneSet
 				std::map< std::string,std::pair<uint64_t,uint64_t> >::iterator ita =
 					geneCoord.find(geneName);
 			
+				// name is not yet stored in geneCoord
 				if ( ita == geneCoord.end() )
+				{
 					geneCoord[geneName] = std::pair<uint64_t,uint64_t>(entry.txStart,entry.txEnd);
+				}
+				// name is already there
 				else
 				{
-					ita->second.first  = std::min(ita->second.first ,entry.txStart);
-					ita->second.second = std::max(ita->second.second,entry.txEnd);
+					Interval prevint(ita->second.first,ita->second.second);
+					Interval newint(entry.txStart,entry.txEnd);
+				
+					// no intersection?
+					if ( prevint.intersection(newint).empty() )
+					{
+						std::ostringstream nameupdatestr;
+						nameupdatestr << geneName << "_" << entry.txStart;
+						geneName = nameupdatestr.str();
+						geneCoord[geneName] = std::pair<uint64_t,uint64_t>(entry.txStart,entry.txEnd);
+						// std::cerr << "new name " << geneName << std::endl;
+					}
+					else
+					{
+						ita->second.first  = std::min(ita->second.first ,entry.txStart);
+						ita->second.second = std::max(ita->second.second,entry.txEnd);
+					}
 				}
 
 				geneInst[geneName].push_back(i);
@@ -488,39 +554,6 @@ struct NamedIntervalGeneSet
 		{}
 	};
 	
-	struct Interval
-	{
-		int64_t from;
-		int64_t to;
-		
-		Interval() : from(0), to(0) {}
-		Interval(int64_t const rfrom, int64_t const rto) : from(rfrom), to(rto) {}
-		
-		bool empty() const
-		{
-			return to < from;
-		}
-		
-		static Interval intersection(Interval const & A, Interval const & B)
-		{
-			if ( A.empty() || B.empty() )
-				return Interval(0,-1);
-			if ( A.from > B.from )
-				return intersection(B,A);
-			
-			assert ( A.from <= B.from );
-			
-			if ( A.to < B.from )
-				return Interval(0,-1);
-				
-			return Interval(B.from,std::min(B.to,A.to));
-		}
-		
-		Interval intersection(Interval const & B) const
-		{
-			return intersection(*this,B);
-		}
-	};
 
 	void findIntervals(
 		libmaus::bambam::BamAlignment const & algn,
