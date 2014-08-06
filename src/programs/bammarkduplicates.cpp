@@ -294,7 +294,8 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 
 	uint64_t const colexcludeflags =
 		libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY |
-		libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSUPPLEMENTARY;
+		libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSUPPLEMENTARY |
+		libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL;
 
 	if ( arginfo.getPairCount("I") > 1 )
 	{
@@ -647,6 +648,10 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 		copybamstr->flush();
 		copybamstr.reset();
 	}
+
+	// number of lines in input file (due to dropping secondary etc. alignments this can be larger than
+	// maxrank+1 and larger than als)
+	uint64_t const numranks = CBD->getRank(); // maxrank+1;
 	
 	CBD.reset();
 	CIS.reset();
@@ -661,16 +666,17 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	if ( verbose )
 		std::cerr << "[V] fragment and pair data computed in time " << fragrtc.getElapsedSeconds() << " (" << fragrtc.formatTime(fragrtc.getElapsedSeconds()) << ")" << std::endl;
 
-	uint64_t const numranks = maxrank+1;
-	
+	#if 0	
 	if ( numranks != als )
 		std::cerr << "[D] numranks=" << numranks << " != als=" << als << std::endl;
 	
 	assert ( numranks == als );
+	#endif
 
 	if ( verbose )
 		std::cerr
 			<< "[V] " 
+			<< numranks << " lines, "
 			<< als << " als, "
 			<< fragcnt << " mapped frags, " 
 			<< paircnt << " mapped pairs, "

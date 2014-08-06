@@ -1698,6 +1698,8 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 		copybamstr->flush();
 		copybamstr.reset();
 	}
+
+	uint64_t const numranks = CBD->getRank(); // maxrank+1;
 	
 	CBD.reset();
 	CIS.reset();
@@ -1712,16 +1714,19 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	if ( verbose )
 		std::cerr << "[V] fragment and pair data computed in time " << fragrtc.getElapsedSeconds() << " (" << fragrtc.formatTime(fragrtc.getElapsedSeconds()) << ")" << std::endl;
 
+	#if 0
 	uint64_t const numranks = maxrank+1;
 	
 	if ( numranks != als )
 		std::cerr << "[D] numranks=" << numranks << " != als=" << als << std::endl;
 	
 	assert ( numranks == als );
+	#endif
 
 	if ( verbose )
 		std::cerr
 			<< "[V] " 
+			<< numranks << " lines, "
 			<< als << " als, "
 			<< fragcnt << " mapped frags, " 
 			<< paircnt << " mapped pairs, "
