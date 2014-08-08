@@ -34,6 +34,8 @@
 #include <libmaus/lz/BgzfDeflateOutputCallbackMD5.hpp>
 #include <libmaus/lz/BufferedGzipStream.hpp>
 
+#include <libmaus/math/IntegerInterval.hpp>
+
 #include <libmaus/regex/PosixRegex.hpp>
 
 #include <libmaus/util/ArgInfo.hpp>
@@ -42,7 +44,6 @@
 #include <biobambam/BamBamConfig.hpp>
 #include <biobambam/Licensing.hpp>
 
-
 static int getDefaultMD5() { return 0; }
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; }
@@ -50,39 +51,6 @@ static bool getDefaultDisableValidation() { return false; }
 static std::string getDefaultInputFormat() { return "bam"; }
 static int getDefaultIndex() { return 0; }
 
-struct Interval
-{
-	int64_t from;
-	int64_t to;
-	
-	Interval() : from(0), to(0) {}
-	Interval(int64_t const rfrom, int64_t const rto) : from(rfrom), to(rto) {}
-	
-	bool empty() const
-	{
-		return to < from;
-	}
-	
-	static Interval intersection(Interval const & A, Interval const & B)
-	{
-		if ( A.empty() || B.empty() )
-			return Interval(0,-1);
-		if ( A.from > B.from )
-			return intersection(B,A);
-		
-		assert ( A.from <= B.from );
-		
-		if ( A.to < B.from )
-			return Interval(0,-1);
-			
-		return Interval(B.from,std::min(B.to,A.to));
-	}
-	
-	Interval intersection(Interval const & B) const
-	{
-		return intersection(*this,B);
-	}
-};
 
 struct NamedInterval
 {
@@ -287,11 +255,11 @@ struct NamedIntervalGeneSet
 				// name is already there
 				else
 				{
-					Interval prevint(ita->second.first,ita->second.second);
-					Interval newint(entry.txStart,entry.txEnd);
+					libmaus::math::IntegerInterval<int64_t> prevint(ita->second.first,ita->second.second);
+					libmaus::math::IntegerInterval<int64_t> newint(entry.txStart,entry.txEnd);
 				
 					// no intersection?
-					if ( prevint.intersection(newint).empty() )
+					if ( prevint.intersection(newint).isEmpty() )
 					{
 						std::ostringstream nameupdatestr;
 						nameupdatestr << geneName << "_" << entry.txStart;
@@ -568,7 +536,7 @@ struct NamedIntervalGeneSet
 			uint64_t const refid = algn.getRefID();
 			uint64_t const from = algn.getPos();
 			uint64_t const to = algn.getAlignmentEnd();
-			Interval const A(from,to);
+			libmaus::math::IntegerInterval<int64_t> const A(from,to);
 
 			#if defined(FIND_INTERVALS_DEBUG)
 			#if 0
@@ -580,7 +548,7 @@ struct NamedIntervalGeneSet
 			{
 				assert ( intervals[i].refseq == refid );
 
-				if ( ! A.intersection(Interval(intervals[i].from,intervals[i].to)).empty() )
+				if ( ! A.intersection(libmaus::math::IntegerInterval(intervals[i].from,intervals[i].to)).isEmpty() )
 				{
 					matchingIntervals.push_back(i);
 					#if 0
@@ -610,7 +578,7 @@ struct NamedIntervalGeneSet
 				);
 				
 				for ( ; it != intervals.end() && it->bin == C.bin; ++it )
-					if ( ! A.intersection(Interval(it->from,it->to)).empty() )
+					if ( ! A.intersection(libmaus::math::IntegerInterval<int64_t>(it->from,it->to)).isEmpty() )
 					{
 						binMatchingIntervals.push_back(it-intervals.begin());
 						
