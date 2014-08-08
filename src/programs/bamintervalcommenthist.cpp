@@ -161,6 +161,8 @@ struct IntervalPairHistogram
 				std::vector< std::string > co1 = getComments(A1);
 				std::vector< std::string > co2 = getComments(A2);
 				
+				std::vector<uint64_t> idseen;
+				
 				for ( uint64_t k = 0; k < co1.size(); ++k )
 					for ( uint64_t l = 0; l < co2.size(); ++l )
 					{
@@ -172,14 +174,19 @@ struct IntervalPairHistogram
 						
 						uint64_t const id = (id1 <= id2) ? ((id1<<32) | id2) : ((id2<<32) | id1);
 
-						// std::cerr << n1 << "\t" << id1 << "\t" << n2 << "\t" << id2 << std::endl;
+						if ( std::find(idseen.begin(),idseen.end(),id) == idseen.end() )
+						{
+							// std::cerr << n1 << "\t" << id1 << "\t" << n2 << "\t" << id2 << std::endl;
 		
-						hist[id]++;
-						readnames[id].push_back(rname1);
+							hist[id]++;
+							readnames[id].push_back(rname1);
+							idseen.push_back(id);
+						}
 					}
 			}
 		
 		// std::cerr << R1.size() << "\t" << R2.size() << std::endl;
+		// std::cerr << "---" << std::endl;
 	}
 };
 
@@ -210,7 +217,7 @@ int bamintervalcommenthist(::libmaus::util::ArgInfo const & arginfo)
 	::libmaus::bambam::BamAlignmentDecoder & dec = *ppdec;
 	if ( disablevalidation )
 		dec.disableValidation();
-	::libmaus::bambam::BamHeader const & header = dec.getHeader();
+	// ::libmaus::bambam::BamHeader const & header = dec.getHeader();
 	
 	libmaus::bambam::BamAlignment & curalgn = dec.getAlignment();
 	uint64_t c = 0;
