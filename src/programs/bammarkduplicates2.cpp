@@ -1268,7 +1268,8 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 
 	uint64_t const colexcludeflags =
 		libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY |
-		libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSUPPLEMENTARY;
+		libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSUPPLEMENTARY |
+		libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL;
 	
 	if ( arginfo.getPairCount("I") > 1 )
 	{
