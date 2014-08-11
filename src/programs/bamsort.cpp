@@ -30,6 +30,7 @@
 #include <libmaus/bambam/BamDecoder.hpp>
 #include <libmaus/bambam/BamEntryContainer.hpp>
 #include <libmaus/bambam/BamMultiAlignmentDecoderFactory.hpp>
+#include <libmaus/bambam/BamStreamingMarkDuplicates.hpp>
 #include <libmaus/bambam/BamWriter.hpp>
 #include <libmaus/bambam/ProgramHeaderLineSet.hpp>
 
@@ -98,8 +99,6 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilenameout);
 	uint64_t blockmem = arginfo.getValue<uint64_t>("blockmb",getDefaultBlockSize())*1024*1024;
 	std::string const sortorder = arginfo.getValue<std::string>("SO","coordinate");
-	bool const fixmates = arginfo.getValue<int>("fixmates",getDefaultFixMates());
-	bool const addMSMC = arginfo.getValue<int>("adddupmarksupport",getDefaultAddDupMarkSupport());
 	uint64_t sortthreads = arginfo.getValue<uint64_t>("sortthreads",getDefaultSortThreads());
 
 	// input decoder wrapper
@@ -174,16 +173,86 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 	/*
 	 * end md5/index callbacks
 	 */
+	enum sort_order_type { sort_order_coordinate, sort_order_queryname };
+	sort_order_type sort_order;
+	 
 	if ( sortorder != "queryname" )
+	{
 		uphead.changeSortOrder("coordinate");
+		sort_order = sort_order_coordinate;
+	}
 	else
+	{
 		uphead.changeSortOrder("queryname");
+		sort_order = sort_order_queryname;
+	}
+
+	bool const havetag = arginfo.hasArg("tag");
+	std::string const tag = arginfo.getUnparsedValue("tag","no tag");
+
+	if ( havetag && (tag.size() != 2 || (!isalpha(tag[0])) || (!isalnum(tag[1])) ) )
+	{
+		::libmaus::exception::LibMausException se;
+		se.getStream() << "tag " << tag << " is invalid" << std::endl;
+		se.finish();
+		throw se;			
+	}
+	
+	// nucl tag field
+	bool const havenucltag = arginfo.hasArg("nucltag");
+	std::string const nucltag = arginfo.getUnparsedValue("nucltag","no tag");
+
+	if ( havenucltag && (nucltag.size() != 2 || (!isalpha(nucltag[0])) || (!isalnum(nucltag[1])) ) )
+	{
+		::libmaus::exception::LibMausException se;
+		se.getStream() << "nucltag " << tag << " is invalid" << std::endl;
+		se.finish();
+		throw se;			
+	}
+	
+	if ( havetag && havenucltag )
+	{
+		::libmaus::exception::LibMausException se;
+		se.getStream() << "tag and nucltag are mutually exclusive" << std::endl;
+		se.finish();
+		throw se;					
+	}
+	
+	enum tag_type_enum
+	{
+		tag_type_none,
+		tag_type_string,
+		tag_type_nucleotide
+	};
+	tag_type_enum tag_type;
+	
+	if ( havetag )
+		tag_type = tag_type_string;
+	else if ( havenucltag )
+		tag_type = tag_type_nucleotide;
+	else
+		tag_type = tag_type_none;
+
+	bool addMSMC = arginfo.getValue<int>("adddupmarksupport",getDefaultAddDupMarkSupport());
+	bool fixmates = arginfo.getValue<int>("fixmates",getDefaultFixMates());
+	
+	if ( (havetag || havenucltag) && (!addMSMC) )
+	{
+		std::cerr << "[W] tag or nucltag is enabled, forcing adddupmarksupport=1" << std::endl;
+		addMSMC = true;
+	}
+	
+	if ( addMSMC && ! fixmates )
+	{
+		std::cerr << "[W] adddupmarksupport is enabled, forcing fixmates=1" << std::endl;
+		fixmates = true;
+	}
 
 	libmaus::bambam::BamBlockWriterBase::unique_ptr_type Pout ( libmaus::bambam::BamBlockWriterBaseFactory::construct(uphead, arginfo, Pcbs) );
 
 	if ( fixmates )
 	{
-		if ( sortorder != "queryname" )
+		if ( sort_order == sort_order_coordinate )
 		{
 			::libmaus::bambam::BamEntryContainer< ::libmaus::bambam::BamAlignmentPosComparator > 
 				BEC(blockmem,tmpfilenameout,sortthreads);
@@ -202,9 +271,11 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 			libmaus::bambam::BamAuxFilterVector MQfilter;
 			libmaus::bambam::BamAuxFilterVector MSfilter;
 			libmaus::bambam::BamAuxFilterVector MCfilter;
+			libmaus::bambam::BamAuxFilterVector MTfilter;
 			MQfilter.set("MQ");
 			MSfilter.set("MS");
 			MCfilter.set("MC");
+			MTfilter.set("MT");
 			
 			while ( dec.readAlignment() )
 			{
@@ -229,6 +300,18 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 						{
 							libmaus::bambam::BamAlignment::addMateBaseScore(prevalgn,curalgn,MSfilter);
 							libmaus::bambam::BamAlignment::addMateCoordinate(prevalgn,curalgn,MCfilter);
+							
+							switch ( tag_type )
+							{
+								case tag_type_string:
+									libmaus::bambam::BamAlignment::addMateTag(prevalgn,curalgn,MTfilter,tag);
+									break;
+								case tag_type_nucleotide:
+									libmaus::bambam::BamAlignment::addMateTag(prevalgn,curalgn,MTfilter,nucltag);
+									break;
+								default:
+									break;
+							}
 						}
 
 						BEC.putAlignment(prevalgn);
@@ -277,9 +360,11 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 			libmaus::bambam::BamAuxFilterVector MQfilter;
 			libmaus::bambam::BamAuxFilterVector MSfilter;
 			libmaus::bambam::BamAuxFilterVector MCfilter;
+			libmaus::bambam::BamAuxFilterVector MTfilter;
 			MQfilter.set("MQ");
 			MSfilter.set("MS");
 			MCfilter.set("MC");
+			MTfilter.set("MT");
 			
 			while ( dec.readAlignment() )
 			{
@@ -304,6 +389,18 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 						{
 							libmaus::bambam::BamAlignment::addMateBaseScore(prevalgn,curalgn,MSfilter);
 							libmaus::bambam::BamAlignment::addMateCoordinate(prevalgn,curalgn,MCfilter);
+
+							switch ( tag_type )
+							{
+								case tag_type_string:
+									libmaus::bambam::BamAlignment::addMateTag(prevalgn,curalgn,MTfilter,tag);
+									break;
+								case tag_type_nucleotide:
+									libmaus::bambam::BamAlignment::addMateTag(prevalgn,curalgn,MTfilter,nucltag);
+									break;
+								default:
+									break;
+							}
 						}
 
 						BEC.putAlignment(prevalgn);
@@ -336,7 +433,7 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 	}
 	else
 	{
-		if ( sortorder != "queryname" )
+		if ( sort_order == sort_order_coordinate )
 		{
 			bool const calmdnm = arginfo.getValue<unsigned int>("calmdnm",getDefaultCalMdNm());			
 			if ( calmdnm && (! arginfo.hasArg("calmdnmreference")) )
@@ -470,6 +567,8 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( std::string("calmdnmrecompindetonly=<[")+::biobambam::Licensing::formatNumber(getDefaultCalMdNm())+"]>", "only recalculate MD and NM in the presence of indeterminate bases (calmdnm=1 only)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("calmdnmwarnchange=<[")+::biobambam::Licensing::formatNumber(getDefaultCalMdNmWarnChange())+"]>", "warn when changing existing MD/NM fields (calmdnm=1 only)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("adddupmarksupport=<[")+::biobambam::Licensing::formatNumber(getDefaultAddDupMarkSupport())+"]>", "add info for streaming duplicate marking (for name collated input only, ignored for fixmate=0, disabled by default)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "tag=<[a-zA-Z][a-zA-Z0-9]>", "aux field id for tag string extraction (adddupmarksupport=1 only)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "nucltag=<[a-zA-Z][a-zA-Z0-9]>", "aux field id for nucleotide tag extraction (adddupmarksupport=1 only)" ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 
