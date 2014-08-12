@@ -113,12 +113,11 @@ int bamrandomtag(::libmaus::util::ArgInfo const & arginfo)
  	
 	libmaus::bambam::BamAlignment & algn = dec.getAlignment();
 	uint64_t c = 0;
-	libmaus::bambam::BamAuxSortingBuffer sortbuffer;
 
 	libmaus::bambam::BamAuxFilterVector tagfilter;
 	tagfilter.set(tag.c_str());
 	char const * taga = "A";
-	char const * tagb = "B";
+	char const * tagb = "C";
 	srand(time(0));
 
 	while ( dec.readAlignment() )
