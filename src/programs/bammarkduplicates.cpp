@@ -547,11 +547,9 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 			case tag_type_nucleotide:
 			{
 				// aux lookup for read1
-				if ( P.first )
-					tag1 = P.first->getAuxString(cnucltag);
+				tag1 = P.first ? P.first->getAuxString(cnucltag) : 0;
 				// aux lookup for read2
-				if ( P.second )
-					tag2 = P.second->getAuxString(cnucltag);
+				tag2 = P.second ? P.second->getAuxString(cnucltag) : 0;
 
 				tagid = (FATBT(tag1) << 32) | FATBT(tag2);
 				
