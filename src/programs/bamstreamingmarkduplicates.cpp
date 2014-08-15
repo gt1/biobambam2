@@ -45,11 +45,13 @@ static int getDefaultVerbose() { return true; }
 static int getDefaultMD5() { return 0; }
 static int getDefaultIndex() { return 0; }
 static int getDefaultResetDupFlag() { return 0; }
+static int getDefaultFilterDupMarkTags() { return 0; }
 
 int bamstreamingmarkduplicates(libmaus::util::ArgInfo const & arginfo)
 {
 	bool const verbose = arginfo.getValue<uint64_t>("verbose",getDefaultVerbose());
 	bool const resetdupflag = arginfo.getValue<uint64_t>("resetdupflag",getDefaultResetDupFlag());
+	bool const filterdupmarktags = arginfo.getValue<uint64_t>("filterdupmarktags",getDefaultFilterDupMarkTags());
 	std::string const tmpfilenamebase = arginfo.getUnparsedValue("tmpfile",arginfo.getDefaultTmpFileName());	
 
 	libmaus::aio::PosixFdInputStream PFIS(STDIN_FILENO);
@@ -118,7 +120,7 @@ int bamstreamingmarkduplicates(libmaus::util::ArgInfo const & arginfo)
 	libmaus::bambam::BamBlockWriterBase::unique_ptr_type Pwriter(libmaus::bambam::BamBlockWriterBaseFactory::construct(*genuphead,arginfo,Pcbs));
 	libmaus::bambam::BamBlockWriterBase & wr = *Pwriter;
 
-	libmaus::bambam::BamStreamingMarkDuplicates BSMD(arginfo,header,wr);
+	libmaus::bambam::BamStreamingMarkDuplicates BSMD(arginfo,header,wr,filterdupmarktags);
 
 	uint64_t cnt = 0;
 
@@ -239,6 +241,9 @@ int main(int argc, char *argv[])
 
 				V.push_back ( std::pair<std::string,std::string> ( "tag=<[a-zA-Z][a-zA-Z0-9]>", "aux field id for tag string extraction" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "nucltag=<[a-zA-Z][a-zA-Z0-9]>", "aux field id for nucleotide tag extraction" ) );
+				V.push_back ( std::pair<std::string,std::string> ( 
+					std::string("filterdupmarktags=<[") + ::biobambam::Licensing::formatNumber(getDefaultFilterDupMarkTags()) + std::string("]>"), 
+					std::string("remove aux fields MC, MQ, MS, and MT from output (default: ") + ::biobambam::Licensing::formatNumber(getDefaultFilterDupMarkTags()) + std::string(")") ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 
