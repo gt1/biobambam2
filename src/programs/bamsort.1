@@ -1,4 +1,4 @@
-.TH BAMSORT 1 "July 2013" BIOBAMBAM
+.TH BAMSORT 1 "August 2014" BIOBAMBAM
 .SH NAME
 bamsort - sort BAM files by coordinate or query name
 .SH SYNOPSIS
@@ -169,12 +169,37 @@ existing field. By default no warnings are produced.
 add information required for streaming duplicate marking in the aux fields
 MS and MC. Input is assumed to be collated by query name. This option is
 ignored unless fixmates=1. By default it is disabled.
+.PP
+.B markduplicates=<[0]>:
+mark duplicate read pairs and reads. This option can only be used when a
+name collated file (all reads for a name are consecutive in the input) is
+sorted into coordinate order. In addition the input is required not to
+contain orphan reads (pair ends such that the other end of the pair is not
+contained in the file). Setting markduplicates=1 implies
+adddupmarksupport=1. The temporarily added auxiliary fields are removed
+during output generation. The markduplicates option is disabled by default.
+.PP
+.B tag=<tag>
+name of auxiliary field storing tag information for duplicate marking in string form. Read fragments or pairs 
+with different tags will not be considered as duplicates, even they would be according to their
+mapping coordinates. For pairs the tag field information of the first and
+second mate are concatenated to obtain the tag of the pair.
+.PP
+.B nucltag=<tag>
+this option works like the tag option but is restricted to sequences of
+nucleotides (A,C,G or T) as tags. The length of each tag sequence is not
+allowed to exceed 15 bases. All tags are required to have the same length.
+Each non nucleotide symbol is mapped to A. In constrast to the tag option, 
+nucltag uses less memory for processing and can be expected to be faster.
+.PP
+.B M=<stderr>: 
+name of the metrics file for duplicate marking (metrics are written to standard error if not set)
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"
 Report bugs to <gt1@sanger.ac.uk>
 .SH COPYRIGHT
-Copyright \(co 2009-2013 German Tischler, \(co 2011-2013 Genome Research Limited.
+Copyright \(co 2009-2014 German Tischler, \(co 2011-2014 Genome Research Limited.
 License GPLv3+: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>
 .br
 This is free software: you are free to change and redistribute it.
