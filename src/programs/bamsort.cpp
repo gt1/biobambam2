@@ -64,6 +64,7 @@ static int getDefaultCalMdNm() { return 0; }
 static int getDefaultCalMdNmRecompIndetOnly() { return 0; }
 static int getDefaultCalMdNmWarnChange() { return 0; }
 static int getDefaultAddDupMarkSupport() { return 0; }
+static int getDefaultMarkDuplicates() { return 0; }
 
 int bamsort(::libmaus::util::ArgInfo const & arginfo)
 {
@@ -90,6 +91,7 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
 	bool const disablevalidation = arginfo.getValue<int>("disablevalidation",getDefaultDisableValidation());
+	bool const markduplicates = arginfo.getValue<int>("markduplicates",getDefaultMarkDuplicates());
 
 	std::string const inputformat = arginfo.getUnparsedValue("inputformat",getDefaultInputFormat());
 
@@ -104,7 +106,7 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 	// input decoder wrapper
 	libmaus::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
 		libmaus::bambam::BamMultiAlignmentDecoderFactory::construct(
-			arginfo,false // put rank
+			arginfo,markduplicates // put rank if we mark duplicates
 		)
 	);
 	::libmaus::bambam::BamAlignmentDecoder * ppdec = &(decwrapper->getDecoder());
@@ -242,13 +244,32 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 		addMSMC = true;
 	}
 	
+	if ( markduplicates && (!addMSMC) )
+	{
+		std::cerr << "[W] markduplicates is enabled, forcing adddupmarksupport=1" << std::endl;
+		addMSMC = true;		
+	}
+	
 	if ( addMSMC && ! fixmates )
 	{
 		std::cerr << "[W] adddupmarksupport is enabled, forcing fixmates=1" << std::endl;
 		fixmates = true;
 	}
 
-	libmaus::bambam::BamBlockWriterBase::unique_ptr_type Pout ( libmaus::bambam::BamBlockWriterBaseFactory::construct(uphead, arginfo, Pcbs) );
+	libmaus::bambam::BamBlockWriterBase::unique_ptr_type Uout ( libmaus::bambam::BamBlockWriterBaseFactory::construct(uphead, arginfo, Pcbs) );
+	libmaus::bambam::BamBlockWriterBase * Pout = Uout.get();
+	libmaus::bambam::BamStreamingMarkDuplicates::unique_ptr_type MaDuout;
+	
+	if ( markduplicates )
+	{
+		libmaus::bambam::BamStreamingMarkDuplicates::unique_ptr_type TMaDuout(
+			new libmaus::bambam::BamStreamingMarkDuplicates(arginfo,header,*Pout,true /* filter tags out */)
+		);
+		MaDuout = UNIQUE_PTR_MOVE(TMaDuout);
+		Pout = MaDuout.get();
+	}
+	
+	libmaus::bambam::BamBlockWriterBase & alout = *Pout;
 
 	if ( fixmates )
 	{
@@ -339,7 +360,7 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 				std::cerr << "[V] read " << incnt << " alignments" << std::endl;
 
 			// BEC.createOutput(std::cout, uphead, level, verbose, Pcbs);
-			BEC.createOutput(*Pout, verbose);
+			BEC.createOutput(alout, verbose);
 		}
 		else
 		{
@@ -428,7 +449,7 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 				std::cerr << "[V] read " << incnt << " alignments" << std::endl;
 
 			// BEC.createOutput(std::cout, uphead, level, verbose, Pcbs);
-			BEC.createOutput(*Pout, verbose);
+			BEC.createOutput(alout, verbose);
 		}
 	}
 	else
@@ -468,11 +489,11 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 			if ( calmdnm )
 			{
 				libmaus::bambam::MdNmRecalculation mdnmrecalc(calmdnmreference,false /* do not validate again */,calmdnmrecompindetonly,calmdnmwarnchange,64*1024);
-				BEC.createOutput(*Pout, verbose, &mdnmrecalc);
+				BEC.createOutput(alout, verbose, &mdnmrecalc);
 			}
 			else
 			{
-				BEC.createOutput(*Pout, verbose, 0);			
+				BEC.createOutput(alout, verbose, 0);			
 			}
 		}
 		else
@@ -495,12 +516,20 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 				std::cerr << "[V] read " << incnt << " alignments" << std::endl;
 
 			// BEC.createOutput(std::cout, uphead, level, verbose, Pcbs);
-			BEC.createOutput(*Pout, verbose);
+			BEC.createOutput(alout, verbose);
 		}
+	}
+	
+	// flush duplicate marking if active
+	if ( MaDuout )
+	{
+		MaDuout->flush();
+		MaDuout->writeMetrics(arginfo);
+		MaDuout.reset();
 	}
 
 	// flush encoder so callbacks see all output data
-	Pout.reset();
+	Uout.reset();
 
 	if ( Pmd5cb )
 	{
@@ -569,6 +598,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( std::string("adddupmarksupport=<[")+::biobambam::Licensing::formatNumber(getDefaultAddDupMarkSupport())+"]>", "add info for streaming duplicate marking (for name collated input only, ignored for fixmate=0, disabled by default)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "tag=<[a-zA-Z][a-zA-Z0-9]>", "aux field id for tag string extraction (adddupmarksupport=1 only)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "nucltag=<[a-zA-Z][a-zA-Z0-9]>", "aux field id for nucleotide tag extraction (adddupmarksupport=1 only)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("markduplicates=<[")+::biobambam::Licensing::formatNumber(getDefaultMarkDuplicates())+"]>", "mark duplicates (only when input name collated and output coordinate sorted, disabled by default)" ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 
