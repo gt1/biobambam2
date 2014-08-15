@@ -237,6 +237,9 @@ int main(int argc, char *argv[])
 					)
 				);
 
+				V.push_back ( std::pair<std::string,std::string> ( "tag=<[a-zA-Z][a-zA-Z0-9]>", "aux field id for tag string extraction" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "nucltag=<[a-zA-Z][a-zA-Z0-9]>", "aux field id for nucleotide tag extraction" ) );
+
 				::biobambam::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
