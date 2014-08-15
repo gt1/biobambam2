@@ -128,13 +128,13 @@ If indexfilename and O are unset, then no BAM index will be computed.
 .B indexfilename
 file name for BAM index if index=1.
 .PP
-.B tag
+.B tag=<tag>
 name of auxiliary field storing tag information in string form. Read fragments or pairs 
 with different tags will not be considered as duplicates, even they would be according to their
 mapping coordinates. For pairs the tag field information of the first and
 second mate are concatenated to obtain the tag of the pair.
 .PP
-.B nucltag
+.B nucltag=<tag>
 this option works like the tag option but is restricted to sequences of
 nucleotides (A,C,G or T) as tags. The length of each tag sequence is not
 allowed to exceed 15 bases. All tags are required to have the same length.
