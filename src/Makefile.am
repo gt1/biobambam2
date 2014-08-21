@@ -71,7 +71,7 @@ bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamr
 noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments bamtoname \
 	bamdisthist bamrefdepth fastabgzfextract bamfilternames @BAMREFDEPTHPEAKS@ \
 	@BAMPARSORTNOINSTEXP@ bamheap bamfrontback bamclipextract \
-	@BAMALIGNMENTOFFSETSNOINSTEXP@ @BLASTXMLTOBAMNOINSTEXP@ bamrandomtag
+	@BAMALIGNMENTOFFSETSNOINSTEXP@ @BLASTXMLTOBAMNOINSTEXP@ bamrandomtag bamheap2
 	
 EXTRA_PROGRAMS = bamrefdepthpeaks bamparsort blastnxmltobam bamalignmentoffsets
 
@@ -374,3 +374,8 @@ bamrandomtag_SOURCES = programs/bamrandomtag.cpp biobambam/Licensing.cpp
 bamrandomtag_LDADD = ${LIBMAUSLIBS}
 bamrandomtag_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
 bamrandomtag_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+bamheap2_SOURCES = programs/bamheap2.cpp biobambam/Licensing.cpp
+bamheap2_LDADD = ${LIBMAUSLIBS}
+bamheap2_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+bamheap2_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
