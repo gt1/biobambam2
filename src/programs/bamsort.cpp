@@ -106,7 +106,7 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 	// input decoder wrapper
 	libmaus::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
 		libmaus::bambam::BamMultiAlignmentDecoderFactory::construct(
-			arginfo,markduplicates // put rank if we mark duplicates
+			arginfo,false // do not put rank
 		)
 	);
 	::libmaus::bambam::BamAlignmentDecoder * ppdec = &(decwrapper->getDecoder());
@@ -263,7 +263,7 @@ int bamsort(::libmaus::util::ArgInfo const & arginfo)
 	if ( markduplicates )
 	{
 		libmaus::bambam::BamStreamingMarkDuplicates::unique_ptr_type TMaDuout(
-			new libmaus::bambam::BamStreamingMarkDuplicates(arginfo,header,*Pout,true /* filter tags out */)
+			new libmaus::bambam::BamStreamingMarkDuplicates(arginfo,header,*Pout,true /* filter tags out */, true /* put rank */)
 		);
 		MaDuout = UNIQUE_PTR_MOVE(TMaDuout);
 		Pout = MaDuout.get();
