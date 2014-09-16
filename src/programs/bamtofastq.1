@@ -182,6 +182,17 @@ Default is _s.fq if gz=0 and _s.fq.gz for gz=1.
 .PP
 .B tryoq=<0|1>:
 use content of OQ aux field if present instead of quality field when converting to FastQ. By default the quality field is used.
+.PP
+.B split=<0>:
+split named output files into chunks of this number of reads. The output
+file names will be extended by _NNNNNN if gz=0 and by _NNNNNN.gz if gz=1
+where NNNNNN denotes the NNNNNN+1'th output file (i.e. numbers start with 000000).
+The suffixes k, m, g, K, M and G can be used to denote that the argument is
+to be multiplied by 1024, 1024^2, 1024^3, 1000, 1000^2 or 1000^3
+respectively.
+.PP
+.B splitprefix=<bamtofastq_split>:
+file prefix if split>0 and collate=0.
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"

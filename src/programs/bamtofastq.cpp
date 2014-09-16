@@ -24,15 +24,18 @@
 
 #include <config.h>
 
-#include <libmaus/bambam/CircularHashCollatingBamDecoder.hpp>
-#include <libmaus/bambam/BamToFastqOutputFileSet.hpp>
-#include <libmaus/bambam/BamMultiAlignmentDecoderFactory.hpp>
-#include <libmaus/util/TempFileRemovalContainer.hpp>
-#include <libmaus/util/MemUsage.hpp>
-#include <libmaus/lz/GzipOutputStream.hpp>
 #include <libmaus/aio/PosixFdInputStream.hpp>
 #include <libmaus/aio/PosixFdOutputStream.hpp>
 #include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
+#include <libmaus/bambam/BamMultiAlignmentDecoderFactory.hpp>
+#include <libmaus/bambam/BamToFastqOutputFileSet.hpp>
+#include <libmaus/bambam/CircularHashCollatingBamDecoder.hpp>
+#include <libmaus/lz/GzipOutputStream.hpp>
+#include <libmaus/util/MemUsage.hpp>
+#include <libmaus/util/TempFileRemovalContainer.hpp>
+
+#include <libmaus/aio/LineSplittingPosixFdOutputStream.hpp>
+#include <libmaus/lz/LineSplittingGzipOutputStream.hpp>
 
 static std::string getDefaultInputFormat()
 {
@@ -54,29 +57,39 @@ bool getDefaultTryOQ()
 	return 0;
 }
 
-std::string getDefaultReadGroupSuffixF(bool const gz)
+std::string getDefaultReadGroupSuffixF(bool const gz, uint64_t const split)
 {
-	return std::string("_1.fq") + (gz ? ".gz" : "");
+	return std::string("_1.fq") + ((gz && split) ? ".gz" : "");
 }
 
-std::string getDefaultReadGroupSuffixF2(bool const gz)
+std::string getDefaultReadGroupSuffixF2(bool const gz, uint64_t const split)
 {
-	return std::string("_2.fq") + (gz ? ".gz" : "");
+	return std::string("_2.fq") + ((gz && split) ? ".gz" : "");
 }
 
-std::string getDefaultReadGroupSuffixO(bool const gz)
+std::string getDefaultReadGroupSuffixO(bool const gz, uint64_t const split)
 {
-	return std::string("_o1.fq") + (gz ? ".gz" : "");
+	return std::string("_o1.fq") + ((gz && split) ? ".gz" : "");
 }
 
-std::string getDefaultReadGroupSuffixO2(bool const gz)
+std::string getDefaultReadGroupSuffixO2(bool const gz, uint64_t const split)
 {
-	return std::string("_o2.fq") + (gz ? ".gz" : "");
+	return std::string("_o2.fq") + ((gz && split) ? ".gz" : "");
 }
 
-std::string getDefaultReadGroupSuffixS(bool const gz)
+std::string getDefaultReadGroupSuffixS(bool const gz, uint64_t const split)
 {
-	return std::string("_s.fq") + (gz ? ".gz" : "");
+	return std::string("_s.fq") + ((gz && split) ? ".gz" : "");
+}
+
+uint64_t getDefaultSplit()
+{
+	return 0;
+}
+
+std::string getDefaultSplitPrefix()
+{
+	return "bamtofastq_split";
 }
 
 struct BamToFastQInputFileStream
@@ -132,6 +145,8 @@ void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::bam
 
 	libmaus::timing::RealTimeClock rtc; rtc.start();
 	bool const gz = arginfo.getValue<int>("gz",0);
+	uint64_t const split = arginfo.getValueUnsignedNumeric("split",getDefaultSplit());
+	std::string splitprefix = arginfo.getUnparsedValue("splitprefix",getDefaultSplitPrefix());
 	int const level = libmaus::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",Z_DEFAULT_COMPRESSION));
 	uint32_t const excludeflags = libmaus::bambam::BamFlagBase::stringToFlags(arginfo.getValue<std::string>("exclude","SECONDARY,SUPPLEMENTARY"));
 	libmaus::bambam::BamAlignment const & algn = bamdec.getAlignment();
@@ -140,14 +155,38 @@ void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::bam
 	uint64_t bcnt = 0;
 	unsigned int const verbshift = 20;
 	libmaus::lz::GzipOutputStream::unique_ptr_type Pgzos;
+	std::ostream * poutputstream = &std::cout;
+	libmaus::aio::LineSplittingPosixFdOutputStream::unique_ptr_type Psplitos;
+	libmaus::lz::LineSplittingGzipOutputStream::unique_ptr_type Psplitgzos;
 	
-	if ( gz )
+	if ( split )
+	{
+		if ( gz )
+		{
+			libmaus::lz::LineSplittingGzipOutputStream::unique_ptr_type Tsplitgzos(
+				new libmaus::lz::LineSplittingGzipOutputStream(splitprefix,split*4,64*1024,level)
+			);
+			Psplitgzos = UNIQUE_PTR_MOVE(Tsplitgzos);
+			poutputstream = Psplitgzos.get();
+		
+		}
+		else
+		{
+			libmaus::aio::LineSplittingPosixFdOutputStream::unique_ptr_type Tsplitos(
+				new libmaus::aio::LineSplittingPosixFdOutputStream(splitprefix,split*4)
+			);
+			Psplitos = UNIQUE_PTR_MOVE(Tsplitos);
+			poutputstream = Psplitos.get();
+		}
+	}
+	else if ( gz )
 	{
 		libmaus::lz::GzipOutputStream::unique_ptr_type tPgzos(new libmaus::lz::GzipOutputStream(std::cout,libmaus::bambam::BamToFastqOutputFileSet::getGzipBufferSize(),level));
 		Pgzos = UNIQUE_PTR_MOVE(tPgzos);
+		poutputstream = Pgzos.get();
 	}
 	
-	std::ostream & outputstream = gz ? *Pgzos : std::cout;
+	std::ostream & outputstream = *poutputstream;
 		
 	while ( bamdec.readAlignment() )
 	{
@@ -184,6 +223,8 @@ void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::bam
 		}
 	}
 
+	Psplitos.reset();
+	Psplitgzos.reset();
 	outputstream.flush();
 	if ( Pgzos )
 		Pgzos.reset();
@@ -278,11 +319,12 @@ void bamtofastqCollating(
 	if ( outputperreadgroup )
 	{
 		bool const gz = arginfo.getValue<int>("gz",0);
-		std::string const Fsuffix = arginfo.getUnparsedValue("outputperreadgroupsuffixF",getDefaultReadGroupSuffixF(gz));
-		std::string const F2suffix = arginfo.getUnparsedValue("outputperreadgroupsuffixF2",getDefaultReadGroupSuffixF2(gz));
-		std::string const Osuffix = arginfo.getUnparsedValue("outputperreadgroupsuffixO",getDefaultReadGroupSuffixO(gz));
-		std::string const O2suffix = arginfo.getUnparsedValue("outputperreadgroupsuffixO2",getDefaultReadGroupSuffixO2(gz));
-		std::string const Ssuffix = arginfo.getUnparsedValue("outputperreadgroupsuffixS",getDefaultReadGroupSuffixS(gz));
+		uint64_t const split = arginfo.getValueUnsignedNumeric("split",getDefaultSplit());
+		std::string const Fsuffix = arginfo.getUnparsedValue("outputperreadgroupsuffixF",getDefaultReadGroupSuffixF(gz,split));
+		std::string const F2suffix = arginfo.getUnparsedValue("outputperreadgroupsuffixF2",getDefaultReadGroupSuffixF2(gz,split));
+		std::string const Osuffix = arginfo.getUnparsedValue("outputperreadgroupsuffixO",getDefaultReadGroupSuffixO(gz,split));
+		std::string const O2suffix = arginfo.getUnparsedValue("outputperreadgroupsuffixO2",getDefaultReadGroupSuffixO2(gz,split));
+		std::string const Ssuffix = arginfo.getUnparsedValue("outputperreadgroupsuffixS",getDefaultReadGroupSuffixS(gz,split));
 		
 		// collect set of all suffixes
 		std::set<std::string> suffixset;
@@ -360,25 +402,58 @@ void bamtofastqCollating(
 		int64_t const posixoutbufsize = 256*1024;
 		libmaus::autoarray::AutoArray< ::libmaus::aio::PosixFdOutputStream::unique_ptr_type > APFOS(numoutputfiles);
 		libmaus::autoarray::AutoArray< libmaus::lz::GzipOutputStream::unique_ptr_type > AGZOS(numoutputfiles);
+		
+		libmaus::autoarray::AutoArray< ::libmaus::aio::LineSplittingPosixFdOutputStream::unique_ptr_type > ALSPFDOS(numoutputfiles);
+		libmaus::autoarray::AutoArray< ::libmaus::lz::LineSplittingGzipOutputStream::unique_ptr_type > ALSGZOS(numoutputfiles);
+		
 		libmaus::autoarray::AutoArray< std::ostream * > AOS(numoutputfiles);
 		libmaus::autoarray::AutoArray< uint64_t > filefrags(numoutputfiles);
 		int const level = std::min(9,std::max(-1,arginfo.getValue<int>("level",Z_DEFAULT_COMPRESSION)));
-		for ( uint64_t i = 0; i < numoutputfiles; ++i )
+		
+		if ( split )
 		{
-			::libmaus::aio::PosixFdOutputStream::unique_ptr_type tptr(
-				new ::libmaus::aio::PosixFdOutputStream(outputfilenamevector[i],posixoutbufsize)
-			);
-			APFOS[i] = UNIQUE_PTR_MOVE(tptr);
-			
 			if ( gz )
 			{
-				libmaus::lz::GzipOutputStream::unique_ptr_type tPgzos(new libmaus::lz::GzipOutputStream(*(APFOS[i]),libmaus::bambam::BamToFastqOutputFileSet::getGzipBufferSize(),level));
-				AGZOS[i] = UNIQUE_PTR_MOVE(tPgzos);
-				AOS[i] = AGZOS[i].get();
+				for ( uint64_t i = 0; i < numoutputfiles; ++i )
+				{
+					::libmaus::lz::LineSplittingGzipOutputStream::unique_ptr_type tptr(
+						new ::libmaus::lz::LineSplittingGzipOutputStream(outputfilenamevector[i],4*split,64*1024,level)
+					);
+					ALSGZOS[i] = UNIQUE_PTR_MOVE(tptr);
+					AOS[i] = ALSGZOS[i].get();
+				}	
 			}
 			else
 			{
-				AOS[i] = APFOS[i].get();
+				for ( uint64_t i = 0; i < numoutputfiles; ++i )
+				{
+					::libmaus::aio::LineSplittingPosixFdOutputStream::unique_ptr_type tptr(
+						new ::libmaus::aio::LineSplittingPosixFdOutputStream(outputfilenamevector[i],4*split)
+					);
+					ALSPFDOS[i] = UNIQUE_PTR_MOVE(tptr);
+					AOS[i] = ALSPFDOS[i].get();
+				}				
+			}
+		}
+		else
+		{
+			for ( uint64_t i = 0; i < numoutputfiles; ++i )
+			{
+				::libmaus::aio::PosixFdOutputStream::unique_ptr_type tptr(
+					new ::libmaus::aio::PosixFdOutputStream(outputfilenamevector[i],posixoutbufsize)
+				);
+				APFOS[i] = UNIQUE_PTR_MOVE(tptr);
+				
+				if ( gz )
+				{
+					libmaus::lz::GzipOutputStream::unique_ptr_type tPgzos(new libmaus::lz::GzipOutputStream(*(APFOS[i]),libmaus::bambam::BamToFastqOutputFileSet::getGzipBufferSize(),level));
+					AGZOS[i] = UNIQUE_PTR_MOVE(tPgzos);
+					AOS[i] = AGZOS[i].get();
+				}
+				else
+				{
+					AOS[i] = APFOS[i].get();
+				}
 			}
 		}
 
@@ -516,16 +591,27 @@ void bamtofastqCollating(
 			}
 		}
 
-		
-		// close files
-		for ( uint64_t i = 0; i < numoutputfiles; ++i )
+		if ( split )
 		{
-			if ( AGZOS[i] )
-				AGZOS[i].reset();
-			APFOS[i].reset();
+			for ( uint64_t i = 0; i < numoutputfiles; ++i )
+			{
+				ALSPFDOS[i].reset();
+				ALSGZOS[i].reset();
+			}
+		}
+		else
+		{
+			// close files
+			for ( uint64_t i = 0; i < numoutputfiles; ++i )
+			{
+				if ( AGZOS[i] )
+					AGZOS[i].reset();
+				APFOS[i].reset();
 			
-			if ( ! filefrags[i] )
-				remove(outputfilenamevector[i].c_str());
+				// remove empty files
+				if ( ! filefrags[i] )
+					remove(outputfilenamevector[i].c_str());
+			}
 		}
 	}
 	else
@@ -968,6 +1054,7 @@ int main(int argc, char * argv[])
 				std::vector< std::pair<std::string,std::string> > V;
 				
 				bool const gz = arginfo.getValue<unsigned int>("gz",0);
+				uint64_t const split = arginfo.getValueUnsignedNumeric("split",0);
 				
 				V.push_back ( std::pair<std::string,std::string> ( "F=<[stdout]>", "matched pairs first mates" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "F2=<[stdout]>", "matched pairs second mates" ) );
@@ -999,12 +1086,14 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "inputbuffersize=<["+::biobambam::Licensing::formatNumber(BamToFastQInputFileStream::getDefaultBufferSize())+"]>", "size of input buffer" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "outputperreadgroup=<["+::biobambam::Licensing::formatNumber(getDefaultOutputPerReadgroup())+"]>", "split output per read group (for collate=1 only)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "outputdir=<>", "directory for output if outputperreadgroup=1 (default: current directory)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "outputperreadgroupsuffixF=<["+getDefaultReadGroupSuffixF(gz)+"]>", "suffix for F category when outputperreadgroup=1" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "outputperreadgroupsuffixF2=<["+getDefaultReadGroupSuffixF2(gz)+"]>", "suffix for F2 category when outputperreadgroup=1" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "outputperreadgroupsuffixO=<["+getDefaultReadGroupSuffixO(gz)+"]>", "suffix for O category when outputperreadgroup=1" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "outputperreadgroupsuffixO2=<["+getDefaultReadGroupSuffixO2(gz)+"]>", "suffix for O2 category when outputperreadgroup=1" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "outputperreadgroupsuffixS=<["+getDefaultReadGroupSuffixS(gz)+"]>", "suffix for S category when outputperreadgroup=1" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "outputperreadgroupsuffixF=<["+getDefaultReadGroupSuffixF(gz,split)+"]>", "suffix for F category when outputperreadgroup=1" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "outputperreadgroupsuffixF2=<["+getDefaultReadGroupSuffixF2(gz,split)+"]>", "suffix for F2 category when outputperreadgroup=1" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "outputperreadgroupsuffixO=<["+getDefaultReadGroupSuffixO(gz,split)+"]>", "suffix for O category when outputperreadgroup=1" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "outputperreadgroupsuffixO2=<["+getDefaultReadGroupSuffixO2(gz,split)+"]>", "suffix for O2 category when outputperreadgroup=1" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "outputperreadgroupsuffixS=<["+getDefaultReadGroupSuffixS(gz,split)+"]>", "suffix for S category when outputperreadgroup=1" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("tryoq=<[") + ::biobambam::Licensing::formatNumber(getDefaultTryOQ()) + "]>", "use OQ field instead of quality field if present (collate={0,1} only)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("split=<[")+libmaus::util::NumberSerialisation::formatNumber(getDefaultSplit(),0)+"]>", "split named output files into chunks of this amount of reads (0: do not split)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("splitprefix=<[")+getDefaultSplitPrefix()+"]>", "file name prefix if collate=0 and split>0" ) );
 				
 				::biobambam::Licensing::printMap(std::cerr,V);
 
