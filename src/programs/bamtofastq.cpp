@@ -138,6 +138,20 @@ struct BamToFastQInputFileStream
 enum bamtofastq_conversion_type { bamtofastq_conversion_type_fastq, bamtofastq_conversion_type_fasta, bamtofastq_conversion_type_fastq_try_oq };
 
 template<bamtofastq_conversion_type conversion_type>
+uint64_t getSplitMultiplier()
+{
+	switch ( conversion_type )
+	{
+		case bamtofastq_conversion_type_fasta:
+			return 2;
+		case bamtofastq_conversion_type_fastq:
+		case bamtofastq_conversion_type_fastq_try_oq:
+		default:
+			return 4;
+	}
+}
+
+template<bamtofastq_conversion_type conversion_type>
 void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::bambam::BamAlignmentDecoder & bamdec)
 {
 	if ( arginfo.getValue<unsigned int>("disablevalidation",0) )
@@ -161,10 +175,12 @@ void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::bam
 	
 	if ( split )
 	{
+		uint64_t const mult = getSplitMultiplier<conversion_type>();
+		
 		if ( gz )
 		{
 			libmaus::lz::LineSplittingGzipOutputStream::unique_ptr_type Tsplitgzos(
-				new libmaus::lz::LineSplittingGzipOutputStream(splitprefix,split*4,64*1024,level)
+				new libmaus::lz::LineSplittingGzipOutputStream(splitprefix,split*mult,64*1024,level)
 			);
 			Psplitgzos = UNIQUE_PTR_MOVE(Tsplitgzos);
 			poutputstream = Psplitgzos.get();
@@ -173,7 +189,7 @@ void bamtofastqNonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::bam
 		else
 		{
 			libmaus::aio::LineSplittingPosixFdOutputStream::unique_ptr_type Tsplitos(
-				new libmaus::aio::LineSplittingPosixFdOutputStream(splitprefix,split*4)
+				new libmaus::aio::LineSplittingPosixFdOutputStream(splitprefix,split*mult)
 			);
 			Psplitos = UNIQUE_PTR_MOVE(Tsplitos);
 			poutputstream = Psplitos.get();
@@ -412,12 +428,14 @@ void bamtofastqCollating(
 		
 		if ( split )
 		{
+			uint64_t const mult = getSplitMultiplier<conversion_type>();
+			
 			if ( gz )
 			{
 				for ( uint64_t i = 0; i < numoutputfiles; ++i )
 				{
 					::libmaus::lz::LineSplittingGzipOutputStream::unique_ptr_type tptr(
-						new ::libmaus::lz::LineSplittingGzipOutputStream(outputfilenamevector[i],4*split,64*1024,level)
+						new ::libmaus::lz::LineSplittingGzipOutputStream(outputfilenamevector[i],mult*split,64*1024,level)
 					);
 					ALSGZOS[i] = UNIQUE_PTR_MOVE(tptr);
 					AOS[i] = ALSGZOS[i].get();
@@ -428,7 +446,7 @@ void bamtofastqCollating(
 				for ( uint64_t i = 0; i < numoutputfiles; ++i )
 				{
 					::libmaus::aio::LineSplittingPosixFdOutputStream::unique_ptr_type tptr(
-						new ::libmaus::aio::LineSplittingPosixFdOutputStream(outputfilenamevector[i],4*split)
+						new ::libmaus::aio::LineSplittingPosixFdOutputStream(outputfilenamevector[i],mult*split)
 					);
 					ALSPFDOS[i] = UNIQUE_PTR_MOVE(tptr);
 					AOS[i] = ALSPFDOS[i].get();
