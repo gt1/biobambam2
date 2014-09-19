@@ -83,7 +83,7 @@ struct HeapEntry
 					
 				std::sort(sortvec.begin(),sortvec.end());
 
-				out << refidname << "\t" << refpos << "\t" << (-static_cast<int64_t>(maxi))+static_cast<int64_t>(j) << "\t";
+				out << refidname << '\t' << refpos << '\t' << (-static_cast<int64_t>(maxi))+static_cast<int64_t>(j) << '\t';
 				if ( cov > sortvec.size() )
 					for ( uint64_t i = 0; i < cov-sortvec.size(); ++i )
 						out << padsym;
@@ -94,8 +94,8 @@ struct HeapEntry
 		}
 		
 		std::sort(V.begin(),V.end());
-		
-		out << refidname << "\t" << refpos << "\t" << 0 << "\t";
+
+		out << refidname << '\t' << refpos << '\t' << 0 << '\t';
 		for ( uint64_t i = 0; i < V.size(); ++i )
 			out << V[i].first;
 			
