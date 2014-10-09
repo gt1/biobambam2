@@ -45,6 +45,11 @@ int getDefaultLevel()
 	return Z_DEFAULT_COMPRESSION;
 }
 
+bool getDefaultBaseQualHist()
+{
+	return false;
+}
+
 bool getDefaultPassThrough()
 {
 	return false;
@@ -65,6 +70,7 @@ int bamvalidateTemplate(::libmaus::util::ArgInfo const & arginfo)
 {
 	libmaus::timing::RealTimeClock rtc; rtc.start();	
 	bool const verbose = arginfo.getValue("verbose",getDefaultVerbose());
+	bool const basequalhist = arginfo.getValue("basequalhist",getDefaultBaseQualHist());
 	
 	libmaus::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
 		libmaus::bambam::BamMultiAlignmentDecoderFactory::construct(
@@ -147,12 +153,26 @@ int bamvalidateTemplate(::libmaus::util::ArgInfo const & arginfo)
 	libmaus::autoarray::AutoArray<char> lastvalidname(256); // max valid read name is 255 bytes
 	uint64_t alsok = 0;
 
+	::libmaus::autoarray::AutoArray<char> qual;
+	libmaus::autoarray::AutoArray<uint64_t> H(static_cast<uint64_t>(std::numeric_limits<uint8_t>::max())+1);
+	std::fill(H.begin(),H.end(),0ull);
+	
 	try
 	{
 		while ( dec.readAlignment() )
 		{
 			if ( passthrough )
 				Pout->writeAlignment(algn);
+
+			if ( basequalhist )
+			{
+				uint64_t const l = algn.getLseq();
+				uint8_t const * Qc = libmaus::bambam::BamAlignmentDecoderBase::getQual(algn.D.begin());					
+				uint8_t const * const Qe = Qc + l;
+				
+				while ( Qc != Qe )
+					H[*(Qc++)]++;
+			}
 
 			uint64_t const lname = algn.getLReadName();
 			char const * name = algn.getName();
@@ -182,6 +202,48 @@ int bamvalidateTemplate(::libmaus::util::ArgInfo const & arginfo)
 	if ( verbose )
 		std::cerr << "[V] checked " << alsok << " alignments in " << rtc.formatTime(rtc.getElapsedSeconds()) 
 			<< " (" << alsok / rtc.getElapsedSeconds() << " al/s)" << std::endl;
+			
+	if ( basequalhist )
+	{
+		uint64_t const s = std::accumulate(H.begin(),H.end(),0ull);
+		
+		uint64_t a = 0;		
+		uint64_t minq = std::numeric_limits<uint64_t>::max();
+		uint64_t maxq = 0;
+		
+		for ( uint64_t i = 0; i < H.size(); ++i )
+			if ( H[i] )
+			{
+				minq = std::min(minq,i);
+				maxq = std::max(maxq,i);
+			
+				a += H[i];
+				
+				std::cerr 
+					<< "[H]\t" << i << "\t";
+				
+				if ( ( static_cast<uint64_t>(i+33) < static_cast<uint64_t>(std::numeric_limits<char>::max()) && isprint(i+33)) )
+					std::cerr << static_cast<char>(i+33);
+				
+				std::cerr << "\t"
+					<< H[i] << "\t" 
+					<< (H[i] / static_cast<double>(s)) << "\t"
+					<< (a / static_cast<double>(s))
+					<< std::endl;
+			}
+			
+		if ( s )
+		{
+			std::cerr << "[H]\tmin\t" << minq << "\t";
+			if ( ( static_cast<uint64_t>(minq+33) < static_cast<uint64_t>(std::numeric_limits<char>::max()) && isprint(minq+33)) )
+				std::cerr << static_cast<char>(minq+33);
+			std::cerr << std::endl;
+			std::cerr << "[H]\tmax\t" << maxq << "\t";
+			if ( ( static_cast<uint64_t>(maxq+33) < static_cast<uint64_t>(std::numeric_limits<char>::max()) && isprint(maxq+33)) )
+				std::cerr << static_cast<char>(maxq+33);
+			std::cerr << std::endl;
+		}
+	}
 	
 	return EXIT_SUCCESS;
 }
@@ -226,6 +288,7 @@ int main(int argc, char * argv[])
 				std::vector< std::pair<std::string,std::string> > V;
 			
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print stats at the end of a successfull run" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "basequalhist=<["+::biobambam::Licensing::formatNumber(getDefaultBaseQualHist())+"]>", "print base quality histogram at end of a successfull run" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "passthrough=<["+::biobambam::Licensing::formatNumber(getDefaultPassThrough())+"]>", "write alignments to standard output (default: do not pass through)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
 				V.push_back ( std::pair<std::string,std::string> ( "tmpfile=<filename>", "prefix for temporary files, default: create files in current directory (passthrough=1, index=1 only)" ) );
@@ -241,7 +304,6 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "range=<>", "coordinate range to be processed (for coordinate sorted indexed BAM input only)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "outputthreads=<[1]>", "output helper threads (for outputformat=bam only, default: 1, passthrough=1 only)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "O=<[stdout]>", "output filename (standard output if unset, passthrough=1 only)" ) );
-
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 
