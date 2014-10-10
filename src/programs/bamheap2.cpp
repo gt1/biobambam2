@@ -17,6 +17,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 #include <libmaus/bambam/BamMultiAlignmentDecoderFactory.hpp>
+#include <libmaus/fastx/FastAIndex.hpp>
+#include <libmaus/aio/PosixFdOutputStream.hpp>
 #include <biobambam/BamBamConfig.hpp>
 #include <biobambam/Licensing.hpp>
 
@@ -37,6 +39,74 @@ static std::string getDefaultInputFormat()
 
 static char const padsym = '*';
 
+struct ConsensusAccuracy;
+ConsensusAccuracy operator+(ConsensusAccuracy const & A, ConsensusAccuracy const & B);
+
+struct ConsensusAccuracy
+{
+	uint64_t matches;
+	uint64_t mismatches;
+	uint64_t insertions;
+	uint64_t deletions;
+	uint64_t refbasesprocessed;
+	uint64_t refbasesexpected;
+	
+	ConsensusAccuracy() : matches(0), mismatches(0), insertions(0), deletions(0), refbasesprocessed(0), refbasesexpected(0) {}
+	ConsensusAccuracy(uint64_t const & rrefbasesexpected) : matches(0), mismatches(0), insertions(0), deletions(0), refbasesprocessed(0), refbasesexpected(rrefbasesexpected) {}
+	
+	ConsensusAccuracy & operator+=(ConsensusAccuracy const & O)
+	{
+		matches += O.matches;
+		mismatches += O.mismatches;
+		insertions += O.insertions;
+		deletions += O.deletions;
+		refbasesprocessed += O.refbasesprocessed;
+		refbasesexpected += O.refbasesexpected;
+		return *this;
+	}
+};
+
+ConsensusAccuracy operator+(ConsensusAccuracy const & A, ConsensusAccuracy const & B)
+{
+	ConsensusAccuracy C;
+	C.matches = A.matches+B.matches;
+	C.mismatches = A.mismatches+B.mismatches;
+	C.insertions = A.insertions+B.insertions;
+	C.deletions = A.deletions+B.deletions;
+	C.refbasesprocessed = A.refbasesprocessed+B.refbasesprocessed;
+	C.refbasesexpected = A.refbasesexpected+B.refbasesexpected;
+	return C;
+}
+
+std::ostream & operator<<(std::ostream & out, ConsensusAccuracy const & C)
+{
+	return out << "ConsensusAccuracy("
+		<< "matches=" << C.matches << ","
+		<< "mismatches=" << C.mismatches << ","
+		<< "insertions=" << C.insertions << ","
+		<< "deletions=" << C.deletions << ","
+		<< "refbasesprocessed=" << C.refbasesprocessed << ","
+		<< "refbasesexpected=" << C.refbasesexpected << ","
+		<< "refmissing=" << static_cast<int64_t>(C.refbasesexpected)-static_cast<int64_t>(C.refbasesprocessed) << ","
+		<< "errorrate=" << 
+			(static_cast<double>(C.mismatches + C.insertions + C.deletions + static_cast<int64_t>(C.refbasesexpected)-static_cast<int64_t>(C.refbasesprocessed))
+			/
+			(C.matches + C.mismatches + C.insertions + C.deletions + static_cast<int64_t>(C.refbasesexpected)-static_cast<int64_t>(C.refbasesprocessed)))
+		<< ")";
+}
+
+struct ConsensusAux
+{
+	libmaus::autoarray::AutoArray<uint64_t> M;
+	libmaus::autoarray::AutoArray<uint64_t> C;
+
+	ConsensusAux() : M(256), C(256)
+	{
+		std::fill(M.begin(),M.end(),1);
+		std::fill(C.begin(),C.end(),0);
+	}
+};
+
 struct HeapEntry
 {
 	// bases inserted before reference base
@@ -47,11 +117,43 @@ struct HeapEntry
 	
 	HeapEntry() : I(), V(), iadd(0)
 	{
-	
 	}
 	
-	std::ostream & toStream(std::ostream & out, uint64_t refpos, std::string const & refidname)
+	static uint8_t getConsensusBase(ConsensusAux const & caux) 
 	{
+		uint64_t maxval = 0;
+		uint64_t maxindex = 0;
+		uint64_t maxcnt = 0;
+		
+		for ( uint64_t i = 0; i < caux.C.size(); ++i )
+			if ( caux.C[i] > maxval )
+			{
+				maxval = caux.C[i];
+				maxindex = i;
+				maxcnt = 1;
+			}
+			else if ( caux.C[i] == maxval )
+			{
+				maxcnt++;
+			}
+			
+		if ( maxcnt == 1 )
+			return maxindex;
+		else
+			return 'N';
+	}
+	
+	std::ostream & toStream(
+		std::ostream & out, 
+		uint64_t refpos, 
+		std::string const & refidname, 
+		int const refbase,
+		ConsensusAux & caux,
+		ConsensusAccuracy * consacc = 0,
+		std::ostream * consostr = 0
+	)
+	{
+		// insertions
 		if ( I.size() )
 		{
 			uint64_t const cov = V.size() + iadd;
@@ -84,12 +186,38 @@ struct HeapEntry
 				std::sort(sortvec.begin(),sortvec.end());
 
 				out << refidname << '\t' << refpos << '\t' << (-static_cast<int64_t>(maxi))+static_cast<int64_t>(j) << '\t';
+
 				if ( cov > sortvec.size() )
 					for ( uint64_t i = 0; i < cov-sortvec.size(); ++i )
-						out << padsym;
+					{
+						out.put(padsym);
+						caux.C[padsym] += caux.M[padsym];
+					}
 				for ( uint64_t i = 0; i < sortvec.size(); ++i )
-					out << sortvec[i].first;
-				out << '\n';
+				{
+					out.put(sortvec[i].first);
+					caux.C[sortvec[i].first] += caux.M[sortvec[i].first];
+				}
+				
+				out.put('\t');
+				
+				uint8_t const consbase = getConsensusBase(caux);
+				
+				out.put(consbase);
+				
+				if ( consostr && consbase != padsym )
+					consostr->put(consbase);
+				
+				if ( consacc && consbase != padsym )
+					consacc->insertions++;
+
+				out.put('\n');
+
+				if ( cov > sortvec.size() )
+					for ( uint64_t i = 0; i < cov-sortvec.size(); ++i )
+						caux.C[padsym] -= caux.M[padsym];
+				for ( uint64_t i = 0; i < sortvec.size(); ++i )
+					caux.C[sortvec[i].first] -= caux.M[sortvec[i].first];
 			}
 		}
 		
@@ -97,9 +225,53 @@ struct HeapEntry
 
 		out << refidname << '\t' << refpos << '\t' << 0 << '\t';
 		for ( uint64_t i = 0; i < V.size(); ++i )
-			out << V[i].first;
+		{
+			out.put(V[i].first);
+			caux.C[V[i].first] += caux.M[V[i].first];
+		}
 			
-		out << '\n';
+		out << "\t";
+		
+		if ( refbase != -1 )
+			out.put(refbase);
+
+		out.put('\t');
+
+		uint8_t const consbase = getConsensusBase(caux);
+		
+		if ( consacc && (consbase == padsym) )
+			consacc->deletions++;
+		if ( refbase != -1 && consacc && (consbase != padsym) )
+		{
+			if ( consbase == refbase 
+				&& 
+				(
+					consbase == 'a' || consbase == 'A' ||
+					consbase == 'c' || consbase == 'C' ||
+					consbase == 'g' || consbase == 'G' ||
+					consbase == 't' || consbase == 'T'
+				)
+			)
+				consacc->matches++;
+			else
+				consacc->mismatches++;
+		}
+		
+		out.put(consbase);
+
+		if ( consostr && consbase != padsym )
+			consostr->put(consbase);
+			
+		out.put('\n');
+
+		for ( uint64_t i = 0; i < V.size(); ++i )
+			caux.C[V[i].first] -= caux.M[V[i].first];
+		
+		for ( uint64_t i = 0; i < caux.C.size(); ++i )
+			assert ( caux.C[i] == 0 );
+			
+		if ( consacc )
+			consacc->refbasesprocessed++;
 			
 		return out;
 	}
@@ -108,6 +280,8 @@ struct HeapEntry
 int bamheap2(libmaus::util::ArgInfo const & arginfo)
 {
 	bool const verbose = arginfo.getValue("verbose",getDefaultVerbose());
+	std::string const reference = arginfo.getUnparsedValue("reference",std::string());
+	std::string const outputprefix = arginfo.getUnparsedValue("outputprefix",std::string());
 	
 	libmaus::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
 		libmaus::bambam::BamMultiAlignmentDecoderFactory::construct(arginfo));
@@ -115,6 +289,38 @@ int bamheap2(libmaus::util::ArgInfo const & arginfo)
 	::libmaus::bambam::BamAlignmentDecoder & dec = *ppdec;
 	::libmaus::bambam::BamHeader const & header = dec.getHeader();	
 	::libmaus::bambam::BamAlignment const & algn = dec.getAlignment();
+	
+	double const damult = arginfo.getValue<double>("amult",1);
+	double const dcmult = arginfo.getValue<double>("cmult",1);
+	double const dgmult = arginfo.getValue<double>("gmult",1);
+	double const dtmult = arginfo.getValue<double>("tmult",1);
+	double const dpadmult = arginfo.getValue<double>("padmult",1);
+	
+	double maxmult = 0;
+	maxmult = std::max(damult,maxmult);
+	maxmult = std::max(dcmult,maxmult);
+	maxmult = std::max(dgmult,maxmult);
+	maxmult = std::max(dtmult,maxmult);
+	maxmult = std::max(dpadmult,maxmult);
+	
+	uint64_t const amult = std::floor((damult / maxmult) * (1ull<<16) + 0.5);
+	uint64_t const cmult = std::floor((dcmult / maxmult) * (1ull<<16) + 0.5);
+	uint64_t const gmult = std::floor((dgmult / maxmult) * (1ull<<16) + 0.5);
+	uint64_t const tmult = std::floor((dtmult / maxmult) * (1ull<<16) + 0.5);
+	uint64_t const padmult = std::floor((dpadmult / maxmult) * (1ull<<16) + 0.5);
+	
+	libmaus::fastx::FastAIndex::unique_ptr_type Pindex;
+	libmaus::aio::CheckedInputStream::unique_ptr_type PCIS;
+	if ( reference.size() )
+	{
+		libmaus::fastx::FastAIndex::unique_ptr_type Tindex(
+			libmaus::fastx::FastAIndex::load(reference+".fai")
+		);
+		Pindex = UNIQUE_PTR_MOVE(Tindex);
+		
+		libmaus::aio::CheckedInputStream::unique_ptr_type TCIS(new libmaus::aio::CheckedInputStream(reference));
+		PCIS = UNIQUE_PTR_MOVE(TCIS);
+	}
 
 	libmaus::autoarray::AutoArray<libmaus::bambam::cigar_operation> cigop;
 	libmaus::autoarray::AutoArray<char> bases;
@@ -125,6 +331,20 @@ int bamheap2(libmaus::util::ArgInfo const & arginfo)
 	std::map< uint64_t, HeapEntry > M;
 	uint64_t alcnt = 0;
 	std::vector< std::pair<char,uint8_t> > pendinginserts;
+	int64_t loadedRefId = -1;
+	int64_t streamRefId = -1;
+	libmaus::autoarray::AutoArray<char> refseqbases;
+	ConsensusAccuracy * consacc = 0;
+	std::map<uint64_t,ConsensusAccuracy> Mconsacc;
+	typedef libmaus::util::shared_ptr<std::ostringstream>::type stream_ptr_type;
+	stream_ptr_type Pstream;
+	ConsensusAux Caux;
+	
+	Caux.M['a'] = Caux.M['A'] = amult;
+	Caux.M['c'] = Caux.M['C'] = cmult;
+	Caux.M['g'] = Caux.M['G'] = gmult;
+	Caux.M['t'] = Caux.M['T'] = tmult;
+	Caux.M[padsym] = padmult;
 	
 	while ( dec.readAlignment() )
 	{
@@ -145,7 +365,36 @@ int bamheap2(libmaus::util::ArgInfo const & arginfo)
 				{
 					HeapEntry & H = M.begin()->second;
 					
-					H.toStream(std::cout,M.begin()->first,refidname);
+					if ( outputprefix.size() && (streamRefId != prevrefid) )
+					{
+						if ( Pstream )
+						{
+							std::ostringstream fnostr;
+							fnostr << outputprefix << "_" << header.getRefIDName(streamRefId);
+							libmaus::aio::PosixFdOutputStream PFOS(fnostr.str());
+							PFOS << ">" << header.getRefIDName(streamRefId) << '\n';
+							PFOS << Pstream->str() << '\n';
+							
+							Pstream.reset();
+						}
+						
+						stream_ptr_type Tstream(new std::ostringstream);
+						Pstream = Tstream;
+						streamRefId = prevrefid;
+					}
+					
+					if ( Pindex && (loadedRefId != prevrefid) )
+					{
+						refseqbases = Pindex->readSequence(*PCIS, Pindex->getSequenceIdByName(refidname));
+						loadedRefId = prevrefid;
+						
+						if ( Mconsacc.find(loadedRefId) == Mconsacc.end() )
+							Mconsacc[loadedRefId] = ConsensusAccuracy(refseqbases.size());
+						
+						consacc = &(Mconsacc[loadedRefId]);
+					}
+					
+					H.toStream(std::cout,M.begin()->first,refidname,(M.begin()->first < refseqbases.size()) ? static_cast<int>(refseqbases[M.begin()->first]) : -1,Caux,consacc,Pstream.get());
 					
 					M.erase(M.begin());
 				}
@@ -158,8 +407,37 @@ int bamheap2(libmaus::util::ArgInfo const & arginfo)
 				while ( M.size() && M.begin()->first < refpos )
 				{
 					HeapEntry & H = M.begin()->second;
+
+					if ( outputprefix.size() && (streamRefId != prevrefid) )
+					{
+						if ( Pstream )
+						{
+							std::ostringstream fnostr;
+							fnostr << outputprefix << "_" << header.getRefIDName(streamRefId);
+							libmaus::aio::PosixFdOutputStream PFOS(fnostr.str());
+							PFOS << ">" << header.getRefIDName(streamRefId) << '\n';
+							PFOS << Pstream->str() << '\n';
+
+							Pstream.reset();
+						}
+						
+						stream_ptr_type Tstream(new std::ostringstream);
+						Pstream = Tstream;
+						streamRefId = prevrefid;
+					}
+
+					if ( Pindex && (loadedRefId != prevrefid) )
+					{
+						refseqbases = Pindex->readSequence(*PCIS, Pindex->getSequenceIdByName(refidname));
+						loadedRefId = prevrefid;
+
+						if ( Mconsacc.find(loadedRefId) == Mconsacc.end() )
+							Mconsacc[loadedRefId] = ConsensusAccuracy(refseqbases.size());
+
+						consacc = &(Mconsacc[loadedRefId]);
+					}
 					
-					H.toStream(std::cout,M.begin()->first,refidname);
+					H.toStream(std::cout,M.begin()->first,refidname,(M.begin()->first < refseqbases.size()) ? static_cast<int>(refseqbases[M.begin()->first]) : -1,Caux,consacc,Pstream.get());
 					
 					M.erase(M.begin());				
 				}
@@ -256,11 +534,60 @@ int bamheap2(libmaus::util::ArgInfo const & arginfo)
 	while ( M.size() )
 	{
 		HeapEntry & H = M.begin()->second;
+
+		if ( outputprefix.size() && (streamRefId != prevrefid) )
+		{
+			if ( Pstream )
+			{
+				std::ostringstream fnostr;
+				fnostr << outputprefix << "_" << header.getRefIDName(streamRefId);
+				libmaus::aio::PosixFdOutputStream PFOS(fnostr.str());
+				PFOS << ">" << header.getRefIDName(streamRefId) << '\n';
+				PFOS << Pstream->str() << '\n';
+
+				Pstream.reset();
+			}
 			
-		H.toStream(std::cout,M.begin()->first,refidname);
+			stream_ptr_type Tstream(new std::ostringstream);
+			Pstream = Tstream;
+			streamRefId = prevrefid;
+		}
+
+		if ( Pindex && (loadedRefId != prevrefid) )
+		{
+			refseqbases = Pindex->readSequence(*PCIS, Pindex->getSequenceIdByName(refidname));
+			loadedRefId = prevrefid;
+
+			if ( Mconsacc.find(loadedRefId) == Mconsacc.end() )
+				Mconsacc[loadedRefId] = ConsensusAccuracy(refseqbases.size());
+
+			consacc = &(Mconsacc[loadedRefId]);
+		}
+			
+		H.toStream(std::cout,M.begin()->first,refidname,(M.begin()->first < refseqbases.size()) ? static_cast<int>(refseqbases[M.begin()->first]) : -1,Caux,consacc,Pstream.get());
 		
 		M.erase(M.begin());
 	}
+	
+	if ( Pstream )
+	{
+		std::ostringstream fnostr;
+		fnostr << outputprefix << "_" << header.getRefIDName(streamRefId);
+		libmaus::aio::PosixFdOutputStream PFOS(fnostr.str());
+		PFOS << ">" << header.getRefIDName(streamRefId) << '\n';
+		PFOS << Pstream->str() << '\n';
+
+		Pstream.reset();
+	}
+	
+	ConsensusAccuracy total;
+	for ( std::map<uint64_t,ConsensusAccuracy>::const_iterator ita = Mconsacc.begin(); ita != Mconsacc.end(); ++ita )
+	{
+		std::cerr << header.getRefIDName(ita->first) << "\t" << ita->second << std::endl;
+		total += ita->second;
+	}
+	if ( Mconsacc.size() )
+		std::cerr << "all\t" << total << std::endl;
 
 	return EXIT_SUCCESS;
 }
