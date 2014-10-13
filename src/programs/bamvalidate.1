@@ -1,4 +1,4 @@
-.TH BAMVALIDATE 1 "May 2014" BIOBAMBAM
+.TH BAMVALIDATE 1 "October 2014" BIOBAMBAM
 .SH NAME
 bamvalidate - validate BAM file
 .SH SYNOPSIS
@@ -18,13 +18,13 @@ The following key=value pairs can be given:
 .B verbose=<0|1>:
 Valid values are
 .IP 1:
-print statistics on the standard error channel at the end of a succesfull run
+print statistics on the standard error channel at the end of a successful run
 .IP 0:
 do not print statistics
 .PP
 .B passthrough=<0|1>:
-recode alignments to standard output if passthorugh=1. Default is
-passthorugh=0.
+recode alignments to standard output if passthrough=1. Default is
+passthrough=0.
 .PP
 .B level=<-1|0|1|9|11>:
 set compression level of the output BAM file. Valid
@@ -110,6 +110,24 @@ reference FastA file for inputformat=cram and outputformat=cram. An index file (
 .PP
 .B range=<>:
 input range to be processed. This option is only valid if the input is a coordinate sorted and indexed BAM file
+.PP
+.B basequalhist=<[0]>:
+compute base quality histogram and output this histogram on the standard
+error channel after a successful validation run. The histogram lines
+are prefixed with [H]. There is one line for each occurring base quality value
+and two lines in the end specifying the minimum and maximum occurring
+quality value. The lines contain tabulator symbol separated columns.
+The occurring base quality lines have 5 columns after the [H] column. These
+designate the numerical quality level, the ASCII character representation of
+this level (e.g. ! for quality 0 or I for 40), the absolute number of
+occurrences of the value, the fraction of the occurrences of the value (the
+absolute number for this value divided by the sum of the occurrences over all
+values) and the cumulative fraction for all values up to and including the
+current value. The minimum and maximum value lines have min and max
+respectively in the second column. The third and fourth column contain the
+numerical value and the ASCII representation of this value. For all lines
+the ASCII representation of a base quality value may be empty if the numerical quality value does
+not correspond to a printable ASCII code.
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"
