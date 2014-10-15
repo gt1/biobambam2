@@ -206,9 +206,9 @@ void bamdownsamplerandom(
 	 */
 
 	// construct writer
-	::libmaus::bambam::BamWriter::unique_ptr_type writer(new ::libmaus::bambam::BamWriter(std::cout,uphead,getLevel(arginfo),Pcbs));
-	typedef libmaus::bambam::BamWriter::stream_type out_stream_type;
-	out_stream_type & bgzfos = writer->getStream();
+	libmaus::bambam::BamBlockWriterBase::unique_ptr_type Pout ( 
+		libmaus::bambam::BamBlockWriterBaseFactory::construct(uphead, arginfo, Pcbs) 
+	);
 	
 	while ( (ob = CHCBD.process()) )
 	{
@@ -219,10 +219,8 @@ void bamdownsamplerandom(
 		{
 			if ( rv <= up )
 			{
-				::libmaus::bambam::EncoderBase::putLE<out_stream_type,uint32_t>(bgzfos,ob->blocksizea);
-				bgzfos.write(reinterpret_cast<char const *>(ob->Da),ob->blocksizea);
-				::libmaus::bambam::EncoderBase::putLE<out_stream_type,uint32_t>(bgzfos,ob->blocksizeb);
-				bgzfos.write(reinterpret_cast<char const *>(ob->Db),ob->blocksizeb);
+				Pout->writeBamBlock(ob->Da,ob->blocksizea);
+				Pout->writeBamBlock(ob->Db,ob->blocksizeb);
 				ocnt += 2;
 			}
 
@@ -233,8 +231,7 @@ void bamdownsamplerandom(
 		{
 			if ( rv <= up )
 			{
-				::libmaus::bambam::EncoderBase::putLE<out_stream_type,uint32_t>(bgzfos,ob->blocksizea);
-				bgzfos.write(reinterpret_cast<char const *>(ob->Da),ob->blocksizea);
+				Pout->writeBamBlock(ob->Da,ob->blocksizea);
 				ocnt += 1;
 			}
 
@@ -245,8 +242,7 @@ void bamdownsamplerandom(
 		{
 			if ( rv <= up )
 			{
-				::libmaus::bambam::EncoderBase::putLE<out_stream_type,uint32_t>(bgzfos,ob->blocksizea);
-				bgzfos.write(reinterpret_cast<char const *>(ob->Da),ob->blocksizea);
+				Pout->writeBamBlock(ob->Da,ob->blocksizea);
 				ocnt += 1;
 			}
 
@@ -257,8 +253,7 @@ void bamdownsamplerandom(
 		{
 			if ( rv <= up )
 			{
-				::libmaus::bambam::EncoderBase::putLE<out_stream_type,uint32_t>(bgzfos,ob->blocksizea);
-				bgzfos.write(reinterpret_cast<char const *>(ob->Da),ob->blocksizea);
+				Pout->writeBamBlock(ob->Da,ob->blocksizea);
 				ocnt += 1;
 			}
 
@@ -280,8 +275,8 @@ void bamdownsamplerandom(
 	}
 	
 	std::cerr << "[V] " << cnt << std::endl;
-
-	writer.reset();
+	
+	Pout.reset();
 
 	if ( Pmd5cb )
 	{
@@ -448,6 +443,10 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "md5filename=<filename>", "file name for md5 check sum (default: extend output file name)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "indexfilename=<filename>", "file name for BAM index file (default: extend output file name)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("outputformat=<[")+libmaus::bambam::BamBlockWriterBaseFactory::getDefaultOutputFormat()+"]>", std::string("output format (") + libmaus::bambam::BamBlockWriterBaseFactory::getValidOutputFormats() + ")" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "outputthreads=<[1]>", "output helper threads (for outputformat=bam only, default: 1)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "O=<[stdout]>", "output filename (standard output if unset)" ) );
+
 				
 				::biobambam::Licensing::printMap(std::cerr,V);
 
