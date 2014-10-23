@@ -68,6 +68,7 @@ bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamr
 	bamstreamingmarkduplicates \
 	bamheap2 \
 	bamalignfrac \
+	bamlastfilter \
 	@BAMALIGNMENTOFFSETSINSTEXP@ @BLASTXMLTOBAMINSTEXP@
 
 noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments bamtoname \
@@ -386,3 +387,8 @@ bamalignfrac_SOURCES = programs/bamalignfrac.cpp biobambam/Licensing.cpp
 bamalignfrac_LDADD = ${LIBMAUSLIBS}
 bamalignfrac_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
 bamalignfrac_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+bamlastfilter_SOURCES = programs/bamlastfilter.cpp biobambam/Licensing.cpp
+bamlastfilter_LDADD = ${LIBMAUSLIBS}
+bamlastfilter_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+bamlastfilter_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
