@@ -19,6 +19,7 @@
 #include <libmaus/bambam/BamMultiAlignmentDecoderFactory.hpp>
 #include <libmaus/fastx/FastAIndex.hpp>
 #include <libmaus/aio/PosixFdOutputStream.hpp>
+#include <libmaus/util/Histogram.hpp>
 #include <biobambam/BamBamConfig.hpp>
 #include <biobambam/Licensing.hpp>
 
@@ -50,9 +51,18 @@ struct ConsensusAccuracy
 	uint64_t deletions;
 	uint64_t refbasesprocessed;
 	uint64_t refbasesexpected;
+	libmaus::util::Histogram depthhistogram;
 	
 	ConsensusAccuracy() : matches(0), mismatches(0), insertions(0), deletions(0), refbasesprocessed(0), refbasesexpected(0) {}
-	ConsensusAccuracy(uint64_t const & rrefbasesexpected) : matches(0), mismatches(0), insertions(0), deletions(0), refbasesprocessed(0), refbasesexpected(rrefbasesexpected) {}
+	ConsensusAccuracy(
+		ConsensusAccuracy const & o
+	) : matches(o.matches), mismatches(o.mismatches), insertions(o.insertions), deletions(o.deletions), refbasesprocessed(o.refbasesprocessed),
+	    refbasesexpected(o.refbasesexpected)
+	{
+	
+	}
+	ConsensusAccuracy(uint64_t const & rrefbasesexpected) 
+	: matches(0), mismatches(0), insertions(0), deletions(0), refbasesprocessed(0), refbasesexpected(rrefbasesexpected) {}
 	
 	ConsensusAccuracy & operator+=(ConsensusAccuracy const & O)
 	{
@@ -62,19 +72,15 @@ struct ConsensusAccuracy
 		deletions += O.deletions;
 		refbasesprocessed += O.refbasesprocessed;
 		refbasesexpected += O.refbasesexpected;
+		depthhistogram.merge(O.depthhistogram);
 		return *this;
 	}
 };
 
 ConsensusAccuracy operator+(ConsensusAccuracy const & A, ConsensusAccuracy const & B)
 {
-	ConsensusAccuracy C;
-	C.matches = A.matches+B.matches;
-	C.mismatches = A.mismatches+B.mismatches;
-	C.insertions = A.insertions+B.insertions;
-	C.deletions = A.deletions+B.deletions;
-	C.refbasesprocessed = A.refbasesprocessed+B.refbasesprocessed;
-	C.refbasesexpected = A.refbasesexpected+B.refbasesexpected;
+	ConsensusAccuracy C(A);
+	C += B;
 	return C;
 }
 
@@ -240,7 +246,10 @@ struct HeapEntry
 		uint8_t const consbase = getConsensusBase(caux);
 		
 		if ( consacc && (consbase == padsym) )
+		{
 			consacc->deletions++;
+			consacc->depthhistogram(0);
+		}
 		if ( refbase != -1 && consacc && (consbase != padsym) )
 		{
 			if ( consbase == refbase 
@@ -255,6 +264,8 @@ struct HeapEntry
 				consacc->matches++;
 			else
 				consacc->mismatches++;
+
+			consacc->depthhistogram(V.size());
 		}
 		
 		out.put(consbase);
@@ -580,14 +591,75 @@ int bamheap2(libmaus::util::ArgInfo const & arginfo)
 		Pstream.reset();
 	}
 	
-	ConsensusAccuracy total;
+	ConsensusAccuracy constotal;
 	for ( std::map<uint64_t,ConsensusAccuracy>::const_iterator ita = Mconsacc.begin(); ita != Mconsacc.end(); ++ita )
 	{
 		std::cerr << header.getRefIDName(ita->first) << "\t" << ita->second << std::endl;
-		total += ita->second;
+
+		std::map<uint64_t,uint64_t> const M = ita->second.depthhistogram.get();
+		uint64_t total = 0;
+		uint64_t preavg = 0;
+		for ( std::map<uint64_t,uint64_t>::const_iterator aita = M.begin(); aita != M.end(); ++aita )
+		{
+			total += aita->second;
+			preavg += aita->first * aita->second;
+		}
+
+		uint64_t acc = 0;		
+		for ( std::map<uint64_t,uint64_t>::const_iterator aita = M.begin(); aita != M.end(); ++aita )
+		{
+			acc += aita->second;
+			std::cerr << "H[" << header.getRefIDName(ita->first) << "," << aita->first << ",+]"
+				<< "\t" << aita->second << "\t" << static_cast<double>(aita->second)/total
+				<< "\t" << acc << "\t" << static_cast<double>(acc)/total << std::endl;
+		}
+		acc = 0;
+		for ( std::map<uint64_t,uint64_t>::const_reverse_iterator aita = M.rbegin(); aita != M.rend(); ++aita )
+		{
+			acc += aita->second;
+			std::cerr << "H[" << header.getRefIDName(ita->first) << "," << aita->first << ",-]"
+				<< "\t" << aita->second << "\t" << static_cast<double>(aita->second)/total
+				<< "\t" << acc << "\t" << static_cast<double>(acc)/total << std::endl;
+		}
+		
+		std::cerr << "H[" << header.getRefIDName(ita->first) << ",avg]\t" << 
+			static_cast<double>(preavg)/total << std::endl;
+		
+		constotal += ita->second;
 	}
 	if ( Mconsacc.size() )
-		std::cerr << "all\t" << total << std::endl;
+	{
+		std::cerr << "all\t" << constotal << std::endl;
+
+		std::map<uint64_t,uint64_t> const M = constotal.depthhistogram.get();
+		uint64_t total = 0;
+		uint64_t preavg = 0;
+		for ( std::map<uint64_t,uint64_t>::const_iterator aita = M.begin(); aita != M.end(); ++aita )
+		{
+			total += aita->second;
+			preavg += aita->first * aita->second;
+		}
+
+		uint64_t acc = 0;		
+		for ( std::map<uint64_t,uint64_t>::const_iterator aita = M.begin(); aita != M.end(); ++aita )
+		{
+			acc += aita->second;
+			std::cerr << "H[" << "all" << "," << aita->first << ",+]"
+				<< "\t" << aita->second << "\t" << static_cast<double>(aita->second)/total
+				<< "\t" << acc << "\t" << static_cast<double>(acc)/total << std::endl;
+		}
+		acc = 0;
+		for ( std::map<uint64_t,uint64_t>::const_reverse_iterator aita = M.rbegin(); aita != M.rend(); ++aita )
+		{
+			acc += aita->second;
+			std::cerr << "H[" << "all" << "," << aita->first << ",-]"
+				<< "\t" << aita->second << "\t" << static_cast<double>(aita->second)/total
+				<< "\t" << acc << "\t" << static_cast<double>(acc)/total << std::endl;
+		}
+		
+		std::cerr << "H[all,avg]\t" << static_cast<double>(preavg) / total << std::endl;
+		
+	}
 
 	return EXIT_SUCCESS;
 }
