@@ -618,6 +618,38 @@ static std::string getDefaultHash()
 	return "crc32prod";
 }
 
+static std::vector<std::string> getSupportedHashVariants()
+{
+	std::vector<std::string> V;
+	V.push_back("crc32prod");
+	V.push_back("crc32");
+	V.push_back("md5");
+	#if defined(LIBMAUS_HAVE_NETTLE)
+	V.push_back("sha1");
+	V.push_back("sha224");
+	V.push_back("sha256");
+	V.push_back("sha384");
+	V.push_back("sha512");
+	#endif
+	
+	return V;
+}
+
+static std::string getSupportedHashVariantsList()
+{
+	std::ostringstream ostr;
+	std::vector<std::string> const V = getSupportedHashVariants();
+	
+	if ( V.size() )
+	{
+		ostr << V[0];
+		for ( uint64_t i = 1; i < V.size(); ++i )
+			ostr << "," << V[i];
+	}
+	
+	return ostr.str();
+}
+
 int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 {
 	std::string const hash = arginfo.getValue<std::string>("hash",getDefaultHash());
@@ -702,6 +734,8 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<[bam]>", "input format: bam" ) );
 				#endif
 
+				V.push_back ( std::pair<std::string,std::string> ( std::string("hash=<[")+getDefaultHash()+"]>", "hash digest function: " + getSupportedHashVariantsList()) );
+				
 				::biobambam::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;

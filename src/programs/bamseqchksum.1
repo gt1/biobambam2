@@ -6,7 +6,7 @@ bamseqchksum - produce checksums for primary data in BAM files
 .B bamseqchksum
 [options]
 .SH DESCRIPTION
-bamseqchksum reads a BAM file from stdin, for each record calculates crc32
+bamseqchksum reads a BAM file from stdin, for each record calculates hash digest
 checksums over
 .IP [1]
 flags and sequence
@@ -22,9 +22,10 @@ only the bits for multiple segments, first segment and last segment. The
 sequence is reverse complemented, and quality string reversed, before 
 checksumming if the reverse complemented bit is set.
 .PP
-The product, modulo 2^31-1, of these checksums is taken over all
-non-supplementary and non-secondary BAM alignment records. Separate 
-products are reported for combinations of all and QC pass records and for each
+Depending on the chosen hash digest function either the sum modulo some
+power of 2 or the product modulo a prime number of these checksums is taken 
+over all non-supplementary and non-secondary BAM alignment records. Separate 
+sums or products are reported for combinations of all and QC pass records and for each
 readgroup.
 .LP
 The following key=value pairs can be given:
@@ -50,13 +51,38 @@ CRAM (see http://www.ebi.ac.uk/ena/about/cram_toolkit)
 .B reference=:
 file name of the reference for CRAM input files. If this key is unset, then
 the CRAM file header will be scanned for obtaining a reference file name.
+.PP
+.B hash=<crc32prod>:
+hash digest used to compute checksums. All versions of biobambam support the
+following functions:
+.IP crc32prod:
+checksums are computed via crc32 and combined over multiple records by multiplication modulo the prime number 2^31-1.
+This is the default and only option for biobambam versions up to 0.0.174.
+.IP crc32:
+checksums are computed via crc32 and combined by summing up modulo 2^32.
+.IP md5:
+checksums are computed via md5 and combined by summing up modulo 2^128.
+.PP
+If libmaus is compiled with support for the nettle library, then the
+following options are available:
+.IP sha1:
+checksums are computed via sha1 and combined by summing up modulo 2^160.
+.IP sha224:
+checksums are computed via sha2-224 and combined by summing up modulo 2^224.
+.IP sha256:
+checksums are computed via sha2-256 and combined by summing up modulo 2^256.
+.IP sha384:
+checksums are computed via sha2-384 and combined by summing up modulo 2^384.
+.IP sha512:
+checksums are computed via sha2-512 and combined by summing up modulo 2^512.
 .SH AUTHOR
 Written by David Jackson (using code by German Tischler as a template).
+Extended to hash digests beyond crc32prod by German Tischler.
 .SH "REPORTING BUGS"
 Report bugs to <gt1@sanger.ac.uk>
 .SH COPYRIGHT
 Copyright \(co 2014-2014 David Jackson, \(co 2014-2014 Genome Research Limited.
-Copyright \(co 2009-2013 German Tischler, \(co 2011-2013 Genome Research Limited.
+Copyright \(co 2009-2014 German Tischler, \(co 2011-2014 Genome Research Limited.
 License GPLv3+: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>
 .br
 This is free software: you are free to change and redistribute it.
