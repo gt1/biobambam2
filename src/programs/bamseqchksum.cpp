@@ -20,10 +20,9 @@
 #include "config.h"
 
 #include <iostream>
-#include <zlib.h>
 
 #include <libmaus/bambam/BamMultiAlignmentDecoderFactory.hpp>
-
+#include <libmaus/digest/CRC32.hpp>
 #include <libmaus/util/ArgInfo.hpp>
 
 #include <biobambam/Licensing.hpp>
@@ -40,18 +39,43 @@ static std::vector<std::string> getDefaultAuxTags() {
 	return v;
 }
 
+struct CRC32UpdateContext
+{
+	typedef libmaus::digest::CRC32 digest_type;
+
+	digest_type ctx_name_flags_seq;
+	uint8_t ctx_name_flags_seq_digest[digest_type::digestlength];
+	libmaus::math::UnsignedInteger<digest_type::digestlength/4> name_flags_seq_digest;
+	
+	digest_type ctx_flags_seq;
+	uint8_t ctx_flags_seq_digest[digest_type::digestlength];
+	libmaus::math::UnsignedInteger<digest_type::digestlength/4> flags_seq_digest;
+
+	digest_type ctx_flags_seq_qual;
+	uint8_t ctx_flags_seq_qual_digest[digest_type::digestlength];
+	libmaus::math::UnsignedInteger<digest_type::digestlength/4> flags_seq_qual_digest;
+	
+	digest_type ctx_flags_seq_tags;
+	uint8_t ctx_flags_seq_tags_digest[digest_type::digestlength];
+	libmaus::math::UnsignedInteger<digest_type::digestlength/4> flags_seq_tags_digest;
+	
+	bool pass;
+};
+
 /**
-* Finite field products of CRC32 checksums of primary/source sequence data
-*
-* Checksum products should remain unchanged if primary data is retained no matter what
-* alignment information is added or altered, or the ordering of the records.
-*
-* Products calulated for all records and for those with pass QC bit.
+* Product checksums calculated based on basecalls and (multi segment, first
+* and last) bit info, and this combined with the query name, or the basecall
+* qualities, or certain BAM auxilary fields.
 **/
-struct OrderIndependentSeqDataChecksums {
+struct Products 
+{
 	private:
-	::libmaus::autoarray::AutoArray<char> A; // check with German: can we change/treat underlying data block to unsigned char / uint8_t?
-	::libmaus::autoarray::AutoArray<char> B; //separate A & B can allow reordering speed up?
+	uint64_t count;
+	uint64_t b_seq;
+	uint64_t name_b_seq;
+	uint64_t b_seq_qual;
+	uint64_t b_seq_tags;
+
 	/**
 	* Multiply existing product by new checksum, having altered checksum ready for
 	* multiplication in a finite field i.e. 0 < chksum < (2^31 -1)
@@ -64,43 +88,118 @@ struct OrderIndependentSeqDataChecksums {
 		if (!chksum || chksum == MERSENNE31 ) chksum = 1;
 		product = ( product * chksum ) % MERSENNE31;
 	}
+
+	void push_count(uint64_t const add)
+	{
+		count += add;
+	}
+	
+	void push_b_seq(uint32_t const chksum)
+	{
+		product_munged_chksum_multiply(b_seq,chksum);
+	}
+	
+	void push_name_b_seq(uint32_t const chksum)
+	{
+		product_munged_chksum_multiply(name_b_seq,chksum);
+	}
+	
+	void push_b_seq_qual(uint32_t const chksum)
+	{
+		product_munged_chksum_multiply(b_seq_qual,chksum);
+	}
+	
+	void push_b_seq_tags(uint32_t const chksum)
+	{
+		product_munged_chksum_multiply(b_seq_tags,chksum);
+	}
+
+	void push(
+		libmaus::math::UnsignedInteger<CRC32UpdateContext::digest_type::digestlength/4> const & name_b_seq,
+		libmaus::math::UnsignedInteger<CRC32UpdateContext::digest_type::digestlength/4> const & b_seq,
+		libmaus::math::UnsignedInteger<CRC32UpdateContext::digest_type::digestlength/4> const & b_seq_qual,
+		libmaus::math::UnsignedInteger<CRC32UpdateContext::digest_type::digestlength/4> const & b_seq_tags
+	)
+	{
+		push_count(1);
+		push_name_b_seq(name_b_seq[0]);
+		push_b_seq(b_seq[0]);
+		push_b_seq_qual(b_seq_qual[0]);
+		push_b_seq_tags(b_seq_tags[0]);
+	}
+	
+	public:
+	Products() : count(0), b_seq(1), name_b_seq(1), b_seq_qual(1), b_seq_tags(1)
+	{
+	}
+
+	uint64_t get_b_seq() const
+	{
+		return b_seq;
+	}
+
+	uint64_t get_name_b_seq() const
+	{
+		return name_b_seq;
+	}
+	
+	uint64_t get_b_seq_qual() const
+	{
+		return b_seq_qual;
+	}
+	
+	uint64_t get_b_seq_tags() const
+	{
+		return b_seq_tags;
+	}
+	
+	uint64_t get_count() const
+	{
+		return count;
+	}
+	
+	void push(CRC32UpdateContext const & context)
+	{
+		push(
+			context.name_flags_seq_digest,
+			context.flags_seq_digest,
+			context.flags_seq_qual_digest,
+			context.flags_seq_tags_digest
+		);
+	}
+
+	void push (Products const & subsetproducts)
+	{
+		count += subsetproducts.count;
+		product_munged_chksum_multiply(b_seq, subsetproducts.b_seq);
+		product_munged_chksum_multiply(name_b_seq, subsetproducts.name_b_seq);
+		product_munged_chksum_multiply(b_seq_qual, subsetproducts.b_seq_qual);
+		product_munged_chksum_multiply(b_seq_tags, subsetproducts.b_seq_tags);
+	};
+	bool operator== (Products const & other) const
+	{
+		return count==other.count &&
+			b_seq==other.b_seq && name_b_seq==other.name_b_seq &&
+			b_seq_qual==other.b_seq_qual && b_seq_tags==other.b_seq_tags;
+	};
+};
+
+/**
+* Finite field products of CRC32 checksums of primary/source sequence data
+*
+* Checksum products should remain unchanged if primary data is retained no matter what
+* alignment information is added or altered, or the ordering of the records.
+*
+* Products calulated for all records and for those with pass QC bit.
+**/
+struct OrderIndependentSeqDataChecksums {
+	private:
+	::libmaus::autoarray::AutoArray<char> A; // check with German: can we change/treat underlying data block to unsigned char / uint8_t?
+	::libmaus::autoarray::AutoArray<char> B; //separate A & B can allow reordering speed up?
 	public:
 	std::vector<std::string> const auxtags;
 	// to provide fast checking of aux fields when processing and validation at startup
 	::libmaus::bambam::BamAuxFilterVector const auxtagsfilter;
-	/**
-	* Product checksums calculated based on basecalls and (multi segment, first
-	* and last) bit info, and this combined with the query name, or the basecall
-	* qualities, or certain BAM auxilary fields.
-	**/
-	struct Products {
-		uint64_t count;
-		uint64_t b_seq;
-		uint64_t name_b_seq;
-		uint64_t b_seq_qual;
-		uint64_t b_seq_tags;
-		Products(){
-			count = 0;
-			b_seq = 1;
-			name_b_seq = 1;
-			b_seq_qual = 1;
-			b_seq_tags = 1;
-		}
-		void push (Products const & subsetproducts)
-		{
-			count += subsetproducts.count;
-			product_munged_chksum_multiply(b_seq, subsetproducts.b_seq);
-			product_munged_chksum_multiply(name_b_seq, subsetproducts.name_b_seq);
-			product_munged_chksum_multiply(b_seq_qual, subsetproducts.b_seq_qual);
-			product_munged_chksum_multiply(b_seq_tags, subsetproducts.b_seq_tags);
-		};
-		bool operator== (Products const & other) const
-		{
-			return count==other.count &&
-				b_seq==other.b_seq && name_b_seq==other.name_b_seq &&
-				b_seq_qual==other.b_seq_qual && b_seq_tags==other.b_seq_tags;
-		};
-	};
 	Products all;
 	Products pass;
 	OrderIndependentSeqDataChecksums() : A(), B(), auxtags(getDefaultAuxTags()), auxtagsfilter(auxtags), all(), pass() { };
@@ -112,7 +211,7 @@ struct OrderIndependentSeqDataChecksums {
 	*
 	* @param algn BAM alignment record
 	**/
-	void push(libmaus::bambam::BamAlignment const & algn)
+	void push(libmaus::bambam::BamAlignment const & algn, CRC32UpdateContext & context)
 	{
 		if 
 		( ! (
@@ -123,42 +222,65 @@ struct OrderIndependentSeqDataChecksums {
 			)
 		) )
 		{
-			++all.count;
-			const uint8_t flags = ( ( algn.getFlags() & ( //following flags are in the least significant byte!
+			uint8_t const flags = ( ( algn.getFlags() & ( //following flags are in the least significant byte!
 				::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FPAIRED |
 				::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREAD1 | 
 				::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREAD2 ) ) >> 0 )  & 0xFF;
-			const bool is_pass = ! algn.isQCFail();
-			const uint32_t CRC32_INITIAL = crc32(0L, Z_NULL, 0);
-			uint32_t chksum = crc32(CRC32_INITIAL,reinterpret_cast<const unsigned char *>(algn.getName()),algn.getLReadName());
-			chksum = crc32(chksum,reinterpret_cast<const unsigned char*>( &flags), 1);
-			const uint64_t len = algn.isReverse() ? algn.decodeReadRC(A) : algn.decodeRead(A);
-			chksum = crc32(chksum,reinterpret_cast<const unsigned char *>( A.begin()), len);
-			product_munged_chksum_multiply(all.name_b_seq, chksum);
-			uint32_t chksumnn = crc32(CRC32_INITIAL,reinterpret_cast<const unsigned char*>( &flags), 1);
-			chksumnn = crc32(chksumnn,reinterpret_cast<const unsigned char *>( A.begin()), len);
-			product_munged_chksum_multiply(all.b_seq, chksumnn);
-			if(is_pass)
-			{
-				++pass.count;
-				product_munged_chksum_multiply(pass.name_b_seq, chksum);
-				product_munged_chksum_multiply(pass.b_seq, chksumnn);
-			}
-			chksum = chksumnn;
-			const uint64_t len2 = algn.isReverse() ? algn.decodeQualRC(B) : algn.decodeQual(B);
-			chksumnn = crc32(chksumnn,reinterpret_cast<const unsigned char *>( B.begin()), len2);
-			product_munged_chksum_multiply(all.b_seq_qual, chksumnn);
+				
+			context.pass = ! algn.isQCFail();
+			uint64_t const len = algn.isReverse() ? algn.decodeReadRC(A) : algn.decodeRead(A);
+			
+			#if defined(BAM_SEQ_CHKSUM_DEBUG)
+			uint32_t const CRC32_INITIAL = crc32(0L, Z_NULL, 0);
+			#endif
+
+			context.ctx_name_flags_seq.init();
+			context.ctx_name_flags_seq.update(reinterpret_cast<uint8_t const *>(algn.getName()),algn.getLReadName());
+			context.ctx_name_flags_seq.update(reinterpret_cast<uint8_t const *>(&flags),1);
+			context.ctx_name_flags_seq.update(reinterpret_cast<uint8_t const *>(A.begin()),len);
+						
+			#if defined(BAM_SEQ_CHKSUM_DEBUG)
+			uint32_t chksum_name_flags_seq = crc32(CRC32_INITIAL,reinterpret_cast<const unsigned char *>(algn.getName()),algn.getLReadName());
+			chksum_name_flags_seq = crc32(chksum_name_flags_seq,reinterpret_cast<const unsigned char*>( &flags), 1);
+			chksum_name_flags_seq = crc32(chksum_name_flags_seq,reinterpret_cast<const unsigned char *>( A.begin()), len);
+			#endif
+						
+			// flags + sequence
+			context.ctx_flags_seq.init();
+			context.ctx_flags_seq.update(reinterpret_cast<uint8_t const *>(&flags),1);
+			context.ctx_flags_seq.update(reinterpret_cast<uint8_t const *>(A.begin()),len);
+			
+			#if defined(BAM_SEQ_CHKSUM_DEBUG)
+			uint32_t chksum_flags_seq = crc32(CRC32_INITIAL,reinterpret_cast<const unsigned char*>(&flags), 1);
+			chksum_flags_seq = crc32(chksum_flags_seq,reinterpret_cast<const unsigned char *>( A.begin()), len);
+			#endif
+
+			// add quality
+			uint64_t const lenq = algn.isReverse() ? algn.decodeQualRC(B) : algn.decodeQual(B);
+			
+			context.ctx_flags_seq_qual.copyFrom(context.ctx_flags_seq);
+			context.ctx_flags_seq_qual.update(reinterpret_cast<uint8_t *>(B.begin()), lenq);
+
+			#if defined(BAM_SEQ_CHKSUM_DEBUG)
+			uint32_t chksum_flags_seq_qual = chksum_flags_seq;
+			chksum_flags_seq_qual = crc32(chksum_flags_seq_qual,reinterpret_cast<const unsigned char *>( B.begin()), lenq);
+			#endif
+
 			// set aux to start pointer of aux area
 			uint8_t const * aux = ::libmaus::bambam::BamAlignmentDecoderBase::getAux(algn.D.begin());
 			// end of algn data block (and so of aux area)
 			uint8_t const * const auxend = algn.D.begin() + algn.blocksize;
+			
 			// start of each aux entry for auxtags
 			std::vector<uint8_t const *> paux(auxtags.size(),NULL);
 			// size of each aux entry for auxtags
 			std::vector<uint64_t> saux(auxtags.size(),0);
-			while( aux < auxend)
+			
+			while(aux < auxend)
 			{
+				// get length of aux field in bytes
 				uint64_t const auxlen = ::libmaus::bambam::BamAlignmentDecoderBase::getAuxLength(aux);
+				
 				// skip over aux tag data we're not interested in
 				if( auxtagsfilter(aux[0],aux[1]) )
 				{
@@ -188,23 +310,54 @@ struct OrderIndependentSeqDataChecksums {
 			}
 			std::vector<uint8_t const *>::const_iterator it_paux = paux.begin();
 			std::vector<uint64_t>::const_iterator it_saux = saux.begin();
+			
+			// copy context
+			context.ctx_flags_seq_tags.copyFrom(context.ctx_flags_seq);
+
+			#if defined(BAM_SEQ_CHKSUM_DEBUG)
+			uint32_t chksum_flags_seq_tags = chksum_flags_seq;
+			#endif
+			
 			//loop over the chunks of data corresponding to the auxtags
 			while (it_paux != paux.end())
 			{
 				//if data exists push into running checksum
 				if(*it_paux)
-					chksum = crc32(chksum,reinterpret_cast<const unsigned char *>( *it_paux), *it_saux);
+				{
+					context.ctx_flags_seq_tags.update(reinterpret_cast<uint8_t const *>(*it_paux), *it_saux);
+					#if defined(BAM_SEQ_CHKSUM_DEBUG)
+					chksum_flags_seq_tags = crc32(chksum_flags_seq_tags,reinterpret_cast<const unsigned char *>(*it_paux), *it_saux);
+					#endif
+				}
 				++it_paux;
 				++it_saux;
 			}
-			product_munged_chksum_multiply(all.b_seq_tags, chksum);
-			if(is_pass)
-			{
-				product_munged_chksum_multiply(pass.b_seq_tags, chksum);
-				product_munged_chksum_multiply(pass.b_seq_qual, chksumnn);
-			}
+	
+
+			context.flags_seq_qual_digest = context.ctx_flags_seq_qual.digestui();
+			context.name_flags_seq_digest = context.ctx_name_flags_seq.digestui();
+			context.flags_seq_digest = context.ctx_flags_seq.digestui();
+			context.flags_seq_tags_digest = context.ctx_flags_seq_tags.digestui();
+
+			#if defined(BAM_SEQ_CHKSUM_DEBUG)
+			assert ( context.flags_seq_qual_digest[0] == chksum_flags_seq_qual );			
+			assert ( context.name_flags_seq_digest[0] == chksum_name_flags_seq );
+			assert ( context.flags_seq_digest[0] == chksum_flags_seq );
+			assert ( context.flags_seq_tags_digest[0] == chksum_flags_seq_tags );
+			#endif
+
+			push(context);
 		}
 	};
+	
+	void push(CRC32UpdateContext const & context)
+	{
+		all.push(context);
+			
+		if ( context.pass )
+			pass.push(context);	
+	}
+	
 	void push(OrderIndependentSeqDataChecksums const & subsetchksum)
 	{
 		pass.push(subsetchksum.pass);
@@ -254,18 +407,20 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 	::libmaus::bambam::BamAlignment & algn = dec.getAlignment();
 	OrderIndependentSeqDataChecksums chksums;
 	libmaus::autoarray::AutoArray<OrderIndependentSeqDataChecksums> readgroup_chksums(1 + header.getNumReadGroups(),false);
+	CRC32UpdateContext updatecontext;
 	
 	uint64_t c = 0;
 	while ( dec.readAlignment() )
 	{
-		chksums.push(algn);
-		readgroup_chksums[algn.getReadGroupId(header)+1].push(algn);
+		chksums.push(algn,updatecontext);
+		readgroup_chksums[algn.getReadGroupId(header)+1].push(updatecontext);
+		
 		if ( verbose && (++c & (1024*1024-1)) == 0 )
 		{
-			std::cerr << "[V] " << c/(1024*1024) << " " << chksums.all.count << " " << algn.getName() << " " << algn.isRead1()
+			std::cerr << "[V] " << c/(1024*1024) << " " << chksums.all.get_count() << " " << algn.getName() << " " << algn.isRead1()
 			<< " " << algn.isRead2() << " " << ( algn.isReverse() ? algn.getReadRC() : algn.getRead() ) << " "
 			<< ( algn.isReverse() ? algn.getQualRC() : algn.getQual() ) << " " << std::hex << (0x0 + algn.getFlags())
-			<< std::dec << " " << chksums.all.b_seq << " " << chksums.all.b_seq_tags << " " << std::endl;
+			<< std::dec << " " << chksums.all.get_b_seq() << " " << chksums.all.get_b_seq_tags() << " " << std::endl;
 		}
 	}
 
@@ -278,10 +433,10 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 		std::cout << *it_aux;
 	}
 	std::cout << ")" << std::endl;
-	std::cout << "all\tall\t" << chksums.all.count << "\t" << std::hex << "\t" << chksums.all.b_seq << "\t"
-		<< chksums.all.name_b_seq << "\t" << chksums.all.b_seq_qual << "\t" << chksums.all.b_seq_tags << std::dec << std::endl;
-	std::cout << "all\tpass\t" << chksums.pass.count << "\t" << std::hex << "\t" << chksums.pass.b_seq << "\t"
-		<< chksums.pass.name_b_seq << "\t" << chksums.pass.b_seq_qual << "\t" << chksums.pass.b_seq_tags << std::dec << std::endl;
+	std::cout << "all\tall\t" << chksums.all.get_count() << "\t" << std::hex << "\t" << chksums.all.get_b_seq() << "\t"
+		<< chksums.all.get_name_b_seq() << "\t" << chksums.all.get_b_seq_qual() << "\t" << chksums.all.get_b_seq_tags() << std::dec << std::endl;
+	std::cout << "all\tpass\t" << chksums.pass.get_count() << "\t" << std::hex << "\t" << chksums.pass.get_b_seq() << "\t"
+		<< chksums.pass.get_name_b_seq() << "\t" << chksums.pass.get_b_seq_qual() << "\t" << chksums.pass.get_b_seq_tags() << std::dec << std::endl;
 
 	if(header.getNumReadGroups())
 	{
@@ -289,12 +444,12 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 		for(unsigned int i=0; i<=header.getNumReadGroups(); i++)
 		{
 			chksumschk.push(readgroup_chksums[i]);
-			std::cout << (i>0 ? header.getReadGroups().at(i-1).ID : "") << "\tall\t" << readgroup_chksums[i].all.count << "\t"
-				<< std::hex << "\t" << readgroup_chksums[i].all.b_seq << "\t" << readgroup_chksums[i].all.name_b_seq << "\t"
-				<< readgroup_chksums[i].all.b_seq_qual << "\t" << readgroup_chksums[i].all.b_seq_tags << std::dec << std::endl;
-			std::cout << (i>0 ? header.getReadGroups().at(i-1).ID : "") << "\tpass\t" << readgroup_chksums[i].pass.count << "\t"
-				<< std::hex << "\t" << readgroup_chksums[i].pass.b_seq << "\t" << readgroup_chksums[i].pass.name_b_seq << "\t"
-				<< readgroup_chksums[i].pass.b_seq_qual << "\t" << readgroup_chksums[i].pass.b_seq_tags << std::dec << std::endl;
+			std::cout << (i>0 ? header.getReadGroups().at(i-1).ID : "") << "\tall\t" << readgroup_chksums[i].all.get_count() << "\t"
+				<< std::hex << "\t" << readgroup_chksums[i].all.get_b_seq() << "\t" << readgroup_chksums[i].all.get_name_b_seq() << "\t"
+				<< readgroup_chksums[i].all.get_b_seq_qual() << "\t" << readgroup_chksums[i].all.get_b_seq_tags() << std::dec << std::endl;
+			std::cout << (i>0 ? header.getReadGroups().at(i-1).ID : "") << "\tpass\t" << readgroup_chksums[i].pass.get_count() << "\t"
+				<< std::hex << "\t" << readgroup_chksums[i].pass.get_b_seq() << "\t" << readgroup_chksums[i].pass.get_name_b_seq() << "\t"
+				<< readgroup_chksums[i].pass.get_b_seq_qual() << "\t" << readgroup_chksums[i].pass.get_b_seq_tags() << std::dec << std::endl;
 		}
 		assert(chksumschk == chksums);
 	}
