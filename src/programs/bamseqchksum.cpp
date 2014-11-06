@@ -22,7 +22,7 @@
 #include <iostream>
 
 #include <libmaus/bambam/BamMultiAlignmentDecoderFactory.hpp>
-#include <libmaus/digest/CRC32.hpp>
+#include <libmaus/digest/Digests.hpp>
 #include <libmaus/util/ArgInfo.hpp>
 
 #include <biobambam/Licensing.hpp>
@@ -39,9 +39,10 @@ static std::vector<std::string> getDefaultAuxTags() {
 	return v;
 }
 
-struct CRC32UpdateContext
+template<typename _digest_type>
+struct UpdateContext
 {
-	typedef libmaus::digest::CRC32 digest_type;
+	typedef _digest_type digest_type;
 
 	digest_type ctx_name_flags_seq;
 	uint8_t ctx_name_flags_seq_digest[digest_type::digestlength];
@@ -62,13 +63,104 @@ struct CRC32UpdateContext
 	bool pass;
 };
 
+typedef UpdateContext<libmaus::digest::CRC32> CRC32UpdateContext;
+typedef UpdateContext<libmaus::util::MD5> MD5UpdateContext;
+typedef UpdateContext<libmaus::digest::SHA1> SHA1UpdateContext;
+typedef UpdateContext<libmaus::digest::SHA2_224> SHA2_224_UpdateContext;
+typedef UpdateContext<libmaus::digest::SHA2_256> SHA2_256_UpdateContext;
+typedef UpdateContext<libmaus::digest::SHA2_384> SHA2_384_UpdateContext;
+typedef UpdateContext<libmaus::digest::SHA2_512> SHA2_512_UpdateContext;
+
+template<typename _context_type>
+struct SimpleSums
+{
+	typedef _context_type context_type;
+	typedef SimpleSums<context_type> this_type;
+	
+	private:
+	uint64_t count;
+	libmaus::math::UnsignedInteger<context_type::digest_type::digestlength/4> b_seq;
+	libmaus::math::UnsignedInteger<context_type::digest_type::digestlength/4> name_b_seq;
+	libmaus::math::UnsignedInteger<context_type::digest_type::digestlength/4> b_seq_qual;
+	libmaus::math::UnsignedInteger<context_type::digest_type::digestlength/4> b_seq_tags;
+	
+	public:
+	void push(context_type const & context)
+	{
+		count += 1;
+		b_seq += context.flags_seq_digest;
+		name_b_seq += context.name_flags_seq_digest;
+		b_seq_qual += context.flags_seq_qual_digest;
+		b_seq_tags += context.flags_seq_tags_digest;
+	}
+
+	void push (this_type const & subsetproducts)
+	{
+		count += subsetproducts.count;
+		b_seq += subsetproducts.b_seq;
+		name_b_seq += subsetproducts.name_b_seq;
+		b_seq_qual += subsetproducts.b_seq_qual;
+		b_seq_tags += subsetproducts.b_seq_tags;
+	};
+	
+	bool operator== (this_type const & other) const
+	{
+		return count==other.count &&
+			b_seq==other.b_seq && name_b_seq==other.name_b_seq &&
+			b_seq_qual==other.b_seq_qual && b_seq_tags==other.b_seq_tags;
+	};
+
+	std::string get_b_seq() const
+	{
+		std::ostringstream ostr;
+		ostr << std::hex << b_seq;
+		return ostr.str();
+	}
+
+	std::string get_name_b_seq() const
+	{
+		std::ostringstream ostr;
+		ostr << std::hex << name_b_seq;
+		return ostr.str();
+	}
+	
+	std::string get_b_seq_qual() const
+	{
+		std::ostringstream ostr;
+		ostr << std::hex << b_seq_qual;
+		return ostr.str();
+	}
+	
+	std::string get_b_seq_tags() const
+	{
+		std::ostringstream ostr;
+		ostr << std::hex << b_seq_tags;
+		return ostr.str();
+	}
+	
+	uint64_t get_count() const
+	{
+		return count;
+	}
+
+};
+
+typedef SimpleSums<MD5UpdateContext> MD5SimpleSums;
+typedef SimpleSums<SHA1UpdateContext> SHA1SimpleSums;
+typedef SimpleSums<SHA2_224_UpdateContext> SHA2_224_SimpleSums;
+typedef SimpleSums<SHA2_256_UpdateContext> SHA2_256_SimpleSums;
+typedef SimpleSums<SHA2_384_UpdateContext> SHA2_384_SimpleSums;
+typedef SimpleSums<SHA2_512_UpdateContext> SHA2_512_SimpleSums;
+
 /**
 * Product checksums calculated based on basecalls and (multi segment, first
 * and last) bit info, and this combined with the query name, or the basecall
 * qualities, or certain BAM auxilary fields.
 **/
-struct Products 
+struct CRC32Products 
 {
+	typedef CRC32UpdateContext context_type;
+
 	private:
 	uint64_t count;
 	uint64_t b_seq;
@@ -115,10 +207,10 @@ struct Products
 	}
 
 	void push(
-		libmaus::math::UnsignedInteger<CRC32UpdateContext::digest_type::digestlength/4> const & name_b_seq,
-		libmaus::math::UnsignedInteger<CRC32UpdateContext::digest_type::digestlength/4> const & b_seq,
-		libmaus::math::UnsignedInteger<CRC32UpdateContext::digest_type::digestlength/4> const & b_seq_qual,
-		libmaus::math::UnsignedInteger<CRC32UpdateContext::digest_type::digestlength/4> const & b_seq_tags
+		libmaus::math::UnsignedInteger<context_type::digest_type::digestlength/4> const & name_b_seq,
+		libmaus::math::UnsignedInteger<context_type::digest_type::digestlength/4> const & b_seq,
+		libmaus::math::UnsignedInteger<context_type::digest_type::digestlength/4> const & b_seq_qual,
+		libmaus::math::UnsignedInteger<context_type::digest_type::digestlength/4> const & b_seq_tags
 	)
 	{
 		push_count(1);
@@ -129,7 +221,7 @@ struct Products
 	}
 	
 	public:
-	Products() : count(0), b_seq(1), name_b_seq(1), b_seq_qual(1), b_seq_tags(1)
+	CRC32Products() : count(0), b_seq(1), name_b_seq(1), b_seq_qual(1), b_seq_tags(1)
 	{
 	}
 
@@ -158,7 +250,7 @@ struct Products
 		return count;
 	}
 	
-	void push(CRC32UpdateContext const & context)
+	void push(context_type const & context)
 	{
 		push(
 			context.name_flags_seq_digest,
@@ -168,7 +260,7 @@ struct Products
 		);
 	}
 
-	void push (Products const & subsetproducts)
+	void push (CRC32Products const & subsetproducts)
 	{
 		count += subsetproducts.count;
 		product_munged_chksum_multiply(b_seq, subsetproducts.b_seq);
@@ -176,7 +268,7 @@ struct Products
 		product_munged_chksum_multiply(b_seq_qual, subsetproducts.b_seq_qual);
 		product_munged_chksum_multiply(b_seq_tags, subsetproducts.b_seq_tags);
 	};
-	bool operator== (Products const & other) const
+	bool operator== (CRC32Products const & other) const
 	{
 		return count==other.count &&
 			b_seq==other.b_seq && name_b_seq==other.name_b_seq &&
@@ -192,7 +284,11 @@ struct Products
 *
 * Products calulated for all records and for those with pass QC bit.
 **/
+template<typename _crc_container_type>
 struct OrderIndependentSeqDataChecksums {
+	typedef _crc_container_type crc_container_type;
+	typedef typename crc_container_type::context_type context_type;
+
 	private:
 	::libmaus::autoarray::AutoArray<char> A; // check with German: can we change/treat underlying data block to unsigned char / uint8_t?
 	::libmaus::autoarray::AutoArray<char> B; //separate A & B can allow reordering speed up?
@@ -200,8 +296,8 @@ struct OrderIndependentSeqDataChecksums {
 	std::vector<std::string> const auxtags;
 	// to provide fast checking of aux fields when processing and validation at startup
 	::libmaus::bambam::BamAuxFilterVector const auxtagsfilter;
-	Products all;
-	Products pass;
+	crc_container_type all;
+	crc_container_type pass;
 	OrderIndependentSeqDataChecksums() : A(), B(), auxtags(getDefaultAuxTags()), auxtagsfilter(auxtags), all(), pass() { };
 	/**
 	* Combine primary sequence data from alignment record into checksum products
@@ -211,7 +307,7 @@ struct OrderIndependentSeqDataChecksums {
 	*
 	* @param algn BAM alignment record
 	**/
-	void push(libmaus::bambam::BamAlignment const & algn, CRC32UpdateContext & context)
+	void push(libmaus::bambam::BamAlignment const & algn, typename crc_container_type::context_type & context)
 	{
 		if 
 		( ! (
@@ -222,10 +318,12 @@ struct OrderIndependentSeqDataChecksums {
 			)
 		) )
 		{
-			uint8_t const flags = ( ( algn.getFlags() & ( //following flags are in the least significant byte!
+			static uint16_t const maskflags =
 				::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FPAIRED |
 				::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREAD1 | 
-				::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREAD2 ) ) >> 0 )  & 0xFF;
+				::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREAD2;
+				
+			uint8_t const flags = (algn.getFlags() & maskflags) & 0xFF;
 				
 			context.pass = ! algn.isQCFail();
 			uint64_t const len = algn.isReverse() ? algn.decodeReadRC(A) : algn.decodeRead(A);
@@ -350,7 +448,7 @@ struct OrderIndependentSeqDataChecksums {
 		}
 	};
 	
-	void push(CRC32UpdateContext const & context)
+	void push(typename crc_container_type::context_type const & context)
 	{
 		all.push(context);
 			
@@ -374,9 +472,57 @@ namespace libmaus
 	namespace autoarray
 	{
 		template<>
-		struct ArrayErase<OrderIndependentSeqDataChecksums>
+		struct ArrayErase<OrderIndependentSeqDataChecksums<CRC32Products> >
 		{
-			static void erase(OrderIndependentSeqDataChecksums *, uint64_t const)
+			static void erase(OrderIndependentSeqDataChecksums<CRC32Products> *, uint64_t const)
+			{
+			
+			}
+		};
+		template<>
+		struct ArrayErase<OrderIndependentSeqDataChecksums<MD5SimpleSums> >
+		{
+			static void erase(OrderIndependentSeqDataChecksums<MD5SimpleSums> *, uint64_t const)
+			{
+			
+			}
+		};
+		template<>
+		struct ArrayErase<OrderIndependentSeqDataChecksums<SHA1SimpleSums> >
+		{
+			static void erase(OrderIndependentSeqDataChecksums<SHA1SimpleSums> *, uint64_t const)
+			{
+			
+			}
+		};
+		template<>
+		struct ArrayErase<OrderIndependentSeqDataChecksums<SHA2_224_SimpleSums> >
+		{
+			static void erase(OrderIndependentSeqDataChecksums<SHA2_224_SimpleSums> *, uint64_t const)
+			{
+			
+			}
+		};
+		template<>
+		struct ArrayErase<OrderIndependentSeqDataChecksums<SHA2_256_SimpleSums> >
+		{
+			static void erase(OrderIndependentSeqDataChecksums<SHA2_256_SimpleSums> *, uint64_t const)
+			{
+			
+			}
+		};
+		template<>
+		struct ArrayErase<OrderIndependentSeqDataChecksums<SHA2_384_SimpleSums> >
+		{
+			static void erase(OrderIndependentSeqDataChecksums<SHA2_384_SimpleSums> *, uint64_t const)
+			{
+			
+			}
+		};
+		template<>
+		struct ArrayErase<OrderIndependentSeqDataChecksums<SHA2_512_SimpleSums> >
+		{
+			static void erase(OrderIndependentSeqDataChecksums<SHA2_512_SimpleSums> *, uint64_t const)
 			{
 			
 			}
@@ -384,7 +530,8 @@ namespace libmaus
 	}
 }
 
-int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
+template<typename container_type>
+int bamseqchksumTemplate(::libmaus::util::ArgInfo const & arginfo)
 {
 	if ( isatty(STDIN_FILENO) )
 	{
@@ -405,9 +552,9 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 	::libmaus::bambam::BamHeader const & header = dec.getHeader();
 
 	::libmaus::bambam::BamAlignment & algn = dec.getAlignment();
-	OrderIndependentSeqDataChecksums chksums;
-	libmaus::autoarray::AutoArray<OrderIndependentSeqDataChecksums> readgroup_chksums(1 + header.getNumReadGroups(),false);
-	CRC32UpdateContext updatecontext;
+	OrderIndependentSeqDataChecksums<container_type> chksums;
+	libmaus::autoarray::AutoArray< OrderIndependentSeqDataChecksums<container_type> > readgroup_chksums(1 + header.getNumReadGroups(),false);
+	typename OrderIndependentSeqDataChecksums<container_type>::context_type updatecontext;
 	
 	uint64_t c = 0;
 	while ( dec.readAlignment() )
@@ -440,7 +587,7 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 
 	if(header.getNumReadGroups())
 	{
-		OrderIndependentSeqDataChecksums chksumschk;
+		OrderIndependentSeqDataChecksums<container_type> chksumschk;
 		for(unsigned int i=0; i<=header.getNumReadGroups(); i++)
 		{
 			chksumschk.push(readgroup_chksums[i]);
@@ -455,6 +602,54 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 	}
 
 	return EXIT_SUCCESS;
+}
+
+static std::string getDefaultHash()
+{
+	return "crc32prod";
+}
+
+int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
+{
+	std::string const hash = arginfo.getValue<std::string>("hash","crc32prod");
+	
+	if ( hash == "crc32prod" )
+	{
+		return bamseqchksumTemplate<CRC32Products>(arginfo);
+	}
+	else if ( hash == "md5" )
+	{
+		return bamseqchksumTemplate<MD5SimpleSums>(arginfo);
+	}
+	#if defined(LIBMAUS_HAVE_NETTLE)
+	else if ( hash == "sha1" )
+	{
+		return bamseqchksumTemplate<SHA1SimpleSums>(arginfo);
+	}
+	else if ( hash == "sha224" )
+	{
+		return bamseqchksumTemplate<SHA2_224_SimpleSums>(arginfo);
+	}
+	else if ( hash == "sha256" )
+	{
+		return bamseqchksumTemplate<SHA2_256_SimpleSums>(arginfo);
+	}
+	else if ( hash == "sha384" )
+	{
+		return bamseqchksumTemplate<SHA2_384_SimpleSums>(arginfo);
+	}
+	else if ( hash == "sha512" )
+	{
+		return bamseqchksumTemplate<SHA2_512_SimpleSums>(arginfo);
+	}
+	#endif
+	else
+	{
+		libmaus::exception::LibMausException lme;
+		lme.getStream() << "unsupported hash type " << hash << std::endl;
+		lme.finish();
+		throw lme;
+	}
 }
 
 int main(int argc, char * argv[])
