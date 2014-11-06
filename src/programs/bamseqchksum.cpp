@@ -145,6 +145,7 @@ struct SimpleSums
 
 };
 
+typedef SimpleSums<CRC32UpdateContext> CRC32SimpleSums;
 typedef SimpleSums<MD5UpdateContext> MD5SimpleSums;
 typedef SimpleSums<SHA1UpdateContext> SHA1SimpleSums;
 typedef SimpleSums<SHA2_224_UpdateContext> SHA2_224_SimpleSums;
@@ -480,6 +481,14 @@ namespace libmaus
 			}
 		};
 		template<>
+		struct ArrayErase<OrderIndependentSeqDataChecksums<CRC32SimpleSums> >
+		{
+			static void erase(OrderIndependentSeqDataChecksums<CRC32SimpleSums> *, uint64_t const)
+			{
+			
+			}
+		};
+		template<>
 		struct ArrayErase<OrderIndependentSeqDataChecksums<MD5SimpleSums> >
 		{
 			static void erase(OrderIndependentSeqDataChecksums<MD5SimpleSums> *, uint64_t const)
@@ -611,11 +620,15 @@ static std::string getDefaultHash()
 
 int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 {
-	std::string const hash = arginfo.getValue<std::string>("hash","crc32prod");
+	std::string const hash = arginfo.getValue<std::string>("hash",getDefaultHash());
 	
 	if ( hash == "crc32prod" )
 	{
 		return bamseqchksumTemplate<CRC32Products>(arginfo);
+	}
+	else if ( hash == "crc32" )
+	{
+		return bamseqchksumTemplate<CRC32SimpleSums>(arginfo);
 	}
 	else if ( hash == "md5" )
 	{
