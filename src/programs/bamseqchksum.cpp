@@ -61,6 +61,7 @@ struct UpdateContext
 	libmaus::math::UnsignedInteger<digest_type::digestlength/4> flags_seq_tags_digest;
 	
 	bool pass;
+	bool valid;
 };
 
 typedef UpdateContext<libmaus::digest::CRC32> CRC32UpdateContext;
@@ -327,6 +328,7 @@ struct OrderIndependentSeqDataChecksums {
 			uint8_t const flags = (algn.getFlags() & maskflags) & 0xFF;
 				
 			context.pass = ! algn.isQCFail();
+			context.valid = true;
 			uint64_t const len = algn.isReverse() ? algn.decodeReadRC(A) : algn.decodeRead(A);
 			
 			#if defined(BAM_SEQ_CHKSUM_DEBUG)
@@ -447,14 +449,21 @@ struct OrderIndependentSeqDataChecksums {
 
 			push(context);
 		}
+		else
+		{
+			context.valid = false;
+		}
 	};
 	
 	void push(typename crc_container_type::context_type const & context)
 	{
-		all.push(context);
+		if ( context.valid )
+		{
+			all.push(context);
 			
-		if ( context.pass )
-			pass.push(context);	
+			if ( context.pass )
+				pass.push(context);	
+		}
 	}
 	
 	void push(OrderIndependentSeqDataChecksums const & subsetchksum)
@@ -564,7 +573,7 @@ int bamseqchksumTemplate(::libmaus::util::ArgInfo const & arginfo)
 	OrderIndependentSeqDataChecksums<container_type> chksums;
 	libmaus::autoarray::AutoArray< OrderIndependentSeqDataChecksums<container_type> > readgroup_chksums(1 + header.getNumReadGroups(),false);
 	typename OrderIndependentSeqDataChecksums<container_type>::context_type updatecontext;
-	
+
 	uint64_t c = 0;
 	while ( dec.readAlignment() )
 	{
