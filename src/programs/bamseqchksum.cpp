@@ -28,6 +28,10 @@
 #include <biobambam/Licensing.hpp>
 #include <biobambam/BamBamConfig.hpp>
 
+#if defined(BIOBAMBAM_HAVE_GMP)
+#include <gmp.h>
+#endif
+
 static int getDefaultVerbose() { return 0; }
 static std::string getDefaultInputFormat()
 {
@@ -192,13 +196,26 @@ struct PrimeProduct
 	static libmaus::math::UnsignedInteger<productWidth> const foldprime;
 	// prime
 	static libmaus::math::UnsignedInteger<productWidth> const prime;
-	
+		
 	private:
 	uint64_t count;
+
+	#if defined(BIOBAMBAM_HAVE_GMP)
+	mpz_t gmpprime;
+	mpz_t gmpfoldprime;	
+	mpz_t gmpb_seq;
+	mpz_t gmpname_b_seq;
+	mpz_t gmpb_seq_qual;
+	mpz_t gmpb_seq_tags;
+	mpz_t gmpcrc;
+	mpz_t gmpfoldcrc;
+	mpz_t gmpprod;
+	#else
 	libmaus::math::UnsignedInteger<productWidth> b_seq;
 	libmaus::math::UnsignedInteger<productWidth> name_b_seq;
 	libmaus::math::UnsignedInteger<productWidth> b_seq_qual;
-	libmaus::math::UnsignedInteger<productWidth> b_seq_tags;
+	libmaus::math::UnsignedInteger<productWidth> b_seq_tags;	
+	#endif
 	
 	template<size_t k>
 	void updateProduct(libmaus::math::UnsignedInteger<productWidth> & product, libmaus::math::UnsignedInteger<k> const & rcrc)
@@ -213,61 +230,168 @@ struct PrimeProduct
 		product = product * crc;
 		product = product % prime;
 	}
+
+	#if defined(BIOBAMBAM_HAVE_GMP)
+	template<size_t k>
+	void updateProduct(mpz_t & gmpproduct, libmaus::math::UnsignedInteger<k> const & rcrc)
+	{
+		mpz_import(gmpcrc,k,-1 /* least sign first */,sizeof(uint32_t),0 /* native endianess */,0 /* don't skip bits */, rcrc.getWords());
+		mpz_mod(gmpfoldcrc,gmpcrc,gmpfoldprime); // foldcrc = crc % foldprime
+		if ( mpz_cmp_ui(gmpfoldcrc,0) == 0 )
+			mpz_set_ui(gmpfoldcrc,1);
+		mpz_mul(gmpprod,gmpproduct,gmpfoldcrc); // prod = product * foldcrc
+		mpz_mod(gmpproduct,gmpprod,gmpprime); // product = prod % prime
+	}
+	#endif
+	
+	#if defined(BIOBAMBAM_HAVE_GMP)
+	static libmaus::math::UnsignedInteger<productWidth> convertNumber(mpz_t const & gmpnum)
+	{
+		size_t const numbitsperel = 8 * sizeof(uint32_t);
+		size_t const numwords = (mpz_sizeinbase(gmpnum,2) + numbitsperel - 1) / numbitsperel;
+		libmaus::autoarray::AutoArray<uint32_t> A(numwords,false);
+		size_t countp = numwords;
+		mpz_export(A.begin(),&countp,-1,sizeof(uint32_t),0,0,gmpnum);
+		libmaus::math::UnsignedInteger<productWidth> U;
+		for ( size_t i = 0; i < std::min(countp,static_cast<size_t>(productWidth)); ++i )
+			U[i] = A[i];
+		return U;
+	}
+	#endif
 	
 	public:
 	PrimeProduct()
-	: count(0), b_seq(1), name_b_seq(1), b_seq_qual(1), b_seq_tags(1) {}
+	: count(0)
+		#if !defined(BIOBAMBAM_HAVE_GMP)
+		, b_seq(1), name_b_seq(1), b_seq_qual(1), b_seq_tags(1) 
+		#endif
+	{
+		#if defined(BIOBAMBAM_HAVE_GMP)
+		mpz_init(gmpprime);
+		mpz_import(gmpprime,productWidth,-1 /* least sign first */,sizeof(uint32_t),0 /* native endianess */,0 /* don't skip bits */, prime.getWords());		
+		mpz_init(gmpfoldprime);
+		mpz_import(gmpfoldprime,productWidth,-1 /* least sign first */,sizeof(uint32_t),0 /* native endianess */,0 /* don't skip bits */, foldprime.getWords());
+		mpz_init_set_ui(gmpb_seq,1);
+		mpz_init_set_ui(gmpname_b_seq,1);
+		mpz_init_set_ui(gmpb_seq_qual,1);
+		mpz_init_set_ui(gmpb_seq_tags,1);
+		mpz_init(gmpcrc);
+		mpz_init(gmpfoldcrc);
+		mpz_init(gmpprod);
+		#endif
+	}
+	~PrimeProduct()
+	{
+		#if defined(BIOBAMBAM_HAVE_GMP)
+		mpz_clear(gmpprime);
+		mpz_clear(gmpfoldprime);
+		mpz_clear(gmpb_seq);
+		mpz_clear(gmpname_b_seq);
+		mpz_clear(gmpb_seq_qual);
+		mpz_clear(gmpb_seq_tags);
+		mpz_clear(gmpfoldcrc);
+		mpz_clear(gmpprod);
+		#endif		
+	}
 	
 	void push(context_type const & context)
 	{
 		count += 1;		
+		#if defined(BIOBAMBAM_HAVE_GMP)
+		updateProduct(gmpb_seq,context.flags_seq_digest);
+		updateProduct(gmpname_b_seq,context.name_flags_seq_digest);
+		updateProduct(gmpb_seq_qual,context.flags_seq_qual_digest);
+		updateProduct(gmpb_seq_tags,context.flags_seq_tags_digest);
+		#else
 		updateProduct(b_seq,context.flags_seq_digest);
 		updateProduct(name_b_seq,context.name_flags_seq_digest);
 		updateProduct(b_seq_qual,context.flags_seq_qual_digest);
 		updateProduct(b_seq_tags,context.flags_seq_tags_digest);
+		#endif
 	}
 
 	void push (this_type const & subsetproducts)
 	{
 		count += subsetproducts.count;
+		#if defined(BIOBAMBAM_HAVE_GMP)
+		updateProduct(gmpb_seq,convertNumber(subsetproducts.gmpb_seq));
+		updateProduct(gmpname_b_seq,convertNumber(subsetproducts.gmpname_b_seq));
+		updateProduct(gmpb_seq_qual,convertNumber(subsetproducts.gmpb_seq_qual));
+		updateProduct(gmpb_seq_tags,convertNumber(subsetproducts.gmpb_seq_tags));
+		#else
 		updateProduct(b_seq,subsetproducts.b_seq);
 		updateProduct(name_b_seq,subsetproducts.name_b_seq);
 		updateProduct(b_seq_qual,subsetproducts.b_seq_qual);
 		updateProduct(b_seq_tags,subsetproducts.b_seq_tags);
+		#endif
 	};
 	
 	bool operator== (this_type const & other) const
 	{
-		return count==other.count &&
-			b_seq==other.b_seq && name_b_seq==other.name_b_seq &&
-			b_seq_qual==other.b_seq_qual && b_seq_tags==other.b_seq_tags;
+		return count==other.count 
+			#if defined(BIOBAMBAM_HAVE_GMP)
+			&& (mpz_cmp(gmpb_seq,other.gmpb_seq) == 0)
+			&& (mpz_cmp(gmpname_b_seq,other.gmpname_b_seq) == 0)
+			&& (mpz_cmp(gmpb_seq_qual,other.gmpb_seq_qual) == 0)
+			&& (mpz_cmp(gmpb_seq_tags,other.gmpb_seq_tags) == 0)
+			#else
+			&& b_seq==other.b_seq 
+			&& name_b_seq==other.name_b_seq 
+			&& b_seq_qual==other.b_seq_qual 
+			&& b_seq_tags==other.b_seq_tags
+			#endif
+			;
 	};
 
 	std::string get_b_seq() const
 	{
 		std::ostringstream ostr;
-		ostr << std::hex << libmaus::math::UnsignedInteger<primeWidth/32>(b_seq);
+		ostr << std::hex 
+			#if defined(BIOBAMBAM_HAVE_GMP)
+			<< libmaus::math::UnsignedInteger<primeWidth/32>(convertNumber(gmpb_seq))
+			#else
+			<< libmaus::math::UnsignedInteger<primeWidth/32>(b_seq)
+			#endif
+			;
 		return ostr.str();
 	}
 
 	std::string get_name_b_seq() const
 	{
 		std::ostringstream ostr;
-		ostr << std::hex << libmaus::math::UnsignedInteger<primeWidth/32>(name_b_seq);
+		ostr << std::hex 
+			#if defined(BIOBAMBAM_HAVE_GMP)
+			<< libmaus::math::UnsignedInteger<primeWidth/32>(convertNumber(gmpname_b_seq))
+			#else
+			<< libmaus::math::UnsignedInteger<primeWidth/32>(name_b_seq)
+			#endif
+			;
 		return ostr.str();
 	}
 	
 	std::string get_b_seq_qual() const
 	{
 		std::ostringstream ostr;
-		ostr << std::hex << libmaus::math::UnsignedInteger<primeWidth/32>(b_seq_qual);
+		ostr << std::hex 
+			#if defined(BIOBAMBAM_HAVE_GMP)
+			<< libmaus::math::UnsignedInteger<primeWidth/32>(convertNumber(gmpb_seq_qual))
+			#else
+			<< libmaus::math::UnsignedInteger<primeWidth/32>(b_seq_qual)
+			#endif
+			;
 		return ostr.str();
 	}
 	
 	std::string get_b_seq_tags() const
 	{
 		std::ostringstream ostr;
-		ostr << std::hex << libmaus::math::UnsignedInteger<primeWidth/32>(b_seq_tags);
+		ostr << std::hex 
+			#if defined(BIOBAMBAM_HAVE_GMP)
+			<< libmaus::math::UnsignedInteger<primeWidth/32>(convertNumber(gmpb_seq_tags))
+			#else
+			<< libmaus::math::UnsignedInteger<primeWidth/32>(b_seq_tags)
+			#endif
+			;
 		return ostr.str();
 	}
 	

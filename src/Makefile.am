@@ -284,9 +284,9 @@ bamfixmateinformation_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLA
 bamfixmateinformation_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
 
 bamseqchksum_SOURCES = programs/bamseqchksum.cpp biobambam/Licensing.cpp
-bamseqchksum_LDADD = ${LIBMAUSLIBS}
-bamseqchksum_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamseqchksum_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamseqchksum_LDADD = ${LIBMAUSLIBS} @GMPLIBS@
+bamseqchksum_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} @GMPLDFLAGS@ ${AM_LDFLAGS}
+bamseqchksum_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} @GMPCPPFLAGS@
 
 normalisefasta_SOURCES = programs/normalisefasta.cpp biobambam/Licensing.cpp
 normalisefasta_LDADD = ${LIBMAUSLIBS}

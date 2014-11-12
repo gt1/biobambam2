@@ -276,6 +276,64 @@ if test "${with_xerces_c}" != "no" ; then
 	BLASTNXMLTOBAM="blastnxmltobam"
 fi
 
+AC_ARG_WITH([gmp],
+            [AS_HELP_STRING([--with-gmp@<:@=PATH@:>@], [path to installed gmp library @<:@default=no@:>@])],
+            [with_gmp=${withval}],
+            [with_gmp=no])
+
+BIOBAMBAM_HAVE_GMP=
+gmp_CFLAGS=
+gmp_LIBS=
+if test "${with_gmp}" != "no" ; then
+
+	
+	AC_MSG_CHECKING([whether we can compile a program using the gmp library])
+	LDFLAGS_SAVE=${LDFLAGS}
+	CPPFLAGS_SAVE=${CPPFLAGS}
+	LIBS_SAVE=${LIBS}
+	
+	if test \( ! -z "${with_gmp}" \) -a \( "${with_gmp}" != "yes" \) ; then
+		LDFLAGS="-L${with_gmp}/lib"
+		CPPFLAGS="-I${with_gmp}/include"
+	fi
+
+	LIBS="-lgmp ${LIBS}"
+
+	AC_LANG_PUSH([C++])
+	AC_LINK_IFELSE([AC_LANG_SOURCE([
+#include <gmp.h>
+
+int main(int argc, char * argv[[]]) {
+	return 0;
+}])],
+			have_gmp=yes,
+			have_gmp=no
+		)
+	AC_LANG_POP
+	AC_MSG_RESULT($have_gmp)
+
+	LDFLAGS=${LDFLAGS_SAVE}
+	CPPFLAGS=${CPPFLAGS_SAVE}
+	LIBS=${LIBS_SAVE}
+
+	if test "${have_gmp}" = "yes" ; then
+		if test "${with_gmp}" != "yes" ; then
+			GMPLDFLAGS="-L${with_gmp}/lib"
+			GMPCPPFLAGS="-I${with_gmp}/include"
+		else
+			GMPLDFLAGS=
+			GMPCPPFLAGS=
+		fi
+		BIOBAMBAM_HAVE_GMP="#define BIOBAMBAM_HAVE_GMP"
+		GMPLIBS="-lgmp"
+	else
+		GMPLDFLAGS=
+		GMPCPPFLAGS=
+		GMPLIBS=
+	fi
+fi
+
+
 if test "${install_experimental}" = "yes" ; then
 	BLASTXMLTOBAMINSTEXP=${BLASTNXMLTOBAM}
 else
@@ -314,5 +372,9 @@ AC_SUBST([xerces_c_CFLAGS])
 AC_SUBST([xerces_c_LIBS])
 AC_SUBST([BIOBAMBAM_HAVE_XERCES_C])
 AC_SUBST([BLASTNXMLTOBAM])
+AC_SUBST([BIOBAMBAM_HAVE_GMP])
+AC_SUBST([GMPLDFLAGS])
+AC_SUBST([GMPCPPFLAGS])
+AC_SUBST([GMPLIBS])
 # 
 AC_OUTPUT(Makefile src/Makefile test/Makefile src/biobambam/BamBamConfig.hpp)
