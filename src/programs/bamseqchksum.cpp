@@ -1604,6 +1604,70 @@ static std::vector<std::string> getSupportedHashVariants()
 	V.push_back("sha384");
 	V.push_back("sha512");
 	#endif
+	V.push_back("crc32prime32");
+	V.push_back("crc32prime64");
+	V.push_back("md5prime64");
+	#if defined(LIBMAUS_HAVE_NETTLE)
+	V.push_back("sha1prime64");
+	V.push_back("sha224prime64");
+	V.push_back("sha256prime64");
+	V.push_back("sha384prime64");
+	V.push_back("sha512prime64");
+	#endif
+	V.push_back("crc32prime96");
+	V.push_back("md5prime96");
+	#if defined(LIBMAUS_HAVE_NETTLE)
+	V.push_back("sha1prime96");
+	V.push_back("sha224prime96");
+	V.push_back("sha256prime96");
+	V.push_back("sha384prime96");
+	V.push_back("sha512prime96");
+	#endif
+	V.push_back("crc32prime128");
+	V.push_back("md5prime128");
+	#if defined(LIBMAUS_HAVE_NETTLE)
+	V.push_back("sha1prime128");
+	V.push_back("sha224prime128");
+	V.push_back("sha256prime128");
+	V.push_back("sha384prime128");
+	V.push_back("sha512prime128");
+	#endif
+	V.push_back("crc32prime160");
+	V.push_back("md5prime160");
+	#if defined(LIBMAUS_HAVE_NETTLE)
+	V.push_back("sha1prime160");
+	V.push_back("sha224prime160");
+	V.push_back("sha256prime160");
+	V.push_back("sha384prime160");
+	V.push_back("sha512prime160");
+	#endif
+	V.push_back("crc32prime192");
+	V.push_back("md5prime192");
+	#if defined(LIBMAUS_HAVE_NETTLE)
+	V.push_back("sha1prime192");
+	V.push_back("sha224prime192");
+	V.push_back("sha256prime192");
+	V.push_back("sha384prime192");
+	V.push_back("sha512prime192");
+	#endif
+	V.push_back("crc32prime224");
+	V.push_back("md5prime224");
+	#if defined(LIBMAUS_HAVE_NETTLE)
+	V.push_back("sha1prime224");
+	V.push_back("sha224prime224");
+	V.push_back("sha256prime224");
+	V.push_back("sha384prime224");
+	V.push_back("sha512prime224");
+	#endif
+	V.push_back("crc32prime256");
+	V.push_back("md5prime256");
+	#if defined(LIBMAUS_HAVE_NETTLE)
+	V.push_back("sha1prime256");
+	V.push_back("sha224prime256");
+	V.push_back("sha256prime256");
+	V.push_back("sha384prime256");
+	V.push_back("sha512prime256");
+	#endif
 	
 	return V;
 }
