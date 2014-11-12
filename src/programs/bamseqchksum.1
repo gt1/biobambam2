@@ -62,19 +62,119 @@ This is the default and only option for biobambam versions up to 0.0.174.
 checksums are computed via crc32 and combined by summing up modulo 2^32.
 .IP md5:
 checksums are computed via md5 and combined by summing up modulo 2^128.
+.IP crc32prime32:
+identical with crc32prod (alternate implementation for testing purposes)
+.IP crc32prime64:
+checksums are computed via crc32 and combined over multiple records by multiplication modulo the prime number 2^64-59.
+.IP md5prime64:
+checksums are computed via md5 and combined over multiple records by multiplication modulo the prime number 2^64-59.
+.IP crc32prime96:
+checksums are computed via crc32 and combined over multiple records by multiplication modulo the prime number 2^96-17.
+.IP md5prime96:
+checksums are computed via md5 and combined over multiple records by multiplication modulo the prime number 2^96-17.
+.IP crc32prime128:
+checksums are computed via crc32 and combined over multiple records by multiplication modulo the prime number 2^128-159.
+.IP md5prime128:
+checksums are computed via md5 and combined over multiple records by multiplication modulo the prime number 2^128-159.
+.IP crc32prime160:
+checksums are computed via crc32 and combined over multiple records by multiplication modulo the prime number 2^160-47.
+.IP md5prime160:
+checksums are computed via md5 and combined over multiple records by multiplication modulo the prime number 2^160-47.
+.IP crc32prime192:
+checksums are computed via crc32 and combined over multiple records by multiplication modulo the prime number 2^192-237.
+.IP md5prime192:
+checksums are computed via md5 and combined over multiple records by multiplication modulo the prime number 2^192-237.
+.IP crc32prime224:
+checksums are computed via crc32 and combined over multiple records by multiplication modulo the prime number 2^224-63.
+.IP md5prime224:
+checksums are computed via md5 and combined over multiple records by multiplication modulo the prime number 2^224-63.
+.IP crc32prime256:
+checksums are computed via crc32 and combined over multiple records by multiplication modulo the prime number 2^256-189.
+.IP md5prime256:
+checksums are computed via md5 and combined over multiple records by multiplication modulo the prime number 2^256-189.
 .PP
 If libmaus is compiled with support for the nettle library, then the
 following options are available:
 .IP sha1:
 checksums are computed via sha1 and combined by summing up modulo 2^160.
+.IP sha1prime64:
+checksums are computed via sha1 and combined over multiple records by multiplication modulo the prime number 2^64-59.
+.IP sha1prime96:
+checksums are computed via sha1 and combined over multiple records by multiplication modulo the prime number 2^96-17.
+.IP sha1prime128:
+checksums are computed via sha1 and combined over multiple records by multiplication modulo the prime number 2^128-159.
+.IP sha1prime160:
+checksums are computed via sha1 and combined over multiple records by multiplication modulo the prime number 2^160-47.
+.IP sha1prime192:
+checksums are computed via sha1 and combined over multiple records by multiplication modulo the prime number 2^192-237.
+.IP sha1prime224:
+checksums are computed via sha1 and combined over multiple records by multiplication modulo the prime number 2^224-63.
+.IP sha1prime256:
+checksums are computed via sha1 and combined over multiple records by multiplication modulo the prime number 2^256-189.
 .IP sha224:
 checksums are computed via sha2-224 and combined by summing up modulo 2^224.
+.IP sha224prime64:
+checksums are computed via sha2-224 and combined over multiple records by multiplication modulo the prime number 2^64-59.
+.IP sha224prime96:
+checksums are computed via sha2-224 and combined over multiple records by multiplication modulo the prime number 2^96-17.
+.IP sha224prime128:
+checksums are computed via sha2-224 and combined over multiple records by multiplication modulo the prime number 2^128-159.
+.IP sha224prime160:
+checksums are computed via sha2-224 and combined over multiple records by multiplication modulo the prime number 2^160-47.
+.IP sha224prime192:
+checksums are computed via sha2-224 and combined over multiple records by multiplication modulo the prime number 2^192-237.
+.IP sha224prime224:
+checksums are computed via sha2-224 and combined over multiple records by multiplication modulo the prime number 2^224-63.
+.IP sha224prime256:
+checksums are computed via sha2-224 and combined over multiple records by multiplication modulo the prime number 2^256-189.
 .IP sha256:
 checksums are computed via sha2-256 and combined by summing up modulo 2^256.
+.IP sha256prime64:
+checksums are computed via sha2-256 and combined over multiple records by multiplication modulo the prime number 2^64-59.
+.IP sha256prime96:
+checksums are computed via sha2-256 and combined over multiple records by multiplication modulo the prime number 2^96-17.
+.IP sha256prime128:
+checksums are computed via sha2-256 and combined over multiple records by multiplication modulo the prime number 2^128-159.
+.IP sha256prime160:
+checksums are computed via sha2-256 and combined over multiple records by multiplication modulo the prime number 2^160-47.
+.IP sha256prime192:
+checksums are computed via sha2-256 and combined over multiple records by multiplication modulo the prime number 2^192-237.
+.IP sha256prime224:
+checksums are computed via sha2-256 and combined over multiple records by multiplication modulo the prime number 2^224-63.
+.IP sha256prime256:
+checksums are computed via sha2-256 and combined over multiple records by multiplication modulo the prime number 2^256-189.
 .IP sha384:
 checksums are computed via sha2-384 and combined by summing up modulo 2^384.
+.IP sha384prime64:
+checksums are computed via sha2-384 and combined over multiple records by multiplication modulo the prime number 2^64-59.
+.IP sha384prime96:
+checksums are computed via sha2-384 and combined over multiple records by multiplication modulo the prime number 2^96-17.
+.IP sha384prime128:
+checksums are computed via sha2-384 and combined over multiple records by multiplication modulo the prime number 2^128-159.
+.IP sha384prime160:
+checksums are computed via sha2-384 and combined over multiple records by multiplication modulo the prime number 2^160-47.
+.IP sha384prime192:
+checksums are computed via sha2-384 and combined over multiple records by multiplication modulo the prime number 2^192-237.
+.IP sha384prime224:
+checksums are computed via sha2-384 and combined over multiple records by multiplication modulo the prime number 2^224-63.
+.IP sha384prime256:
+checksums are computed via sha2-384 and combined over multiple records by multiplication modulo the prime number 2^256-189.
 .IP sha512:
 checksums are computed via sha2-512 and combined by summing up modulo 2^512.
+.IP sha512prime64:
+checksums are computed via sha2-512 and combined over multiple records by multiplication modulo the prime number 2^64-59.
+.IP sha512prime96:
+checksums are computed via sha2-512 and combined over multiple records by multiplication modulo the prime number 2^96-17.
+.IP sha512prime128:
+checksums are computed via sha2-512 and combined over multiple records by multiplication modulo the prime number 2^128-159.
+.IP sha512prime160:
+checksums are computed via sha2-512 and combined over multiple records by multiplication modulo the prime number 2^160-47.
+.IP sha512prime192:
+checksums are computed via sha2-512 and combined over multiple records by multiplication modulo the prime number 2^192-237.
+.IP sha512prime224:
+checksums are computed via sha2-512 and combined over multiple records by multiplication modulo the prime number 2^224-63.
+.IP sha512prime256:
+checksums are computed via sha2-512 and combined over multiple records by multiplication modulo the prime number 2^256-189.
 .SH AUTHOR
 Written by David Jackson (using code by German Tischler as a template).
 Extended to hash digests beyond crc32prod by German Tischler.
