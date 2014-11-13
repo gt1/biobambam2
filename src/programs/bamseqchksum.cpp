@@ -68,6 +68,7 @@ struct UpdateContext
 	bool valid;
 };
 
+typedef UpdateContext<libmaus::digest::Null> NullUpdateContext;
 typedef UpdateContext<libmaus::digest::CRC32> CRC32UpdateContext;
 typedef UpdateContext<libmaus::util::MD5> MD5UpdateContext;
 typedef UpdateContext<libmaus::digest::SHA1> SHA1UpdateContext;
@@ -612,10 +613,6 @@ typedef PrimeProduct<SHA2_512_UpdateContext,192> SHA2_512_PrimeProduct192;
 template<> libmaus::math::UnsignedInteger<SHA2_512_PrimeProduct192::productWidth> const SHA2_512_PrimeProduct192::prime = getPrime192<SHA2_512_PrimeProduct192::productWidth>();
 template<> libmaus::math::UnsignedInteger<SHA2_512_PrimeProduct192::productWidth> const SHA2_512_PrimeProduct192::foldprime = getPrime192<SHA2_512_PrimeProduct192::productWidth>();
 
-
-
-
-
 template<size_t k>
 static libmaus::math::UnsignedInteger<k> getPrime224()
 {
@@ -843,6 +840,81 @@ struct CRC32Products
 };
 
 /**
+ * null checksums for performance testing
+**/
+struct NullChecksums
+{
+	typedef NullUpdateContext context_type;
+
+	private:
+	uint64_t count;
+
+	void push_count(uint64_t const add)
+	{
+		count += add;
+	}
+	
+	void push(
+		libmaus::math::UnsignedInteger<context_type::digest_type::digestlength/4> const &,
+		libmaus::math::UnsignedInteger<context_type::digest_type::digestlength/4> const &,
+		libmaus::math::UnsignedInteger<context_type::digest_type::digestlength/4> const &,
+		libmaus::math::UnsignedInteger<context_type::digest_type::digestlength/4> const &
+	)
+	{
+		push_count(1);
+	}
+	
+	public:
+	NullChecksums() : count(0)
+	{
+	}
+
+	uint64_t get_b_seq() const
+	{
+		return 0;
+	}
+
+	uint64_t get_name_b_seq() const
+	{
+		return 0;
+	}
+	
+	uint64_t get_b_seq_qual() const
+	{
+		return 0;
+	}
+	
+	uint64_t get_b_seq_tags() const
+	{
+		return 0;
+	}
+	
+	uint64_t get_count() const
+	{
+		return count;
+	}
+	
+	void push(context_type const & context)
+	{
+		push(
+			context.name_flags_seq_digest,
+			context.flags_seq_digest,
+			context.flags_seq_qual_digest,
+			context.flags_seq_tags_digest
+		);
+	}
+
+	void push (NullChecksums const & subsetproducts)
+	{
+		count += subsetproducts.count;
+	};
+	bool operator== (NullChecksums const & other) const
+	{
+		return count==other.count;
+	};
+};
+
+/**
 * Finite field products of CRC32 checksums of primary/source sequence data
 *
 * Checksum products should remain unchanged if primary data is retained no matter what
@@ -1045,6 +1117,14 @@ namespace libmaus
 {
 	namespace autoarray
 	{
+		template<>
+		struct ArrayErase<OrderIndependentSeqDataChecksums<NullChecksums> >
+		{
+			static void erase(OrderIndependentSeqDataChecksums<NullChecksums> *, uint64_t const)
+			{
+			
+			}
+		};
 		template<>
 		struct ArrayErase<OrderIndependentSeqDataChecksums<CRC32Products> >
 		{
@@ -1668,6 +1748,7 @@ static std::vector<std::string> getSupportedHashVariants()
 	V.push_back("sha384prime256");
 	V.push_back("sha512prime256");
 	#endif
+	V.push_back("null");
 	
 	return V;
 }
@@ -1927,6 +2008,10 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 		return bamseqchksumTemplate<SHA2_512_PrimeProduct256>(arginfo);
 	}
 	#endif
+	else if ( hash == "null" )
+	{
+		return bamseqchksumTemplate<NullChecksums>(arginfo);
+	}
 	else
 	{
 		libmaus::exception::LibMausException lme;
