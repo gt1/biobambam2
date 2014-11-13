@@ -92,6 +92,8 @@ checksums are computed via md5 and combined over multiple records by multiplicat
 checksums are computed via crc32 and combined over multiple records by multiplication modulo the prime number 2^256-189.
 .IP md5prime256:
 checksums are computed via md5 and combined over multiple records by multiplication modulo the prime number 2^256-189.
+.IP null:
+no checksums are computed and all checksums in the programs output are 0. This option is for performance testing only.
 .PP
 If libmaus is compiled with support for the nettle library, then the
 following options are available:
