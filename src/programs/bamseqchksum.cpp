@@ -2174,6 +2174,10 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 	{
 		return bamseqchksumTemplate<SHA2_256_PrimeProduct256>(arginfo);
 	}
+	else if ( hash == "sha224prime256" )
+	{
+		return bamseqchksumTemplate<SHA2_224_PrimeProduct256>(arginfo);
+	}
 	else if ( hash == "sha256prime256" )
 	{
 		return bamseqchksumTemplate<SHA2_256_PrimeProduct256>(arginfo);
