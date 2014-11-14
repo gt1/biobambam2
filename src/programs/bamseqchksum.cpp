@@ -43,6 +43,143 @@ static std::vector<std::string> getDefaultAuxTags() {
 	return v;
 }
 
+template<size_t k>
+static libmaus::math::UnsignedInteger<k> getMersenne31()
+{
+	return libmaus::math::UnsignedInteger<k>(0x7FFFFFFFull);
+}
+
+template<size_t k>
+static libmaus::math::UnsignedInteger<k> getMersenne521()
+{
+	libmaus::math::UnsignedInteger< (521 + 31)/32 > M;
+
+	M[0] = 1;
+	M <<= 521;
+	M -= 1;
+	
+	return libmaus::math::UnsignedInteger<k>(M);
+}
+
+template<size_t k>
+static libmaus::math::UnsignedInteger<k> getPrime64()
+{
+	libmaus::math::UnsignedInteger<k> M;
+	if ( 0 < k )
+		M[0] = 0xFFFFFFFFUL - 59UL;
+	if ( 1 < k )
+		M[1] = 0xFFFFFFFFUL;
+	return M; // 2^64-59 prime according to https://primes.utm.edu/lists/2small/0bit.html
+}
+
+template<size_t k>
+static libmaus::math::UnsignedInteger<k> getPrime96()
+{
+	libmaus::math::UnsignedInteger<k> M;
+	if ( 0 < k )
+		M[0] = 0xFFFFFFFFUL - 17;
+	if ( 1 < k )
+		M[1] = 0xFFFFFFFFUL;
+	if ( 2 < k )
+		M[2] = 0xFFFFFFFFUL;
+	return M; // 2^96-17 prime according to https://primes.utm.edu/lists/2small/0bit.html
+}
+
+template<size_t k>
+static libmaus::math::UnsignedInteger<k> getPrime128()
+{
+	libmaus::math::UnsignedInteger<k> M;
+	if ( 0 < k )
+		M[0] = 0xFFFFFFFFUL - 159;
+	if ( 1 < k )
+		M[1] = 0xFFFFFFFFUL;
+	if ( 2 < k )
+		M[2] = 0xFFFFFFFFUL;
+	if ( 3 < k )
+		M[3] = 0xFFFFFFFFUL;
+	return M; // 2^128-159 prime according to https://primes.utm.edu/lists/2small/100bit.html
+}
+
+template<size_t k>
+static libmaus::math::UnsignedInteger<k> getPrime160()
+{
+	libmaus::math::UnsignedInteger<k> M;
+	if ( 0 < k )
+		M[0] = 0xFFFFFFFFUL - 47;
+	if ( 1 < k )
+		M[1] = 0xFFFFFFFFUL;
+	if ( 2 < k )
+		M[2] = 0xFFFFFFFFUL;
+	if ( 3 < k )
+		M[3] = 0xFFFFFFFFUL;
+	if ( 4 < k )
+		M[4] = 0xFFFFFFFFUL;
+	return M; // 2^160-47 prime according to https://primes.utm.edu/lists/2small/100bit.html
+}
+
+template<size_t k>
+static libmaus::math::UnsignedInteger<k> getPrime192()
+{
+	libmaus::math::UnsignedInteger<k> M;
+	if ( 0 < k )
+		M[0] = 0xFFFFFFFFUL - 237;
+	if ( 1 < k )
+		M[1] = 0xFFFFFFFFUL;
+	if ( 2 < k )
+		M[2] = 0xFFFFFFFFUL;
+	if ( 3 < k )
+		M[3] = 0xFFFFFFFFUL;
+	if ( 4 < k )
+		M[4] = 0xFFFFFFFFUL;
+	if ( 5 < k )
+		M[5] = 0xFFFFFFFFUL;
+	return M; // 2^192-237 prime according to https://primes.utm.edu/lists/2small/100bit.html
+}
+
+template<size_t k>
+static libmaus::math::UnsignedInteger<k> getPrime224()
+{
+	libmaus::math::UnsignedInteger<k> M;
+	if ( 0 < k )
+		M[0] = 0xFFFFFFFFUL - 63;
+	if ( 1 < k )
+		M[1] = 0xFFFFFFFFUL;
+	if ( 2 < k )
+		M[2] = 0xFFFFFFFFUL;
+	if ( 3 < k )
+		M[3] = 0xFFFFFFFFUL;
+	if ( 4 < k )
+		M[4] = 0xFFFFFFFFUL;
+	if ( 5 < k )
+		M[5] = 0xFFFFFFFFUL;
+	if ( 6 < k )
+		M[6] = 0xFFFFFFFFUL;
+	return M; // 2^224-63 prime according to https://primes.utm.edu/lists/2small/200bit.html
+}
+
+template<size_t k>
+static libmaus::math::UnsignedInteger<k> getPrime256()
+{
+	libmaus::math::UnsignedInteger<k> M;
+	if ( 0 < k )
+		M[0] = 0xFFFFFFFFUL - 189;
+	if ( 1 < k )
+		M[1] = 0xFFFFFFFFUL;
+	if ( 2 < k )
+		M[2] = 0xFFFFFFFFUL;
+	if ( 3 < k )
+		M[3] = 0xFFFFFFFFUL;
+	if ( 4 < k )
+		M[4] = 0xFFFFFFFFUL;
+	if ( 5 < k )
+		M[5] = 0xFFFFFFFFUL;
+	if ( 6 < k )
+		M[6] = 0xFFFFFFFFUL;
+	if ( 7 < k )
+		M[7] = 0xFFFFFFFFUL;
+	return M; // 2^256-189 prime according to https://primes.utm.edu/lists/2small/200bit.html
+}
+
 template<typename _digest_type>
 struct UpdateContext
 {
@@ -148,7 +285,6 @@ struct SimpleSums
 	{
 		return count;
 	}
-
 };
 
 typedef SimpleSums<CRC32UpdateContext> CRC32SimpleSums;
@@ -158,24 +294,6 @@ typedef SimpleSums<SHA2_224_UpdateContext> SHA2_224_SimpleSums;
 typedef SimpleSums<SHA2_256_UpdateContext> SHA2_256_SimpleSums;
 typedef SimpleSums<SHA2_384_UpdateContext> SHA2_384_SimpleSums;
 typedef SimpleSums<SHA2_512_UpdateContext> SHA2_512_SimpleSums;
-
-template<size_t k>
-static libmaus::math::UnsignedInteger<k> getMersenne31()
-{
-	return libmaus::math::UnsignedInteger<k>(0x7FFFFFFFull);
-}
-
-
-template<size_t k>
-static libmaus::math::UnsignedInteger<k> getPrime64()
-{
-	libmaus::math::UnsignedInteger<k> M;
-	if ( 0 < k )
-		M[0] = 0xFFFFFFFFUL - 59UL;
-	if ( 1 < k )
-		M[1] = 0xFFFFFFFFUL;
-	return M; // 2^64-59 prime according to https://primes.utm.edu/lists/2small/0bit.html
-}
 
 template<size_t a, size_t b>
 struct TemplateMax
@@ -400,7 +518,6 @@ struct PrimeProduct
 	{
 		return count;
 	}
-
 };
 
 typedef PrimeProduct<CRC32UpdateContext,32> CRC32PrimeProduct32;
@@ -436,20 +553,6 @@ typedef PrimeProduct<SHA2_512_UpdateContext,64> SHA2_512_PrimeProduct64;
 template<> libmaus::math::UnsignedInteger<SHA2_512_PrimeProduct64::productWidth> const SHA2_512_PrimeProduct64::prime = getPrime64<SHA2_512_PrimeProduct64::productWidth>();
 template<> libmaus::math::UnsignedInteger<SHA2_512_PrimeProduct64::productWidth> const SHA2_512_PrimeProduct64::foldprime = getPrime64<SHA2_512_PrimeProduct64::productWidth>();
 
-template<size_t k>
-static libmaus::math::UnsignedInteger<k> getPrime96()
-{
-	libmaus::math::UnsignedInteger<k> M;
-	if ( 0 < k )
-		M[0] = 0xFFFFFFFFUL - 17;
-	if ( 1 < k )
-		M[1] = 0xFFFFFFFFUL;
-	if ( 2 < k )
-		M[2] = 0xFFFFFFFFUL;
-	return M; // 2^96-17 prime according to https://primes.utm.edu/lists/2small/0bit.html
-}
-
-
 typedef PrimeProduct<CRC32UpdateContext,96> CRC32PrimeProduct96;
 template<> libmaus::math::UnsignedInteger<CRC32PrimeProduct96::productWidth> const CRC32PrimeProduct96::prime = getPrime96<CRC32PrimeProduct96::productWidth>();
 template<> libmaus::math::UnsignedInteger<CRC32PrimeProduct96::productWidth> const CRC32PrimeProduct96::foldprime = getPrime96<CRC32PrimeProduct96::productWidth>();
@@ -477,21 +580,6 @@ template<> libmaus::math::UnsignedInteger<SHA2_384_PrimeProduct96::productWidth>
 typedef PrimeProduct<SHA2_512_UpdateContext,96> SHA2_512_PrimeProduct96;
 template<> libmaus::math::UnsignedInteger<SHA2_512_PrimeProduct96::productWidth> const SHA2_512_PrimeProduct96::prime = getPrime96<SHA2_512_PrimeProduct96::productWidth>();
 template<> libmaus::math::UnsignedInteger<SHA2_512_PrimeProduct96::productWidth> const SHA2_512_PrimeProduct96::foldprime = getPrime96<SHA2_512_PrimeProduct96::productWidth>();
-
-template<size_t k>
-static libmaus::math::UnsignedInteger<k> getPrime128()
-{
-	libmaus::math::UnsignedInteger<k> M;
-	if ( 0 < k )
-		M[0] = 0xFFFFFFFFUL - 159;
-	if ( 1 < k )
-		M[1] = 0xFFFFFFFFUL;
-	if ( 2 < k )
-		M[2] = 0xFFFFFFFFUL;
-	if ( 3 < k )
-		M[3] = 0xFFFFFFFFUL;
-	return M; // 2^128-159 prime according to https://primes.utm.edu/lists/2small/100bit.html
-}
 
 typedef PrimeProduct<CRC32UpdateContext,128> CRC32PrimeProduct128;
 template<> libmaus::math::UnsignedInteger<CRC32PrimeProduct128::productWidth> const CRC32PrimeProduct128::prime = getPrime128<CRC32PrimeProduct128::productWidth>();
@@ -521,23 +609,6 @@ typedef PrimeProduct<SHA2_512_UpdateContext,128> SHA2_512_PrimeProduct128;
 template<> libmaus::math::UnsignedInteger<SHA2_512_PrimeProduct128::productWidth> const SHA2_512_PrimeProduct128::prime = getPrime128<SHA2_512_PrimeProduct128::productWidth>();
 template<> libmaus::math::UnsignedInteger<SHA2_512_PrimeProduct128::productWidth> const SHA2_512_PrimeProduct128::foldprime = getPrime128<SHA2_512_PrimeProduct128::productWidth>();
 
-template<size_t k>
-static libmaus::math::UnsignedInteger<k> getPrime160()
-{
-	libmaus::math::UnsignedInteger<k> M;
-	if ( 0 < k )
-		M[0] = 0xFFFFFFFFUL - 47;
-	if ( 1 < k )
-		M[1] = 0xFFFFFFFFUL;
-	if ( 2 < k )
-		M[2] = 0xFFFFFFFFUL;
-	if ( 3 < k )
-		M[3] = 0xFFFFFFFFUL;
-	if ( 4 < k )
-		M[4] = 0xFFFFFFFFUL;
-	return M; // 2^160-47 prime according to https://primes.utm.edu/lists/2small/100bit.html
-}
-
 typedef PrimeProduct<CRC32UpdateContext,160> CRC32PrimeProduct160;
 template<> libmaus::math::UnsignedInteger<CRC32PrimeProduct160::productWidth> const CRC32PrimeProduct160::prime = getPrime160<CRC32PrimeProduct160::productWidth>();
 template<> libmaus::math::UnsignedInteger<CRC32PrimeProduct160::productWidth> const CRC32PrimeProduct160::foldprime = getPrime160<CRC32PrimeProduct160::productWidth>();
@@ -565,25 +636,6 @@ template<> libmaus::math::UnsignedInteger<SHA2_384_PrimeProduct160::productWidth
 typedef PrimeProduct<SHA2_512_UpdateContext,160> SHA2_512_PrimeProduct160;
 template<> libmaus::math::UnsignedInteger<SHA2_512_PrimeProduct160::productWidth> const SHA2_512_PrimeProduct160::prime = getPrime160<SHA2_512_PrimeProduct160::productWidth>();
 template<> libmaus::math::UnsignedInteger<SHA2_512_PrimeProduct160::productWidth> const SHA2_512_PrimeProduct160::foldprime = getPrime160<SHA2_512_PrimeProduct160::productWidth>();
-
-template<size_t k>
-static libmaus::math::UnsignedInteger<k> getPrime192()
-{
-	libmaus::math::UnsignedInteger<k> M;
-	if ( 0 < k )
-		M[0] = 0xFFFFFFFFUL - 237;
-	if ( 1 < k )
-		M[1] = 0xFFFFFFFFUL;
-	if ( 2 < k )
-		M[2] = 0xFFFFFFFFUL;
-	if ( 3 < k )
-		M[3] = 0xFFFFFFFFUL;
-	if ( 4 < k )
-		M[4] = 0xFFFFFFFFUL;
-	if ( 5 < k )
-		M[5] = 0xFFFFFFFFUL;
-	return M; // 2^192-237 prime according to https://primes.utm.edu/lists/2small/100bit.html
-}
 
 typedef PrimeProduct<CRC32UpdateContext,192> CRC32PrimeProduct192;
 template<> libmaus::math::UnsignedInteger<CRC32PrimeProduct192::productWidth> const CRC32PrimeProduct192::prime = getPrime192<CRC32PrimeProduct192::productWidth>();
@@ -613,27 +665,6 @@ typedef PrimeProduct<SHA2_512_UpdateContext,192> SHA2_512_PrimeProduct192;
 template<> libmaus::math::UnsignedInteger<SHA2_512_PrimeProduct192::productWidth> const SHA2_512_PrimeProduct192::prime = getPrime192<SHA2_512_PrimeProduct192::productWidth>();
 template<> libmaus::math::UnsignedInteger<SHA2_512_PrimeProduct192::productWidth> const SHA2_512_PrimeProduct192::foldprime = getPrime192<SHA2_512_PrimeProduct192::productWidth>();
 
-template<size_t k>
-static libmaus::math::UnsignedInteger<k> getPrime224()
-{
-	libmaus::math::UnsignedInteger<k> M;
-	if ( 0 < k )
-		M[0] = 0xFFFFFFFFUL - 63;
-	if ( 1 < k )
-		M[1] = 0xFFFFFFFFUL;
-	if ( 2 < k )
-		M[2] = 0xFFFFFFFFUL;
-	if ( 3 < k )
-		M[3] = 0xFFFFFFFFUL;
-	if ( 4 < k )
-		M[4] = 0xFFFFFFFFUL;
-	if ( 5 < k )
-		M[5] = 0xFFFFFFFFUL;
-	if ( 6 < k )
-		M[6] = 0xFFFFFFFFUL;
-	return M; // 2^224-63 prime according to https://primes.utm.edu/lists/2small/200bit.html
-}
-
 typedef PrimeProduct<CRC32UpdateContext,224> CRC32PrimeProduct224;
 template<> libmaus::math::UnsignedInteger<CRC32PrimeProduct224::productWidth> const CRC32PrimeProduct224::prime = getPrime224<CRC32PrimeProduct224::productWidth>();
 template<> libmaus::math::UnsignedInteger<CRC32PrimeProduct224::productWidth> const CRC32PrimeProduct224::foldprime = getPrime224<CRC32PrimeProduct224::productWidth>();
@@ -661,30 +692,6 @@ template<> libmaus::math::UnsignedInteger<SHA2_384_PrimeProduct224::productWidth
 typedef PrimeProduct<SHA2_512_UpdateContext,224> SHA2_512_PrimeProduct224;
 template<> libmaus::math::UnsignedInteger<SHA2_512_PrimeProduct224::productWidth> const SHA2_512_PrimeProduct224::prime = getPrime224<SHA2_512_PrimeProduct224::productWidth>();
 template<> libmaus::math::UnsignedInteger<SHA2_512_PrimeProduct224::productWidth> const SHA2_512_PrimeProduct224::foldprime = getPrime224<SHA2_512_PrimeProduct224::productWidth>();
-
-
-template<size_t k>
-static libmaus::math::UnsignedInteger<k> getPrime256()
-{
-	libmaus::math::UnsignedInteger<k> M;
-	if ( 0 < k )
-		M[0] = 0xFFFFFFFFUL - 189;
-	if ( 1 < k )
-		M[1] = 0xFFFFFFFFUL;
-	if ( 2 < k )
-		M[2] = 0xFFFFFFFFUL;
-	if ( 3 < k )
-		M[3] = 0xFFFFFFFFUL;
-	if ( 4 < k )
-		M[4] = 0xFFFFFFFFUL;
-	if ( 5 < k )
-		M[5] = 0xFFFFFFFFUL;
-	if ( 6 < k )
-		M[6] = 0xFFFFFFFFUL;
-	if ( 7 < k )
-		M[7] = 0xFFFFFFFFUL;
-	return M; // 2^256-189 prime according to https://primes.utm.edu/lists/2small/200bit.html
-}
 
 typedef PrimeProduct<CRC32UpdateContext,256> CRC32PrimeProduct256;
 template<> libmaus::math::UnsignedInteger<CRC32PrimeProduct256::productWidth> const CRC32PrimeProduct256::prime = getPrime256<CRC32PrimeProduct256::productWidth>();
@@ -714,6 +721,161 @@ typedef PrimeProduct<SHA2_512_UpdateContext,256> SHA2_512_PrimeProduct256;
 template<> libmaus::math::UnsignedInteger<SHA2_512_PrimeProduct256::productWidth> const SHA2_512_PrimeProduct256::prime = getPrime256<SHA2_512_PrimeProduct256::productWidth>();
 template<> libmaus::math::UnsignedInteger<SHA2_512_PrimeProduct256::productWidth> const SHA2_512_PrimeProduct256::foldprime = getPrime256<SHA2_512_PrimeProduct256::productWidth>();
 
+template<typename _context_type, size_t _primeWidth>
+struct PrimeSums
+{
+	typedef _context_type context_type;
+	typedef PrimeSums<context_type,_primeWidth> this_type;
+	
+	// width of the prime in bits
+	static size_t const primeWidth = _primeWidth;
+	// width of the sums in bits
+	static size_t const sumWidth = 1 + TemplateMax<primeWidth/32, context_type::digest_type::digestlength/4>::value;
+	// prime
+	static libmaus::math::UnsignedInteger<sumWidth> const prime;
+
+	private:
+	uint64_t count;
+	uint64_t modcount;
+
+	libmaus::math::UnsignedInteger<sumWidth> b_seq;
+	libmaus::math::UnsignedInteger<sumWidth> name_b_seq;
+	libmaus::math::UnsignedInteger<sumWidth> b_seq_qual;
+	libmaus::math::UnsignedInteger<sumWidth> b_seq_tags;
+	
+	// get prime width in bits
+	unsigned int getPrimeWidth() const
+	{
+		for ( unsigned int i = 0; i < sumWidth; ++i )
+		{
+			// most significant to least significant word
+			uint32_t v = prime[sumWidth-i-1];
+			
+			// if word is not null
+			if ( v )
+			{
+				// get word shift
+				unsigned int s = (sumWidth-i-1)*32;
+				
+				if ( (v & 0xFFFF0000UL) )
+					v >>= 16, s += 16;
+				if ( (v & 0xFF00UL) )
+					v >>= 8, s += 8;
+				if ( (v & 0xF0UL) )
+					v >>= 4, s += 4;
+				if ( (v & 0xCUL) )
+					v >>= 2, s += 2;
+								
+				// add bit shift
+				while ( v )
+				{
+					s++;
+					v >>= 1;
+				}
+				
+				return s;
+			}
+		}
+		
+		return 0;
+	}
+	
+	// get prime width in hex digits
+	unsigned int getPrimeHexWidth() const
+	{
+		unsigned int const primewidth = getPrimeWidth();
+		return (primewidth + 3)/4;
+	}
+	
+	std::string shortenHexDigest(std::string const & s) const
+	{
+		assert ( s.size() >= getPrimeHexWidth() );
+		return s.substr(s.size()-getPrimeHexWidth());
+	}
+
+	template<size_t k>
+	void updateSum(libmaus::math::UnsignedInteger<sumWidth> & sum, libmaus::math::UnsignedInteger<k> const & crc)
+	{
+		// prime must be larger than crc to guarantee that (crc%prime) != 0 assuming crc!=0
+		if ( expect_false(crc.isNull()) )
+			sum += libmaus::math::UnsignedInteger<sumWidth>(1);
+		else
+			sum += crc;
+
+		if ( expect_false ( (++modcount & ((1ul<<30)-1)) == 0 ) )
+		{
+			sum %= prime;
+			modcount = 0;
+		}
+	}
+
+	public:
+	PrimeSums() : count(0), modcount(0), b_seq(0), name_b_seq(0), b_seq_qual(0), b_seq_tags(0) {}
+	
+	void push(context_type const & context)
+	{
+		count += 1;		
+		updateSum(b_seq     ,context.flags_seq_digest);
+		updateSum(name_b_seq,context.name_flags_seq_digest);
+		updateSum(b_seq_qual,context.flags_seq_qual_digest);
+		updateSum(b_seq_tags,context.flags_seq_tags_digest);
+	}
+
+	void push (this_type const & subsetproducts)
+	{
+		count += subsetproducts.count;
+		b_seq      = ((b_seq      % prime) + (subsetproducts.b_seq      % prime)) % prime;
+		name_b_seq = ((name_b_seq % prime) + (subsetproducts.name_b_seq % prime)) % prime;
+		b_seq_qual = ((b_seq_qual % prime) + (subsetproducts.b_seq_qual % prime)) % prime;
+		b_seq_tags = ((b_seq_tags % prime) + (subsetproducts.b_seq_tags % prime)) % prime;		
+	};
+	
+	bool operator== (this_type const & other) const
+	{
+		return count==other.count 
+			&& (b_seq%prime)==(other.b_seq%prime)
+			&& (name_b_seq%prime)==(other.name_b_seq%prime)
+			&& (b_seq_qual%prime)==(other.b_seq_qual%prime)
+			&& (b_seq_tags%prime)==(other.b_seq_tags%prime)
+			;
+	};
+
+	std::string get_b_seq() const
+	{
+		std::ostringstream ostr;
+		ostr << std::hex << libmaus::math::UnsignedInteger<primeWidth/32>(b_seq % prime);
+		return shortenHexDigest(ostr.str());
+	}
+
+	std::string get_name_b_seq() const
+	{
+		std::ostringstream ostr;
+		ostr << std::hex << libmaus::math::UnsignedInteger<primeWidth/32>(name_b_seq % prime);
+		return shortenHexDigest(ostr.str());
+	}
+	
+	std::string get_b_seq_qual() const
+	{
+		std::ostringstream ostr;
+		ostr << std::hex << libmaus::math::UnsignedInteger<primeWidth/32>(b_seq_qual % prime);
+		return shortenHexDigest(ostr.str());
+	}
+	
+	std::string get_b_seq_tags() const
+	{
+		std::ostringstream ostr;
+		ostr << std::hex << libmaus::math::UnsignedInteger<primeWidth/32>(b_seq_tags % prime);
+		return shortenHexDigest(ostr.str());
+	}
+	
+	uint64_t get_count() const
+	{
+		return count;
+	}
+};
+
+typedef PrimeSums<SHA2_512_UpdateContext,544> SHA2_512_PrimeSums;
+template<> libmaus::math::UnsignedInteger<SHA2_512_PrimeSums::sumWidth> const SHA2_512_PrimeSums::prime = getMersenne521<SHA2_512_PrimeSums::sumWidth /* 18 */>();
 
 /**
 * Product checksums calculated based on basecalls and (multi segment, first
@@ -1589,6 +1751,14 @@ namespace libmaus
 			
 			}
 		};
+		template<>
+		struct ArrayErase<OrderIndependentSeqDataChecksums<SHA2_512_PrimeSums> >
+		{
+			static void erase(OrderIndependentSeqDataChecksums<SHA2_512_PrimeSums> *, uint64_t const)
+			{
+			
+			}
+		};
 	}
 }
 
@@ -1602,6 +1772,9 @@ int bamseqchksumTemplate(::libmaus::util::ArgInfo const & arginfo)
 		se.finish();
 		throw se;
 	}
+	
+	libmaus::timing::RealTimeClock rtc;
+	rtc.start();
 	
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
 	std::string const inputformat = arginfo.getValue<std::string>("inputformat",getDefaultInputFormat());
@@ -1661,6 +1834,11 @@ int bamseqchksumTemplate(::libmaus::util::ArgInfo const & arginfo)
 				<< readgroup_chksums[i].pass.get_b_seq_qual() << "\t" << readgroup_chksums[i].pass.get_b_seq_tags() << std::dec << std::endl;
 		}
 		assert(chksumschk == chksums);
+	}
+	
+	if ( verbose )
+	{
+		std::cerr << "[V] run time " << rtc.getElapsedSeconds() << " (" << rtc.formatTime(rtc.getElapsedSeconds()) << ")" << std::endl;
 	}
 
 	return EXIT_SUCCESS;
@@ -1749,6 +1927,7 @@ static std::vector<std::string> getSupportedHashVariants()
 	V.push_back("sha512prime256");
 	#endif
 	V.push_back("null");
+	V.push_back("sha512primesums");
 	
 	return V;
 }
@@ -2012,6 +2191,12 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 	{
 		return bamseqchksumTemplate<NullChecksums>(arginfo);
 	}
+	#if defined(LIBMAUS_HAVE_NETTLE)
+	else if ( hash == "sha512primesums" )
+	{
+		return bamseqchksumTemplate<SHA2_512_PrimeSums>(arginfo);
+	}
+	#endif
 	else
 	{
 		libmaus::exception::LibMausException lme;
@@ -2025,9 +2210,6 @@ int main(int argc, char * argv[])
 {
 	try
 	{
-		CRC32PrimeProduct64 prodCRC32;
-		MD5PrimeProduct64   prodMD5;
-	
 		::libmaus::util::ArgInfo const arginfo(argc,argv);
 		
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
