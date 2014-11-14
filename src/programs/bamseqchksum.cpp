@@ -721,11 +721,11 @@ typedef PrimeProduct<SHA2_512_UpdateContext,256> SHA2_512_PrimeProduct256;
 template<> libmaus::math::UnsignedInteger<SHA2_512_PrimeProduct256::productWidth> const SHA2_512_PrimeProduct256::prime = getPrime256<SHA2_512_PrimeProduct256::productWidth>();
 template<> libmaus::math::UnsignedInteger<SHA2_512_PrimeProduct256::productWidth> const SHA2_512_PrimeProduct256::foldprime = getPrime256<SHA2_512_PrimeProduct256::productWidth>();
 
-template<typename _context_type, size_t _primeWidth>
+template<typename _context_type, size_t _primeWidth, size_t truncate>
 struct PrimeSums
 {
 	typedef _context_type context_type;
-	typedef PrimeSums<context_type,_primeWidth> this_type;
+	typedef PrimeSums<context_type,_primeWidth,truncate> this_type;
 	
 	// width of the prime in bits
 	static size_t const primeWidth = _primeWidth;
@@ -789,8 +789,15 @@ struct PrimeSums
 	
 	std::string shortenHexDigest(std::string const & s) const
 	{
-		assert ( s.size() >= getPrimeHexWidth() );
-		return s.substr(s.size()-getPrimeHexWidth());
+		if ( truncate )
+		{
+			return s.substr(s.size() - (truncate/32)*8);
+		}
+		else
+		{
+			assert ( s.size() >= getPrimeHexWidth() );
+			return s.substr(s.size()-getPrimeHexWidth());
+		}
 	}
 
 	template<size_t k>
@@ -874,8 +881,20 @@ struct PrimeSums
 	}
 };
 
-typedef PrimeSums<SHA2_512_UpdateContext,544> SHA2_512_PrimeSums;
-template<> libmaus::math::UnsignedInteger<SHA2_512_PrimeSums::sumWidth> const SHA2_512_PrimeSums::prime = getMersenne521<SHA2_512_PrimeSums::sumWidth /* 18 */>();
+template<size_t k>
+static libmaus::math::UnsignedInteger<k> getNextPrime512()
+{
+	libmaus::math::UnsignedInteger<k> U(1);
+	U <<= 512;
+	U += libmaus::math::UnsignedInteger<k>(75);
+	return U;
+}
+
+typedef PrimeSums<SHA2_512_UpdateContext,544,512> SHA2_512_PrimeSums512;
+template<> libmaus::math::UnsignedInteger<SHA2_512_PrimeSums512::sumWidth> const SHA2_512_PrimeSums512::prime = getNextPrime512<SHA2_512_PrimeSums512::sumWidth>();
+
+typedef PrimeSums<SHA2_512_UpdateContext,544,0> SHA2_512_PrimeSums;
+template<> libmaus::math::UnsignedInteger<SHA2_512_PrimeSums::sumWidth> const SHA2_512_PrimeSums::prime = getMersenne521<SHA2_512_PrimeSums::sumWidth>();
 
 /**
 * Product checksums calculated based on basecalls and (multi segment, first
@@ -1759,6 +1778,14 @@ namespace libmaus
 			
 			}
 		};
+		template<>
+		struct ArrayErase<OrderIndependentSeqDataChecksums<SHA2_512_PrimeSums512> >
+		{
+			static void erase(OrderIndependentSeqDataChecksums<SHA2_512_PrimeSums512> *, uint64_t const)
+			{
+			
+			}
+		};
 	}
 }
 
@@ -1928,6 +1955,7 @@ static std::vector<std::string> getSupportedHashVariants()
 	#endif
 	V.push_back("null");
 	V.push_back("sha512primesums");
+	V.push_back("sha512primesums512");
 	
 	return V;
 }
@@ -2200,6 +2228,10 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 	{
 		return bamseqchksumTemplate<SHA2_512_PrimeSums>(arginfo);
 	}
+	else if ( hash == "sha512primesums512" )
+	{
+		return bamseqchksumTemplate<SHA2_512_PrimeSums512>(arginfo);
+	}
 	#endif
 	else
 	{
@@ -2209,6 +2241,43 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 		throw lme;
 	}
 }
+
+#if defined(BIOBAMBAM_HAVE_GMP)
+template<size_t k>
+static libmaus::math::UnsignedInteger<k> convertNumber(mpz_t const & gmpnum)
+{
+	size_t const numbitsperel = 8 * sizeof(uint32_t);
+	size_t const numwords = (mpz_sizeinbase(gmpnum,2) + numbitsperel - 1) / numbitsperel;
+	libmaus::autoarray::AutoArray<uint32_t> A(numwords,false);
+	size_t countp = numwords;
+	mpz_export(A.begin(),&countp,-1,sizeof(uint32_t),0,0,gmpnum);
+	libmaus::math::UnsignedInteger<k> U;
+	for ( size_t i = 0; i < std::min(countp,static_cast<size_t>(k)); ++i )
+		U[i] = A[i];
+	return U;
+}
+// search for next prime number larger than 2^(32*k) using probabilistic algorithm in gmp library
+template<size_t k>
+libmaus::math::UnsignedInteger<k+1> nextPrime()
+{
+	libmaus::math::UnsignedInteger<k+1> U(1);
+	U <<= (k*32);
+	
+	mpz_t gmpU;
+	mpz_init(gmpU);
+	mpz_import(gmpU,k+1,-1 /* least sign first */,sizeof(uint32_t),0 /* native endianess */,0 /* don't skip bits */, U.getWords());
+	
+	while ( mpz_probab_prime_p(gmpU,200) == 0 )
+		mpz_add_ui(gmpU,gmpU,1);
+	
+	libmaus::math::UnsignedInteger<k+1> const R = convertNumber<k+1>(gmpU);
+	
+	mpz_clear(gmpU);
+	
+	return R;
+}
+#endif
+
 
 int main(int argc, char * argv[])
 {
