@@ -1221,8 +1221,11 @@ struct OrderIndependentSeqDataChecksums {
 			#endif
 
 			context.ctx_name_flags_seq.init();
+			// read name (algn.getLReadName() bytes)
 			context.ctx_name_flags_seq.update(reinterpret_cast<uint8_t const *>(algn.getName()),algn.getLReadName());
+			// flags (1 byte)
 			context.ctx_name_flags_seq.update(reinterpret_cast<uint8_t const *>(&flags),1);
+			// query sequence
 			context.ctx_name_flags_seq.update(reinterpret_cast<uint8_t const *>(A.begin()),len);
 						
 			#if defined(BAM_SEQ_CHKSUM_DEBUG)
@@ -1231,9 +1234,10 @@ struct OrderIndependentSeqDataChecksums {
 			chksum_name_flags_seq = crc32(chksum_name_flags_seq,reinterpret_cast<const unsigned char *>( A.begin()), len);
 			#endif
 						
-			// flags + sequence
 			context.ctx_flags_seq.init();
+			// flags
 			context.ctx_flags_seq.update(reinterpret_cast<uint8_t const *>(&flags),1);
+			// query sequence
 			context.ctx_flags_seq.update(reinterpret_cast<uint8_t const *>(A.begin()),len);
 			
 			#if defined(BAM_SEQ_CHKSUM_DEBUG)
