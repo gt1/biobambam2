@@ -216,6 +216,7 @@ typedef UpdateContext<libmaus::digest::SHA2_256> SHA2_256_UpdateContext;
 typedef UpdateContext<libmaus::digest::SHA2_256_sse4> SHA2_256_sse4_UpdateContext;
 typedef UpdateContext<libmaus::digest::SHA2_384> SHA2_384_UpdateContext;
 typedef UpdateContext<libmaus::digest::SHA2_512> SHA2_512_UpdateContext;
+typedef UpdateContext<libmaus::digest::SHA2_512_sse4> SHA2_512_sse4_UpdateContext;
 
 template<typename _context_type>
 struct SimpleSums
@@ -298,6 +299,7 @@ typedef SimpleSums<SHA2_256_UpdateContext> SHA2_256_SimpleSums;
 typedef SimpleSums<SHA2_256_sse4_UpdateContext> SHA2_256_sse4_SimpleSums;
 typedef SimpleSums<SHA2_384_UpdateContext> SHA2_384_SimpleSums;
 typedef SimpleSums<SHA2_512_UpdateContext> SHA2_512_SimpleSums;
+typedef SimpleSums<SHA2_512_sse4_UpdateContext> SHA2_512_sse4_SimpleSums;
 
 template<size_t a, size_t b>
 struct TemplateMax
@@ -561,6 +563,10 @@ typedef PrimeProduct<SHA2_512_UpdateContext,64> SHA2_512_PrimeProduct64;
 template<> libmaus::math::UnsignedInteger<SHA2_512_PrimeProduct64::productWidth> const SHA2_512_PrimeProduct64::prime = getPrime64<SHA2_512_PrimeProduct64::productWidth>();
 template<> libmaus::math::UnsignedInteger<SHA2_512_PrimeProduct64::productWidth> const SHA2_512_PrimeProduct64::foldprime = getPrime64<SHA2_512_PrimeProduct64::productWidth>();
 
+typedef PrimeProduct<SHA2_512_sse4_UpdateContext,64> SHA2_512_sse4_PrimeProduct64;
+template<> libmaus::math::UnsignedInteger<SHA2_512_sse4_PrimeProduct64::productWidth> const SHA2_512_sse4_PrimeProduct64::prime = getPrime64<SHA2_512_sse4_PrimeProduct64::productWidth>();
+template<> libmaus::math::UnsignedInteger<SHA2_512_sse4_PrimeProduct64::productWidth> const SHA2_512_sse4_PrimeProduct64::foldprime = getPrime64<SHA2_512_sse4_PrimeProduct64::productWidth>();
+
 typedef PrimeProduct<CRC32UpdateContext,96> CRC32PrimeProduct96;
 template<> libmaus::math::UnsignedInteger<CRC32PrimeProduct96::productWidth> const CRC32PrimeProduct96::prime = getPrime96<CRC32PrimeProduct96::productWidth>();
 template<> libmaus::math::UnsignedInteger<CRC32PrimeProduct96::productWidth> const CRC32PrimeProduct96::foldprime = getPrime96<CRC32PrimeProduct96::productWidth>();
@@ -592,6 +598,10 @@ template<> libmaus::math::UnsignedInteger<SHA2_384_PrimeProduct96::productWidth>
 typedef PrimeProduct<SHA2_512_UpdateContext,96> SHA2_512_PrimeProduct96;
 template<> libmaus::math::UnsignedInteger<SHA2_512_PrimeProduct96::productWidth> const SHA2_512_PrimeProduct96::prime = getPrime96<SHA2_512_PrimeProduct96::productWidth>();
 template<> libmaus::math::UnsignedInteger<SHA2_512_PrimeProduct96::productWidth> const SHA2_512_PrimeProduct96::foldprime = getPrime96<SHA2_512_PrimeProduct96::productWidth>();
+
+typedef PrimeProduct<SHA2_512_sse4_UpdateContext,96> SHA2_512_sse4_PrimeProduct96;
+template<> libmaus::math::UnsignedInteger<SHA2_512_sse4_PrimeProduct96::productWidth> const SHA2_512_sse4_PrimeProduct96::prime = getPrime96<SHA2_512_sse4_PrimeProduct96::productWidth>();
+template<> libmaus::math::UnsignedInteger<SHA2_512_sse4_PrimeProduct96::productWidth> const SHA2_512_sse4_PrimeProduct96::foldprime = getPrime96<SHA2_512_sse4_PrimeProduct96::productWidth>();
 
 typedef PrimeProduct<CRC32UpdateContext,128> CRC32PrimeProduct128;
 template<> libmaus::math::UnsignedInteger<CRC32PrimeProduct128::productWidth> const CRC32PrimeProduct128::prime = getPrime128<CRC32PrimeProduct128::productWidth>();
@@ -625,6 +635,10 @@ typedef PrimeProduct<SHA2_512_UpdateContext,128> SHA2_512_PrimeProduct128;
 template<> libmaus::math::UnsignedInteger<SHA2_512_PrimeProduct128::productWidth> const SHA2_512_PrimeProduct128::prime = getPrime128<SHA2_512_PrimeProduct128::productWidth>();
 template<> libmaus::math::UnsignedInteger<SHA2_512_PrimeProduct128::productWidth> const SHA2_512_PrimeProduct128::foldprime = getPrime128<SHA2_512_PrimeProduct128::productWidth>();
 
+typedef PrimeProduct<SHA2_512_sse4_UpdateContext,128> SHA2_512_sse4_PrimeProduct128;
+template<> libmaus::math::UnsignedInteger<SHA2_512_sse4_PrimeProduct128::productWidth> const SHA2_512_sse4_PrimeProduct128::prime = getPrime128<SHA2_512_sse4_PrimeProduct128::productWidth>();
+template<> libmaus::math::UnsignedInteger<SHA2_512_sse4_PrimeProduct128::productWidth> const SHA2_512_sse4_PrimeProduct128::foldprime = getPrime128<SHA2_512_sse4_PrimeProduct128::productWidth>();
+
 typedef PrimeProduct<CRC32UpdateContext,160> CRC32PrimeProduct160;
 template<> libmaus::math::UnsignedInteger<CRC32PrimeProduct160::productWidth> const CRC32PrimeProduct160::prime = getPrime160<CRC32PrimeProduct160::productWidth>();
 template<> libmaus::math::UnsignedInteger<CRC32PrimeProduct160::productWidth> const CRC32PrimeProduct160::foldprime = getPrime160<CRC32PrimeProduct160::productWidth>();
@@ -656,6 +670,10 @@ template<> libmaus::math::UnsignedInteger<SHA2_384_PrimeProduct160::productWidth
 typedef PrimeProduct<SHA2_512_UpdateContext,160> SHA2_512_PrimeProduct160;
 template<> libmaus::math::UnsignedInteger<SHA2_512_PrimeProduct160::productWidth> const SHA2_512_PrimeProduct160::prime = getPrime160<SHA2_512_PrimeProduct160::productWidth>();
 template<> libmaus::math::UnsignedInteger<SHA2_512_PrimeProduct160::productWidth> const SHA2_512_PrimeProduct160::foldprime = getPrime160<SHA2_512_PrimeProduct160::productWidth>();
+
+typedef PrimeProduct<SHA2_512_sse4_UpdateContext,160> SHA2_512_sse4_PrimeProduct160;
+template<> libmaus::math::UnsignedInteger<SHA2_512_sse4_PrimeProduct160::productWidth> const SHA2_512_sse4_PrimeProduct160::prime = getPrime160<SHA2_512_sse4_PrimeProduct160::productWidth>();
+template<> libmaus::math::UnsignedInteger<SHA2_512_sse4_PrimeProduct160::productWidth> const SHA2_512_sse4_PrimeProduct160::foldprime = getPrime160<SHA2_512_sse4_PrimeProduct160::productWidth>();
 
 typedef PrimeProduct<CRC32UpdateContext,192> CRC32PrimeProduct192;
 template<> libmaus::math::UnsignedInteger<CRC32PrimeProduct192::productWidth> const CRC32PrimeProduct192::prime = getPrime192<CRC32PrimeProduct192::productWidth>();
@@ -689,6 +707,10 @@ typedef PrimeProduct<SHA2_512_UpdateContext,192> SHA2_512_PrimeProduct192;
 template<> libmaus::math::UnsignedInteger<SHA2_512_PrimeProduct192::productWidth> const SHA2_512_PrimeProduct192::prime = getPrime192<SHA2_512_PrimeProduct192::productWidth>();
 template<> libmaus::math::UnsignedInteger<SHA2_512_PrimeProduct192::productWidth> const SHA2_512_PrimeProduct192::foldprime = getPrime192<SHA2_512_PrimeProduct192::productWidth>();
 
+typedef PrimeProduct<SHA2_512_sse4_UpdateContext,192> SHA2_512_sse4_PrimeProduct192;
+template<> libmaus::math::UnsignedInteger<SHA2_512_sse4_PrimeProduct192::productWidth> const SHA2_512_sse4_PrimeProduct192::prime = getPrime192<SHA2_512_sse4_PrimeProduct192::productWidth>();
+template<> libmaus::math::UnsignedInteger<SHA2_512_sse4_PrimeProduct192::productWidth> const SHA2_512_sse4_PrimeProduct192::foldprime = getPrime192<SHA2_512_sse4_PrimeProduct192::productWidth>();
+
 typedef PrimeProduct<CRC32UpdateContext,224> CRC32PrimeProduct224;
 template<> libmaus::math::UnsignedInteger<CRC32PrimeProduct224::productWidth> const CRC32PrimeProduct224::prime = getPrime224<CRC32PrimeProduct224::productWidth>();
 template<> libmaus::math::UnsignedInteger<CRC32PrimeProduct224::productWidth> const CRC32PrimeProduct224::foldprime = getPrime224<CRC32PrimeProduct224::productWidth>();
@@ -721,6 +743,10 @@ typedef PrimeProduct<SHA2_512_UpdateContext,224> SHA2_512_PrimeProduct224;
 template<> libmaus::math::UnsignedInteger<SHA2_512_PrimeProduct224::productWidth> const SHA2_512_PrimeProduct224::prime = getPrime224<SHA2_512_PrimeProduct224::productWidth>();
 template<> libmaus::math::UnsignedInteger<SHA2_512_PrimeProduct224::productWidth> const SHA2_512_PrimeProduct224::foldprime = getPrime224<SHA2_512_PrimeProduct224::productWidth>();
 
+typedef PrimeProduct<SHA2_512_sse4_UpdateContext,224> SHA2_512_sse4_PrimeProduct224;
+template<> libmaus::math::UnsignedInteger<SHA2_512_sse4_PrimeProduct224::productWidth> const SHA2_512_sse4_PrimeProduct224::prime = getPrime224<SHA2_512_sse4_PrimeProduct224::productWidth>();
+template<> libmaus::math::UnsignedInteger<SHA2_512_sse4_PrimeProduct224::productWidth> const SHA2_512_sse4_PrimeProduct224::foldprime = getPrime224<SHA2_512_sse4_PrimeProduct224::productWidth>();
+
 typedef PrimeProduct<CRC32UpdateContext,256> CRC32PrimeProduct256;
 template<> libmaus::math::UnsignedInteger<CRC32PrimeProduct256::productWidth> const CRC32PrimeProduct256::prime = getPrime256<CRC32PrimeProduct256::productWidth>();
 template<> libmaus::math::UnsignedInteger<CRC32PrimeProduct256::productWidth> const CRC32PrimeProduct256::foldprime = getPrime256<CRC32PrimeProduct256::productWidth>();
@@ -752,6 +778,10 @@ template<> libmaus::math::UnsignedInteger<SHA2_384_PrimeProduct256::productWidth
 typedef PrimeProduct<SHA2_512_UpdateContext,256> SHA2_512_PrimeProduct256;
 template<> libmaus::math::UnsignedInteger<SHA2_512_PrimeProduct256::productWidth> const SHA2_512_PrimeProduct256::prime = getPrime256<SHA2_512_PrimeProduct256::productWidth>();
 template<> libmaus::math::UnsignedInteger<SHA2_512_PrimeProduct256::productWidth> const SHA2_512_PrimeProduct256::foldprime = getPrime256<SHA2_512_PrimeProduct256::productWidth>();
+
+typedef PrimeProduct<SHA2_512_sse4_UpdateContext,256> SHA2_512_sse4_PrimeProduct256;
+template<> libmaus::math::UnsignedInteger<SHA2_512_sse4_PrimeProduct256::productWidth> const SHA2_512_sse4_PrimeProduct256::prime = getPrime256<SHA2_512_sse4_PrimeProduct256::productWidth>();
+template<> libmaus::math::UnsignedInteger<SHA2_512_sse4_PrimeProduct256::productWidth> const SHA2_512_sse4_PrimeProduct256::foldprime = getPrime256<SHA2_512_sse4_PrimeProduct256::productWidth>();
 
 template<typename _context_type, size_t _primeWidth, size_t truncate>
 struct PrimeSums
@@ -927,6 +957,12 @@ template<> libmaus::math::UnsignedInteger<SHA2_512_PrimeSums512::sumWidth> const
 
 typedef PrimeSums<SHA2_512_UpdateContext,544,0> SHA2_512_PrimeSums;
 template<> libmaus::math::UnsignedInteger<SHA2_512_PrimeSums::sumWidth> const SHA2_512_PrimeSums::prime = getMersenne521<SHA2_512_PrimeSums::sumWidth>();
+
+typedef PrimeSums<SHA2_512_sse4_UpdateContext,544,512> SHA2_512_sse4_PrimeSums512;
+template<> libmaus::math::UnsignedInteger<SHA2_512_sse4_PrimeSums512::sumWidth> const SHA2_512_sse4_PrimeSums512::prime = getNextPrime512<SHA2_512_sse4_PrimeSums512::sumWidth>();
+
+typedef PrimeSums<SHA2_512_sse4_UpdateContext,544,0> SHA2_512_sse4_PrimeSums;
+template<> libmaus::math::UnsignedInteger<SHA2_512_sse4_PrimeSums::sumWidth> const SHA2_512_sse4_PrimeSums::prime = getMersenne521<SHA2_512_sse4_PrimeSums::sumWidth>();
 
 /**
 * Product checksums calculated based on basecalls and (multi segment, first
@@ -1411,6 +1447,14 @@ namespace libmaus
 			}
 		};
 		template<>
+		struct ArrayErase<OrderIndependentSeqDataChecksums<SHA2_512_sse4_SimpleSums> >
+		{
+			static void erase(OrderIndependentSeqDataChecksums<SHA2_512_sse4_SimpleSums> *, uint64_t const)
+			{
+			
+			}
+		};
+		template<>
 		struct ArrayErase<OrderIndependentSeqDataChecksums<CRC32PrimeProduct32> >
 		{
 			static void erase(OrderIndependentSeqDataChecksums<CRC32PrimeProduct32> *, uint64_t const)
@@ -1483,6 +1527,14 @@ namespace libmaus
 			}
 		};
 		template<>
+		struct ArrayErase<OrderIndependentSeqDataChecksums<SHA2_512_sse4_PrimeProduct64> >
+		{
+			static void erase(OrderIndependentSeqDataChecksums<SHA2_512_sse4_PrimeProduct64> *, uint64_t const)
+			{
+			
+			}
+		};
+		template<>
 		struct ArrayErase<OrderIndependentSeqDataChecksums<CRC32PrimeProduct96> >
 		{
 			static void erase(OrderIndependentSeqDataChecksums<CRC32PrimeProduct96> *, uint64_t const)
@@ -1542,6 +1594,14 @@ namespace libmaus
 		struct ArrayErase<OrderIndependentSeqDataChecksums<SHA2_512_PrimeProduct96> >
 		{
 			static void erase(OrderIndependentSeqDataChecksums<SHA2_512_PrimeProduct96> *, uint64_t const)
+			{
+			
+			}
+		};
+		template<>
+		struct ArrayErase<OrderIndependentSeqDataChecksums<SHA2_512_sse4_PrimeProduct96> >
+		{
+			static void erase(OrderIndependentSeqDataChecksums<SHA2_512_sse4_PrimeProduct96> *, uint64_t const)
 			{
 			
 			}
@@ -1611,6 +1671,14 @@ namespace libmaus
 			}
 		};
 		template<>
+		struct ArrayErase<OrderIndependentSeqDataChecksums<SHA2_512_sse4_PrimeProduct128> >
+		{
+			static void erase(OrderIndependentSeqDataChecksums<SHA2_512_sse4_PrimeProduct128> *, uint64_t const)
+			{
+			
+			}
+		};
+		template<>
 		struct ArrayErase<OrderIndependentSeqDataChecksums<CRC32PrimeProduct160> >
 		{
 			static void erase(OrderIndependentSeqDataChecksums<CRC32PrimeProduct160> *, uint64_t const)
@@ -1670,6 +1738,14 @@ namespace libmaus
 		struct ArrayErase<OrderIndependentSeqDataChecksums<SHA2_512_PrimeProduct160> >
 		{
 			static void erase(OrderIndependentSeqDataChecksums<SHA2_512_PrimeProduct160> *, uint64_t const)
+			{
+			
+			}
+		};
+		template<>
+		struct ArrayErase<OrderIndependentSeqDataChecksums<SHA2_512_sse4_PrimeProduct160> >
+		{
+			static void erase(OrderIndependentSeqDataChecksums<SHA2_512_sse4_PrimeProduct160> *, uint64_t const)
 			{
 			
 			}
@@ -1739,6 +1815,14 @@ namespace libmaus
 			}
 		};
 		template<>
+		struct ArrayErase<OrderIndependentSeqDataChecksums<SHA2_512_sse4_PrimeProduct192> >
+		{
+			static void erase(OrderIndependentSeqDataChecksums<SHA2_512_sse4_PrimeProduct192> *, uint64_t const)
+			{
+			
+			}
+		};
+		template<>
 		struct ArrayErase<OrderIndependentSeqDataChecksums<CRC32PrimeProduct224> >
 		{
 			static void erase(OrderIndependentSeqDataChecksums<CRC32PrimeProduct224> *, uint64_t const)
@@ -1798,6 +1882,14 @@ namespace libmaus
 		struct ArrayErase<OrderIndependentSeqDataChecksums<SHA2_512_PrimeProduct224> >
 		{
 			static void erase(OrderIndependentSeqDataChecksums<SHA2_512_PrimeProduct224> *, uint64_t const)
+			{
+			
+			}
+		};
+		template<>
+		struct ArrayErase<OrderIndependentSeqDataChecksums<SHA2_512_sse4_PrimeProduct224> >
+		{
+			static void erase(OrderIndependentSeqDataChecksums<SHA2_512_sse4_PrimeProduct224> *, uint64_t const)
 			{
 			
 			}
@@ -1867,6 +1959,14 @@ namespace libmaus
 			}
 		};
 		template<>
+		struct ArrayErase<OrderIndependentSeqDataChecksums<SHA2_512_sse4_PrimeProduct256> >
+		{
+			static void erase(OrderIndependentSeqDataChecksums<SHA2_512_sse4_PrimeProduct256> *, uint64_t const)
+			{
+			
+			}
+		};
+		template<>
 		struct ArrayErase<OrderIndependentSeqDataChecksums<SHA2_512_PrimeSums> >
 		{
 			static void erase(OrderIndependentSeqDataChecksums<SHA2_512_PrimeSums> *, uint64_t const)
@@ -1875,9 +1975,25 @@ namespace libmaus
 			}
 		};
 		template<>
+		struct ArrayErase<OrderIndependentSeqDataChecksums<SHA2_512_sse4_PrimeSums> >
+		{
+			static void erase(OrderIndependentSeqDataChecksums<SHA2_512_sse4_PrimeSums> *, uint64_t const)
+			{
+			
+			}
+		};
+		template<>
 		struct ArrayErase<OrderIndependentSeqDataChecksums<SHA2_512_PrimeSums512> >
 		{
 			static void erase(OrderIndependentSeqDataChecksums<SHA2_512_PrimeSums512> *, uint64_t const)
+			{
+			
+			}
+		};
+		template<>
+		struct ArrayErase<OrderIndependentSeqDataChecksums<SHA2_512_sse4_PrimeSums512> >
+		{
+			static void erase(OrderIndependentSeqDataChecksums<SHA2_512_sse4_PrimeSums512> *, uint64_t const)
 			{
 			
 			}
@@ -1898,6 +2014,7 @@ int bamseqchksumTemplate(::libmaus::util::ArgInfo const & arginfo)
 	
 	libmaus::timing::RealTimeClock rtc;
 	rtc.start();
+	double prevtime = 0;
 	
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
 	std::string const inputformat = arginfo.getValue<std::string>("inputformat",getDefaultInputFormat());
@@ -1922,10 +2039,14 @@ int bamseqchksumTemplate(::libmaus::util::ArgInfo const & arginfo)
 		
 		if ( verbose && (++c & (1024*1024-1)) == 0 )
 		{
+			double const elapsed = rtc.getElapsedSeconds();
 			std::cerr << "[V] " << c/(1024*1024) << " " << chksums.all.get_count() << " " << algn.getName() << " " << algn.isRead1()
 			<< " " << algn.isRead2() << " " << ( algn.isReverse() ? algn.getReadRC() : algn.getRead() ) << " "
 			<< ( algn.isReverse() ? algn.getQualRC() : algn.getQual() ) << " " << std::hex << (0x0 + algn.getFlags())
-			<< std::dec << " " << chksums.all.get_b_seq() << " " << chksums.all.get_b_seq_tags() << " " << std::endl;
+			<< std::dec << " " << chksums.all.get_b_seq() << " " << chksums.all.get_b_seq_tags() << " " 
+			<< " " << (elapsed-prevtime)
+			<< std::endl;
+			prevtime = elapsed;
 		}
 	}
 
@@ -2050,8 +2171,32 @@ static std::vector<std::string> getSupportedHashVariants()
 	V.push_back("sha512prime256");
 	#endif
 	V.push_back("null");
+
+	#if defined(LIBMAUS_HAVE_NETTLE)
 	V.push_back("sha512primesums");
 	V.push_back("sha512primesums512");
+	#endif
+
+	#if (!defined(LIBMAUS_HAVE_NETTLE)) && (defined(LIBMAUS_USE_ASSEMBLY) && defined(LIBMAUS_HAVE_i386) && defined(LIBMAUS_HAVE_SHA2_ASSEMBLY))
+	V.push_back("sha256");
+	V.push_back("sha512");
+	V.push_back("sha256prime64");
+	V.push_back("sha512prime64");
+	V.push_back("sha256prime96");
+	V.push_back("sha512prime96");
+	V.push_back("sha256prime128");
+	V.push_back("sha512prime128");
+	V.push_back("sha256prime160");
+	V.push_back("sha512prime160");
+	V.push_back("sha256prime192");
+	V.push_back("sha512prime192");
+	V.push_back("sha256prime224");
+	V.push_back("sha512prime224");
+	V.push_back("sha256prime256");
+	V.push_back("sha512prime256");
+	V.push_back("sha512primesums");
+	V.push_back("sha512primesums512");
+	#endif
 	
 	return V;
 }
@@ -2100,7 +2245,10 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 	{
 		#if defined(LIBMAUS_USE_ASSEMBLY) && defined(LIBMAUS_HAVE_i386)	&& defined(LIBMAUS_HAVE_SHA2_ASSEMBLY)
 		if ( libmaus::util::I386CacheLineSize::hasSSE41() )
+		{
+			// std::cerr << "[V] running sse4 SHA2_256" << std::endl;
 			return bamseqchksumTemplate<SHA2_256_sse4_SimpleSums>(arginfo);
+		}
 		else
 		#endif
 			return bamseqchksumTemplate<SHA2_256_SimpleSums>(arginfo);
@@ -2111,12 +2259,15 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 	}
 	else if ( hash == "sha512" )
 	{
-		return bamseqchksumTemplate<SHA2_512_SimpleSums>(arginfo);
-	}
-	#elif defined(LIBMAUS_USE_ASSEMBLY) && defined(LIBMAUS_HAVE_i386) && defined(LIBMAUS_HAVE_SHA2_ASSEMBLY)
-	else if ( hash == "sha256" && libmaus::util::I386CacheLineSize::hasSSE41() )
-	{
-		return bamseqchksumTemplate<SHA2_256_sse4_SimpleSums>(arginfo);	
+		#if defined(LIBMAUS_USE_ASSEMBLY) && defined(LIBMAUS_HAVE_i386)	&& defined(LIBMAUS_HAVE_SHA2_ASSEMBLY)
+		if ( libmaus::util::I386CacheLineSize::hasSSE41() )
+		{
+			// std::cerr << "[V] running sse4 SHA2_512" << std::endl;
+			return bamseqchksumTemplate<SHA2_512_sse4_SimpleSums>(arginfo);
+		}
+		else
+		#endif
+			return bamseqchksumTemplate<SHA2_512_SimpleSums>(arginfo);
 	}
 	#endif
 	else if ( hash == "crc32prime32" )
@@ -2190,7 +2341,15 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 	}
 	else if ( hash == "sha256prime64" )
 	{
-		return bamseqchksumTemplate<SHA2_256_PrimeProduct64>(arginfo);
+		#if defined(LIBMAUS_USE_ASSEMBLY) && defined(LIBMAUS_HAVE_i386)	&& defined(LIBMAUS_HAVE_SHA2_ASSEMBLY)
+		if ( libmaus::util::I386CacheLineSize::hasSSE41() )
+		{
+			//std::cerr << "[V] running sse4 SHA2_256" << std::endl;
+			return bamseqchksumTemplate<SHA2_256_sse4_PrimeProduct64>(arginfo);
+		}
+		else
+		#endif
+			return bamseqchksumTemplate<SHA2_256_PrimeProduct64>(arginfo);
 	}
 	else if ( hash == "sha384prime64" )
 	{
@@ -2198,7 +2357,15 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 	}
 	else if ( hash == "sha512prime64" )
 	{
-		return bamseqchksumTemplate<SHA2_512_PrimeProduct64>(arginfo);
+		#if defined(LIBMAUS_USE_ASSEMBLY) && defined(LIBMAUS_HAVE_i386)	&& defined(LIBMAUS_HAVE_SHA2_ASSEMBLY)
+		if ( libmaus::util::I386CacheLineSize::hasSSE41() )
+		{
+			//std::cerr << "[V] running sse4 SHA2_512" << std::endl;
+			return bamseqchksumTemplate<SHA2_512_sse4_PrimeProduct64>(arginfo);
+		}
+		else
+		#endif
+			return bamseqchksumTemplate<SHA2_512_PrimeProduct64>(arginfo);
 	}
 	else if ( hash == "sha1prime96" )
 	{
@@ -2210,7 +2377,15 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 	}
 	else if ( hash == "sha256prime96" )
 	{
-		return bamseqchksumTemplate<SHA2_256_PrimeProduct96>(arginfo);
+		#if defined(LIBMAUS_USE_ASSEMBLY) && defined(LIBMAUS_HAVE_i386)	&& defined(LIBMAUS_HAVE_SHA2_ASSEMBLY)
+		if ( libmaus::util::I386CacheLineSize::hasSSE41() )
+		{
+			//std::cerr << "[V] running sse4 SHA2_256" << std::endl;
+			return bamseqchksumTemplate<SHA2_256_sse4_PrimeProduct96>(arginfo);
+		}
+		else
+		#endif
+			return bamseqchksumTemplate<SHA2_256_PrimeProduct96>(arginfo);
 	}
 	else if ( hash == "sha384prime96" )
 	{
@@ -2218,7 +2393,15 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 	}
 	else if ( hash == "sha512prime96" )
 	{
-		return bamseqchksumTemplate<SHA2_512_PrimeProduct96>(arginfo);
+		#if defined(LIBMAUS_USE_ASSEMBLY) && defined(LIBMAUS_HAVE_i386)	&& defined(LIBMAUS_HAVE_SHA2_ASSEMBLY)
+		if ( libmaus::util::I386CacheLineSize::hasSSE41() )
+		{
+			// std::cerr << "[V] running sse4 SHA2_512" << std::endl;
+			return bamseqchksumTemplate<SHA2_512_sse4_PrimeProduct96>(arginfo);
+		}
+		else
+		#endif
+			return bamseqchksumTemplate<SHA2_512_PrimeProduct96>(arginfo);
 	}
 	else if ( hash == "sha1prime128" )
 	{
@@ -2230,7 +2413,15 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 	}
 	else if ( hash == "sha256prime128" )
 	{
-		return bamseqchksumTemplate<SHA2_256_PrimeProduct128>(arginfo);
+		#if defined(LIBMAUS_USE_ASSEMBLY) && defined(LIBMAUS_HAVE_i386)	&& defined(LIBMAUS_HAVE_SHA2_ASSEMBLY)
+		if ( libmaus::util::I386CacheLineSize::hasSSE41() )
+		{
+			// std::cerr << "[V] running sse4 SHA2_256" << std::endl;
+			return bamseqchksumTemplate<SHA2_256_sse4_PrimeProduct128>(arginfo);
+		}
+		else
+		#endif
+			return bamseqchksumTemplate<SHA2_256_PrimeProduct128>(arginfo);
 	}
 	else if ( hash == "sha384prime128" )
 	{
@@ -2238,7 +2429,15 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 	}
 	else if ( hash == "sha512prime128" )
 	{
-		return bamseqchksumTemplate<SHA2_512_PrimeProduct128>(arginfo);
+		#if defined(LIBMAUS_USE_ASSEMBLY) && defined(LIBMAUS_HAVE_i386)	&& defined(LIBMAUS_HAVE_SHA2_ASSEMBLY)
+		if ( libmaus::util::I386CacheLineSize::hasSSE41() )
+		{
+			// std::cerr << "[V] running sse4 SHA2_512" << std::endl;
+			return bamseqchksumTemplate<SHA2_512_sse4_PrimeProduct128>(arginfo);
+		}
+		else
+		#endif
+			return bamseqchksumTemplate<SHA2_512_PrimeProduct128>(arginfo);
 	}
 	else if ( hash == "sha1prime160" )
 	{
@@ -2250,7 +2449,15 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 	}
 	else if ( hash == "sha256prime160" )
 	{
-		return bamseqchksumTemplate<SHA2_256_PrimeProduct160>(arginfo);
+		#if defined(LIBMAUS_USE_ASSEMBLY) && defined(LIBMAUS_HAVE_i386)	&& defined(LIBMAUS_HAVE_SHA2_ASSEMBLY)
+		if ( libmaus::util::I386CacheLineSize::hasSSE41() )
+		{
+			// std::cerr << "[V] running sse4 SHA2_256" << std::endl;
+			return bamseqchksumTemplate<SHA2_256_sse4_PrimeProduct160>(arginfo);
+		}
+		else
+		#endif
+			return bamseqchksumTemplate<SHA2_256_PrimeProduct160>(arginfo);
 	}
 	else if ( hash == "sha384prime160" )
 	{
@@ -2258,7 +2465,15 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 	}
 	else if ( hash == "sha512prime160" )
 	{
-		return bamseqchksumTemplate<SHA2_512_PrimeProduct160>(arginfo);
+		#if defined(LIBMAUS_USE_ASSEMBLY) && defined(LIBMAUS_HAVE_i386)	&& defined(LIBMAUS_HAVE_SHA2_ASSEMBLY)
+		if ( libmaus::util::I386CacheLineSize::hasSSE41() )
+		{
+			// std::cerr << "[V] running sse4 SHA2_512" << std::endl;
+			return bamseqchksumTemplate<SHA2_512_sse4_PrimeProduct160>(arginfo);
+		}
+		else
+		#endif
+			return bamseqchksumTemplate<SHA2_512_PrimeProduct160>(arginfo);
 	}
 	else if ( hash == "sha1prime192" )
 	{
@@ -2270,7 +2485,15 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 	}
 	else if ( hash == "sha256prime192" )
 	{
-		return bamseqchksumTemplate<SHA2_256_PrimeProduct192>(arginfo);
+		#if defined(LIBMAUS_USE_ASSEMBLY) && defined(LIBMAUS_HAVE_i386)	&& defined(LIBMAUS_HAVE_SHA2_ASSEMBLY)
+		if ( libmaus::util::I386CacheLineSize::hasSSE41() )
+		{
+			// std::cerr << "[V] running sse4 SHA2_256" << std::endl;
+			return bamseqchksumTemplate<SHA2_256_sse4_PrimeProduct192>(arginfo);
+		}
+		else
+		#endif
+			return bamseqchksumTemplate<SHA2_256_PrimeProduct192>(arginfo);
 	}
 	else if ( hash == "sha384prime192" )
 	{
@@ -2278,7 +2501,15 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 	}
 	else if ( hash == "sha512prime192" )
 	{
-		return bamseqchksumTemplate<SHA2_512_PrimeProduct192>(arginfo);
+		#if defined(LIBMAUS_USE_ASSEMBLY) && defined(LIBMAUS_HAVE_i386)	&& defined(LIBMAUS_HAVE_SHA2_ASSEMBLY)
+		if ( libmaus::util::I386CacheLineSize::hasSSE41() )
+		{
+			// std::cerr << "[V] running sse4 SHA2_512" << std::endl;
+			return bamseqchksumTemplate<SHA2_512_sse4_PrimeProduct192>(arginfo);
+		}
+		else
+		#endif
+			return bamseqchksumTemplate<SHA2_512_PrimeProduct192>(arginfo);
 	}
 	else if ( hash == "sha1prime224" )
 	{
@@ -2290,7 +2521,15 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 	}
 	else if ( hash == "sha256prime224" )
 	{
-		return bamseqchksumTemplate<SHA2_256_PrimeProduct224>(arginfo);
+		#if defined(LIBMAUS_USE_ASSEMBLY) && defined(LIBMAUS_HAVE_i386)	&& defined(LIBMAUS_HAVE_SHA2_ASSEMBLY)
+		if ( libmaus::util::I386CacheLineSize::hasSSE41() )
+		{
+			// std::cerr << "[V] running sse4 SHA2_256" << std::endl;
+			return bamseqchksumTemplate<SHA2_256_sse4_PrimeProduct224>(arginfo);
+		}
+		else
+		#endif
+			return bamseqchksumTemplate<SHA2_256_PrimeProduct224>(arginfo);
 	}
 	else if ( hash == "sha384prime224" )
 	{
@@ -2298,15 +2537,19 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 	}
 	else if ( hash == "sha512prime224" )
 	{
-		return bamseqchksumTemplate<SHA2_512_PrimeProduct224>(arginfo);
+		#if defined(LIBMAUS_USE_ASSEMBLY) && defined(LIBMAUS_HAVE_i386)	&& defined(LIBMAUS_HAVE_SHA2_ASSEMBLY)
+		if ( libmaus::util::I386CacheLineSize::hasSSE41() )
+		{
+			// std::cerr << "[V] running sse4 SHA2_512" << std::endl;
+			return bamseqchksumTemplate<SHA2_512_sse4_PrimeProduct224>(arginfo);
+		}
+		else
+		#endif
+			return bamseqchksumTemplate<SHA2_512_PrimeProduct224>(arginfo);
 	}
 	else if ( hash == "sha1prime256" )
 	{
 		return bamseqchksumTemplate<SHA1PrimeProduct256>(arginfo);
-	}
-	else if ( hash == "sha256prime256" )
-	{
-		return bamseqchksumTemplate<SHA2_256_PrimeProduct256>(arginfo);
 	}
 	else if ( hash == "sha224prime256" )
 	{
@@ -2314,7 +2557,15 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 	}
 	else if ( hash == "sha256prime256" )
 	{
-		return bamseqchksumTemplate<SHA2_256_PrimeProduct256>(arginfo);
+		#if defined(LIBMAUS_USE_ASSEMBLY) && defined(LIBMAUS_HAVE_i386)	&& defined(LIBMAUS_HAVE_SHA2_ASSEMBLY)
+		if ( libmaus::util::I386CacheLineSize::hasSSE41() )
+		{
+			// std::cerr << "[V] running sse4 SHA2_256" << std::endl;
+			return bamseqchksumTemplate<SHA2_256_sse4_PrimeProduct256>(arginfo);
+		}
+		else
+		#endif
+			return bamseqchksumTemplate<SHA2_256_PrimeProduct256>(arginfo);
 	}
 	else if ( hash == "sha384prime256" )
 	{
@@ -2322,7 +2573,15 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 	}
 	else if ( hash == "sha512prime256" )
 	{
-		return bamseqchksumTemplate<SHA2_512_PrimeProduct256>(arginfo);
+		#if defined(LIBMAUS_USE_ASSEMBLY) && defined(LIBMAUS_HAVE_i386)	&& defined(LIBMAUS_HAVE_SHA2_ASSEMBLY)
+		if ( libmaus::util::I386CacheLineSize::hasSSE41() )
+		{
+			// std::cerr << "[V] running sse4 SHA2_512" << std::endl;
+			return bamseqchksumTemplate<SHA2_512_sse4_PrimeProduct256>(arginfo);
+		}
+		else
+		#endif
+			return bamseqchksumTemplate<SHA2_512_PrimeProduct256>(arginfo);
 	}
 	#endif
 	else if ( hash == "null" )
@@ -2332,11 +2591,101 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 	#if defined(LIBMAUS_HAVE_NETTLE)
 	else if ( hash == "sha512primesums" )
 	{
-		return bamseqchksumTemplate<SHA2_512_PrimeSums>(arginfo);
+		#if defined(LIBMAUS_USE_ASSEMBLY) && defined(LIBMAUS_HAVE_i386)	&& defined(LIBMAUS_HAVE_SHA2_ASSEMBLY)
+		if ( libmaus::util::I386CacheLineSize::hasSSE41() )
+		{
+			// std::cerr << "[V] running sse4 SHA2_512" << std::endl;
+			return bamseqchksumTemplate<SHA2_512_sse4_PrimeSums>(arginfo);
+		}
+		else
+		#endif
+			return bamseqchksumTemplate<SHA2_512_PrimeSums>(arginfo);
 	}
 	else if ( hash == "sha512primesums512" )
 	{
-		return bamseqchksumTemplate<SHA2_512_PrimeSums512>(arginfo);
+		#if defined(LIBMAUS_USE_ASSEMBLY) && defined(LIBMAUS_HAVE_i386)	&& defined(LIBMAUS_HAVE_SHA2_ASSEMBLY)
+		if ( libmaus::util::I386CacheLineSize::hasSSE41() )
+		{
+			// std::cerr << "[V] running sse4 SHA2_512" << std::endl;
+			return bamseqchksumTemplate<SHA2_512_sse4_PrimeSums512>(arginfo);
+		}
+		else
+		#endif
+			return bamseqchksumTemplate<SHA2_512_PrimeSums512>(arginfo);
+	}
+	#endif
+	#if (! defined(NETTLE)) && defined(LIBMAUS_USE_ASSEMBLY) && defined(LIBMAUS_HAVE_i386) && defined(LIBMAUS_HAVE_SHA2_ASSEMBLY)
+	else if ( hash == "sha256" && libmaus::util::I386CacheLineSize::hasSSE41() )
+	{
+		return bamseqchksumTemplate<SHA2_256_sse4_SimpleSums>(arginfo);	
+	}
+	else if ( hash == "sha512" && libmaus::util::I386CacheLineSize::hasSSE41() )
+	{
+		return bamseqchksumTemplate<SHA2_512_sse4_SimpleSums>(arginfo);	
+	}
+	else if ( hash == "sha256prime64" && libmaus::util::I386CacheLineSize::hasSSE41() )
+	{
+		return bamseqchksumTemplate<SHA2_256_sse4_PrimeProduct64>(arginfo);
+	}
+	else if ( hash == "sha256prime96" && libmaus::util::I386CacheLineSize::hasSSE41() )
+	{
+		return bamseqchksumTemplate<SHA2_256_sse4_PrimeProduct96>(arginfo);
+	}
+	else if ( hash == "sha256prime128" && libmaus::util::I386CacheLineSize::hasSSE41() )
+	{
+		return bamseqchksumTemplate<SHA2_256_sse4_PrimeProduct128>(arginfo);
+	}
+	else if ( hash == "sha256prime160" && libmaus::util::I386CacheLineSize::hasSSE41() )
+	{
+		return bamseqchksumTemplate<SHA2_256_sse4_PrimeProduct160>(arginfo);
+	}
+	else if ( hash == "sha256prime192" && libmaus::util::I386CacheLineSize::hasSSE41() )
+	{
+		return bamseqchksumTemplate<SHA2_256_sse4_PrimeProduct192>(arginfo);
+	}
+	else if ( hash == "sha256prime224" && libmaus::util::I386CacheLineSize::hasSSE41() )
+	{
+		return bamseqchksumTemplate<SHA2_256_sse4_PrimeProduct224>(arginfo);
+	}
+	else if ( hash == "sha256prime256" && libmaus::util::I386CacheLineSize::hasSSE41() )
+	{
+		return bamseqchksumTemplate<SHA2_256_sse4_PrimeProduct256>(arginfo);
+	}
+	else if ( hash == "sha512prime64" && libmaus::util::I386CacheLineSize::hasSSE41() )
+	{
+		return bamseqchksumTemplate<SHA2_512_sse4_PrimeProduct64>(arginfo);
+	}
+	else if ( hash == "sha512prime96" && libmaus::util::I386CacheLineSize::hasSSE41() )
+	{
+		return bamseqchksumTemplate<SHA2_512_sse4_PrimeProduct96>(arginfo);
+	}
+	else if ( hash == "sha512prime128" && libmaus::util::I386CacheLineSize::hasSSE41() )
+	{
+		return bamseqchksumTemplate<SHA2_512_sse4_PrimeProduct128>(arginfo);
+	}
+	else if ( hash == "sha512prime160" && libmaus::util::I386CacheLineSize::hasSSE41() )
+	{
+		return bamseqchksumTemplate<SHA2_512_sse4_PrimeProduct160>(arginfo);
+	}
+	else if ( hash == "sha512prime192" && libmaus::util::I386CacheLineSize::hasSSE41() )
+	{
+		return bamseqchksumTemplate<SHA2_512_sse4_PrimeProduct192>(arginfo);
+	}
+	else if ( hash == "sha512prime224" && libmaus::util::I386CacheLineSize::hasSSE41() )
+	{
+		return bamseqchksumTemplate<SHA2_512_sse4_PrimeProduct224>(arginfo);
+	}
+	else if ( hash == "sha512prime256" && libmaus::util::I386CacheLineSize::hasSSE41() )
+	{
+		return bamseqchksumTemplate<SHA2_512_sse4_PrimeProduct256>(arginfo);
+	}
+	else if ( hash == "sha512primesums" && libmaus::util::I386CacheLineSize::hasSSE41() )
+	{
+		return bamseqchksumTemplate<SHA2_512_sse4_PrimeSums>(arginfo);	
+	}
+	else if ( hash == "sha512primesums512" && libmaus::util::I386CacheLineSize::hasSSE41() )
+	{
+		return bamseqchksumTemplate<SHA2_512_sse4_PrimeSums512>(arginfo);
 	}
 	#endif
 	else
