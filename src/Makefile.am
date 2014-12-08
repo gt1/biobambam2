@@ -69,10 +69,11 @@ bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamr
 	bamheap2 \
 	bamalignfrac \
 	bamlastfilter \
+	bamfilternames \
 	@BAMALIGNMENTOFFSETSINSTEXP@ @BLASTXMLTOBAMINSTEXP@
 
 noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments bamtoname \
-	bamdisthist bamrefdepth fastabgzfextract bamfilternames @BAMREFDEPTHPEAKS@ \
+	bamdisthist bamrefdepth fastabgzfextract @BAMREFDEPTHPEAKS@ \
 	@BAMPARSORTNOINSTEXP@ bamheap bamfrontback bamclipextract \
 	@BAMALIGNMENTOFFSETSNOINSTEXP@ @BLASTXMLTOBAMNOINSTEXP@ bamrandomtag
 	
