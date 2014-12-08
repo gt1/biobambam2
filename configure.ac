@@ -1,4 +1,4 @@
-AC_INIT(biobambam,0.0.182,[gt1@sanger.ac.uk],[biobambam],[http://www.sanger.ac.uk])
+AC_INIT(biobambam,0.0.183,[gt1@sanger.ac.uk],[biobambam],[http://www.sanger.ac.uk])
 AC_CANONICAL_SYSTEM
 AC_PROG_LIBTOOL
 
