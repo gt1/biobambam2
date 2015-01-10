@@ -120,7 +120,7 @@ static int bammdnm(libmaus::util::ArgInfo const & arginfo)
 	libmaus::autoarray::AutoArray<char> B(libmaus::lz::BgzfConstants::getBgzfMaxBlockSize(),false);
 	bool haveheader = false;
 	::libmaus::bambam::BamHeader header;
-	::libmaus::bambam::BamHeader::BamHeaderParserState bamheaderparsestate;
+	::libmaus::bambam::BamHeaderParserState bamheaderparsestate;
 
 	/* parser state types */
 	enum parsestate { state_reading_blocklen,  state_post_skip };
@@ -152,7 +152,7 @@ static int bammdnm(libmaus::util::ArgInfo const & arginfo)
 		if ( (! haveheader) && (pa != pc) )
 		{			
 			::libmaus::util::GetObject<uint8_t const *> G(pa);
-			std::pair<bool,uint64_t> const P = ::libmaus::bambam::BamHeader::parseHeader(G,bamheaderparsestate,bgzfinfo.uncompressed);
+			std::pair<bool,uint64_t> const P = bamheaderparsestate.parseHeader(G,bgzfinfo.uncompressed);
 
 			// header complete?
 			if ( P.first )
