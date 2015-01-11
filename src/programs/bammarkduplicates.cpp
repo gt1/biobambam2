@@ -261,14 +261,20 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	std::string const tmpfilenamebase = arginfo.getValue<std::string>("tmpfile",arginfo.getDefaultTmpFileName());
 	std::string const tmpfilename = tmpfilenamebase + "_bamcollate";
 	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilename);
-	std::string const tmpfilenamereadfrags = tmpfilenamebase + "_readfrags";
-	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilenamereadfrags);
-	std::string const tmpfilenamereadpairs = tmpfilenamebase + "_readpairs";
-	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilenamereadpairs);
 	std::string const tmpfilesnappyreads = tmpfilenamebase + "_alignments";
 	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilesnappyreads);
 	std::string const tmpfileindex = tmpfilenamebase + "_index";
 	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
+
+	std::string const tmpfilenamereadfrags = tmpfilenamebase + "_readfrags";
+	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilenamereadfrags);
+	std::string const tmpfilenamereadfragsindex = tmpfilenamebase + "_readfrags_index";
+	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilenamereadfragsindex);
+	
+	std::string const tmpfilenamereadpairs = tmpfilenamebase + "_readpairs";
+	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilenamereadpairs);
+	std::string const tmpfilenamereadpairsindex = tmpfilenamebase + "_readpairs_index";
+	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilenamereadpairsindex);
 
 	int const level = libmaus::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
 	
@@ -433,8 +439,8 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	#else
 	bool const copyAlignments = false;
 	#endif
-	::libmaus::bambam::ReadEndsContainer::unique_ptr_type fragREC(new ::libmaus::bambam::ReadEndsContainer(fragbufsize,tmpfilenamereadfrags,copyAlignments)); // fragment container
-	::libmaus::bambam::ReadEndsContainer::unique_ptr_type pairREC(new ::libmaus::bambam::ReadEndsContainer(fragbufsize,tmpfilenamereadpairs,copyAlignments)); // pair container
+	::libmaus::bambam::ReadEndsContainer::unique_ptr_type fragREC(new ::libmaus::bambam::ReadEndsContainer(fragbufsize,tmpfilenamereadfrags,tmpfilenamereadfragsindex,copyAlignments)); // fragment container
+	::libmaus::bambam::ReadEndsContainer::unique_ptr_type pairREC(new ::libmaus::bambam::ReadEndsContainer(fragbufsize,tmpfilenamereadpairs,tmpfilenamereadpairsindex,copyAlignments)); // pair container
 	
 	int64_t maxrank = -1; // maximal appearing rank
 	uint64_t als = 0; // number of processed alignments (= mapped+unmapped fragments)
@@ -681,6 +687,66 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 			<< fragcnt/rtc.getElapsedSeconds() << " frags/s "
 			<< ::libmaus::util::MemUsage()
 			<< std::endl;
+
+	{
+		uint64_t const numrg = bamheader.getNumReadGroups();
+		int64_t maxlibid = -1;
+		for ( uint64_t i = 0; i < numrg; ++i )
+			maxlibid = std::max(maxlibid,bamheader.getLibraryId(i));
+		int64_t const numref = bamheader.getNumRef();
+		int64_t maxseqlen = -1;
+		for ( int64_t i = 0; i < numref; ++i )
+			maxseqlen = std::max(maxseqlen,bamheader.getRefIDLength(i));	
+			
+		std::cerr << "maxlibid=" << maxlibid << " maxseqlen=" << maxseqlen << " numref=" << numref << std::endl;
+	
+		std::cerr << "[D] Checking unmerged decoding...";
+		::libmaus::bambam::ReadEnds::hash_value_type HP;
+		::libmaus::bambam::ReadEndsStreamDecoder::unique_ptr_type fragunmergeddecoder(fragREC->getUnmergedDecoder());
+		::libmaus::bambam::ReadEndsStreamDecoder::unique_ptr_type pairunmergeddecoder(pairREC->getUnmergedDecoder());
+		::libmaus::bambam::ReadEndsBlockDecoderBaseCollection::unique_ptr_type fragblockdecoder(fragREC->getBaseDecoderCollection());
+		::libmaus::bambam::ReadEndsBlockDecoderBaseCollection::unique_ptr_type pairblockdecoder(pairREC->getBaseDecoderCollection());
+		::libmaus::bambam::ReadEnds RA;
+		::libmaus::bambam::ReadEnds RB;
+		
+		std::cerr << fragblockdecoder->max() << ";" << pairblockdecoder->max();
+
+		for ( uint64_t j = 0; j < fragblockdecoder->size(); ++j )
+		{
+			HP = ::libmaus::bambam::ReadEnds::hash_value_type(0);
+			for ( uint64_t i = 0; i < fragblockdecoder->getBlock(j)->size(); ++i )
+			{
+				bool const ok = fragunmergeddecoder->get(RA);
+				assert ( ok );
+				assert ( RA == (*(fragblockdecoder->getBlock(j)))[i] );
+				assert ( HP <= RA.encodeHash() );
+				HP = RA.encodeHash();
+
+				RB.decodeHash(HP);
+				assert ( RA.compareHashAttributes(RB) );
+			}
+		}
+		assert ( fragunmergeddecoder->get(RA) == false );
+
+		for ( uint64_t j = 0; j < pairblockdecoder->size(); ++j )
+		{
+			HP = ::libmaus::bambam::ReadEnds::hash_value_type(0);
+			for ( uint64_t i = 0; i < pairblockdecoder->getBlock(j)->size(); ++i )
+			{
+				bool const ok = pairunmergeddecoder->get(RA);
+				assert ( ok );
+				assert ( RA == (*(pairblockdecoder->getBlock(j)))[i] );
+				assert ( HP <= RA.encodeHash() );
+				HP = RA.encodeHash();
+
+				RB.decodeHash(HP);
+				assert ( RA.compareHashAttributes(RB) );
+			}
+		}
+		assert ( pairunmergeddecoder->get(RA) == false );
+
+		std::cerr << "done." << std::endl;
+	}
 
 	::libmaus::bambam::DupSetCallbackVector DSCV(numranks,metrics);
 
