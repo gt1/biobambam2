@@ -195,6 +195,78 @@ std::string getModifiedHeaderText(decoder_type const & bamdec, libmaus::util::Ar
 	return LHTsnofailure;
 }
 
+struct RGReplaceInfo
+{
+	::libmaus::trie::LinearHashTrie<char,uint32_t>::shared_ptr_type rgreplacetrie;
+	std::vector<std::string> rgreplacevalues;
+	libmaus::bambam::BamAuxFilterVector rgauxfilter;
+	std::map<std::string,std::string> RGmap;
+	
+	RGReplaceInfo(libmaus::util::ArgInfo const & arginfo)
+	{
+		rgauxfilter.set("RG");
+
+		// check for read group replacement
+		if ( arginfo.hasArg("replacereadgroupnames") )
+		{
+			libmaus::aio::PosixFdInputStream PFIS(arginfo.getUnparsedValue("replacereadgroupnames",""));
+			while ( PFIS )
+			{
+				std::string line;
+				std::getline(PFIS,line);
+				if ( line.size() )
+				{
+					std::deque<std::string> tokens = libmaus::util::stringFunctions::tokenize<std::string>(line,"\t");
+					if ( tokens.size() == 2 )
+					{
+						RGmap[tokens[0]] = tokens[1];
+						std::cerr << tokens[0] << "->" << tokens[1] << std::endl;
+					}
+					else
+					{
+						libmaus::exception::LibMausException lme;
+						lme.getStream() << "Cannot parse line " << line << std::endl;
+						lme.finish();
+						throw lme;
+					}
+				}
+			}
+
+
+			if ( RGmap.size() )
+			{
+				std::vector<std::string> readgroupkeys;
+				for ( std::map<std::string,std::string>::const_iterator ita = RGmap.begin(); ita != RGmap.end(); ++ita )
+				{
+					readgroupkeys.push_back(ita->first);
+					rgreplacevalues.push_back(ita->second);
+				}
+				::libmaus::trie::Trie<char> trienofailure;
+				trienofailure.insertContainer(readgroupkeys);
+				::libmaus::trie::LinearHashTrie<char,uint32_t>::unique_ptr_type LHTnofailure(trienofailure.toLinearHashTrie<uint32_t>());
+				rgreplacetrie = ::libmaus::trie::LinearHashTrie<char,uint32_t>::shared_ptr_type(LHTnofailure.release());
+			}
+		}
+	}
+
+	void apply(libmaus::bambam::BamAlignment & algn) const
+	{
+		if ( rgreplacetrie )
+		{
+			char const * RG = algn.getReadGroup();
+			if ( RG )
+			{
+				int64_t const replid = rgreplacetrie->searchCompleteNoFailureZ(RG);
+				if ( replid >= 0 )
+				{
+					algn.filterOutAux(rgauxfilter);
+					algn.putAuxString("RG",rgreplacevalues.at(replid));
+				}
+			}
+		}	
+	}
+};
+
 void bamcollate2NonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::bambam::BamAlignmentDecoder & bamdec)
 {
 	if ( arginfo.getValue<unsigned int>("disablevalidation",0) )
@@ -211,10 +283,14 @@ void bamcollate2NonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::ba
 	bool const resetaux = arginfo.getValue<unsigned int>("resetaux",getDefaultResetAux());
 	libmaus::bambam::BamAuxFilterVector::unique_ptr_type const prgfilter(libmaus::bambam::BamAuxFilterVector::parseAuxFilterList(arginfo));
 	libmaus::bambam::BamAuxFilterVector const * rgfilter = prgfilter.get();
+	RGReplaceInfo const rgreplinfo(arginfo);
 
 	// construct new header
 	::libmaus::bambam::BamHeader uphead(getModifiedHeaderText(bamdec,arginfo,reset));
 
+	if ( rgreplinfo.RGmap.size() )
+		uphead.replaceReadGroupNames(rgreplinfo.RGmap);
+	
 	/*
 	 * start index/md5 callbacks
 	 */
@@ -288,6 +364,8 @@ void bamcollate2NonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::ba
 				        libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSUPPLEMENTARY,
 				        rgfilter /* rg filter */
 				);
+	
+			rgreplinfo.apply(algn);			
 		
 			writer->writeAlignment(algn);
 		}
@@ -353,10 +431,16 @@ void bamcollate2Collating(
 	libmaus::bambam::BamAlignment Ralgna, Ralgnb;
 	std::string const sclassfilter = arginfo.getValue<std::string>("classes",getDefaultClassFilter());
 	uint32_t const classmask = parseClassList(sclassfilter);
+	RGReplaceInfo const rgreplinfo(arginfo);
 
 	// construct new header
 	::libmaus::bambam::BamHeader uphead(getModifiedHeaderText(CHCBD,arginfo,reset));
 	uphead.changeSortOrder("unknown");
+
+	if ( rgreplinfo.RGmap.size() )
+		uphead.replaceReadGroupNames(rgreplinfo.RGmap);
+		
+	// rgreplacetrie
 
 	/*
 	 * start index/md5 callbacks
@@ -459,6 +543,9 @@ void bamcollate2Collating(
 						        libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSUPPLEMENTARY,
 						        rgfilter /* RG filter */
 							);
+
+						rgreplinfo.apply(Ralgna);
+						
 						writer->writeAlignment(Ralgna);
 						bcnt += (Ralgna.blocksize);
 					}
@@ -473,6 +560,27 @@ void bamcollate2Collating(
 						        libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSUPPLEMENTARY,
 						        rgfilter /* RG filter */
 						);
+						
+						rgreplinfo.apply(Ralgnb);
+						
+						writer->writeAlignment(Ralgnb);
+						bcnt += (Ralgnb.blocksize);
+					}
+				}
+				else if ( rgreplinfo.rgreplacetrie )
+				{
+					if ( classmask & classmask_F )
+					{
+						Ralgna.copyFrom(ob->Da,ob->blocksizea);
+						rgreplinfo.apply(Ralgna);						
+						writer->writeAlignment(Ralgna);
+						bcnt += (Ralgna.blocksize);
+					}
+					
+					if ( classmask & classmask_F2 )
+					{
+						Ralgnb.copyFrom(ob->Db,ob->blocksizeb);
+						rgreplinfo.apply(Ralgnb);
 						writer->writeAlignment(Ralgnb);
 						bcnt += (Ralgnb.blocksize);
 					}
@@ -525,6 +633,15 @@ void bamcollate2Collating(
 					        libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSUPPLEMENTARY,
 					        rgfilter /* RG filter */
 					);
+					rgreplinfo.apply(Ralgna);
+					writer->writeAlignment(Ralgna);
+
+					bcnt += (Ralgna.blocksize);
+				}
+				else if ( rgreplinfo.rgreplacetrie )
+				{
+					Ralgna.copyFrom(ob->Da,ob->blocksizea);
+					rgreplinfo.apply(Ralgna);
 					writer->writeAlignment(Ralgna);
 
 					bcnt += (Ralgna.blocksize);
@@ -567,8 +684,16 @@ void bamcollate2Collating(
 						libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY |
 					        libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSUPPLEMENTARY,
 					        rgfilter /* RG filter */					);
+					rgreplinfo.apply(Ralgna);
 					writer->writeAlignment(Ralgna);
 					bcnt += (Ralgna.blocksize);
+				}
+				else if ( rgreplinfo.rgreplacetrie )
+				{
+					Ralgna.copyFrom(ob->Da,ob->blocksizea);
+					rgreplinfo.apply(Ralgna);
+					writer->writeAlignment(Ralgna);
+					bcnt += (Ralgna.blocksize);				
 				}
 				else
 				{
@@ -609,8 +734,16 @@ void bamcollate2Collating(
 					        libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSUPPLEMENTARY,
 					        rgfilter /* RG filter */
 					);
+					rgreplinfo.apply(Ralgna);
 					writer->writeAlignment(Ralgna);
 					bcnt += (Ralgna.blocksize);
+				}				
+				else if ( rgreplinfo.rgreplacetrie )
+				{
+					Ralgna.copyFrom(ob->Da,ob->blocksizea);
+					rgreplinfo.apply(Ralgna);
+					writer->writeAlignment(Ralgna);
+					bcnt += (Ralgna.blocksize);				
 				}
 				else
 				{
@@ -1434,6 +1567,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "O=<[stdout]>", "output filename (standard output if unset)" ) );				
 				V.push_back ( std::pair<std::string,std::string> ( "outputthreads=<[1]>", "output helper threads (for outputformat=bam only, default: 1)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("inputbuffersize=<[")+::biobambam::Licensing::formatNumber(getDefaultInputBufferSize())+"]>", "input buffer size" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("replacereadgroupnames=<[]>"), "name of file containing list of read group identifier replacements (default: no replacements)" ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 

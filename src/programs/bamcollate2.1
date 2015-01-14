@@ -1,4 +1,4 @@
-.TH BAMCOLLATE2 1 "July 2013" BIOBAMBAM
+.TH BAMCOLLATE2 1 "February 2015" BIOBAMBAM
 .SH NAME
 bamcollate2 - collate reads in a SAM, BAM or CRAM file by name
 .SH SYNOPSIS
@@ -226,12 +226,20 @@ Valid values are
 print progress report on standard error
 .IP 0:
 do not print progress report
+.PP
+.B replacereadgroupnames=<>:
+file name containing a list of read group mappings. Each line in the file
+corresponds to one read group ID replacement and contains two columns
+separated by the tab symbol (ASCII code 9). The first column contains the
+source identifier which will be replaced by the value of the second column
+in the output file. This option is only valid for collate<2. By default no
+read group identifier mapping is performed.
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"
 Report bugs to <gt1@sanger.ac.uk>
 .SH COPYRIGHT
-Copyright \(co 2009-2013 German Tischler, \(co 2011-2013 Genome Research Limited.
+Copyright \(co 2009-2015 German Tischler, \(co 2011-2015 Genome Research Limited.
 License GPLv3+: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>
 .br
 This is free software: you are free to change and redistribute it.
