@@ -46,6 +46,7 @@
 #include <libmaus/bambam/DupSetCallbackVector.hpp>
 #include <libmaus/bambam/OpticalComparator.hpp>
 #include <libmaus/bambam/ProgramHeaderLineSet.hpp>
+#include <libmaus/bambam/ReadEndsBasePointerComparator.hpp>
 #include <libmaus/bambam/ReadEndsContainer.hpp>
 #include <libmaus/bambam/SortedFragDecoder.hpp>
 #include <libmaus/fastx/FastATwoBitTable.hpp>
