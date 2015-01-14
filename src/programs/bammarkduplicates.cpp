@@ -54,6 +54,8 @@
 #include <libmaus/util/MemUsage.hpp>
 #include <biobambam/Licensing.hpp>
 
+#include <libmaus/bambam/ReadEndsStreamDecoderBase.hpp>
+
 // static std::string formatNumber(int64_t const n) { std::ostringstream ostr; ostr << n; return ostr.str(); }
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static unsigned int getDefaultVerbose() { return 1; }
@@ -689,28 +691,15 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 			<< std::endl;
 
 	{
-		uint64_t const numrg = bamheader.getNumReadGroups();
-		int64_t maxlibid = -1;
-		for ( uint64_t i = 0; i < numrg; ++i )
-			maxlibid = std::max(maxlibid,bamheader.getLibraryId(i));
-		int64_t const numref = bamheader.getNumRef();
-		int64_t maxseqlen = -1;
-		for ( int64_t i = 0; i < numref; ++i )
-			maxseqlen = std::max(maxseqlen,bamheader.getRefIDLength(i));	
-			
-		std::cerr << "maxlibid=" << maxlibid << " maxseqlen=" << maxseqlen << " numref=" << numref << std::endl;
-	
 		std::cerr << "[D] Checking unmerged decoding...";
 		::libmaus::bambam::ReadEnds::hash_value_type HP;
 		::libmaus::bambam::ReadEndsStreamDecoder::unique_ptr_type fragunmergeddecoder(fragREC->getUnmergedDecoder());
 		::libmaus::bambam::ReadEndsStreamDecoder::unique_ptr_type pairunmergeddecoder(pairREC->getUnmergedDecoder());
-		::libmaus::bambam::ReadEndsBlockDecoderBaseCollection::unique_ptr_type fragblockdecoder(fragREC->getBaseDecoderCollection());
-		::libmaus::bambam::ReadEndsBlockDecoderBaseCollection::unique_ptr_type pairblockdecoder(pairREC->getBaseDecoderCollection());
+		::libmaus::bambam::ReadEndsBlockDecoderBaseCollection<false>::unique_ptr_type fragblockdecoder(fragREC->getBaseDecoderCollectionWithoutProxy());
+		::libmaus::bambam::ReadEndsBlockDecoderBaseCollection<false>::unique_ptr_type pairblockdecoder(pairREC->getBaseDecoderCollectionWithoutProxy());
 		::libmaus::bambam::ReadEnds RA;
 		::libmaus::bambam::ReadEnds RB;
 		
-		std::cerr << fragblockdecoder->max() << ";" << pairblockdecoder->max();
-
 		for ( uint64_t j = 0; j < fragblockdecoder->size(); ++j )
 		{
 			HP = ::libmaus::bambam::ReadEnds::hash_value_type(0);
@@ -719,11 +708,11 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 				bool const ok = fragunmergeddecoder->get(RA);
 				assert ( ok );
 				assert ( RA == (*(fragblockdecoder->getBlock(j)))[i] );
-				assert ( HP <= RA.encodeHash() );
-				HP = RA.encodeHash();
+				assert ( HP <= RA.encodeShortHash() );
+				HP = RA.encodeShortHash();
 
-				RB.decodeHash(HP);
-				assert ( RA.compareHashAttributes(RB) );
+				RB.decodeShortHash(HP);
+				assert ( RA.compareShortHashAttributes(RB) );
 			}
 		}
 		assert ( fragunmergeddecoder->get(RA) == false );
@@ -736,16 +725,158 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 				bool const ok = pairunmergeddecoder->get(RA);
 				assert ( ok );
 				assert ( RA == (*(pairblockdecoder->getBlock(j)))[i] );
-				assert ( HP <= RA.encodeHash() );
-				HP = RA.encodeHash();
+				assert ( HP <= RA.encodeLongHash() );
+				HP = RA.encodeLongHash();
 
-				RB.decodeHash(HP);
-				assert ( RA.compareHashAttributes(RB) );
+				RB.decodeLongHash(HP);
+				assert ( RA.compareLongHashAttributes(RB) );
 			}
 		}
 		assert ( pairunmergeddecoder->get(RA) == false );
 
 		std::cerr << "done." << std::endl;
+	}
+
+	{
+		std::cerr << "[D] Checking unmerged blocks:\n";
+		::libmaus::bambam::ReadEnds::hash_value_type HP;
+		::libmaus::bambam::ReadEndsStreamDecoder::unique_ptr_type fragunmergeddecoder(fragREC->getUnmergedDecoder());
+		::libmaus::bambam::ReadEndsStreamDecoder::unique_ptr_type pairunmergeddecoder(pairREC->getUnmergedDecoder());
+		::libmaus::bambam::ReadEndsBlockDecoderBaseCollection<true>::unique_ptr_type fragblockdecoder(fragREC->getBaseDecoderCollectionWithProxy());
+		::libmaus::bambam::ReadEndsBlockDecoderBaseCollection<true>::unique_ptr_type pairblockdecoder(pairREC->getBaseDecoderCollectionWithProxy());
+		::libmaus::bambam::ReadEnds RA;
+		::libmaus::bambam::ReadEnds RB;
+		
+		uint64_t const numthreads = arginfo.getValue<unsigned int>("fragthreads",32);
+		
+		libmaus::timing::RealTimeClock rtcshortmid; rtcshortmid.start();		
+		uint64_t const fragtotalentries = fragblockdecoder->totalEntries();
+		for ( uint64_t i = 0; i < numthreads; ++i )
+		{
+			::libmaus::bambam::ReadEnds::hash_value_type fragmid = std::lower_bound(fragblockdecoder->outerShortBegin(),fragblockdecoder->outerShortEnd(),
+				i * (fragtotalentries/numthreads)
+			).i;
+			::libmaus::bambam::ReadEnds Rfragmid;
+			Rfragmid.decodeShortHash(fragmid);
+			std::cerr << "frag[" << i << "]=" << Rfragmid << " count=" << fragblockdecoder->countSmallerThanShort(Rfragmid) << "/" << fragtotalentries << "=" << 
+				(fragblockdecoder->countSmallerThanShort(Rfragmid) / static_cast<double>(fragtotalentries)) << std::endl;
+		}
+		std::cerr << " time=" << rtcshortmid.getElapsedSeconds() << std::endl;
+
+		libmaus::timing::RealTimeClock rtclongmid; rtclongmid.start();		
+		uint64_t const pairtotalentries = pairblockdecoder->totalEntries();
+		for ( uint64_t i = 0; i < numthreads; ++i )
+		{
+			::libmaus::bambam::ReadEnds::hash_value_type pairmid =
+				std::lower_bound(pairblockdecoder->outerLongBegin(),pairblockdecoder->outerLongEnd(),
+					i*(pairtotalentries/numthreads)).i;
+			::libmaus::bambam::ReadEnds Rpairmid;
+			Rpairmid.decodeLongHash(pairmid);
+
+			std::cerr << "pair[" << i << "]=" << Rpairmid << " count=" << pairblockdecoder->countSmallerThanLong(Rpairmid) << "/" << pairtotalentries << "=" << 
+				(pairblockdecoder->countSmallerThanLong(Rpairmid) / static_cast<double>(pairtotalentries)) << std::endl;
+		}
+		std::cerr << "time=" << rtclongmid.getElapsedSeconds() << std::endl;
+
+		std::cerr << "done." << std::endl;
+
+		
+		std::cerr << "Computing and checking fragments for " << numthreads << " threads...";
+		std::vector < std::vector< std::pair<uint64_t,uint64_t> > > const Rfrag = fragblockdecoder->getShortMergeIntervals(numthreads);
+		std::cerr << "done." << std::endl;
+		libmaus::timing::RealTimeClock fragrtc;
+		std::cerr << "Merging frags...";
+		fragrtc.start();
+		
+		typedef libmaus::util::shared_ptr<std::ostringstream>::type ostringstream_ptr_type;
+		std::vector<ostringstream_ptr_type> fragoutstrs(numthreads), fragindexoutstrs(numthreads);
+		for ( uint64_t i = 0; i < fragoutstrs.size(); ++i )
+		{
+			fragoutstrs[i] = ostringstream_ptr_type(new std::ostringstream);
+			fragindexoutstrs[i] = ostringstream_ptr_type(new std::ostringstream);
+		}		
+		#if defined(_OPENMP)
+		#pragma omp parallel for
+		#endif
+		for ( uint64_t i = 0; i < Rfrag.size(); ++i )
+		{
+			::libmaus::bambam::ReadEndsBlockDecoderBaseCollection<false>::unique_ptr_type fragblockdecodernoproxy(fragREC->getBaseDecoderCollectionWithoutProxy());
+			fragblockdecodernoproxy->merge(Rfrag[i],*fragoutstrs[i],*fragindexoutstrs[i]);
+		}
+		double const fragtime = fragrtc.getElapsedSeconds();
+		std::cerr << "done, " << fragtime << ", " << (fragtotalentries/fragtime) << std::endl;
+
+		{		
+		std::cerr << "Checking merged frag stream...";
+		typedef libmaus::util::shared_ptr<std::istringstream>::type istringstream_ptr_type;
+		std::vector<istringstream_ptr_type> sfraginstrs(numthreads);
+		std::vector<std::istream *> fraginstrs(numthreads);
+		for ( uint64_t i = 0; i < numthreads; ++i )
+		{
+			sfraginstrs[i] = istringstream_ptr_type(new std::istringstream(fragoutstrs[i]->str()));
+			fraginstrs[i] = sfraginstrs[i].get();
+		}		
+		libmaus::bambam::ReadEndsStreamDecoderBase fragindec(fraginstrs);
+		::libmaus::bambam::SortedFragDecoder::unique_ptr_type fragDec(fragREC->getDecoder());
+		
+		::libmaus::bambam::ReadEnds RE1, RE2;
+		while ( fragDec->getNext(RE1) )
+		{
+			bool const ok = fragindec.get(RE2);
+			assert ( ok );
+			assert ( RE1 == RE2 );
+		}
+		std::cerr << "done." << std::endl;
+		}
+
+		std::cerr << "Computing and checking pairs for " << numthreads << " threads...";
+		std::vector < std::vector< std::pair<uint64_t,uint64_t> > > const Rpair = pairblockdecoder->getLongMergeIntervals(numthreads);
+		std::cerr << "done." << std::endl;		
+		
+		libmaus::timing::RealTimeClock pairrtc;
+		std::cerr << "Merging pairs...";
+		pairrtc.start();
+		
+		typedef libmaus::util::shared_ptr<std::ostringstream>::type ostringstream_ptr_type;
+		std::vector<ostringstream_ptr_type> pairoutstrs(numthreads), pairindexoutstrs(numthreads);
+		for ( uint64_t i = 0; i < pairoutstrs.size(); ++i )
+		{
+			pairoutstrs[i] = ostringstream_ptr_type(new std::ostringstream);
+			pairindexoutstrs[i] = ostringstream_ptr_type(new std::ostringstream);
+		}
+		#if defined(_OPENMP)
+		#pragma omp parallel for
+		#endif
+		for ( uint64_t i = 0; i < Rpair.size(); ++i )
+		{
+			::libmaus::bambam::ReadEndsBlockDecoderBaseCollection<false>::unique_ptr_type pairblockdecodernoproxy(pairREC->getBaseDecoderCollectionWithoutProxy());
+			pairblockdecodernoproxy->merge(Rpair[i],*pairoutstrs[i],*pairindexoutstrs[i]);
+		}
+		double const pairtime = pairrtc.getElapsedSeconds();
+		std::cerr << "done, " << pairtime << ", " << (pairtotalentries/pairtime) << std::endl;
+
+		{		
+		std::cerr << "Checking merged pair stream...";
+		typedef libmaus::util::shared_ptr<std::istringstream>::type istringstream_ptr_type;
+		std::vector<istringstream_ptr_type> spairinstrs(numthreads);
+		std::vector<std::istream *> pairinstrs(numthreads);
+		for ( uint64_t i = 0; i < numthreads; ++i )
+		{
+			spairinstrs[i] = istringstream_ptr_type(new std::istringstream(pairoutstrs[i]->str()));
+			pairinstrs[i] = spairinstrs[i].get();
+		}		
+		libmaus::bambam::ReadEndsStreamDecoderBase pairindec(pairinstrs);
+		::libmaus::bambam::SortedFragDecoder::unique_ptr_type pairDec(pairREC->getDecoder());
+		
+		::libmaus::bambam::ReadEnds RE1, RE2;
+		while ( pairDec->getNext(RE1) )
+		{
+			bool const ok = pairindec.get(RE2);
+			assert ( ok );
+			assert ( RE1 == RE2 );
+		}
+		std::cerr << "done." << std::endl;
+		}
 	}
 
 	::libmaus::bambam::DupSetCallbackVector DSCV(numranks,metrics);
