@@ -220,7 +220,6 @@ struct RGReplaceInfo
 					if ( tokens.size() == 2 )
 					{
 						RGmap[tokens[0]] = tokens[1];
-						std::cerr << tokens[0] << "->" << tokens[1] << std::endl;
 					}
 					else
 					{
