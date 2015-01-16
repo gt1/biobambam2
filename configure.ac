@@ -148,7 +148,7 @@ if test ! -z "${with_libmaus}" ; then
 	fi
 fi
 
-PKG_CHECK_MODULES([libmaus],[libmaus >= 0.0.186])
+PKG_CHECK_MODULES([libmaus],[libmaus >= 0.0.187])
 PKG_CHECK_MODULES([libmausdigests],[libmausdigests >= 0.0.183])
 
 if test ! -z "${with_libmaus}" ; then
