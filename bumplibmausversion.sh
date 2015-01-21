@@ -7,6 +7,7 @@ fi
 
 sed -i -e "s/libmaus >= [0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*/libmaus >= ${LIBMAUSVERSION}/" configure.ac
 sed -i -e "s/libmausdigests >= [0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*/libmausdigests >= ${LIBMAUSVERSION}/" configure.ac
+sed -i -e "s/libmausirods >= [0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*/libmausirods >= ${LIBMAUSVERSION}/" configure.ac
 git add configure.ac
 git commit -m "bump libmaus version"
 git push
