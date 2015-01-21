@@ -1041,10 +1041,18 @@ void bamtofastq(libmaus::util::ArgInfo const & arginfo)
 	}
 }
 
+#if defined(LIBMAUS_HAVE_IRODS)
+#include <libmaus/irods/IRodsInputStreamFactory.hpp>
+#endif
+
 int main(int argc, char * argv[])
 {
 	try
 	{
+		#if defined(LIBMAUS_HAVE_IRODS)
+		libmaus::irods::IRodsInputStreamFactory::registerHandler();
+		#endif
+
 		libmaus::timing::RealTimeClock rtc; rtc.start();
 		
 		::libmaus::util::ArgInfo arginfo(argc,argv);

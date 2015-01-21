@@ -1008,67 +1008,19 @@ void bamcollate2CollatingRanking(libmaus::util::ArgInfo const & arginfo)
 	libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilename);
 	std::string const inputformat = arginfo.getValue<std::string>("inputformat",getDefaultInputFormat());
 	std::string const inputfilename = arginfo.getValue<std::string>("filename","-");
-	uint64_t const numthreads = arginfo.getValue<uint64_t>("threads",0);
 
 	unsigned int const hlog = arginfo.getValue<unsigned int>("colhlog",18);
 	uint64_t const sbs = arginfo.getValueUnsignedNumeric<uint64_t>("colsbs",128ull*1024ull*1024ull);
 
-	if ( inputformat == "bam" )
-	{
-		BamToFastQInputFileStream bamin(inputfilename);
-
-		if ( numthreads > 0 )
-		{
-			libmaus::bambam::BamParallelCircularHashCollatingBamDecoder CHCBD(
-				bamin.in,
-				numthreads,
-				tmpfilename,excludeflags,
-				true, /* put rank */
-				hlog,
-				sbs
-				);
-			bamcollate2CollatingRanking(arginfo,CHCBD);
-		}
-		else
-		{
-			libmaus::bambam::BamCircularHashCollatingBamDecoder CHCBD(
-				bamin.in,
-				tmpfilename,excludeflags,
-				true, /* put rank */
-				hlog,
-				sbs
-				);
-			bamcollate2CollatingRanking(arginfo,CHCBD);
-		}
-	}
-	#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
-	else if ( inputformat == "sam" )
-	{
-		libmaus::bambam::ScramCircularHashCollatingBamDecoder CHCBD(inputfilename,"r","",
-			tmpfilename,excludeflags,
-			true, /* put rank */
-			hlog,sbs
-		);
-		bamcollate2CollatingRanking(arginfo,CHCBD);
-	}
-	else if ( inputformat == "cram" )
-	{
-		std::string const reference = arginfo.getValue<std::string>("reference","");
-		libmaus::bambam::ScramCircularHashCollatingBamDecoder CHCBD(inputfilename,"rc",reference,
-			tmpfilename,excludeflags,
-			true, /* put rank */
-			hlog,sbs
-		);
-		bamcollate2CollatingRanking(arginfo,CHCBD);
-	}
-	#endif
-	else
-	{
-		libmaus::exception::LibMausException se;
-		se.getStream() << "unknown input format " << inputformat << std::endl;
-		se.finish();
-		throw se;
-	}
+	uint64_t const inputbuffersize = arginfo.getValueUnsignedNumeric<uint64_t>("inputbuffersize",getDefaultInputBufferSize());
+	libmaus::aio::PosixFdInputStream PFIS(STDIN_FILENO,inputbuffersize);
+	libmaus::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
+		libmaus::bambam::BamMultiAlignmentDecoderFactory::construct(
+			arginfo,true /* put rank */, 0 /* copy stream */, PFIS
+		)
+	);
+	libmaus::bambam::CircularHashCollatingBamDecoder CHCBD(decwrapper->getDecoder(),tmpfilename,excludeflags,hlog,sbs);
+	bamcollate2CollatingRanking(arginfo,CHCBD);
 	
 	std::cout.flush();
 }
@@ -1383,67 +1335,19 @@ void bamcollate2CollatingPostRanking(libmaus::util::ArgInfo const & arginfo)
 	libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilename);
 	std::string const inputformat = arginfo.getValue<std::string>("inputformat",getDefaultInputFormat());
 	std::string const inputfilename = arginfo.getValue<std::string>("filename","-");
-	uint64_t const numthreads = arginfo.getValue<uint64_t>("threads",0);
 
 	unsigned int const hlog = arginfo.getValue<unsigned int>("colhlog",18);
 	uint64_t const sbs = arginfo.getValueUnsignedNumeric<uint64_t>("colsbs",128ull*1024ull*1024ull);
 
-	if ( inputformat == "bam" )
-	{
-		BamToFastQInputFileStream bamin(inputfilename);
-
-		if ( numthreads > 0 )
-		{
-			libmaus::bambam::BamParallelCircularHashCollatingBamDecoder CHCBD(
-				bamin.in,
-				numthreads,
-				tmpfilename,excludeflags,
-				true, /* put rank */
-				hlog,
-				sbs
-				);
-			bamcollate2CollatingPostRanking(arginfo,CHCBD);
-		}
-		else
-		{
-			libmaus::bambam::BamCircularHashCollatingBamDecoder CHCBD(
-				bamin.in,
-				tmpfilename,excludeflags,
-				true, /* put rank */
-				hlog,
-				sbs
-				);
-			bamcollate2CollatingPostRanking(arginfo,CHCBD);
-		}
-	}
-	#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
-	else if ( inputformat == "sam" )
-	{
-		libmaus::bambam::ScramCircularHashCollatingBamDecoder CHCBD(inputfilename,"r","",
-			tmpfilename,excludeflags,
-			true, /* put rank */
-			hlog,sbs
-		);
-		bamcollate2CollatingPostRanking(arginfo,CHCBD);
-	}
-	else if ( inputformat == "cram" )
-	{
-		std::string const reference = arginfo.getValue<std::string>("reference","");
-		libmaus::bambam::ScramCircularHashCollatingBamDecoder CHCBD(inputfilename,"rc",reference,
-			tmpfilename,excludeflags,
-			true, /* put rank */
-			hlog,sbs
-		);
-		bamcollate2CollatingPostRanking(arginfo,CHCBD);
-	}
-	#endif
-	else
-	{
-		libmaus::exception::LibMausException se;
-		se.getStream() << "unknown input format " << inputformat << std::endl;
-		se.finish();
-		throw se;
-	}
+	uint64_t const inputbuffersize = arginfo.getValueUnsignedNumeric<uint64_t>("inputbuffersize",getDefaultInputBufferSize());
+	libmaus::aio::PosixFdInputStream PFIS(STDIN_FILENO,inputbuffersize);
+	libmaus::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
+		libmaus::bambam::BamMultiAlignmentDecoderFactory::construct(
+			arginfo,true /* put rank */, 0 /* copy stream */, PFIS
+		)
+	);
+	libmaus::bambam::CircularHashCollatingBamDecoder CHCBD(decwrapper->getDecoder(),tmpfilename,excludeflags,hlog,sbs);
+	bamcollate2CollatingPostRanking(arginfo,CHCBD);
 	
 	std::cout.flush();
 }
@@ -1502,10 +1406,18 @@ void bamcollate2(libmaus::util::ArgInfo const & arginfo)
 	}
 }
 
+#if defined(LIBMAUS_HAVE_IRODS)
+#include <libmaus/irods/IRodsInputStreamFactory.hpp>
+#endif
+
 int main(int argc, char * argv[])
 {
 	try
 	{
+		#if defined(LIBMAUS_HAVE_IRODS)
+                libmaus::irods::IRodsInputStreamFactory::registerHandler();
+                #endif
+
 		libmaus::timing::RealTimeClock rtc; rtc.start();
 		
 		::libmaus::util::ArgInfo arginfo(argc,argv);
