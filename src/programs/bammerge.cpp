@@ -38,6 +38,10 @@ static std::string getDefaultSortOrder() { return "coordinate"; }
 static int getDefaultMD5() { return 0; }
 static int getDefaultIndex() { return 0; }
 
+#if defined(LIBMAUS_HAVE_IRODS)
+#include <libmaus/irods/IRodsInputStreamFactory.hpp>
+#endif
+
 ::libmaus::bambam::BamHeader::unique_ptr_type updateHeader(
 	::libmaus::util::ArgInfo const & arginfo,
 	::libmaus::bambam::BamHeader const & header
@@ -180,6 +184,10 @@ int main(int argc, char * argv[])
 {
 	try
 	{
+		#if defined(LIBMAUS_HAVE_IRODS)
+                libmaus::irods::IRodsInputStreamFactory::registerHandler();
+                #endif
+
 		::libmaus::util::ArgInfo const arginfo(argc,argv);
 		
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
