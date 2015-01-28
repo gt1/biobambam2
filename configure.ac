@@ -148,8 +148,8 @@ if test ! -z "${with_libmaus}" ; then
 	fi
 fi
 
-PKG_CHECK_MODULES([libmaus],[libmaus >= 0.0.187])
-PKG_CHECK_MODULES([libmausdigests],[libmausdigests >= 0.0.187])
+PKG_CHECK_MODULES([libmaus],[libmaus >= 0.0.189])
+PKG_CHECK_MODULES([libmausdigests],[libmausdigests >= 0.0.189])
 
 if test ! -z "${with_libmaus}" ; then
 	if test ! -z "${PKGCONFIGPATHSAVE}" ; then
@@ -240,7 +240,7 @@ if test "${have_libmaus_irods}" = "yes" ; then
 		fi
 	fi
 
-	PKG_CHECK_MODULES([libmausirods],[libmausirods >= 0.0.187])
+	PKG_CHECK_MODULES([libmausirods],[libmausirods >= 0.0.189])
 
 	LIBMAUSIRODSCPPFLAGS="${libmausirods_CFLAGS}"
 	LIBMAUSIRODSLIBS="${libmausirods_LIBS}"
