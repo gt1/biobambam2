@@ -136,31 +136,28 @@ std::string getModifiedHeaderText(decoder_type const & bamdec, libmaus::util::Ar
 	std::string headertext = header.text;
 
 	// reset header if requested
-	if ( reset )
+	if ( reset && ! arginfo.hasArg("resetheadertext") )
 	{
-		// no replacement header file given
-		if ( ! arginfo.hasArg("resetheadertext") )
-		{
-			// remove SQ lines
-			std::vector<libmaus::bambam::HeaderLine> allheaderlines = libmaus::bambam::HeaderLine::extractLines(headertext);
+		// remove SQ lines
+		std::vector<libmaus::bambam::HeaderLine> allheaderlines = libmaus::bambam::HeaderLine::extractLines(headertext);
 
-			std::ostringstream upheadstr;
-			for ( uint64_t i = 0; i < allheaderlines.size(); ++i )
-				if ( allheaderlines[i].type != "SQ" )
-					upheadstr << allheaderlines[i].line << std::endl;
+		std::ostringstream upheadstr;
+		for ( uint64_t i = 0; i < allheaderlines.size(); ++i )
+			if ( allheaderlines[i].type != "SQ" )
+				upheadstr << allheaderlines[i].line << std::endl;
 
-			headertext = upheadstr.str();
-		}
-		// replace header given in file
-		else
-		{
-			std::string const headerfilename = arginfo.getUnparsedValue("resetheadertext","");
-			uint64_t const headerlen = libmaus::util::GetFileSize::getFileSize(headerfilename);
-			libmaus::aio::CheckedInputStream CIS(headerfilename);
-			libmaus::autoarray::AutoArray<char> ctext(headerlen,false);
-			CIS.read(ctext.begin(),headerlen);
-			headertext = std::string(ctext.begin(),ctext.end());		
-		}
+		headertext = upheadstr.str();
+	}
+
+	// replace header with contents of file if requested
+	if ( arginfo.hasArg("resetheadertext") )
+	{
+		std::string const headerfilename = arginfo.getUnparsedValue("resetheadertext","");
+		uint64_t const headerlen = libmaus::util::GetFileSize::getFileSize(headerfilename);
+		libmaus::aio::CheckedInputStream CIS(headerfilename);
+		libmaus::autoarray::AutoArray<char> ctext(headerlen,false);
+		CIS.read(ctext.begin(),headerlen);
+		headertext = std::string(ctext.begin(),ctext.end());		
 	}
 
 	// add PG line to header
