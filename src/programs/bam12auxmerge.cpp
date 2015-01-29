@@ -55,6 +55,24 @@ static uint64_t getDefaultZZToName() { return 1; }
 static int getDefaultMD5() { return 0; }
 static int getDefaultIndex() { return 0; }
 
+
+bool is_suffix(const char *str, const char *suf)
+{
+	if ( !str || !suf )
+    	    	return false;
+
+	size_t len_str = strlen(str);
+	size_t len_suf = strlen(suf);
+
+	if ( len_str < len_suf )
+    	    	return false;
+
+	if ( strcmp(str + len_str - len_suf, suf) == 0 )
+    	    	return true;
+	else
+    	    	return false;
+} 
+
 int bam12auxmerge(::libmaus::util::ArgInfo const & arginfo)
 {
 	if ( isatty(STDIN_FILENO) )
@@ -284,7 +302,7 @@ int bam12auxmerge(::libmaus::util::ArgInfo const & arginfo)
 			if ( verbose > 1 )
     	    	    	    	std::cerr << "Sanity: comparing " << name << " and " << prename << std::endl;			    
 			
-			if ( !strstr(prename, u1) ) // names do not match
+			if ( !is_suffix(prename, u1) ) // names do not match
 			{
 			    	libmaus::exception::LibMausException se;
 			    	se.getStream() << "Sanity check failed on read names, found " << name << " and " << prename << std::endl;
