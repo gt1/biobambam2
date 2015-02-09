@@ -192,8 +192,8 @@ keep second mates of orphaned pairs (i.e. such that the other mate is not in the
 keep single end reads
 .PP
 .B resetheadertext
-file name for replacement SAM header if reset=1. By default the header of
-the input SAM/BAM/CRAM file is filtered.
+file name for replacement SAM header. By default the header of
+the input SAM/BAM/CRAM file is used (and filtered in case of reset=1).
 .PP
 .B resetaux=<0|1>:
 remove auxilliary fields if resetaux=1. This key is only available for

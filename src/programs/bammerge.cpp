@@ -38,6 +38,10 @@ static std::string getDefaultSortOrder() { return "coordinate"; }
 static int getDefaultMD5() { return 0; }
 static int getDefaultIndex() { return 0; }
 
+#if defined(LIBMAUS_HAVE_IRODS)
+#include <libmaus/irods/IRodsInputStreamFactory.hpp>
+#endif
+
 ::libmaus::bambam::BamHeader::unique_ptr_type updateHeader(
 	::libmaus::util::ArgInfo const & arginfo,
 	::libmaus::bambam::BamHeader const & header
@@ -70,7 +74,6 @@ int bammerge(libmaus::util::ArgInfo const & arginfo)
 		throw se;
 	}
 
-	int const level = libmaus::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
 	std::string const sortorder = arginfo.getValue<std::string>("SO",getDefaultSortOrder());
 
@@ -128,19 +131,19 @@ int bammerge(libmaus::util::ArgInfo const & arginfo)
 
 	if ( sortorder == "queryname" )
 	{
-		libmaus::bambam::BamMergeQueryName bamdec(inputfilenames /* ,true */);
+		libmaus::bambam::BamMergeQueryName bamdec(arginfo,inputfilenames /* ,true */);
 		libmaus::bambam::BamAlignment const & algn = bamdec.getAlignment();
 		libmaus::bambam::BamHeader const & header = bamdec.getHeader();
 		::libmaus::bambam::BamHeader::unique_ptr_type uphead(updateHeader(arginfo,header));
-		libmaus::bambam::BamWriter writer(std::cout,*uphead,level,Pcbs);
-		libmaus::bambam::BamWriter::stream_type & bamoutstr = writer.getStream();
+		libmaus::bambam::BamBlockWriterBase::unique_ptr_type Pwriter(
+			libmaus::bambam::BamBlockWriterBaseFactory::construct(*uphead,arginfo,Pcbs));
 		
 		if ( verbose )
 		{
 			uint64_t c = 0;
 			while ( bamdec.readAlignment() )
 			{
-				algn.serialise(bamoutstr);
+				Pwriter->writeAlignment(algn);
 	
 				if ( ((++c) & ((1ull<<20)-1)) == 0 )
 					std::cerr << "[V] " << c << std::endl;
@@ -150,18 +153,36 @@ int bammerge(libmaus::util::ArgInfo const & arginfo)
 		}
 		else
 			while ( bamdec.readAlignment() )
-				algn.serialise(bamoutstr);
+				Pwriter->writeAlignment(algn);
 	}
 	else
 	{
-		libmaus::bambam::BamMergeCoordinate bamdec(inputfilenames /* ,true */);
+		libmaus::bambam::BamMergeCoordinate bamdec(arginfo,inputfilenames /* ,true */);
 		libmaus::bambam::BamAlignment const & algn = bamdec.getAlignment();
 		libmaus::bambam::BamHeader const & header = bamdec.getHeader();
 		::libmaus::bambam::BamHeader::unique_ptr_type uphead(updateHeader(arginfo,header));
-		libmaus::bambam::BamWriter writer(std::cout,*uphead,level,Pcbs);
-		libmaus::bambam::BamWriter::stream_type & bamoutstr = writer.getStream();
-		while ( bamdec.readAlignment() )
-			algn.serialise(bamoutstr);	
+		libmaus::bambam::BamBlockWriterBase::unique_ptr_type Pwriter(
+			libmaus::bambam::BamBlockWriterBaseFactory::construct(*uphead,arginfo,Pcbs));
+			
+		if ( verbose )
+		{
+			uint64_t c = 0;
+
+			while ( bamdec.readAlignment() )
+			{
+				Pwriter->writeAlignment(algn);
+	
+				if ( ((++c) & ((1ull<<20)-1)) == 0 )
+					std::cerr << "[V] " << c << std::endl;
+			}
+		
+			std::cerr << "[V] " << c << std::endl;
+		}
+		else
+		{
+			while ( bamdec.readAlignment() )
+				Pwriter->writeAlignment(algn);
+		}
 	}
 
 	if ( Pmd5cb )
@@ -180,6 +201,10 @@ int main(int argc, char * argv[])
 {
 	try
 	{
+		#if defined(LIBMAUS_HAVE_IRODS)
+                libmaus::irods::IRodsInputStreamFactory::registerHandler();
+                #endif
+
 		::libmaus::util::ArgInfo const arginfo(argc,argv);
 		
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )

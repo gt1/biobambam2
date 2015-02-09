@@ -1,4 +1,4 @@
-AC_INIT(biobambam,0.0.183,[gt1@sanger.ac.uk],[biobambam],[http://www.sanger.ac.uk])
+AC_INIT(biobambam,0.0.187,[gt1@sanger.ac.uk],[biobambam],[http://www.sanger.ac.uk])
 AC_CANONICAL_SYSTEM
 AC_PROG_LIBTOOL
 
@@ -148,8 +148,8 @@ if test ! -z "${with_libmaus}" ; then
 	fi
 fi
 
-PKG_CHECK_MODULES([libmaus],[libmaus >= 0.0.186])
-PKG_CHECK_MODULES([libmausdigests],[libmausdigests >= 0.0.183])
+PKG_CHECK_MODULES([libmaus],[libmaus >= 0.0.193])
+PKG_CHECK_MODULES([libmausdigests],[libmausdigests >= 0.0.193])
 
 if test ! -z "${with_libmaus}" ; then
 	if test ! -z "${PKGCONFIGPATHSAVE}" ; then
@@ -187,7 +187,7 @@ if test "${have_libmaus}" = "no" ; then
 fi
 
 AC_LANG_PUSH([C++])
-AC_MSG_CHECKING([whether we libmaus has support for io_lib])
+AC_MSG_CHECKING([whether libmaus has support for io_lib])
 	AC_LINK_IFELSE([AC_LANG_SOURCE([
 #include <libmaus/LibMausConfig.hpp>
 
@@ -206,6 +206,57 @@ AC_MSG_RESULT($have_libmaus_iolib)
 LIBMAUSIOLIBDEFINE=
 if test "${have_libmaus_iolib}" = "yes" ; then
 	LIBMAUSIOLIBDEFINE="#define BIOBAMBAM_LIBMAUS_HAVE_IO_LIB"
+fi
+
+## zzzz
+
+AC_LANG_PUSH([C++])
+AC_MSG_CHECKING([whether libmaus has support for iRODS])
+	AC_LINK_IFELSE([AC_LANG_SOURCE([
+#include <libmaus/LibMausConfig.hpp>
+
+				int main(int argc, char * argv[[]]) {
+					#if ! defined(LIBMAUS_HAVE_IRODS)
+					#error "installed libmaus does not support iRODS"
+					#endif
+					return 0;
+			}])],
+			have_libmaus_irods=yes,
+			have_libmaus_irods=no
+		)
+AC_LANG_POP
+AC_MSG_RESULT($have_libmaus_irods)
+
+LIBMAUSIRODSDEFINE=
+LIBMAUSIRODSCPPFLAGS=
+LIBMAUSIRODSLIBS=
+if test "${have_libmaus_irods}" = "yes" ; then
+	if test ! -z "${with_libmaus}" ; then
+		PKGCONFIGPATHSAVE="${PKG_CONFIG_PATH}"
+		if test -z "${PKG_CONFIG_PATH}" ; then
+			export PKG_CONFIG_PATH="${with_libmaus}/lib/pkgconfig"
+		else
+			export PKG_CONFIG_PATH="${with_libmaus}/lib/pkgconfig:${PKG_CONFIG_PATH}"
+		fi
+	fi
+
+	PKG_CHECK_MODULES([libmausirods],[libmausirods >= 0.0.193])
+
+	LIBMAUSIRODSCPPFLAGS="${libmausirods_CFLAGS}"
+	LIBMAUSIRODSLIBS="${libmausirods_LIBS}"
+	
+	LIBMAUSCPPFLAGS="${LIBMAUSCPPFLAGS} ${LIBMAUSIRODSCPPFLAGS}"
+	LIBMAUSLIBS="${LIBMAUSLIBS} ${LIBMAUSIRODSLIBS}"
+	CPPFLAGS="${CPPFLAGS} ${LIBMAUSIRODSCPPFLAGS}"
+	LIBS="${LIBS} ${LIBMAUSIRODSLIBS}"
+
+	if test ! -z "${with_libmaus}" ; then
+		if test ! -z "${PKGCONFIGPATHSAVE}" ; then
+			export PKG_CONFIG_PATH="${PKGCONFIGPATHSAVE}"
+		fi
+	fi
+	
+	LIBMAUSIRODSDEFINE="#define BIOBAMBAM_LIBMAUS_HAVE_IRODS"
 fi
 
 CPPFLAGS="${CPPFLAGS_SAVE}"
@@ -357,6 +408,7 @@ AC_SUBST([LIBMAUSCPPFLAGS])
 AC_SUBST([LIBMAUSLIBS])
 # 
 AC_SUBST([LIBMAUSIOLIBDEFINE])
+AC_SUBST([LIBMAUSIRODSDEFINE])
 #
 AC_SUBST([LIFTINGWAVELETTRANSFORMDEFINE])
 AC_SUBST([BAMREFDEPTHPEAKS])
