@@ -43,6 +43,7 @@
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; }
+static int getDefaultSanity() { return 0; }
 static uint64_t getDefaultMod() { return 1024*1024; }
 static uint64_t getDefaultRankSplit() { return 1; }
 static uint64_t getDefaultRankStrip() { return 1; }
@@ -53,6 +54,24 @@ static uint64_t getDefaultZZToName() { return 1; }
 #include <libmaus/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
 static int getDefaultMD5() { return 0; }
 static int getDefaultIndex() { return 0; }
+
+
+bool is_suffix(const char *str, const char *suf)
+{
+	if ( !str || !suf )
+    	    	return false;
+
+	size_t len_str = strlen(str);
+	size_t len_suf = strlen(suf);
+
+	if ( len_str < len_suf )
+    	    	return false;
+
+	if ( strcmp(str + len_str - len_suf, suf) == 0 )
+    	    	return true;
+	else
+    	    	return false;
+} 
 
 int bam12auxmerge(::libmaus::util::ArgInfo const & arginfo)
 {
@@ -81,6 +100,7 @@ int bam12auxmerge(::libmaus::util::ArgInfo const & arginfo)
 	int const rankstrip = arginfo.getValue<int>("rankstrip",getDefaultRankSplit());
 	int const clipreinsert = arginfo.getValue<int>("clipreinsert",getDefaultClipReinsert());
 	int const zztoname = arginfo.getValue<int>("zztoname",getDefaultZZToName());
+	int const sanity = arginfo.getValue<int>("sanity",getDefaultSanity());
 	uint64_t const mod = arginfo.getValue<int>("mod",getDefaultMod());
 	uint64_t const bmod = libmaus::math::nextTwoPow(mod);
 	uint64_t const bmask = bmod-1;
@@ -272,6 +292,46 @@ int bam12auxmerge(::libmaus::util::ArgInfo const & arginfo)
 		uint64_t pretagnum = prealgn.enumerateAuxTags(auxpre);
 		uint64_t newtagnum = algn.enumerateAuxTags(auxnew);
 		
+		// do some sanity checking
+		if ( sanity )
+		{
+		    	// first do a name check
+			char const * prename = prealgn.getName();
+			u1++; // put on the first letter of readname
+			
+			if ( verbose > 1 )
+    	    	    	    	std::cerr << "Sanity: comparing " << name << " and " << prename << std::endl;			    
+			
+			if ( !is_suffix(prename, u1) ) // names do not match
+			{
+			    	libmaus::exception::LibMausException se;
+			    	se.getStream() << "Sanity check failed on read names, found " << name << " and " << prename << std::endl;
+				se.finish();
+				throw se;
+			}
+			
+			// now the names match so try the flags
+			
+			if ( !(algn.isPaired() == prealgn.isPaired() &&
+			     algn.isRead1() == prealgn.isRead1() &&
+			     algn.isRead2() == prealgn.isRead2()) )
+			{
+			    	libmaus::exception::LibMausException se;
+				se.getStream() << "Sanity check failed on flags, " << std::endl
+				    	       << "Aligned " << name << " paired " << algn.isPaired() << " first " << algn.isRead1() << " last " << algn.isRead2() << std::endl
+			    	    	       << "Unaligned " << prename << " paired " << prealgn.isPaired() << " first " << prealgn.isRead1() << " last " << prealgn.isRead2() << std::endl;
+				se.finish();
+				throw se;
+			}
+			
+			if ( verbose > 1 )
+			    std::cerr << "Sanity check on flags: " << std::endl
+				    	       << "Aligned " << name << " paired " << algn.isPaired() << " first " << algn.isRead1() << " last " << algn.isRead2() << std::endl
+			    	    	       << "Unaligned " << prename << " paired " << prealgn.isPaired() << " first " << prealgn.isRead1() << " last " << prealgn.isRead2() << std::endl;	
+			
+			
+		}
+		
 		std::sort(auxpre.begin(),auxpre.begin()+pretagnum);
 		std::sort(auxnew.begin(),auxnew.begin()+newtagnum);
 		
@@ -399,7 +459,8 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "indexfilename=<filename>", "file name for BAM index file (default: extend output file name)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "tmpfile=<filename>", "prefix for temporary files, default: create files in current directory" ) );
-
+    	    	    	    	V.push_back ( std::pair<std::string,std::string> ( "sanity=<["+::biobambam::Licensing::formatNumber(getDefaultSanity())+"]>", "extra checking of reads" ) );
+				
 				::biobambam::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;

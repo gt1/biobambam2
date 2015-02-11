@@ -80,6 +80,19 @@ int bammerge(libmaus::util::ArgInfo const & arginfo)
 	std::vector<std::string> inputfilenames = arginfo.getPairValues("I");
 	for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
 		inputfilenames.push_back(arginfo.restargs[i]);
+	std::vector<std::string> inputmetafilenames = arginfo.getPairValues("IL");
+	for ( uint64_t i = 0; i < inputmetafilenames.size(); ++i )
+	{
+		libmaus::aio::InputStream::unique_ptr_type iptr(libmaus::aio::InputStreamFactoryContainer::constructUnique(inputmetafilenames[i]));
+		std::istream & in = *iptr;
+		while ( in )
+		{
+			std::string line;
+			std::getline(in,line);
+			if ( line.size() )
+				inputfilenames.push_back(line);
+		}
+	}
 
 	/*
 	 * start index/md5 callbacks
