@@ -788,12 +788,12 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 		std::cerr << "Merging frags...";
 		fragrtc.start();
 		
-		typedef libmaus::util::shared_ptr<std::ostringstream>::type ostringstream_ptr_type;
-		std::vector<ostringstream_ptr_type> fragoutstrs(numthreads), fragindexoutstrs(numthreads);
+		typedef libmaus::util::shared_ptr<std::stringstream>::type stringstream_ptr_type;
+		std::vector<stringstream_ptr_type> fragoutstrs(numthreads), fragindexoutstrs(numthreads);
 		for ( uint64_t i = 0; i < fragoutstrs.size(); ++i )
 		{
-			fragoutstrs[i] = ostringstream_ptr_type(new std::ostringstream);
-			fragindexoutstrs[i] = ostringstream_ptr_type(new std::ostringstream);
+			fragoutstrs[i] = stringstream_ptr_type(new std::stringstream);
+			fragindexoutstrs[i] = stringstream_ptr_type(new std::stringstream);
 		}		
 		#if defined(_OPENMP)
 		#pragma omp parallel for
@@ -830,19 +830,22 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 		}
 
 		std::cerr << "Computing and checking pairs for " << numthreads << " threads...";
-		std::vector < std::vector< std::pair<uint64_t,uint64_t> > > const Rpair = pairblockdecoder->getLongMergeIntervals(numthreads);
+		std::vector < std::vector< std::pair<uint64_t,uint64_t> > > const Rpair = pairblockdecoder->getLongMergeIntervals(
+			std::vector<libmaus::bambam::ReadEndsBlockDecoderBaseCollectionInfoBase>(1,pairREC->getMergeInfo()),
+			numthreads
+		);
 		std::cerr << "done." << std::endl;		
 		
 		libmaus::timing::RealTimeClock pairrtc;
 		std::cerr << "Merging pairs...";
 		pairrtc.start();
 		
-		typedef libmaus::util::shared_ptr<std::ostringstream>::type ostringstream_ptr_type;
-		std::vector<ostringstream_ptr_type> pairoutstrs(numthreads), pairindexoutstrs(numthreads);
+		typedef libmaus::util::shared_ptr<std::stringstream>::type stringstream_ptr_type;
+		std::vector<stringstream_ptr_type> pairoutstrs(numthreads), pairindexoutstrs(numthreads);
 		for ( uint64_t i = 0; i < pairoutstrs.size(); ++i )
 		{
-			pairoutstrs[i] = ostringstream_ptr_type(new std::ostringstream);
-			pairindexoutstrs[i] = ostringstream_ptr_type(new std::ostringstream);
+			pairoutstrs[i] = stringstream_ptr_type(new std::stringstream);
+			pairindexoutstrs[i] = stringstream_ptr_type(new std::stringstream);
 		}
 		#if defined(_OPENMP)
 		#pragma omp parallel for
