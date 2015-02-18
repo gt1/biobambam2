@@ -270,7 +270,7 @@ void bamcollate2NonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::ba
 
 	bool const verbose = arginfo.getValue<unsigned int>("verbose",getDefaultVerbose());
 	libmaus::timing::RealTimeClock rtc; rtc.start();
-	uint32_t const excludeflags = libmaus::bambam::BamFlagBase::stringToFlags(arginfo.getValue<std::string>("exclude","SECONDARY,SUPPLEMENTARY"));
+	uint32_t const excludeflags = libmaus::bambam::BamFlagBase::stringToFlags(arginfo.getUnparsedValue("exclude","SECONDARY,SUPPLEMENTARY"));
 	libmaus::bambam::BamAlignment & algn = bamdec.getAlignment();
 	::libmaus::autoarray::AutoArray<uint8_t> T;
 	uint64_t cnt = 0;
@@ -290,7 +290,7 @@ void bamcollate2NonCollating(libmaus::util::ArgInfo const & arginfo, libmaus::ba
 	/*
 	 * start index/md5 callbacks
 	 */
-	std::string const tmpfilenamebase = arginfo.getValue<std::string>("T",arginfo.getDefaultTmpFileName());
+	std::string const tmpfilenamebase = arginfo.getUnparsedValue("T",arginfo.getDefaultTmpFileName());
 	std::string const tmpfileindex = tmpfilenamebase + "_index";
 	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
 
@@ -425,7 +425,7 @@ void bamcollate2Collating(
 	libmaus::bambam::BamAuxFilterVector::unique_ptr_type const prgfilter(libmaus::bambam::BamAuxFilterVector::parseAuxFilterList(arginfo));
 	libmaus::bambam::BamAuxFilterVector const * rgfilter = prgfilter.get();
 	libmaus::bambam::BamAlignment Ralgna, Ralgnb;
-	std::string const sclassfilter = arginfo.getValue<std::string>("classes",getDefaultClassFilter());
+	std::string const sclassfilter = arginfo.getUnparsedValue("classes",getDefaultClassFilter());
 	uint32_t const classmask = parseClassList(sclassfilter);
 	RGReplaceInfo const rgreplinfo(arginfo);
 
@@ -441,7 +441,7 @@ void bamcollate2Collating(
 	/*
 	 * start index/md5 callbacks
 	 */
-	std::string const tmpfilenamebase = arginfo.getValue<std::string>("T",arginfo.getDefaultTmpFileName());
+	std::string const tmpfilenamebase = arginfo.getUnparsedValue("T",arginfo.getDefaultTmpFileName());
 	std::string const tmpfileindex = tmpfilenamebase + "_index";
 	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
 
@@ -780,9 +780,9 @@ void bamcollate2Collating(
 
 void bamcollate2Collating(libmaus::util::ArgInfo const & arginfo)
 {
-	uint32_t const excludeflags = libmaus::bambam::BamFlagBase::stringToFlags(arginfo.getValue<std::string>("exclude","SECONDARY,SUPPLEMENTARY"));
+	uint32_t const excludeflags = libmaus::bambam::BamFlagBase::stringToFlags(arginfo.getUnparsedValue("exclude","SECONDARY,SUPPLEMENTARY"));
 	libmaus::util::TempFileRemovalContainer::setup();
-	std::string const tmpfilename = arginfo.getValue<std::string>("T",arginfo.getDefaultTmpFileName());
+	std::string const tmpfilename = arginfo.getUnparsedValue("T",arginfo.getDefaultTmpFileName());
 	libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilename);
 	
 	unsigned int const hlog = arginfo.getValue<unsigned int>("colhlog",18);
@@ -828,7 +828,7 @@ void bamcollate2CollatingRanking(
 	/*
 	 * start index/md5 callbacks
 	 */
-	std::string const tmpfilenamebase = arginfo.getValue<std::string>("T",arginfo.getDefaultTmpFileName());
+	std::string const tmpfilenamebase = arginfo.getUnparsedValue("T",arginfo.getDefaultTmpFileName());
 	std::string const tmpfileindex = tmpfilenamebase + "_index";
 	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
 
@@ -999,12 +999,12 @@ void bamcollate2CollatingRanking(
 
 void bamcollate2CollatingRanking(libmaus::util::ArgInfo const & arginfo)
 {
-	uint32_t const excludeflags = libmaus::bambam::BamFlagBase::stringToFlags(arginfo.getValue<std::string>("exclude","SECONDARY,SUPPLEMENTARY"));
+	uint32_t const excludeflags = libmaus::bambam::BamFlagBase::stringToFlags(arginfo.getUnparsedValue("exclude","SECONDARY,SUPPLEMENTARY"));
 	libmaus::util::TempFileRemovalContainer::setup();
-	std::string const tmpfilename = arginfo.getValue<std::string>("T",arginfo.getDefaultTmpFileName());
+	std::string const tmpfilename = arginfo.getUnparsedValue("T",arginfo.getDefaultTmpFileName());
 	libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilename);
-	std::string const inputformat = arginfo.getValue<std::string>("inputformat",getDefaultInputFormat());
-	std::string const inputfilename = arginfo.getValue<std::string>("filename","-");
+	std::string const inputformat = arginfo.getUnparsedValue("inputformat",getDefaultInputFormat());
+	std::string const inputfilename = arginfo.getUnparsedValue("filename","-");
 
 	unsigned int const hlog = arginfo.getValue<unsigned int>("colhlog",18);
 	uint64_t const sbs = arginfo.getValueUnsignedNumeric<uint64_t>("colsbs",128ull*1024ull*1024ull);
@@ -1052,7 +1052,7 @@ void bamcollate2CollatingPostRanking(
 	/*
 	 * start index/md5 callbacks
 	 */
-	std::string const tmpfilenamebase = arginfo.getValue<std::string>("T",arginfo.getDefaultTmpFileName());
+	std::string const tmpfilenamebase = arginfo.getUnparsedValue("T",arginfo.getDefaultTmpFileName());
 	std::string const tmpfileindex = tmpfilenamebase + "_index";
 	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
 
@@ -1326,12 +1326,12 @@ void bamcollate2CollatingPostRanking(
 
 void bamcollate2CollatingPostRanking(libmaus::util::ArgInfo const & arginfo)
 {
-	uint32_t const excludeflags = libmaus::bambam::BamFlagBase::stringToFlags(arginfo.getValue<std::string>("exclude","SECONDARY,SUPPLEMENTARY"));
+	uint32_t const excludeflags = libmaus::bambam::BamFlagBase::stringToFlags(arginfo.getUnparsedValue("exclude","SECONDARY,SUPPLEMENTARY"));
 	libmaus::util::TempFileRemovalContainer::setup();
-	std::string const tmpfilename = arginfo.getValue<std::string>("T",arginfo.getDefaultTmpFileName());
+	std::string const tmpfilename = arginfo.getUnparsedValue("T",arginfo.getDefaultTmpFileName());
 	libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilename);
-	std::string const inputformat = arginfo.getValue<std::string>("inputformat",getDefaultInputFormat());
-	std::string const inputfilename = arginfo.getValue<std::string>("filename","-");
+	std::string const inputformat = arginfo.getUnparsedValue("inputformat",getDefaultInputFormat());
+	std::string const inputfilename = arginfo.getUnparsedValue("filename","-");
 
 	unsigned int const hlog = arginfo.getValue<unsigned int>("colhlog",18);
 	uint64_t const sbs = arginfo.getValueUnsignedNumeric<uint64_t>("colsbs",128ull*1024ull*1024ull);
@@ -1363,7 +1363,7 @@ void bamcollate2(libmaus::util::ArgInfo const & arginfo)
 		throw se;
 	}
 
-	if ( arginfo.hasArg("ranges") && ((!arginfo.hasArg("filename")) || arginfo.getValue<std::string>("filename","-") == "-") )
+	if ( arginfo.hasArg("ranges") && ((!arginfo.hasArg("filename")) || arginfo.getUnparsedValue("filename","-") == "-") )
 	{
 		libmaus::exception::LibMausException se;
 		se.getStream() << "ranges are not supported for reading via standard input" << std::endl;
