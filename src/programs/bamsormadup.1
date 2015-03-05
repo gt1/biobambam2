@@ -1,0 +1,58 @@
+.TH BAMSORMADUP 1 "March 2015" BIOBAMBAM
+.SH NAME
+bamsormadup - sort name collated SAM or BAM file by coordinates and mark duplicates
+.SH SYNOPSIS
+.PP
+.B bamsormadup [options]
+.SH DESCRIPTION
+bamsormadup reads a name collated BAM or SAM file from standard input, runs a fix mate
+process, sorts the contained alignments by coordinate, marks duplicate
+alignments and writes the sorted alignments to standard output in BAM
+format. An alignment file is name collated if all the alignments for one
+read name appear consecutively in the file.
+.PP
+The following key=value pairs can be given:
+.PP
+.B level=<-1|0|1|9|11>:
+set compression level of the output BAM file. Valid
+values are
+.IP -1:
+zlib/gzip default compression level
+.IP 0:
+uncompressed
+.IP 1:
+zlib/gzip level 1 (fast) compression
+.IP 9:
+zlib/gzip level 9 (best) compression
+.P
+If libmaus has been compiled with support for igzip (see
+https://software.intel.com/en-us/articles/igzip-a-high-performance-deflate-compressor-with-optimizations-for-genomic-data)
+then an additional valid value is
+.IP 11:
+igzip compression
+.PP
+.B tmpfile=<filename>:
+set the prefix for temporary file names
+.PP
+.B inputformat=<bam>: 
+set the input file format.
+This can be either bam or sam (see http://samtools.sourceforge.net/SAM1.pdf)
+.PP
+.B threads=<[1]>:
+number of threads used
+.PP
+.B M=<stderr>: 
+name of the metrics file for duplicate marking (metrics are written to standard error if not set)
+.PP
+.B tmpfile=<bamsormadup_hostname_pid_starttime>:
+prefix for temporary files. By default the temporary files are created in the current directory.
+.SH AUTHOR
+Written by German Tischler.
+.SH "REPORTING BUGS"
+Report bugs to <gt1@sanger.ac.uk>
+.SH COPYRIGHT
+Copyright \(co 2009-2015 German Tischler, \(co 2011-2015 Genome Research Limited.
+License GPLv3+: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
