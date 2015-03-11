@@ -72,6 +72,8 @@ bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamr
 	bamlastfilter \
 	bamfilternames \
 	bamsormadup \
+	bamexplode \
+	fastqtobampar \
 	@BAMALIGNMENTOFFSETSINSTEXP@ @BLASTXMLTOBAMINSTEXP@
 
 noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments bamtoname \
@@ -400,3 +402,13 @@ bamsormadup_SOURCES = programs/bamsormadup.cpp biobambam/Licensing.cpp
 bamsormadup_LDADD = ${LIBMAUSLIBS}
 bamsormadup_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
 bamsormadup_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+bamexplode_SOURCES = programs/bamexplode.cpp biobambam/Licensing.cpp
+bamexplode_LDADD = ${LIBMAUSLIBS}
+bamexplode_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+bamexplode_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+fastqtobampar_SOURCES = programs/fastqtobampar.cpp biobambam/Licensing.cpp
+fastqtobampar_LDADD = ${LIBMAUSLIBS}
+fastqtobampar_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+fastqtobampar_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
