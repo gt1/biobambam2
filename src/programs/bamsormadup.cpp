@@ -18,9 +18,14 @@
 **/
 #include "config.h"
 
+#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
+
 #include <libmaus/bambam/parallel/BlockSortControl.hpp>
 #include <libmaus/bambam/parallel/BlockMergeControl.hpp>
 #include <libmaus/bambam/parallel/FragmentAlignmentBufferPosComparator.hpp>
+
+#include <libmaus/digest/Digests.hpp>
+
 #include <libmaus/parallel/NumCpus.hpp>
 
 #include <libmaus/util/ArgInfo.hpp>
@@ -32,6 +37,59 @@ static int getDefaultTempLevel() { return Z_BEST_SPEED; }
 // static std::string getDefaultSortOrder() { return "coordinate"; }
 static std::string getDefaultInputFormat() { return "bam"; }
 static std::string getDefaultHash() { return "crc32prod"; }
+static std::string getDefaultFileHash() { return "md5"; }
+
+template<typename digest_type>
+static int mergeBlocks(
+	libmaus::parallel::SimpleThreadPool & STP,
+	std::ostream & out,
+	libmaus::autoarray::AutoArray<char> & sheader,
+	std::vector<libmaus::bambam::parallel::GenericInputControlStreamInfo> const & BI,
+	libmaus::bitio::BitVector::unique_ptr_type const & Pdupvec,
+	int level,
+	uint64_t inputblocksize,
+	uint64_t inputblocksperfile,
+	uint64_t mergebuffersize,
+	uint64_t mergebuffers,
+	uint64_t complistsize,
+	std::string const & hash,
+	std::string const & headerchecksumstr,
+	std::string const & filehash
+)
+{
+	libmaus::bambam::parallel::BlockMergeControl<digest_type> BMC(
+		STP, // libmaus::parallel::SimpleThreadPool &
+		out, // std::ostream & 
+		sheader, // libmaus::autoarray::AutoArray<char> const & 
+		BI, // std::vector<libmaus::bambam::parallel::GenericInputControlStreamInfo> const &
+		*Pdupvec, // libmaus::bitio::BitVector::unique_ptr_type const &
+		level, // int
+		inputblocksize, // uint64_t
+		inputblocksperfile /* uint64_t, blocks per channel */,
+		mergebuffersize /* uint64_t, merge buffer size */,
+		mergebuffers /* uint64_t, number of merge buffers */,
+		complistsize /* uint64_t, number of bgzf preload blocks */,
+		hash // std::string
+	);
+	BMC.addPending();			
+	BMC.waitWritingFinished();
+	std::ostringstream finalheaderchecksumstr;
+	BMC.printChecksumsForBamHeader(finalheaderchecksumstr);
+	// std::cerr << finalheaderchecksumstr.str();
+
+	std::cerr << "[D]\t" << filehash << "\t" << BMC.getFileDigest() << std::endl;
+
+	if ( finalheaderchecksumstr.str() != headerchecksumstr )
+	{
+		std::cerr << "[W] checksum mismatch between input and output" << std::endl;
+		return EXIT_FAILURE;
+	}
+	else
+	{
+		std::cerr << "[V] checksum ok" << std::endl;
+		return EXIT_SUCCESS;
+	}	
+}
 
 int bamsormadup(::libmaus::util::ArgInfo const & arginfo)
 {
@@ -49,6 +107,7 @@ int bamsormadup(::libmaus::util::ArgInfo const & arginfo)
 	std::string const tmpfilebase = arginfo.getUnparsedValue("tmpfile",arginfo.getDefaultTmpFileName());
 	int const templevel = arginfo.getValue<int>("templevel",getDefaultTempLevel());
 	std::string const hash = arginfo.getValue<std::string>("hash",getDefaultHash());
+	std::string const filehash = arginfo.getValue<std::string>("filehash",getDefaultFileHash());
 
 	std::string const sinputformat = arginfo.getUnparsedValue("inputformat",getDefaultInputFormat());
 	libmaus::bambam::parallel::BlockSortControlBase::block_sort_control_input_enum inform = libmaus::bambam::parallel::BlockSortControlBase::block_sort_control_input_bam;
@@ -138,21 +197,20 @@ int bamsormadup(::libmaus::util::ArgInfo const & arginfo)
 	uint64_t const complistsize = 32;
 	int const level = arginfo.getValue<int>("level",Z_DEFAULT_COMPRESSION);
 
-	libmaus::bambam::parallel::BlockMergeControl BMC(
-		STP,std::cout,sheader,BI,*Pdupvec,level,inputblocksize,inputblocksperfile /* blocks per channel */,mergebuffersize /* merge buffer size */,mergebuffers /* number of merge buffers */, complistsize /* number of bgzf preload blocks */, hash);
-	BMC.addPending();			
-	BMC.waitWritingFinished();
-	std::ostringstream finalheaderchecksumstr;
-	BMC.printChecksumsForBamHeader(finalheaderchecksumstr);
-	// std::cerr << finalheaderchecksumstr.str();
-	
-	if ( finalheaderchecksumstr.str() != headerchecksumstr.str() )
+	if ( filehash == "sha512" )
 	{
-		std::cerr << "[W] checksum mismatch between input and output" << std::endl;
-		returncode = EXIT_FAILURE;
+		mergeBlocks<libmaus::digest::SHA2_512>(
+			STP,std::cout,sheader,BI,Pdupvec,level,inputblocksize,inputblocksperfile,mergebuffersize,mergebuffers,complistsize,hash,headerchecksumstr.str(),
+			filehash
+		);
 	}
 	else
-		std::cerr << "[V] checksum ok" << std::endl;
+	{
+		mergeBlocks<libmaus::util::MD5>(
+			STP,std::cout,sheader,BI,Pdupvec,level,inputblocksize,inputblocksperfile,mergebuffersize,mergebuffers,complistsize,hash,headerchecksumstr.str(),
+			"md5"
+		);
+	}
 	
 	std::cerr << "[V] blocks merged in time " << rtc.formatTime(rtc.getElapsedSeconds()) << std::endl;
 
@@ -163,8 +221,6 @@ int bamsormadup(::libmaus::util::ArgInfo const & arginfo)
 
 	return returncode;
 }
-
-#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
 
 int main(int argc, char * argv[])
 {
