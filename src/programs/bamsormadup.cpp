@@ -31,9 +31,12 @@ static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultTempLevel() { return Z_BEST_SPEED; }
 // static std::string getDefaultSortOrder() { return "coordinate"; }
 static std::string getDefaultInputFormat() { return "bam"; }
+static std::string getDefaultHash() { return "crc32prod"; }
 
-int bamasam(::libmaus::util::ArgInfo const & arginfo)
+int bamsormadup(::libmaus::util::ArgInfo const & arginfo)
 {
+	int returncode = EXIT_SUCCESS;
+
 	libmaus::timing::RealTimeClock progrtc; progrtc.start();
 	typedef libmaus::bambam::parallel::FragmentAlignmentBufferPosComparator order_type;
 	// typedef libmaus::bambam::parallel::FragmentAlignmentBufferNameComparator order_type;
@@ -45,6 +48,7 @@ int bamasam(::libmaus::util::ArgInfo const & arginfo)
 	libmaus::aio::PosixFdInputStream in(STDIN_FILENO,256*1024);
 	std::string const tmpfilebase = arginfo.getUnparsedValue("tmpfile",arginfo.getDefaultTmpFileName());
 	int const templevel = arginfo.getValue<int>("templevel",getDefaultTempLevel());
+	std::string const hash = arginfo.getValue<std::string>("hash",getDefaultHash());
 
 	std::string const sinputformat = arginfo.getUnparsedValue("inputformat",getDefaultInputFormat());
 	libmaus::bambam::parallel::BlockSortControlBase::block_sort_control_input_enum inform = libmaus::bambam::parallel::BlockSortControlBase::block_sort_control_input_bam;
@@ -68,13 +72,17 @@ int bamasam(::libmaus::util::ArgInfo const & arginfo)
 	libmaus::parallel::SimpleThreadPool STP(numlogcpus);
 	libmaus::bambam::parallel::BlockSortControl<order_type>::unique_ptr_type VC(
 		new libmaus::bambam::parallel::BlockSortControl<order_type>(
-			inform,STP,in,templevel,tmpfilebase
+			inform,STP,in,templevel,tmpfilebase,hash
 		)
 	);
 	VC->enqueReadPackage();
 	VC->waitDecodingFinished();
-	VC->printSizes(std::cerr);
-	VC->printPackageFreeListSizes(std::cerr);
+	// VC->printChecksums(std::cerr);
+	std::ostringstream headerchecksumstr;
+	VC->printChecksumsForBamHeader(headerchecksumstr);
+	// std::cerr << headerchecksumstr.str();
+	// VC->printSizes(std::cerr);
+	// VC->printPackageFreeListSizes(std::cerr);
 	#if defined(AUTOARRAY_TRACE)
 	libmaus::autoarray::autoArrayPrintTraces(std::cerr);
 	#endif
@@ -109,8 +117,10 @@ int bamasam(::libmaus::util::ArgInfo const & arginfo)
 	std::vector<libmaus::bambam::parallel::GenericInputControlStreamInfo> const BI = VC->getBlockInfo();
 	libmaus::bitio::BitVector::unique_ptr_type Pdupvec(VC->releaseDupBitVector());
 	libmaus::bambam::BamHeader::unique_ptr_type Pheader(VC->getHeader());
-	::libmaus::bambam::BamHeader::unique_ptr_type uphead(libmaus::bambam::BamHeaderUpdate::updateHeader(arginfo,*Pheader,"bamasam",PACKAGE_VERSION));
+	::libmaus::bambam::BamHeader::unique_ptr_type uphead(libmaus::bambam::BamHeaderUpdate::updateHeader(arginfo,*Pheader,"bamsormadup",PACKAGE_VERSION));
 	uphead->changeSortOrder("coordinate");
+	uphead->text = uphead->filterOutChecksum(uphead->text);
+	uphead->text += headerchecksumstr.str();
 	std::ostringstream hostr;
 	uphead->serialise(hostr);
 	std::string const hostrstr = hostr.str();
@@ -129,9 +139,21 @@ int bamasam(::libmaus::util::ArgInfo const & arginfo)
 	int const level = arginfo.getValue<int>("level",Z_DEFAULT_COMPRESSION);
 
 	libmaus::bambam::parallel::BlockMergeControl BMC(
-		STP,std::cout,sheader,BI,*Pdupvec,level,inputblocksize,inputblocksperfile /* blocks per channel */,mergebuffersize /* merge buffer size */,mergebuffers /* number of merge buffers */, complistsize /* number of bgzf preload blocks */);
+		STP,std::cout,sheader,BI,*Pdupvec,level,inputblocksize,inputblocksperfile /* blocks per channel */,mergebuffersize /* merge buffer size */,mergebuffers /* number of merge buffers */, complistsize /* number of bgzf preload blocks */, hash);
 	BMC.addPending();			
 	BMC.waitWritingFinished();
+	std::ostringstream finalheaderchecksumstr;
+	BMC.printChecksumsForBamHeader(finalheaderchecksumstr);
+	// std::cerr << finalheaderchecksumstr.str();
+	
+	if ( finalheaderchecksumstr.str() != headerchecksumstr.str() )
+	{
+		std::cerr << "[W] checksum mismatch between input and output" << std::endl;
+		returncode = EXIT_FAILURE;
+	}
+	else
+		std::cerr << "[V] checksum ok" << std::endl;
+	
 	std::cerr << "[V] blocks merged in time " << rtc.formatTime(rtc.getElapsedSeconds()) << std::endl;
 
 	STP.terminate();
@@ -139,7 +161,7 @@ int bamasam(::libmaus::util::ArgInfo const & arginfo)
 	
 	std::cerr << "[V] run time " << progrtc.formatTime(progrtc.getElapsedSeconds()) << " (" << progrtc.getElapsedSeconds() << " s)" << "\t" << libmaus::util::MemUsage() << std::endl;
 
-	return EXIT_SUCCESS;
+	return returncode;
 }
 
 #include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
@@ -183,6 +205,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( std::string("inputformat=<[")+getDefaultInputFormat()+"]>", std::string("input format (sam,bam)") ) );
 				V.push_back ( std::pair<std::string,std::string> ( "M=<filename>", "metrics file, stderr if unset" ) );
 				// V.push_back ( std::pair<std::string,std::string> ( std::string("outputformat=<[bam]>", std::string("output format (bam)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("hash=<[")+getDefaultHash()+"]>", "hash digest function: " + libmaus::bambam::ChecksumsFactory::getSupportedHashVariantsList()) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 
@@ -190,7 +213,7 @@ int main(int argc, char * argv[])
 				return EXIT_SUCCESS;
 			}
 			
-		return bamasam(arginfo);
+		return bamsormadup(arginfo);
 	}
 	catch(std::exception const & ex)
 	{

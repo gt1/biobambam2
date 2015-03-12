@@ -150,6 +150,7 @@ fi
 
 PKG_CHECK_MODULES([libmaus],[libmaus >= 0.0.195])
 PKG_CHECK_MODULES([libmausdigests],[libmausdigests >= 0.0.195])
+PKG_CHECK_MODULES([libmausseqchksumsfactory],[libmausseqchksumsfactory >= 0.0.195])
 
 if test ! -z "${with_libmaus}" ; then
 	if test ! -z "${PKGCONFIGPATHSAVE}" ; then
@@ -157,8 +158,8 @@ if test ! -z "${with_libmaus}" ; then
 	fi
 fi
 
-LIBMAUSCPPFLAGS="${libmaus_CFLAGS} ${libmausdigests_CFLAGS}"
-LIBMAUSLIBS="${libmaus_LIBS} ${libmausdigests_LIBS}"
+LIBMAUSCPPFLAGS="${libmaus_CFLAGS} ${libmausseqchksumsfactory_CFLAGS} ${libmausdigests_CFLAGS}"
+LIBMAUSLIBS="${libmaus_LIBS} ${libmausseqchksumsfactory_LIBS} ${libmausdigests_LIBS}"
 
 CPPFLAGS_SAVE="${CPPFLAGS}"
 LDFLAGS_SAVE="${LDFLAGS}"
