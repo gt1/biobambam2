@@ -26,6 +26,16 @@
 
 #include <libmaus/digest/Digests.hpp>
 
+#if defined(LIBMAUS_HAVE_SHA2_ASSEMBLY)
+#include <libmaus/digest/DigestFactory_SHA2_ASM.hpp>
+#endif
+
+#if defined(LIBMAUS_HAVE_SMMINTRIN_H)
+#include <libmaus/digest/DigestFactory_CRC32C_SSE42.hpp>
+#endif
+
+#include <libmaus/digest/DigestFactoryContainer.hpp>
+
 #include <libmaus/parallel/NumCpus.hpp>
 
 #include <libmaus/util/ArgInfo.hpp>
@@ -36,11 +46,12 @@ static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultTempLevel() { return Z_BEST_SPEED; }
 // static std::string getDefaultSortOrder() { return "coordinate"; }
 static std::string getDefaultInputFormat() { return "bam"; }
-static std::string getDefaultHash() { return "crc32prod"; }
-static std::string getDefaultFileHash() { return "md5"; }
+static std::string getDefaultSeqChksumHash() { return "crc32prod"; }
+static std::string getDefaultDigest() { return "md5"; }
 
-template<typename digest_type>
-static int mergeBlocks(
+static int 
+	mergeBlocks
+(
 	libmaus::parallel::SimpleThreadPool & STP,
 	std::ostream & out,
 	libmaus::autoarray::AutoArray<char> & sheader,
@@ -54,10 +65,17 @@ static int mergeBlocks(
 	uint64_t complistsize,
 	std::string const & hash,
 	std::string const & headerchecksumstr,
-	std::string const & filehash
+	std::string const & digesttype,
+	std::string const & indextmpfileprefix,
+	std::string const & indexfilename,
+	std::string const & digestfilename
 )
-{
-	libmaus::bambam::parallel::BlockMergeControl<digest_type> BMC(
+{	
+	typedef libmaus::digest::DigestInterface digest_interface_type;
+	typedef digest_interface_type::unique_ptr_type digest_interface_pointer_type;
+	digest_interface_pointer_type Pdigest(::libmaus::digest::DigestFactoryContainer::construct(digesttype));
+
+	libmaus::bambam::parallel::BlockMergeControl BMC(
 		STP, // libmaus::parallel::SimpleThreadPool &
 		out, // std::ostream & 
 		sheader, // libmaus::autoarray::AutoArray<char> const & 
@@ -69,15 +87,26 @@ static int mergeBlocks(
 		mergebuffersize /* uint64_t, merge buffer size */,
 		mergebuffers /* uint64_t, number of merge buffers */,
 		complistsize /* uint64_t, number of bgzf preload blocks */,
-		hash // std::string
+		hash, // std::string
+		indextmpfileprefix,
+		Pdigest.get()
 	);
 	BMC.addPending();			
 	BMC.waitWritingFinished();
 	std::ostringstream finalheaderchecksumstr;
 	BMC.printChecksumsForBamHeader(finalheaderchecksumstr);
 	// std::cerr << finalheaderchecksumstr.str();
+	if ( indexfilename.size() )
+		BMC.writeBamIndex(indexfilename);
+	std::string const digeststr = BMC.getFileDigest();
+	if ( digestfilename.size() )
+	{
+		libmaus::aio::PosixFdOutputStream PFOS(digestfilename);
+		PFOS << digeststr << std::endl;
+		PFOS.flush();
+	}
 
-	std::cerr << "[D]\t" << filehash << "\t" << BMC.getFileDigest() << std::endl;
+	std::cerr << "[D]\t" << digesttype << "\t" << digeststr << std::endl;
 
 	if ( finalheaderchecksumstr.str() != headerchecksumstr )
 	{
@@ -106,8 +135,10 @@ int bamsormadup(::libmaus::util::ArgInfo const & arginfo)
 	libmaus::aio::PosixFdInputStream in(STDIN_FILENO,256*1024);
 	std::string const tmpfilebase = arginfo.getUnparsedValue("tmpfile",arginfo.getDefaultTmpFileName());
 	int const templevel = arginfo.getValue<int>("templevel",getDefaultTempLevel());
-	std::string const hash = arginfo.getValue<std::string>("hash",getDefaultHash());
-	std::string const filehash = arginfo.getValue<std::string>("filehash",getDefaultFileHash());
+	std::string const seqchksumhash = arginfo.getValue<std::string>("seqchksumhash",getDefaultSeqChksumHash());
+	std::string const digest = arginfo.getValue<std::string>("digest",getDefaultDigest());
+	std::string const indexfilename = arginfo.getUnparsedValue("indexfilename",std::string());
+	std::string const digestfilename = arginfo.getUnparsedValue("digestfilename",std::string());
 
 	std::string const sinputformat = arginfo.getUnparsedValue("inputformat",getDefaultInputFormat());
 	libmaus::bambam::parallel::BlockSortControlBase::block_sort_control_input_enum inform = libmaus::bambam::parallel::BlockSortControlBase::block_sort_control_input_bam;
@@ -131,7 +162,7 @@ int bamsormadup(::libmaus::util::ArgInfo const & arginfo)
 	libmaus::parallel::SimpleThreadPool STP(numlogcpus);
 	libmaus::bambam::parallel::BlockSortControl<order_type>::unique_ptr_type VC(
 		new libmaus::bambam::parallel::BlockSortControl<order_type>(
-			inform,STP,in,templevel,tmpfilebase,hash
+			inform,STP,in,templevel,tmpfilebase,seqchksumhash
 		)
 	);
 	VC->enqueReadPackage();
@@ -197,20 +228,13 @@ int bamsormadup(::libmaus::util::ArgInfo const & arginfo)
 	uint64_t const complistsize = 32;
 	int const level = arginfo.getValue<int>("level",Z_DEFAULT_COMPRESSION);
 
-	if ( filehash == "sha512" )
-	{
-		mergeBlocks<libmaus::digest::SHA2_512>(
-			STP,std::cout,sheader,BI,Pdupvec,level,inputblocksize,inputblocksperfile,mergebuffersize,mergebuffers,complistsize,hash,headerchecksumstr.str(),
-			filehash
-		);
-	}
-	else
-	{
-		mergeBlocks<libmaus::util::MD5>(
-			STP,std::cout,sheader,BI,Pdupvec,level,inputblocksize,inputblocksperfile,mergebuffersize,mergebuffers,complistsize,hash,headerchecksumstr.str(),
-			"md5"
-		);
-	}
+	mergeBlocks(
+		STP,std::cout,sheader,BI,Pdupvec,level,inputblocksize,inputblocksperfile,mergebuffersize,mergebuffers,complistsize,seqchksumhash,headerchecksumstr.str(),
+		digest,
+		tmpfilebase+"_index",
+		indexfilename,
+		digestfilename
+	);
 	
 	std::cerr << "[V] blocks merged in time " << rtc.formatTime(rtc.getElapsedSeconds()) << std::endl;
 
@@ -222,10 +246,18 @@ int bamsormadup(::libmaus::util::ArgInfo const & arginfo)
 	return returncode;
 }
 
+
 int main(int argc, char * argv[])
 {
 	try
 	{
+		#if defined(LIBMAUS_HAVE_SHA2_ASSEMBLY)
+		libmaus::digest::DigestFactoryContainer::addFactories(libmaus::digest::DigestFactory_SHA2_ASM());
+		#endif
+		#if defined(LIBMAUS_HAVE_SMMINTRIN_H)
+		libmaus::digest::DigestFactoryContainer::addFactories(libmaus::digest::DigestFactory_CRC32C_SSE42());
+		#endif
+		
 		::libmaus::util::ArgInfo const arginfo(argc,argv);
 		
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
@@ -261,7 +293,10 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( std::string("inputformat=<[")+getDefaultInputFormat()+"]>", std::string("input format (sam,bam)") ) );
 				V.push_back ( std::pair<std::string,std::string> ( "M=<filename>", "metrics file, stderr if unset" ) );
 				// V.push_back ( std::pair<std::string,std::string> ( std::string("outputformat=<[bam]>", std::string("output format (bam)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( std::string("hash=<[")+getDefaultHash()+"]>", "hash digest function: " + libmaus::bambam::ChecksumsFactory::getSupportedHashVariantsList()) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("seqchksumhash=<[")+getDefaultSeqChksumHash()+"]>", "seqchksum digest function: " + libmaus::bambam::ChecksumsFactory::getSupportedHashVariantsList()) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("digest=<[")+getDefaultDigest()+"]>", "hash digest computed for output stream (md5, sha512)") );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("digestfilename=<[]>"), "name of file for storing hash digest computed for output stream (not stored by default)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("indexfilename=<[]>"), "name of file for storing BAM index (not stored by default)" ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 
