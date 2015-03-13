@@ -13,29 +13,54 @@ bool clipAdapters(
 	uint64_t const asclip = algn.hasAux("as") ? algn.getAuxAsNumber<int>("as") : 0;
 	uint64_t const a3clip = algn.hasAux("a3") ? algn.getAuxAsNumber<int>("a3") : 0;
 	uint64_t const aclip = std::max(asclip,a3clip);
+	bool     const reverse = algn.isReverse();
 	
 	if ( aclip )
 	{
 		uint64_t const len = algn.decodeRead(R);
-		/* uint64_t const qlen = */ algn.decodeQual(Q);
+		algn.decodeQual(Q);
 		
 		if ( len - aclip )
 		{
-			// FIXME: if read is on the reverse strand, clip front instead of back
-			if ( algn.isMapped() )
+		    	if ( !reverse )
 			{
-				uint32_t const numcigop = algn.getCigarOperations(cigop);
-					
-				if ( numcigop == cigop.size() )
-					cigop.resize(numcigop+1);
-			
-				cigop[numcigop] = libmaus::bambam::cigar_operation(5,aclip);
-				algn.replaceCigarString(cigop.begin(),numcigop+1,T);
+				if ( algn.isMapped() )
+				{
+					uint32_t const numcigop = algn.getCigarOperations(cigop);
+
+					if ( numcigop == cigop.size() )
+						cigop.resize(numcigop+1);
+
+					cigop[numcigop] = libmaus::bambam::cigar_operation(5,aclip);
+					algn.replaceCigarString(cigop.begin(),numcigop+1,T);
+				}
+
+				algn.replaceSequence(seqenc,R.begin(),Q.begin(),len-aclip,T);
+				algn.putAuxString("qs",std::string(R.begin()+(len-aclip),R.begin()+len));
+				algn.putAuxString("qq",std::string(Q.begin()+(len-aclip),Q.begin()+len));
 			}
-		
-			algn.replaceSequence(seqenc,R.begin(),Q.begin(),len-aclip,T);
-			algn.putAuxString("qs",std::string(R.begin()+(len-aclip),R.begin()+len));
-			algn.putAuxString("qq",std::string(Q.begin()+(len-aclip),Q.begin()+len));
+			else
+			{
+				if ( algn.isMapped() )
+				{
+			    		uint32_t const numcigop = algn.getCigarOperations(cigop);
+
+					if ( numcigop == cigop.size() )
+					    cigop.resize(numcigop+1);
+
+
+					for (uint32_t i = numcigop; i > 0; i--) {
+					    cigop[i] = cigop[i - 1];
+					}
+
+					cigop[0] = libmaus::bambam::cigar_operation(5,aclip);
+					algn.replaceCigarString(cigop.begin(),numcigop+1,T);
+				}
+
+				algn.replaceSequence(seqenc, (R.begin() + aclip), (Q.begin() + aclip), len - aclip, T);
+				algn.putAuxString("qs", std::string(R.begin(), R.begin() + aclip));
+				algn.putAuxString("qq", std::string(Q.begin(), Q.begin() + aclip));
+			}
 		}
 	}
 
