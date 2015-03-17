@@ -199,7 +199,8 @@ int bamsormadup(::libmaus::util::ArgInfo const & arginfo)
 
 	std::ostream & metricsstr = *pmetricstr;
 
-	VC->flushReadEndsLists(metricsstr,"bamsormadup");
+	VC->flushReadEndsLists();
+	VC->mergeReadEndsLists(metricsstr,"bamsormadup");
 	
 	metricsstr.flush();
 	pM.reset();
