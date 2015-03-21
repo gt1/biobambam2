@@ -80,7 +80,7 @@ static int
 		out, // std::ostream & 
 		sheader, // libmaus::autoarray::AutoArray<char> const & 
 		BI, // std::vector<libmaus::bambam::parallel::GenericInputControlStreamInfo> const &
-		*Pdupvec, // libmaus::bitio::BitVector::unique_ptr_type const &
+		Pdupvec.get(), // libmaus::bitio::BitVector::unique_ptr_type const &
 		level, // int
 		inputblocksize, // uint64_t
 		inputblocksperfile /* uint64_t, blocks per channel */,
