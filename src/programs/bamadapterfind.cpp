@@ -76,7 +76,17 @@ void adapterListMatch(
 	double const pT
 )
 {
-	uint64_t const len = algn.decodeRead(Aread);
+    	uint64_t len;
+
+    	if ( algn.isReverse() ) 
+	{
+	        len = algn.decodeReadRC(Aread);
+	} 
+	else
+	{
+	    	len = algn.decodeRead(Aread);
+	}
+
 	uint8_t const * const ua = reinterpret_cast<uint8_t const *>(Aread.begin());
 			
 	bool const matched = AF.searchAdapters(
@@ -420,42 +430,40 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 		
 		unsigned int const rev0 = algns[0].isReverse() ? 1 : 0;
 		unsigned int const rev1 = algns[1].isReverse() ? 1 : 0;
-		unsigned int const map0 = algns[0].isMapped() ? 1 : 0;
-		unsigned int const map1 = algns[1].isMapped() ? 1 : 0;
 		
 		/* 
-		 * if both are mapped then both are supposed to be stored relative to
-		 * the forward strand;
-		 * if no end is mapped, and the second read is marked as one the
-		 * reverse strand, then we do the same
+		 * Whether a sequence needs to be reverse complemented for
+		 * adaptor detection depends on its strand and in what orientation
+		 * it is stored.
 		 */
-		if ( 
-			(map0 + map1 == 2) 
-			||
-			( ((map0+map1)==0) && (!rev0) && (rev1) )
-		)
+		 
+		if ( !rev0 ) 
 		{
-			algns[0].decodeRead(seqs[0]);
-			algns[1].decodeRead(seqs[1]);
-		}
-		else if ( (map0+map1) == 0 && (!rev0) && (!rev1) )
-		{
-			algns[0].decodeRead(seqs[0]);
-			algns[1].decodeReadRC(seqs[1]);	
+    	    		algns[0].decodeRead(seqs[0]);
+
+			if ( !rev1 ) 
+			{
+			        algns[1].decodeReadRC(seqs[1]);
+			} 
+			else
+			{
+		    	        algns[1].decodeRead(seqs[1]);
+			}
 		}
 		else
 		{
-			if ( clip )
+			algns[0].decodeReadRC(seqs[0]);
+
+			if ( !rev1 ) 
 			{
-				clipAdapters(algns[0],CR,CQ,seqenc,cigop,T);
-				clipAdapters(algns[1],CR,CQ,seqenc,cigop,T);
+			        algns[1].decodeReadRC(seqs[1]);
 			}
-			
-			algns[0].serialise(writer->getStream());
-			algns[1].serialise(writer->getStream());		
-			continue;
+			else
+			{
+		    	        algns[1].decodeRead(seqs[1]);
+			}
 		}
-			
+		
 		uint64_t const l0 = algns[0].getLseq();
 		uint64_t const l1 = algns[1].getLseq();
 		uint64_t const lm = std::min(l0,l1);
@@ -577,8 +585,6 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 									<< " mismatchrate=" << 
 										nummis << "/" << (restoverlap+lseedlength) << "=" <<
 										static_cast<double>(nummis)/(restoverlap+lseedlength)
-									<< " map0=" << map0
-									<< " map1=" << map1 
 									<< " al0=" << al0 
 									<< " al1=" << al1
 									<< " aldif=" << aldif
