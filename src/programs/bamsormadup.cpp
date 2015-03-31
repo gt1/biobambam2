@@ -68,7 +68,8 @@ static int
 	std::string const & digesttype,
 	std::string const & indextmpfileprefix,
 	std::string const & indexfilename,
-	std::string const & digestfilename
+	std::string const & digestfilename,
+	libmaus::bambam::parallel::BlockMergeControl::block_merge_output_format_t const oformat
 )
 {	
 	typedef libmaus::digest::DigestInterface digest_interface_type;
@@ -89,7 +90,8 @@ static int
 		complistsize /* uint64_t, number of bgzf preload blocks */,
 		hash, // std::string
 		indextmpfileprefix,
-		Pdigest.get()
+		Pdigest.get(),
+		oformat
 	);
 	BMC.addPending();			
 	BMC.waitWritingFinished();
@@ -229,12 +231,18 @@ int bamsormadup(::libmaus::util::ArgInfo const & arginfo)
 	uint64_t const complistsize = 32;
 	int const level = arginfo.getValue<int>("level",Z_DEFAULT_COMPRESSION);
 
+	libmaus::bambam::parallel::BlockMergeControl::block_merge_output_format_t oformat = libmaus::bambam::parallel::BlockMergeControl::output_format_bam;
+		
+	if ( arginfo.getUnparsedValue("outputformat","bam") == "sam" )
+		oformat = libmaus::bambam::parallel::BlockMergeControl::output_format_sam;
+
 	mergeBlocks(
 		STP,std::cout,sheader,BI,Pdupvec,level,inputblocksize,inputblocksperfile,mergebuffersize,mergebuffers,complistsize,seqchksumhash,headerchecksumstr.str(),
 		digest,
 		tmpfilebase+"_index",
 		indexfilename,
-		digestfilename
+		digestfilename,
+		oformat
 	);
 	
 	std::cerr << "[V] blocks merged in time " << rtc.formatTime(rtc.getElapsedSeconds()) << std::endl;
