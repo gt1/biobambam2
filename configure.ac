@@ -1,4 +1,4 @@
-AC_INIT(biobambam,0.0.189,[gt1@sanger.ac.uk],[biobambam],[http://www.sanger.ac.uk])
+AC_INIT(biobambam,0.0.191,[gt1@sanger.ac.uk],[biobambam],[http://www.sanger.ac.uk])
 AC_CANONICAL_SYSTEM
 AC_PROG_LIBTOOL
 
@@ -148,9 +148,9 @@ if test ! -z "${with_libmaus}" ; then
 	fi
 fi
 
-PKG_CHECK_MODULES([libmaus],[libmaus >= 0.0.195])
-PKG_CHECK_MODULES([libmausdigests],[libmausdigests >= 0.0.195])
-PKG_CHECK_MODULES([libmausseqchksumsfactory],[libmausseqchksumsfactory >= 0.0.195])
+PKG_CHECK_MODULES([libmaus],[libmaus >= 0.0.196])
+PKG_CHECK_MODULES([libmausdigests],[libmausdigests >= 0.0.196])
+PKG_CHECK_MODULES([libmausseqchksumsfactory],[libmausseqchksumsfactory >= 0.0.196])
 
 if test ! -z "${with_libmaus}" ; then
 	if test ! -z "${PKGCONFIGPATHSAVE}" ; then
@@ -241,7 +241,7 @@ if test "${have_libmaus_irods}" = "yes" ; then
 		fi
 	fi
 
-	PKG_CHECK_MODULES([libmausirods],[libmausirods >= 0.0.195])
+	PKG_CHECK_MODULES([libmausirods],[libmausirods >= 0.0.196])
 
 	LIBMAUSIRODSCPPFLAGS="${libmausirods_CFLAGS}"
 	LIBMAUSIRODSLIBS="${libmausirods_LIBS}"
