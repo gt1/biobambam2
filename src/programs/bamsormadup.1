@@ -1,15 +1,19 @@
-.TH BAMSORMADUP 1 "March 2015" BIOBAMBAM
+.TH BAMSORMADUP 1 "April 2015" BIOBAMBAM
 .SH NAME
-bamsormadup - sort name collated SAM or BAM file by coordinates and mark duplicates
+bamsormadup - sort name collated SAM or BAM file by coordinate and mark duplicates or sort SAM or BAM file by query name
 .SH SYNOPSIS
 .PP
 .B bamsormadup [options]
 .SH DESCRIPTION
+bamsormadup has two modes of operation depending on the value of the SO
+parameter. If SO=coordinate or if the SO key is not given, then
 bamsormadup reads a name collated BAM or SAM file from standard input, runs a fix mate
 process, sorts the contained alignments by coordinate, marks duplicate
 alignments and writes the sorted alignments to standard output in BAM
 format. An alignment file is name collated if all the alignments for one
-read name appear consecutively in the file.
+read name appear consecutively in the file. If SO=queryname then the program
+reads a BAM or SAM file from standard input, sorts it by queryname and writes the
+sorted file on standard output in BAM format.
 .PP
 The following key=value pairs can be given:
 .PP
@@ -46,6 +50,13 @@ name of the metrics file for duplicate marking (metrics are written to standard 
 .PP
 .B tmpfile=<bamsormadup_hostname_pid_starttime>:
 prefix for temporary files. By default the temporary files are created in the current directory.
+.PP
+.B SO=<coordinate|queryname>: 
+set the sort order. Valid values are
+.IP coordinate
+sort alignments by coordinate. Input is assumed to be name collated.
+.IP queryname
+sort alignments by query name. No assumption is made on the order of the input.
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"

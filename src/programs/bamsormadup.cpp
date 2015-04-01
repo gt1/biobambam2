@@ -23,6 +23,7 @@
 #include <libmaus/bambam/parallel/BlockSortControl.hpp>
 #include <libmaus/bambam/parallel/BlockMergeControl.hpp>
 #include <libmaus/bambam/parallel/FragmentAlignmentBufferPosComparator.hpp>
+#include <libmaus/bambam/parallel/FragmentAlignmentBufferQueryNameComparator.hpp>
 
 #include <libmaus/digest/Digests.hpp>
 
@@ -49,6 +50,7 @@ static std::string getDefaultInputFormat() { return "bam"; }
 static std::string getDefaultSeqChksumHash() { return "crc32prod"; }
 static std::string getDefaultDigest() { return "md5"; }
 
+template<typename heap_element_type>
 static int 
 	mergeBlocks
 (
@@ -69,14 +71,15 @@ static int
 	std::string const & indextmpfileprefix,
 	std::string const & indexfilename,
 	std::string const & digestfilename,
-	libmaus::bambam::parallel::BlockMergeControl::block_merge_output_format_t const oformat
+	libmaus::bambam::parallel::BlockMergeControlTypeBase::block_merge_output_format_t const oformat,
+	bool const bamindex
 )
 {	
 	typedef libmaus::digest::DigestInterface digest_interface_type;
 	typedef digest_interface_type::unique_ptr_type digest_interface_pointer_type;
 	digest_interface_pointer_type Pdigest(::libmaus::digest::DigestFactoryContainer::construct(digesttype));
-
-	libmaus::bambam::parallel::BlockMergeControl BMC(
+	
+	libmaus::bambam::parallel::BlockMergeControl<heap_element_type> BMC(
 		STP, // libmaus::parallel::SimpleThreadPool &
 		out, // std::ostream & 
 		sheader, // libmaus::autoarray::AutoArray<char> const & 
@@ -91,7 +94,8 @@ static int
 		hash, // std::string
 		indextmpfileprefix,
 		Pdigest.get(),
-		oformat
+		oformat,
+		bamindex
 	);
 	BMC.addPending();			
 	BMC.waitWritingFinished();
@@ -122,12 +126,19 @@ static int
 	}	
 }
 
-int bamsormadup(::libmaus::util::ArgInfo const & arginfo)
+template<typename order_type, typename heap_element_type, bool create_dup_mark_info>
+int bamsormadupTemplate(
+	::libmaus::util::ArgInfo const & arginfo,
+	bool const bamindex,
+	bool const fixmates,
+	bool const dupmarksupport,
+	std::string const & sortordername
+)
 {
 	int returncode = EXIT_SUCCESS;
 
 	libmaus::timing::RealTimeClock progrtc; progrtc.start();
-	typedef libmaus::bambam::parallel::FragmentAlignmentBufferPosComparator order_type;
+	// typedef libmaus::bambam::parallel::FragmentAlignmentBufferPosComparator order_type;
 	// typedef libmaus::bambam::parallel::FragmentAlignmentBufferNameComparator order_type;
 	
 	libmaus::timing::RealTimeClock rtc;
@@ -162,9 +173,11 @@ int bamsormadup(::libmaus::util::ArgInfo const & arginfo)
 	}
 				
 	libmaus::parallel::SimpleThreadPool STP(numlogcpus);
-	libmaus::bambam::parallel::BlockSortControl<order_type>::unique_ptr_type VC(
-		new libmaus::bambam::parallel::BlockSortControl<order_type>(
-			inform,STP,in,templevel,tmpfilebase,seqchksumhash
+	typename libmaus::bambam::parallel::BlockSortControl<order_type,create_dup_mark_info>::unique_ptr_type VC(
+		new libmaus::bambam::parallel::BlockSortControl<order_type,create_dup_mark_info>(
+			inform,STP,in,templevel,tmpfilebase,seqchksumhash,
+			fixmates,
+			dupmarksupport
 		)
 	);
 	VC->enqueReadPackage();
@@ -201,8 +214,11 @@ int bamsormadup(::libmaus::util::ArgInfo const & arginfo)
 
 	std::ostream & metricsstr = *pmetricstr;
 
-	VC->flushReadEndsLists();
-	VC->mergeReadEndsLists(metricsstr,"bamsormadup");
+	if ( create_dup_mark_info )
+	{
+		VC->flushReadEndsLists();
+		VC->mergeReadEndsLists(metricsstr,"bamsormadup");
+	}
 	
 	metricsstr.flush();
 	pM.reset();
@@ -211,7 +227,7 @@ int bamsormadup(::libmaus::util::ArgInfo const & arginfo)
 	libmaus::bitio::BitVector::unique_ptr_type Pdupvec(VC->releaseDupBitVector());
 	libmaus::bambam::BamHeader::unique_ptr_type Pheader(VC->getHeader());
 	::libmaus::bambam::BamHeader::unique_ptr_type uphead(libmaus::bambam::BamHeaderUpdate::updateHeader(arginfo,*Pheader,"bamsormadup",PACKAGE_VERSION));
-	uphead->changeSortOrder("coordinate");
+	uphead->changeSortOrder(sortordername /* "coordinate" */);
 	uphead->text = uphead->filterOutChecksum(uphead->text);
 	uphead->text += headerchecksumstr.str();
 	std::ostringstream hostr;
@@ -231,18 +247,19 @@ int bamsormadup(::libmaus::util::ArgInfo const & arginfo)
 	uint64_t const complistsize = 32;
 	int const level = arginfo.getValue<int>("level",Z_DEFAULT_COMPRESSION);
 
-	libmaus::bambam::parallel::BlockMergeControl::block_merge_output_format_t oformat = libmaus::bambam::parallel::BlockMergeControl::output_format_bam;
+	libmaus::bambam::parallel::BlockMergeControlTypeBase::block_merge_output_format_t oformat = libmaus::bambam::parallel::BlockMergeControlTypeBase::output_format_bam;
 		
 	if ( arginfo.getUnparsedValue("outputformat","bam") == "sam" )
-		oformat = libmaus::bambam::parallel::BlockMergeControl::output_format_sam;
+		oformat = libmaus::bambam::parallel::BlockMergeControlTypeBase::output_format_sam;
 
-	mergeBlocks(
+	mergeBlocks<heap_element_type>(
 		STP,std::cout,sheader,BI,Pdupvec,level,inputblocksize,inputblocksperfile,mergebuffersize,mergebuffers,complistsize,seqchksumhash,headerchecksumstr.str(),
 		digest,
 		tmpfilebase+"_index",
 		indexfilename,
 		digestfilename,
-		oformat
+		oformat,
+		bamindex
 	);
 	
 	std::cerr << "[V] blocks merged in time " << rtc.formatTime(rtc.getElapsedSeconds()) << std::endl;
@@ -255,6 +272,21 @@ int bamsormadup(::libmaus::util::ArgInfo const & arginfo)
 	return returncode;
 }
 
+int bamsormadup(::libmaus::util::ArgInfo const & arginfo)
+{
+	std::string const so = arginfo.getUnparsedValue("SO","coordinate");
+	
+	if ( so == "queryname" )
+		return bamsormadupTemplate<
+				libmaus::bambam::parallel::FragmentAlignmentBufferQueryNameComparator,
+				libmaus::bambam::parallel::GenericInputControlMergeHeapEntryQueryName,
+				false /* create dup mark info */>(arginfo,false /* bam index */,false /* fix mates */,false /* dup mark support */,"queryname");
+	else
+		return bamsormadupTemplate<
+				libmaus::bambam::parallel::FragmentAlignmentBufferPosComparator,
+				libmaus::bambam::parallel::GenericInputControlMergeHeapEntryCoordinate,
+				true /* create dup mark info */>(arginfo,true /* bam index */,true /* fix mates */,true /* dup mark support */,"coordinate");
+}
 
 int main(int argc, char * argv[])
 {
@@ -306,14 +338,15 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( std::string("digest=<[")+getDefaultDigest()+"]>", "hash digest computed for output stream (md5, sha512)") );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("digestfilename=<[]>"), "name of file for storing hash digest computed for output stream (not stored by default)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("indexfilename=<[]>"), "name of file for storing BAM index (not stored by default)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("SO=<coordinate|queryname>"), "output sort order (coordinate by default)" ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;
 			}
-			
-		return bamsormadup(arginfo);
+
+		return bamsormadup(arginfo);			
 	}
 	catch(std::exception const & ex)
 	{
