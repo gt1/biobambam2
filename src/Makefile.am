@@ -71,6 +71,7 @@ bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamr
 	bamlastfilter \
 	bamfilternames \
 	bamexplode \
+	bamranksort \
 	@BAMALIGNMENTOFFSETSINSTEXP@ @BLASTXMLTOBAMINSTEXP@
 
 noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments bamtoname \
@@ -399,3 +400,8 @@ bamexplode_SOURCES = programs/bamexplode.cpp biobambam/Licensing.cpp
 bamexplode_LDADD = ${LIBMAUSLIBS}
 bamexplode_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
 bamexplode_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+
+bamranksort_SOURCES = programs/bamranksort.cpp biobambam/Licensing.cpp
+bamranksort_LDADD = ${LIBMAUSLIBS}
+bamranksort_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
+bamranksort_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
