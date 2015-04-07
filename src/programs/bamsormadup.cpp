@@ -250,7 +250,7 @@ int bamsormadupTemplate(
 		
 	if ( arginfo.getUnparsedValue("outputformat","bam") == "sam" )
 		oformat = libmaus::bambam::parallel::BlockMergeControlTypeBase::output_format_sam;
-	if ( arginfo.getUnparsedValue("outputformat","cram") == "cram" )
+	if ( arginfo.getUnparsedValue("outputformat","bam") == "cram" )
 		oformat = libmaus::bambam::parallel::BlockMergeControlTypeBase::output_format_cram;
 
 	uint64_t const mergebuffers = 
