@@ -242,8 +242,7 @@ int bamsormadupTemplate(
 	rtc.start();
 	uint64_t const inputblocksize = 1024*1024;
 	uint64_t const inputblocksperfile = 8;
-	uint64_t const mergebuffersize = 256*1024*1024;
-	uint64_t const mergebuffers = 4;
+	uint64_t const mergebuffermemory = arginfo.getValueUnsignedNumeric("mergebuffermemory", 1024ull * 1024ull * 1024ull);
 	uint64_t const complistsize = 32;
 	int const level = arginfo.getValue<int>("level",Z_DEFAULT_COMPRESSION);
 
@@ -251,6 +250,17 @@ int bamsormadupTemplate(
 		
 	if ( arginfo.getUnparsedValue("outputformat","bam") == "sam" )
 		oformat = libmaus::bambam::parallel::BlockMergeControlTypeBase::output_format_sam;
+	if ( arginfo.getUnparsedValue("outputformat","cram") == "cram" )
+		oformat = libmaus::bambam::parallel::BlockMergeControlTypeBase::output_format_cram;
+
+	uint64_t const mergebuffers = 
+		(oformat == libmaus::bambam::parallel::BlockMergeControlTypeBase::output_format_cram)
+		?
+		(2*STP.getNumThreads())
+		:
+		4
+	;
+	uint64_t const mergebuffersize = std::max(mergebuffermemory / mergebuffers,static_cast<uint64_t>(1ull));
 
 	mergeBlocks<heap_element_type>(
 		STP,std::cout,sheader,BI,Pdupvec,level,inputblocksize,inputblocksperfile,mergebuffersize,mergebuffers,complistsize,seqchksumhash,headerchecksumstr.str(),
@@ -339,6 +349,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( std::string("digestfilename=<[]>"), "name of file for storing hash digest computed for output stream (not stored by default)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("indexfilename=<[]>"), "name of file for storing BAM index (not stored by default)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("SO=<coordinate|queryname>"), "output sort order (coordinate by default)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("outputformat=<[bam]>"), std::string("output format (sam,bam,cram)") ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 
