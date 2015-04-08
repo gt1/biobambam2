@@ -72,12 +72,15 @@ static int
 	std::string const & indexfilename,
 	std::string const & digestfilename,
 	libmaus::bambam::parallel::BlockMergeControlTypeBase::block_merge_output_format_t const oformat,
-	bool const bamindex
+	bool const bamindex,
+	std::string const & sortordername
 )
 {	
 	typedef libmaus::digest::DigestInterface digest_interface_type;
 	typedef digest_interface_type::unique_ptr_type digest_interface_pointer_type;
 	digest_interface_pointer_type Pdigest(::libmaus::digest::DigestFactoryContainer::construct(digesttype));
+
+	bool const computerefidintervals = (oformat == libmaus::bambam::parallel::BlockMergeControlTypeBase::output_format_cram) && (sortordername == "coordinate");
 	
 	libmaus::bambam::parallel::BlockMergeControl<heap_element_type> BMC(
 		STP, // libmaus::parallel::SimpleThreadPool &
@@ -95,7 +98,8 @@ static int
 		indextmpfileprefix,
 		Pdigest.get(),
 		oformat,
-		bamindex
+		bamindex,
+		computerefidintervals
 	);
 	BMC.addPending();			
 	BMC.waitWritingFinished();
@@ -269,7 +273,8 @@ int bamsormadupTemplate(
 		indexfilename,
 		digestfilename,
 		oformat,
-		bamindex
+		bamindex,
+		sortordername
 	);
 	
 	std::cerr << "[V] blocks merged in time " << rtc.formatTime(rtc.getElapsedSeconds()) << std::endl;
