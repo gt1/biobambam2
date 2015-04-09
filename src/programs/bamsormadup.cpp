@@ -266,16 +266,25 @@ int bamsormadupTemplate(
 	;
 	uint64_t const mergebuffersize = std::max(mergebuffermemory / mergebuffers,static_cast<uint64_t>(1ull));
 
-	mergeBlocks<heap_element_type>(
-		STP,std::cout,sheader,BI,Pdupvec,level,inputblocksize,inputblocksperfile,mergebuffersize,mergebuffers,complistsize,seqchksumhash,headerchecksumstr.str(),
-		digest,
-		tmpfilebase+"_index",
-		indexfilename,
-		digestfilename,
-		oformat,
-		bamindex,
-		sortordername
-	);
+	try
+	{
+		mergeBlocks<heap_element_type>(
+			STP,std::cout,sheader,BI,Pdupvec,level,inputblocksize,inputblocksperfile,mergebuffersize,mergebuffers,complistsize,seqchksumhash,headerchecksumstr.str(),
+			digest,
+			tmpfilebase+"_index",
+			indexfilename,
+			digestfilename,
+			oformat,
+			bamindex,
+			sortordername
+		);
+	}
+	catch(...)
+	{
+		STP.terminate();
+		STP.join();
+		throw;
+	}
 	
 	std::cerr << "[V] blocks merged in time " << rtc.formatTime(rtc.getElapsedSeconds()) << std::endl;
 
