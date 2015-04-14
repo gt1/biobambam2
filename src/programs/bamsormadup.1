@@ -57,6 +57,18 @@ set the sort order. Valid values are
 sort alignments by coordinate. Input is assumed to be name collated.
 .IP queryname
 sort alignments by query name. No assumption is made on the order of the input.
+.PP
+.B reference=<>: 
+name of reference FastA file when writing CRAM. This file will be used for
+filling missing UR and M5 fields of SQ header lines. It may refer to a local
+file or a file stored on an http or ftp server. The file is uncompressed on
+the fly if the file name ends on .gz . If the REF_CACHE environment variable
+is set to the name of an existing directory, then normalised cache files
+will be written to this directory for each reference sequence. The file
+names are constructed from the directory name and the MD5 checksum of each
+reference sequence. This writing of cached files is omitted however, if a
+previously existing file is found in the list of read only cache locations
+given by the REF_PATH environment variable.
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"

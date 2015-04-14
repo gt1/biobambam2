@@ -375,13 +375,13 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( std::string("tmpfile=<[")+arginfo.getDefaultTmpFileName()+"]>", "prefix for temporary files, default: create files in current directory" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("inputformat=<[")+getDefaultInputFormat()+"]>", std::string("input format (sam,bam)") ) );
 				V.push_back ( std::pair<std::string,std::string> ( "M=<filename>", "metrics file, stderr if unset" ) );
-				// V.push_back ( std::pair<std::string,std::string> ( std::string("outputformat=<[bam]>", std::string("output format (bam)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("seqchksumhash=<[")+getDefaultSeqChksumHash()+"]>", "seqchksum digest function: " + libmaus::bambam::ChecksumsFactory::getSupportedHashVariantsList()) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("digest=<[")+getDefaultDigest()+"]>", "hash digest computed for output stream (md5, sha512)") );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("digestfilename=<[]>"), "name of file for storing hash digest computed for output stream (not stored by default)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("indexfilename=<[]>"), "name of file for storing BAM index (not stored by default)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("SO=<coordinate|queryname>"), "output sort order (coordinate by default)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("outputformat=<[bam]>"), std::string("output format (sam,bam,cram)") ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("reference=<[]>"), std::string("reference FastA for writing cram") ) );
 
 				::biobambam::Licensing::printMap(std::cerr,V);
 
