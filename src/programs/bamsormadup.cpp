@@ -234,6 +234,30 @@ int bamsormadupTemplate(
 	uphead->changeSortOrder(sortordername /* "coordinate" */);
 	uphead->text = uphead->filterOutChecksum(uphead->text);
 	uphead->text += headerchecksumstr.str();
+
+	libmaus::bambam::parallel::BlockMergeControlTypeBase::block_merge_output_format_t oformat = libmaus::bambam::parallel::BlockMergeControlTypeBase::output_format_bam;
+		
+	if ( arginfo.getUnparsedValue("outputformat","bam") == "sam" )
+		oformat = libmaus::bambam::parallel::BlockMergeControlTypeBase::output_format_sam;
+	if ( arginfo.getUnparsedValue("outputformat","bam") == "cram" )
+		oformat = libmaus::bambam::parallel::BlockMergeControlTypeBase::output_format_cram;
+
+	std::string const reference = arginfo.getUnparsedValue("reference",std::string());
+        if ( oformat == libmaus::bambam::parallel::BlockMergeControlTypeBase::output_format_cram )
+        {
+        	try
+                {
+                	uphead->checkSequenceChecksums(reference);
+		}
+		catch(...)
+		{
+			STP.terminate();
+			STP.join();
+			throw;
+		}
+	}
+                                                                                                
+
 	std::ostringstream hostr;
 	uphead->serialise(hostr);
 	std::string const hostrstr = hostr.str();
@@ -250,12 +274,6 @@ int bamsormadupTemplate(
 	uint64_t const complistsize = 32;
 	int const level = arginfo.getValue<int>("level",Z_DEFAULT_COMPRESSION);
 
-	libmaus::bambam::parallel::BlockMergeControlTypeBase::block_merge_output_format_t oformat = libmaus::bambam::parallel::BlockMergeControlTypeBase::output_format_bam;
-		
-	if ( arginfo.getUnparsedValue("outputformat","bam") == "sam" )
-		oformat = libmaus::bambam::parallel::BlockMergeControlTypeBase::output_format_sam;
-	if ( arginfo.getUnparsedValue("outputformat","bam") == "cram" )
-		oformat = libmaus::bambam::parallel::BlockMergeControlTypeBase::output_format_cram;
 
 	uint64_t const mergebuffers = 
 		(oformat == libmaus::bambam::parallel::BlockMergeControlTypeBase::output_format_cram)
