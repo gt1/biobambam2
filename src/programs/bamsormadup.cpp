@@ -243,11 +243,35 @@ int bamsormadupTemplate(
 		oformat = libmaus::bambam::parallel::BlockMergeControlTypeBase::output_format_cram;
 
 	std::string const reference = arginfo.getUnparsedValue("reference",std::string());
-        if ( oformat == libmaus::bambam::parallel::BlockMergeControlTypeBase::output_format_cram )
-        {
-        	try
-                {
-                	uphead->checkSequenceChecksums(reference);
+	if ( oformat == libmaus::bambam::parallel::BlockMergeControlTypeBase::output_format_cram )
+	{
+		try
+		{
+			uphead->checkSequenceChecksums(reference);
+			
+			if ( ! uphead->checkSequenceChecksumsCached(false /* throw */) )
+			{
+				char const * refcache = getenv("REF_CACHE");
+				
+				if ( (! refcache) || (!*refcache) )
+				{
+					libmaus::exception::LibMausException lme;
+					lme.getStream() << "Sequence cache is missing sequences but REF_CACHE is not set" << std::endl;
+					lme.finish();
+					throw lme;	
+				}
+				
+				// try to fill cache
+				uphead->getSequenceURSet(true);
+			}
+
+			if ( ! uphead->checkSequenceChecksumsCached(true /* throw */) )
+			{
+				libmaus::exception::LibMausException lme;
+				lme.getStream() << "Sequence cache is missing sequences" << std::endl;
+				lme.finish();
+				throw lme;
+			}
 		}
 		catch(...)
 		{
@@ -256,7 +280,6 @@ int bamsormadupTemplate(
 			throw;
 		}
 	}
-                                                                                                
 
 	std::ostringstream hostr;
 	uphead->serialise(hostr);
