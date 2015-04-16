@@ -1,0 +1,96 @@
+.TH BAMMERGE 1 "October 2013" BIOBAMBAM
+.SH NAME
+bammerge - merge BAM files
+.SH SYNOPSIS
+.PP
+.B bammerge
+[options]
+.SH DESCRIPTION
+bammerge reads a set of input BAM files, merges the contained headers and
+alignment data and writes the output on standard output in BAM format. The
+input files can be specified via the I key. Any none key=value arguments
+given after the key=value pairs will also be considered as input files. The
+input files need to be sorted by coordinate or query name. The set of
+reference sequences in the files does not need to be identical. For merging
+coordinate sorted files however the order of the reference sequences in the 
+headers needs to be consistent among the files, i.e. if reference sequence 
+A appears before reference sequence B in any input file, then this needs 
+to hold for all other files as well. If the order is not consistent then
+bammerge cannot be used for merging. In this case the merging can be done
+by concatenating the files using bamcat and running bamsort afterwards.
+.PP
+The following key=value pairs can be given:
+.PP
+.B I=<stdin>: 
+name of the input file. This key can be used multiple times
+.PP
+.B SO=<coordinate>:
+Sort order. By default the sort order is coordinate.
+.IP coordinate:
+input files are sorted by coordinate. The created output file will be sorted by coordinate as well.
+.IP queryname:
+input files are sorted by query name. The created output file will be sorted by query name as well.
+.PP
+.B level=<-1|0|1|9|11>:
+set compression level of the output BAM file. Valid
+values are
+.IP -1:
+zlib/gzip default compression level
+.IP 0:
+uncompressed
+.IP 1:
+zlib/gzip level 1 (fast) compression
+.IP 9:
+zlib/gzip level 9 (best) compression
+.P
+If libmaus has been compiled with support for igzip (see
+https://software.intel.com/en-us/articles/igzip-a-high-performance-deflate-compressor-with-optimizations-for-genomic-data)
+then an additional valid value is
+.IP 11:
+igzip compression
+.PP
+.B verbose=<1>:
+Valid values are
+.IP 1:
+print progress report on standard error
+.IP 0:
+do not print progress report
+.PP
+.B tmpfile=<filename>: 
+prefix for temporary files. By default the temporary files are created in the current directory
+.PP
+.B md5=<0|1>:
+md5 checksum creation for output file. Valid values are
+.IP 0:
+do not compute checksum. This is the default.
+.IP 1:
+compute checksum. If the md5filename key is set, then the checksum is
+written to the given file. If md5filename is unset, then no checksum will be computed.
+.PP
+.B md5filename
+file name for md5 checksum if md5=1.
+.PP
+.B index=<0|1>:
+compute BAM index for output file. Valid values are
+.IP 0:
+do not compute BAM index. This is the default.
+.IP 1:
+compute BAM index. If the indexfilename key is set, then the BAM index is
+written to the given file. If indexfilename is unset, then no BAM index will be computed.
+.PP
+.B indexfilename
+file name for BAM index if index=1.
+.PP
+.B IL
+name of file containing input file names. The given text file contains a list of
+input file names, one file per line.
+.SH AUTHOR
+Written by German Tischler.
+.SH "REPORTING BUGS"
+Report bugs to <gt1@sanger.ac.uk>
+.SH COPYRIGHT
+Copyright \(co 2009-2013 German Tischler, \(co 2011-2013 Genome Research Limited.
+License GPLv3+: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.

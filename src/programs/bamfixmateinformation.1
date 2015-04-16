@@ -1,0 +1,116 @@
+.TH BAMFIXMATEINFORMATION 1 "December 2013" BIOBAMBAM
+.SH NAME
+bamfixmateinformation - fix mate pair information in BAM files
+.SH SYNOPSIS
+.PP
+.B bamfixmateinformation
+[options]
+.SH DESCRIPTION
+bamfixmateinformation reads a BAM, SAM or CRAM file, fixes the mate pair
+information of paired alignments and writes the resulting file as BAM, SAM
+or CRAM. The input file must be sorted by query name (see bamsort).
+bamfixmateinformation modifies the following fields for paired reads with
+aligned mates:
+.IP -
+mate alignment reference sequence id
+.IP -
+mate alignment position on reference sequence
+.IP -
+mate unmapped/mate mapped to reverse strand flags
+.IP -
+MQ auxiliary tag denoting the mapping quality of the mapped mate
+.IP -
+inferred template length
+.PP
+The following key=value pairs can be given:
+.PP
+.B level=<-1|0|1|9|11>:
+set compression level of the output BAM file. Valid
+values are
+.IP -1:
+zlib/gzip default compression level
+.IP 0:
+uncompressed
+.IP 1:
+zlib/gzip level 1 (fast) compression
+.IP 9:
+zlib/gzip level 9 (best) compression
+.P
+If libmaus has been compiled with support for igzip (see
+https://software.intel.com/en-us/articles/igzip-a-high-performance-deflate-compressor-with-optimizations-for-genomic-data)
+then an additional valid value is
+.IP 11:
+igzip compression
+.PP
+.B verbose=<1>:
+Valid values are
+.IP 1:
+print progress report on standard error
+.IP 0:
+do not print progress report
+.PP
+.B disablevalidation=<0|1>:
+sets whether input validation is performed. Valid values are
+.IP 0:
+validation is enabled (default)
+.IP 1:
+validation is disabled
+.PP
+.B md5=<0|1>:
+md5 checksum creation for output file. This option can only be given if
+outputformat=bam. Then valid values are
+.IP 0:
+do not compute checksum. This is the default.
+.IP 1:
+compute checksum. If the md5filename key is set, then the checksum is
+written to the given file. If md5filename is unset, then no checksum will be computed.
+.PP
+.B md5filename
+file name for md5 checksum if md5=1.
+.PP
+.B inputformat=<bam>: input file format.
+All versions of bamsort come with support for the BAM input format. If
+the program in addition is linked to the io_lib package, then the following
+options are valid:
+.IP bam:
+BAM (see http://samtools.sourceforge.net/SAM1.pdf)
+.IP sam:
+SAM (see http://samtools.sourceforge.net/SAM1.pdf)
+.IP cram:
+CRAM (see http://www.ebi.ac.uk/ena/about/cram_toolkit)
+.PP
+.B outputformat=<bam>: output file format.
+All versions of bamsort come with support for the BAM output format. If
+the program in addition is linked to the io_lib package, then the following
+options are valid:
+.IP bam:
+BAM (see http://samtools.sourceforge.net/SAM1.pdf)
+.IP sam:
+SAM (see http://samtools.sourceforge.net/SAM1.pdf)
+.IP cram:
+CRAM (see http://www.ebi.ac.uk/ena/about/cram_toolkit). This format is not advisable for data sorted by query name.
+.PP
+.B I=<[stdin]>: 
+input filename, standard input if unset.
+.PP
+.B O=<[stdout]>: 
+output filename, standard output if unset.
+.PP
+.B inputthreads=<[1]>:
+input helper threads, only valid for inputformat=bam.
+.PP
+.B outputthreads=<[1]>:
+output helper threads, only valid for outputformat=bam.
+.PP
+.B reference=<[]>:
+reference FastA file for inputformat=cram and outputformat=cram. An index file (.fai) is required. 
+.SH AUTHOR
+Written by German Tischler.
+.SH "REPORTING BUGS"
+Report bugs to <gt1@sanger.ac.uk>
+.SH COPYRIGHT
+Copyright \(co 2009-2013 German Tischler, \(co 2011-2013 Genome Research Limited.
+License GPLv3+: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.

@@ -1,0 +1,246 @@
+.TH BAMCOLLATE2 1 "February 2015" BIOBAMBAM
+.SH NAME
+bamcollate2 - collate reads in a SAM, BAM or CRAM file by name
+.SH SYNOPSIS
+.PP
+.B bamcollate2
+[options]
+.SH DESCRIPTION
+bamcollate2 reads a SAM, BAM or CRAM file from standard input, collates the contained
+reads/alignments by name and writes the resulting data to standard output in
+BAM format.
+.PP
+The following key=value pairs can be given:
+.PP
+.B collate=<0|1|2|3>:
+Valid values are
+.IP 3:
+collate read pairs and attach post ranks (line numbers of alignments in output file)
+to each read. For pairs this add the prefix a_b_ to a pair when the first
+read of the pair appears in line a and the second one in line b of the
+output file, e.g. the name HS5 is changed to 20_21_HS5 for both ends if read
+1 appears in line 20 and read 2 in line 21. For single end reads it add the
+prefix a_ to the name where a is the rank (line number) of the read in the output file.
+The pre rank (line number in the input file) is attached to each read by
+putting it in the zz auxiliary field as an eight byte number array similar
+to the funcionality of bamrank.
+.IP 2:
+collate read pairs and attach ranks (line numbers of alignments in source file)
+to each read. For pairs this add the prefix a_b_ to a pair when the first
+read of the pair appears in line a and the second one in line b of the
+source file, e.g. the name HS5 is changed to 25_32_HS5 for both ends if read
+1 appears in line 25 and read 2 in line 32. For single end reads it add the
+prefix a_ to the name where a is the rank (line number) of the read in the source file.
+.IP 1:
+collate read pairs
+.IP 0:
+do not collate, keep reads in the original order
+.PP
+.B filename=<stdin>: 
+input file name (data is read from standard input if this option is not given)
+.PP
+.B inputformat=<bam>: input file format
+All versions of bamcollate2 come with support for the BAM input format. If
+the program in addition is linked to the io_lib package, then the following
+options are valid:
+.IP bam:
+BAM (see http://samtools.sourceforge.net/SAM1.pdf)
+.IP sam:
+SAM (see http://samtools.sourceforge.net/SAM1.pdf)
+.IP cram:
+CRAM (see http://www.ebi.ac.uk/ena/about/cram_toolkit)
+.PP
+.B level=<-1|0|1|9|11>:
+set compression level of the output BAM file. Valid
+values are
+.IP -1:
+zlib/gzip default compression level
+.IP 0:
+uncompressed
+.IP 1:
+zlib/gzip level 1 (fast) compression
+.IP 9:
+zlib/gzip level 9 (best) compression
+.P
+If libmaus has been compiled with support for igzip (see
+https://software.intel.com/en-us/articles/igzip-a-high-performance-deflate-compressor-with-optimizations-for-genomic-data)
+then an additional valid value is
+.IP 11:
+igzip compression
+.PP
+.B exclude=<SECONDARY>:
+Do not include reads in the output that have any of the given flags set. The
+flags are given separated by commas. Valid flags are:
+.IP PAIRED:
+read was paired in sequencing
+.IP PROPER_PAIR:
+read has been mapped as part of a proper pair
+.IP UNMAP:
+read was not mapped
+.IP MUNMAP:
+mate of read was not mapped
+.IP REVERSE:
+read was mapped to the reverse strand
+.IP MREVERSE:
+mate of read was mapped to the reverse strand
+.IP READ1:
+read was first read of a pair during sequencing
+.IP READ2:
+read was second read of a pair during sequencing
+.IP SECONDARY:
+alignment is secondary, i.e. an alternative mapping to the primary alignment in the same file
+.IP QCFAIL:
+read as marked as having failed quality control
+.IP DUP:
+read is marked as a duplicate of another read in the same file (see bammarkduplicates)
+.IP SUPPLEMENTARY:
+read is marked as supplementary alignment
+.PP
+.B disablevalidation=<0>:
+Valid values are
+.IP 0:
+run input file validation on alignments (this is the default)
+.IP 1:
+do not check the validity of the input file (this may help for some broken
+input files, but it is a security risk as it can lead to the execution of
+arbitrary code through a forged input file).
+.PP
+.B colhlog=<18>
+base two logarithm of the size of the hash table used for collation (the
+default value is 18 and should work reasonably well for most input files.
+Please see the biobambam paper at arxiv.org/abs/1306.0836 for details).
+.PP
+.B colsbs=<128M>
+size of hash table overflow list in bytes (the default is 128MB and should
+work reasonably well for most input files. Please see the biobambam paper at 
+arxiv.org/abs/1306.0836 for details).
+.PP
+.B T=<bamcollate2_hostname_pid_time>
+file name of temporary file used for collation
+.PP
+.B ranges=<>:
+coordinate ranges selected from input. This option is only available for
+input files in BAM and CRAM format which have a corresponding index file (.bai for BAM, .crai for CRAM) and
+if input is via file (i.e. the filename argument is set). 
+Valid ranges consist of either
+.IP "whole\ reference\ sequence:"
+a whole reference sequence (e.g. "chr1")
+.IP "half\ open\ interval\ on\ reference\ sequence:"
+an interval on a reference sequence half open on the right (e.g. "chr1:50000"
+which means alignments overlapping chr1 from position 50000 to the end of chr1)
+.IP "interval\ on\ reference\ sequence:"
+an interval on a reference sequence (e.g. "chr1:50000-60000" which means
+alignments overlapping positions 50000 to 60000 on chr1)
+.PP
+For BAM input multiple ranges are separated by space characters (e.g. ranges="chr1:10000-20000 chr1:30000-40000").
+CRAM input supports a single range only.
+.PP
+.B reference=: 
+file name of the reference for CRAM input files. If this key is unset, then
+the CRAM file header will be scanned for obtaining a reference file name.
+.PP
+.B md5=<0|1>:
+md5 checksum creation for output file. Valid values are
+.IP 0:
+do not compute checksum. This is the default.
+.IP 1:
+compute checksum. If the md5filename key is set, then the checksum is
+written to the given file. If md5filename is unset, then no checksum will be computed.
+.PP
+.B md5filename
+file name for md5 checksum if md5=1.
+.PP
+.B index=<0|1>:
+compute BAM index for output file. Valid values are
+.IP 0:
+do not compute BAM index. This is the default.
+.IP 1:
+compute BAM index. If the indexfilename key is set, then the BAM index is
+written to the given file. If indexfilename is unset, then no BAM index will be computed.
+.PP
+.B indexfilename
+file name for BAM index if index=1.
+.PP
+.B readgroups
+comma separated list of read group identifiers to be kept. If not given all records will be kept.
+Read group filtering is only available if collate=0 and collate=1 (i.e. this
+key is ignored for collate=2 and collate=3).
+.PP
+.B mapqthres
+mapping quality threshold. This option is only available for collate=1 (i.e. it is ignored for collate=0 and
+collate>1). If this key is set, reads are kept if the mapping quality field
+is at least the given value. For paired end reads it is sufficient for a
+read or its mate to have a mapping quality above the threshold.
+.PP
+.B reset
+reduce alignments to an unmapped state (see bamreset). This key is only
+valid for collate=0, collate=1 or collate=3. The default value is 0 for
+collate=0 and collate=1 and 1 for collate=3.
+.PP
+.B classes
+types of alignment lines to be kept. This key is only valid for collate=1. By default all alignments are kept.
+The value for this key is a comma separated list consisting of a subset of the following options:
+.IP F:
+keep first mates of complete pairs
+.IP F2:
+keep second mates of complete pairs
+.IP O:
+keep first mates of orphaned pairs (i.e. such that the other mate is not in the input file)
+.IP O2:
+keep second mates of orphaned pairs (i.e. such that the other mate is not in the input file)
+.IP S:
+keep single end reads
+.PP
+.B resetheadertext
+file name for replacement SAM header. By default the header of
+the input SAM/BAM/CRAM file is used (and filtered in case of reset=1).
+.PP
+.B resetaux=<0|1>:
+remove auxilliary fields if resetaux=1. This key is only available for
+reset=1. If reset=1 then the default is to remove all aux fields.
+.PP
+.B auxfilter=<>:
+comma separated list of aux tags to be kept if reset=1 and resetaux=0. If
+the key is not set then all tags are kept.
+.PP
+.B outputformat=<bam>: output file format.
+All versions of bamcollate2 come with support for the BAM output format. If
+the program in addition is linked to the io_lib package, then the following
+options are valid:
+.IP bam:
+BAM (see http://samtools.sourceforge.net/SAM1.pdf)
+.IP sam:
+SAM (see http://samtools.sourceforge.net/SAM1.pdf)
+.IP cram:
+CRAM (see http://www.ebi.ac.uk/ena/about/cram_toolkit). This format is not advisable for data not sorted by coordinate.
+.PP
+.B O=<[stdout]>: 
+output filename, standard output if unset.
+.PP
+.B outputthreads=<[1]>:
+output helper threads, only valid for outputformat=bam.
+.PP
+.B verbose=<1>:
+Valid values are
+.IP 1:
+print progress report on standard error
+.IP 0:
+do not print progress report
+.PP
+.B replacereadgroupnames=<>:
+file name containing a list of read group mappings. Each line in the file
+corresponds to one read group ID replacement and contains two columns
+separated by the tab symbol (ASCII code 9). The first column contains the
+source identifier which will be replaced by the value of the second column
+in the output file. This option is only valid for collate<2. By default no
+read group identifier mapping is performed.
+.SH AUTHOR
+Written by German Tischler.
+.SH "REPORTING BUGS"
+Report bugs to <gt1@sanger.ac.uk>
+.SH COPYRIGHT
+Copyright \(co 2009-2015 German Tischler, \(co 2011-2015 Genome Research Limited.
+License GPLv3+: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.

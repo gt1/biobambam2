@@ -1,0 +1,59 @@
+.TH BAMSPLITDIV 1 "October 2013" BIOBAMBAM
+.SH NAME
+bamsplitdiv - split BAM file into a set of BAM files
+.SH SYNOPSIS
+.PP
+.B bamsplitdiv
+[options]
+.SH DESCRIPTION
+bamsplitdiv reads a BAM file via standard input and creates a set of output
+BAM files containing the alignments in the input. Given a positive natural
+number 
+.I div 
+bamsplitdiv will create div files. The alignments in the input file will be
+distributed to the output files in a round robin type scheme, i.e. entries
+0, div, 2div, 3div, etc. will be written to the first output file, 1,div+1,2div+1,
+3div+1, etc. to the second etc.
+.PP
+The following key=value pairs can be given:
+.PP
+.B div=<1>:
+number of output files
+.PP
+.B prefix=<filename>
+prefix for the create files. The created files will have names ${prefix}_000000.bam, ${prefix}_000001.bam, etc.
+.PP
+.B level=<-1|0|1|9|11>:
+set compression level of the output BAM file. Valid
+values are
+.IP -1:
+zlib/gzip default compression level
+.IP 0:
+uncompressed
+.IP 1:
+zlib/gzip level 1 (fast) compression
+.IP 9:
+zlib/gzip level 9 (best) compression
+.P
+If libmaus has been compiled with support for igzip (see
+https://software.intel.com/en-us/articles/igzip-a-high-performance-deflate-compressor-with-optimizations-for-genomic-data)
+then an additional valid value is
+.IP 11:
+igzip compression
+.PP
+.B verbose=<1>:
+Valid values are
+.IP 1:
+print progress report on standard error
+.IP 0:
+do not print progress report
+.SH AUTHOR
+Written by German Tischler.
+.SH "REPORTING BUGS"
+Report bugs to <gt1@sanger.ac.uk>
+.SH COPYRIGHT
+Copyright \(co 2009-2013 German Tischler, \(co 2011-2013 Genome Research Limited.
+License GPLv3+: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.

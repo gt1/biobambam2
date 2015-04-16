@@ -1,0 +1,57 @@
+.TH KMERPROB 1 "July 2013" BIOBAMBAM
+.SH NAME
+kmerprob - print probability of a query sequence randomly appearing in a reference sequence
+.SH SYNOPSIS
+.PP
+.B kmerprob
+[options]
+.SH DESCRIPTION
+Let L be the length of a reference sequence. Further let Q be a query
+sequence of length K such that Q contains Kx bases of type x for x=A,C,G,T
+where KA+KC+KG+KT=K. Let px for x=A,C,G,T be the relative frequences of the
+bases A,C,G,T in the reference sequence such that pA+pC+pG+pT=1. Then
+kmerprob given the parameters L,KA,KC,KG,KT,pA,pC,pG,PT and n prints an
+approximation of the probability that Q appears in such a random reference
+sequence exactly n times.
+.PP
+The following key=value pairs can be given:
+.PP
+.B L: 
+lenght of the reference sequence
+.PP
+.B KA:
+number of A bases in the query sequence
+.PP
+.B KC:
+number of C bases in the query sequence
+.PP
+.B KG:
+number of G bases in the query sequence
+.PP
+.B KT:
+number of T bases in the query sequence
+.PP
+.B pA;
+relative frequency of the base A (i.e. number of times A appears in the reference divided by L)
+.PP
+.B pC;
+relative frequency of the base C (i.e. number of times C appears in the reference divided by L)
+.PP
+.B pG;
+relative frequency of the base G (i.e. number of times G appears in the reference divided by L)
+.PP
+.B pT;
+relative frequency of the base T (i.e. number of times T appears in the reference divided by L)
+.PP
+.B n;
+number of times query appears
+.SH AUTHOR
+Written by German Tischler.
+.SH "REPORTING BUGS"
+Report bugs to <gt1@sanger.ac.uk>
+.SH COPYRIGHT
+Copyright \(co 2009-2013 German Tischler, \(co 2011-2013 Genome Research Limited.
+License GPLv3+: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.

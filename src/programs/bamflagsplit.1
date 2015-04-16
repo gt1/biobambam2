@@ -1,0 +1,178 @@
+.TH BAMFLAGSPLIT 1 "June 2014" BIOBAMBAM
+.SH NAME
+bamflagsplit - sort BAM files by coordinate or query name
+.SH SYNOPSIS
+.PP
+.B bamflagsplit
+[options]
+.SH DESCRIPTION
+bamflagsplit reads a name collated BAM, SAM or CRAM file and distributes the contained
+reads into a set of BAM files. The reads are distributed as follows:
+.IP single 
+single end reads are placed in the single file
+.IP unmapped
+(partially) unmapped read pairs (pairs where at least one of the two
+mates is unmapped) are placed in the unmapped file
+.IP orphan
+orphan reads (pairs where the other mate is missing in the file) are
+placed in the orphan file
+.IP supplementary 
+supplementary mappings (mappings which have the supplementary flag set) are
+placed in the supplementary file
+.IP split 
+split pair reads (pairs such that the two ends map to different reference
+sequences/chromosomes) are placed in the split file
+.IP samestrand
+read pairs such that both ends map to the same strand are placed in the
+samestrand file
+.IP improper
+improperly mapped read pairs (read pairs where the mapped as a proper
+pair flag is not set) are place in the improper file
+.IP proper
+properly mapped pairs are placed in the proper file
+.PP
+The following key=value pairs can be given:
+.PP
+.B I=<[stdin]>: 
+input filename, standard input if unset.
+.PP
+.B level=<-1|0|1|9|11>:
+set compression level of the output BAM files. Valid
+values are
+.IP -1:
+zlib/gzip default compression level
+.IP 0:
+uncompressed
+.IP 1:
+zlib/gzip level 1 (fast) compression
+.IP 9:
+zlib/gzip level 9 (best) compression
+.P
+If libmaus has been compiled with support for igzip (see
+https://software.intel.com/en-us/articles/igzip-a-high-performance-deflate-compressor-with-optimizations-for-genomic-data)
+then an additional valid value is
+.IP 11:
+igzip compression
+.PP
+.B verbose=<1>:
+Valid values are
+.IP 1:
+print progress report on standard error
+.IP 0:
+do not print progress report
+.PP
+.B disablevalidation=<0|1>:
+sets whether input validation is performed. Valid values are
+.IP 0:
+validation is enabled (default)
+.IP 1:
+validation is disabled
+.PP
+.B single=<filename>:
+file name for the single file
+.PP
+.B singlemd5=<0|1>:
+md5 checksum creation for single output file. Valid values are
+.IP 0:
+do not compute checksum. This is the default.
+.IP 1:
+compute checksum. If the splitmd5filename key is set, then the checksum is
+written to the given file. If splitmd5filename, then no checksum will be computed.
+.PP
+.B unmapped=<filename>:
+file name for the unmapped file
+.PP
+.B unmappedmd5=<0|1>:
+md5 checksum creation for unmapped output file. Valid values are
+.IP 0:
+do not compute checksum. This is the default.
+.IP 1:
+compute checksum. If the splitmd5filename key is set, then the checksum is
+written to the given file. If splitmd5filename, then no checksum will be computed.
+.PP
+.B orphan=<filename>:
+file name for the orphan file
+.PP
+.B orphanmd5=<0|1>:
+md5 checksum creation for orphan output file. Valid values are
+.IP 0:
+do not compute checksum. This is the default.
+.IP 1:
+compute checksum. If the splitmd5filename key is set, then the checksum is
+written to the given file. If splitmd5filename, then no checksum will be computed.
+.PP
+.B supplementary=<filename>:
+file name for the supplementary file
+.PP
+.B supplementarymd5=<0|1>:
+md5 checksum creation for supplementary output file. Valid values are
+.IP 0:
+do not compute checksum. This is the default.
+.IP 1:
+compute checksum. If the splitmd5filename key is set, then the checksum is
+written to the given file. If splitmd5filename, then no checksum will be computed.
+.PP
+.B split=<filename>:
+file name for the split file
+.PP
+.B splitmd5=<0|1>:
+md5 checksum creation for split output file. Valid values are
+.IP 0:
+do not compute checksum. This is the default.
+.IP 1:
+compute checksum. If the splitmd5filename key is set, then the checksum is
+written to the given file. If splitmd5filename, then no checksum will be computed.
+.PP
+.B samestrand=<filename>:
+file name for the samestrand file
+.PP
+.B samestrandmd5=<0|1>:
+md5 checksum creation for samestrand output file. Valid values are
+.IP 0:
+do not compute checksum. This is the default.
+.IP 1:
+compute checksum. If the samestrandmd5filename key is set, then the checksum is
+written to the given file. If samestrandmd5filename, then no checksum will be computed.
+.PP
+.B improper=<filename>:
+file name for the improper file
+.PP
+.B impropermd5=<0|1>:
+md5 checksum creation for improper output file. Valid values are
+.IP 0:
+do not compute checksum. This is the default.
+.IP 1:
+compute checksum. If the impropermd5filename key is set, then the checksum is
+written to the given file. If impropermd5filename, then no checksum will be computed.
+.PP
+.B proper=<filename>:
+file name for the proper file
+.PP
+.B propermd5=<0|1>:
+md5 checksum creation for proper output file. Valid values are
+.IP 0:
+do not compute checksum. This is the default.
+.IP 1:
+compute checksum. If the propermd5filename key is set, then the checksum is
+written to the given file. If propermd5filename, then no checksum will be computed.
+.PP
+.B inputformat=<bam>: input file format.
+All versions of bamflagsplit come with support for the BAM input format. If
+the program in addition is linked to the io_lib package, then the following
+options are valid:
+.IP bam:
+BAM (see http://samtools.sourceforge.net/SAM1.pdf)
+.IP sam:
+SAM (see http://samtools.sourceforge.net/SAM1.pdf)
+.IP cram:
+CRAM (see http://www.ebi.ac.uk/ena/about/cram_toolkit)
+.SH AUTHOR
+Written by German Tischler.
+.SH "REPORTING BUGS"
+Report bugs to <gt1@sanger.ac.uk>
+.SH COPYRIGHT
+Copyright \(co 2009-2014 German Tischler, \(co 2011-2014 Genome Research Limited.
+License GPLv3+: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.

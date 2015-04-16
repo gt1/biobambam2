@@ -1,0 +1,205 @@
+.TH BAMTOFASTQ 1 "March 2014" BIOBAMBAM
+.SH NAME
+bamtofastq - convert SAM, BAM or CRAM files to FastQ
+.SH SYNOPSIS
+.PP
+.B bamtofastq
+[options]
+.SH DESCRIPTION
+bamtofastq reads a SAM, BAM or CRAM file from standard input and converts it to the FastQ
+format. The output can be split into multiple files according to the pair
+flags of the reads involved. bamtofastq can collate the source reads
+according to their read names, i.e. place pairs of reads next to each other
+in the output. bamtofastq writes its output to the standard output channel
+by default. All output channels can be compressed using gzip.
+.PP
+The following key=value pairs can be given:
+.PP
+.B F=<stdout>: 
+output file for the first mates of pairs if collation is active.
+.PP
+.B F2=<stdout>: 
+output file for the second mates of pairs if collation is active.
+.PP
+.B S=<stdout>: 
+output file for single end reads if collation is active.
+.PP
+.B O=<stdout>: 
+output file for unmatched (orphan) first mates if collation is active.
+.PP
+.B O2=<stdout>: 
+output file for unmatched (orphan) second mates if collation is active.
+.PP
+.B collate=<0|1>:
+Valid values are
+.IP 1:
+collate read pairs
+.IP 0:
+output reads to standard output in the order in which they appear in the BAM file
+.PP
+.B combs=<0|1>:
+print some counts after finishing collation based output
+.PP
+.B filename=<stdin>: 
+input file name (data is read from standard input if this option is not given)
+.PP
+.B inputformat=<bam>: input file format
+All versions of bamtofastq come with support for the BAM input format. If
+the program in addition is linked to the io_lib package, then the following
+options are valid:
+.IP bam:
+BAM (see http://samtools.sourceforge.net/SAM1.pdf)
+.IP sam:
+SAM (see http://samtools.sourceforge.net/SAM1.pdf)
+.IP cram:
+CRAM (see http://www.ebi.ac.uk/ena/about/cram_toolkit)
+.PP
+.B reference=: 
+file name of the reference for CRAM input files. If this key is unset, then
+the CRAM file header will be scanned for obtaining a reference file name.
+.PP
+.B exclude=<SECONDARY>:
+Do not include reads in the output that have any of the given flags set. The
+flags are given separated by commas. Valid flags are:
+.IP PAIRED:
+read was paired in sequencing
+.IP PROPER_PAIR:
+read has been mapped as part of a proper pair
+.IP UNMAP:
+read was not mapped
+.IP MUNMAP:
+mate of read was not mapped
+.IP REVERSE:
+read was mapped to the reverse strand
+.IP MREVERSE:
+mate of read was mapped to the reverse strand
+.IP READ1:
+read was first read of a pair during sequencing
+.IP READ2:
+read was second read of a pair during sequencing
+.IP SECONDARY:
+alignment is secondary, i.e. an alternative mapping to the primary alignment in the same file
+.IP QCFAIL:
+read as marked as having failed quality control
+.IP DUP:
+read is marked as a duplicate of another read in the same file (see bammarkduplicates)
+.IP SUPPLEMENTARY:
+read is marked as supplementary alignment
+.PP
+.B disablevalidation=<0>:
+Valid values are
+.IP 0:
+run input file validation on alignments (this is the default)
+.IP 1:
+do not check the validity of the input file (this may help for some broken
+input files, but it is a security risk as it can lead to the execution of
+arbitrary code through a forged input file).
+.PP
+.B colhlog=<18>
+base two logarithm of the size of the hash table used for collation (the
+default value is 18 and should work reasonably well for most input files.
+Please see the biobambam paper at arxiv.org/abs/1306.0836 for details).
+.PP
+.B colsbs=<128M>
+size of hash table overflow list in bytes (the default is 128MB and should
+work reasonably well for most input files. Please see the biobambam paper at 
+arxiv.org/abs/1306.0836 for details).
+.PP
+.B T=<bamtofastq_hostname_pid_time>
+file name of temporary file used for collation
+.PP
+.B ranges=<>:
+coordinate ranges selected from input. This option is only available for
+input files in BAM and CRAM format which have a corresponding index file (.bai for BAM, .crai for CRAM) and
+if input is via file (i.e. the filename argument is set). 
+Valid ranges consist of either
+.IP "whole\ reference\ sequence:"
+a whole reference sequence (e.g. "chr1")
+.IP "half\ open\ interval\ on\ reference\ sequence:"
+an interval on a reference sequence half open on the right (e.g. "chr1:50000"
+which means alignments overlapping chr1 from position 50000 to the end of chr1)
+.IP "interval\ on\ reference\ sequence:"
+an interval on a reference sequence (e.g. "chr1:50000-60000" which means
+alignments overlapping positions 50000 to 60000 on chr1)
+.PP
+For BAM input multiple ranges are separated by space characters (e.g. ranges="chr1:10000-20000 chr1:30000-40000").
+CRAM input supports a single range only.
+.PP
+.B gz=<[0|1]>: 
+compress output files using gzip. By default output is uncompressed.
+.PP
+.B level=<-1|0|1|9|11>:
+set compression level of the output FastQ/FastA files if gz=1. Valid
+values are
+.IP -1:
+zlib/gzip default compression level
+.IP 0:
+uncompressed
+.IP 1:
+zlib/gzip level 1 (fast) compression
+.IP 9:
+zlib/gzip level 9 (best) compression
+.P
+If libmaus has been compiled with support for igzip (see
+https://software.intel.com/en-us/articles/igzip-a-high-performance-deflate-compressor-with-optimizations-for-genomic-data)
+then an additional valid value is
+.IP 11:
+igzip compression
+.PP
+.B fasta=<0|1>:
+output FastA instead of FastQ if fasta=1.
+.PP
+.B outputperreadgroup=<0|1>
+split output by read group if outputperreadgroup=1 (default is 0). If
+splitting by read group is performed then no output is written on standard
+output but all data is written to files. The file names will be generated
+using the outputdir and outputperreadgroupsuffix parameters and read group
+names.
+.PP
+.B outputdir=<>
+output directory if outputperreadgroup=1. By default the output files are
+generated in the current directory.
+.PP
+.B outputperreadgroupsuffixF=<_1.fq>
+output file name suffix for first mates of complete pairs if outputperreadgroup=1.
+Default is _1.fq if gz=0 and _1.fq.gz for gz=1.
+.PP
+.B outputperreadgroupsuffixF2=<_2.fq>
+output file name suffix for second mates of complete pairs if outputperreadgroup=1.
+Default is _2.fq if gz=0 and _2.fq.gz for gz=1.
+.PP
+.B outputperreadgroupsuffixO=<_o1.fq>
+output file name suffix for first mates of incomplete pairs if outputperreadgroup=1.
+Default is _o1.fq if gz=0 and _o1.fq.gz for gz=1.
+.PP
+.B outputperreadgroupsuffixO2=<_o2.fq>
+output file name suffix for second mates of incomplete pairs if outputperreadgroup=1.
+Default is _o2.fq if gz=0 and _o2.fq.gz for gz=1.
+.PP
+.B outputperreadgroupsuffixS=<_s.fq>
+output file name suffix for singled end reads if outputperreadgroup=1.
+Default is _s.fq if gz=0 and _s.fq.gz for gz=1.
+.PP
+.B tryoq=<0|1>:
+use content of OQ aux field if present instead of quality field when converting to FastQ. By default the quality field is used.
+.PP
+.B split=<0>:
+split named output files into chunks of this number of reads. The output
+file names will be extended by _NNNNNN if gz=0 and by _NNNNNN.gz if gz=1
+where NNNNNN denotes the NNNNNN+1'th output file (i.e. numbers start with 000000).
+The suffixes k, m, g, K, M and G can be used to denote that the argument is
+to be multiplied by 1024, 1024^2, 1024^3, 1000, 1000^2 or 1000^3
+respectively.
+.PP
+.B splitprefix=<bamtofastq_split>:
+file prefix if split>0 and collate=0.
+.SH AUTHOR
+Written by German Tischler.
+.SH "REPORTING BUGS"
+Report bugs to <gt1@sanger.ac.uk>
+.SH COPYRIGHT
+Copyright \(co 2009-2014 German Tischler, \(co 2011-2014 Genome Research Limited.
+License GPLv3+: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.

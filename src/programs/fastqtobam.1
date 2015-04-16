@@ -1,0 +1,137 @@
+.TH FASTQTOBAM 1 "July 2013" BIOBAMBAM
+.SH NAME
+fastqtobam - convert FastQ to unmapped BAM
+.SH SYNOPSIS
+.PP
+.B fastqtobam
+[options]
+.SH DESCRIPTION
+fastqtobam reads one or two FastQ files and converts them to a BAM file in
+which each read is marked as unmapped. If no input file name is given, then
+a single FastQ file is read from standard input. If one file name is given,
+then a single FastQ file is read from the given file. In both cases the read
+names in the file are parsed to determine whether the contained reads are
+paired or not if the name scheme is not set to pairedfiles.
+If two file names are given, then the program assumes to find
+two FastQ files which are synchronous, i.e. where the first read in the
+first file is the mate of the first read in the second file etc. Input file
+names can be given either via the I key or after the key=value pairs on the
+command line. The program accepts read name formats as described below
+under the key namescheme.
+.PP
+The following key=value pairs can be given:
+.PP
+.B verbose=<[0|1]>
+print progress report. By default progress is not reported.
+.PP
+.B I=<filename>: 
+input file name (data is read from standard input if this option is not given). This key can be given twice.
+.PP
+.B level=<-1|0|1|9|11>:
+set compression level of the output BAM file. Valid
+values are
+.IP -1:
+zlib/gzip default compression level
+.IP 0:
+uncompressed
+.IP 1:
+zlib/gzip level 1 (fast) compression
+.IP 9:
+zlib/gzip level 9 (best) compression
+.P
+If libmaus has been compiled with support for igzip (see
+https://software.intel.com/en-us/articles/igzip-a-high-performance-deflate-compressor-with-optimizations-for-genomic-data)
+then an additional valid value is
+.IP 11:
+igzip compression
+.PP
+.B md5=<0|1>:
+md5 checksum creation for output file. Valid values are
+.IP 0:
+do not compute checksum. This is the default.
+.IP 1:
+compute checksum. If the md5filename key is set, then the checksum is
+written to the given file. If md5filename is unset, then no checksum will be computed.
+.PP
+.B md5filename
+file name for md5 checksum if md5=1.
+.PP
+.B gz=<[0|1]>
+input is gzip compressed FastQ. By default input is assumed to be uncompressed FastQ.
+.PP
+.B threads=<1>
+additional BAM encoding helper threads.
+.PP
+.B PGID=<>
+read group identifier for reads. By default no read group identifer is set.
+The fields CN, DS, DT, FO, KS, LB, PG, PI, PL, PU and SM of the
+corresponding @RG header line can be set by using the keys RGCN, RGDS, etc.
+respectively.
+.PP
+.B qualityoffset=<33>
+FastQ quality offset. This value is subtracted from the ASCII character
+representation to get the quality score value.
+.PP
+.B qualitymax=<41>
+maximum valid quality value, 41 by default. Higher values may
+indicate a wrong setting of the qualityoffset parameter. BAM allows quality values up
+to the value of 94.
+.PP
+.B qualityhist=<0>
+compute a quality histogram and print it on the standard error channel after
+processing has finished successfully. Lines for the quality histogram are
+prefixed with [H] and contain tab separated values. The histogram enumerates
+quality scores from high to low values. The histogram has four columns
+(after the [H] marker). The first is the ASCII representation of the quality
+with offset 33, i.e. the symbol ! denotes quality 0. The second column gives
+the absolute frequency of the value. The third column stores the relative
+frequency of the value, i.e. the fraction of all values assigned to this value.
+The fourth column gives a cumulative relative frequency value over all quality
+for the current line and those for higher quality values.
+.PP
+.B checkquality=<1>
+check whether quality values are in range and terminate if an invalid value
+is encountered.
+.PP
+.B namescheme=<generic>
+read name scheme. This determines how read names are parsed. There are four
+possible options:
+.IP generic:
+the first sequence of non whitespace characters is extracted from the @ line
+of the FastQ record and the rest of the @ line is discarded. If the retained
+name ends in /1 or /2, then the read is part of a read pair, otherwise it is 
+the single read for the template. For a pair the part of the name before the
+/1 or /2 is considered the template name. For a single the whole name is
+considered the name of the template.
+.IP c18s:
+The name is expected to consist of two sequences of non white-space
+characters where the first contains seven colon separated fields and the second
+four colon separated fields. The first of the two is considered to be the name of
+the template. It is assumed that this read is the only read for the template.
+.IP c18pe:
+As for c18s, the name is expected to consist of two sequences of non white-space
+characters where the first contains seven colon separated fields and the second
+four colon separated fields. The first of the two is considered to be the name of
+the template. The read is assumed to be part of a read pair. The first field
+in the second non-whitespace sequence of the @ line designates, whether it
+is the first or second of the pair depending on whether the field stores the
+number 1 or 2 respectively.
+.IP pairedfiles:
+The input framgents are assumed to be paired. If there is a single input
+file then the pairs are expected consecutive in the file. If there are two
+input files then the read names in the two are expected to be synchronous.
+All characters in read names beginning from the first white space character
+are discarded. If the two (so reduced) read names in question end on /1 and /2 
+respectively, then those suffixes will be clipped off also. The remaining
+read names are checked for equality. If they are not equal, then the program
+will reject the input and terminate.
+.SH AUTHOR
+Written by German Tischler.
+.SH "REPORTING BUGS"
+Report bugs to <gt1@sanger.ac.uk>
+.SH COPYRIGHT
+Copyright \(co 2009-2014 German Tischler, \(co 2011-2014 Genome Research Limited.
+License GPLv3+: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.

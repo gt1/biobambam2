@@ -1,0 +1,95 @@
+.TH BAMMASKFLAGS 1 "July 2013" BIOBAMBAM
+.SH NAME
+bammaskflags - remove flags from alignments
+.SH SYNOPSIS
+.PP
+.B bammaskflags
+[options]
+.SH DESCRIPTION
+bammaskflags reads a BAM file from standard input, performs a bit wise and
+with the flags field of each read/alignment and writes the resulting data to standard output in BAM format.
+.PP
+The following key=value pairs can be given:
+.PP
+.B level=<-1|0|1|9|11>:
+set compression level of the output BAM file. Valid
+values are
+.IP -1:
+zlib/gzip default compression level
+.IP 0:
+uncompressed
+.IP 1:
+zlib/gzip level 1 (fast) compression
+.IP 9:
+zlib/gzip level 9 (best) compression
+.P
+If libmaus has been compiled with support for igzip (see
+https://software.intel.com/en-us/articles/igzip-a-high-performance-deflate-compressor-with-optimizations-for-genomic-data)
+then an additional valid value is
+.IP 11:
+igzip compression
+.PP
+.B maskneg=<0>
+mask of flags to be removed (a bit wise and is computed between the bit
+complement of this number and the flag field of the reads/alignments in the
+input BAM file). This value can be obtained by adding up the following
+values of the flags:
+.IP PAIRED (paired in sequencing):
+1
+.IP PROPER_PAIR (mapped as a proper pair):
+2
+.IP UNMAP (unmapped):
+4
+.IP MUNMAP (mate unmapped):
+8
+.IP REVERSE (mapped to the reverse strand):
+16
+.IP MREVERSE (mate mapped to the reverse strand):
+32
+.IP READ1 (first read of pair):
+64
+.IP READ2 (second read of pair):
+128
+.IP SECONDARY (secondary alignment):
+256
+.IP QCFAIL (failed quality control):
+512
+.IP DUP (duplicate):
+1024
+.IP SUPPLEMENTARY (supplementary):
+2048
+.PP
+.B tmpfile=<filename>: 
+prefix for temporary files. By default the temporary files are created in the current directory
+.PP
+.B md5=<0|1>:
+md5 checksum creation for output file. Valid values are
+.IP 0:
+do not compute checksum. This is the default.
+.IP 1:
+compute checksum. If the md5filename key is set, then the checksum is
+written to the given file. If md5filename is unset, then no checksum will be computed.
+.PP
+.B md5filename
+file name for md5 checksum if md5=1.
+.PP
+.B index=<0|1>:
+compute BAM index for output file. Valid values are
+.IP 0:
+do not compute BAM index. This is the default.
+.IP 1:
+compute BAM index. If the indexfilename key is set, then the BAM index is
+written to the given file. If indexfilename is unset, then no BAM index will be computed.
+.PP
+.B indexfilename
+file name for BAM index if index=1.
+.SH AUTHOR
+Written by German Tischler.
+.SH "REPORTING BUGS"
+Report bugs to <gt1@sanger.ac.uk>
+.SH COPYRIGHT
+Copyright \(co 2009-2013 German Tischler, \(co 2011-2013 Genome Research Limited.
+License GPLv3+: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.

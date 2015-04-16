@@ -1,0 +1,55 @@
+.TH NORMALISEFASTA 1 "January 2014" BIOBAMBAM
+.SH NAME
+normalisefasta - normalise line length in a FastA file
+.SH SYNOPSIS
+.PP
+.B normalisefasta
+[options]
+.SH DESCRIPTION
+normalisefasta reads a FastA file from standard input and outputs a
+reformatted version of the file with a consistent length of the lines
+containing sequence information on standard output. The program can either
+produce uncompressed or BGZF compressed output. For uncompressed output
+a FastA index (.fai) is produced on the standard error channel.
+.PP
+The following key=value pairs can be given:
+.PP
+.B cols=<[80]>
+line width for the lines containing sequence information in number of bases.
+This option is only considered for uncompressed output (i.e. bgzf=0)
+.PP
+.B bgzf=<0|1>
+produce uncompressed (bgzf=0) or compressed (bgzf=1) output
+.PP
+.B index=<>
+if bgzf=1 this key can be used for giving the file name for the index file
+allowing (pseudo) random access in the output file. If the key is not given
+when bgzf=1, then no index is written.
+.PP
+.B level=<-1|0|1|9|11>:
+set compression level of the output file if bgzf=1. Valid
+values are
+.IP -1:
+zlib/gzip default compression level
+.IP 0:
+uncompressed
+.IP 1:
+zlib/gzip level 1 (fast) compression
+.IP 9:
+zlib/gzip level 9 (best) compression
+.P
+If libmaus has been compiled with support for igzip (see
+https://software.intel.com/en-us/articles/igzip-a-high-performance-deflate-compressor-with-optimizations-for-genomic-data)
+then an additional valid value is
+.IP 11:
+igzip compression
+.SH AUTHOR
+Written by German Tischler.
+.SH "REPORTING BUGS"
+Report bugs to <gt1@sanger.ac.uk>
+.SH COPYRIGHT
+Copyright \(co 2009-2014 German Tischler, \(co 2011-2014 Genome Research Limited.
+License GPLv3+: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.

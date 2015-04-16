@@ -1,0 +1,135 @@
+.TH BAMADAPTERFIND 1 "July 2013" BIOBAMBAM
+.SH NAME
+bamadapterfind - find adapter contamination in sequencing reads
+.SH SYNOPSIS
+.PP
+.B bamdapterfind
+[options]
+.SH DESCRIPTION
+bamdapterfind scans a BAM file for contaminations by sequencing adapters. It
+uses two separate methods for this detection:
+.IP list:
+each read is matched against a predefined list of adapter sequences. A
+sequence is considered as matching if there is an overlap of a least \fIadpmatchminscore\fR
+bases, the overlap covers at least a factor of \fIadpmatchminfrac\fR
+of the adapter's length and the indel free local alignment between the
+adapter and the read covers at least a factor of
+\fIadpmatchminpfrac\fR
+of the length of the possible overlap between the two. If such a match is
+found, then the auxiliary field \fIas\fR is filled with the length of the
+match, \fIaf\fR is filled with the fraction of the adapter sequence matched
+and \fIaa\fR is filled with the name of the matched adapter sequence.
+.IP overlap: 
+the two mates need to have a match similar to the following two lines
+
+.ti 10
+        s0s1s2s3s4s5s6s7s8s9s10s11s12s13s14s15s16t0t1t2t3
+.br
+.ti 10
+x3x2x1x0s0s1s2s3s4s5s6s7s8s9s10s11s12s13s14s15s16
+
+where an infix s0s1s2... of the first read matches a suffix of the reverse complement
+of the second read. In this case it is likely that the first read has been
+sequenced beyond the end of the payload sequence and into the attached
+adapter. This overlap needs to be at least \fIMIN_OVERLAP\fR bases long to
+be considered. If such an overlap is found, then the adjacent sequences are
+checked for a match, where in the example x3x2x1x0 needs to be the reverse
+complement of t0t1t2t3. The adjacent sequences are checked up to a limit of
+\fIADAPTER_MATCH\fR base pairs. If such a match is found then the auxiliary
+field \fIah\fR is set to 1 and \fIa3\fR is used to store the length of the
+suspected adapter sequence.
+.PP
+The following key=value pairs can be given at the program start:
+.PP
+.B level=<-1|0|1|9|11>:
+set compression level of the output BAM file. Valid
+values are
+.IP -1:
+zlib/gzip default compression level
+.IP 0:
+uncompressed
+.IP 1:
+zlib/gzip level 1 (fast) compression
+.IP 9:
+zlib/gzip level 9 (best) compression
+.P
+If libmaus has been compiled with support for igzip (see
+https://software.intel.com/en-us/articles/igzip-a-high-performance-deflate-compressor-with-optimizations-for-genomic-data)
+then an additional valid value is
+.IP 11:
+igzip compression
+.PP
+.B verbose=<1>:
+Valid values are
+.IP 1:
+print progress report on standard error
+.IP 0:
+do not print progress report
+.PP
+.B mod=<1048576>:
+if verbose=1 then this sets the frequency of progress reports, i.e. a report
+is given for each mod'th input read/alignment
+.PP
+.B adaptersbam=<>:
+file name of the BAM file containing the list of adapter used for the
+adapter matching described above under list. The program contains an
+internal list which is used if this key is not given.
+.PP
+.B SEED_LENGTH=<12>:
+length of the seed used for detecting overlaps in overlap based matching (see overlap above, default value is 12 base pairs).
+.PP
+.B PCT_MISMATCH=<10>:
+percentage of mismatches allowed for overlap matching. This only includes
+the overlap, not the suspected attached adapter sequence. The default value
+is 10.
+.PP
+.B MAX_SEED_MISMATCHES=<SEED_LENGTH*PCT_MISMATCH>:
+maximum number of mismatches allowed in the seed. By default this value is
+computed as SEED_LENGTH*PCT_MISMATCH.
+.PP
+.B MIN_OVERLAP=<32>:
+minimum length of overlap for overlap matching in base pairs (see above). The
+default value is 32.
+.PP
+.B ADAPTER_MATCH=<12>:
+maximum number of base pairs to check for matching adapters in overlap based
+matching. The default value is 12.
+.PP
+.B adpmatchminscore=<16>
+minimum score for list based adapter matching (see above, default value is 16)
+.PP
+.B adpmatchminfrac=<0.75>
+minimum fraction of adapter sequence which needs to match (see above, default value is 0.75=75%)
+.PP
+.B adpmatchminpfrac=<0.8>
+minimum fraction of overlap for adapter list matching (see above, default value is 0.8=80%)
+.PP
+.B clip=<1>
+clip the adapters off and move the corresponding sequence part to the qs
+auxiliary field and the corresponding quality string part to the qq
+auxiliary field
+.PP
+.B reflen=<3000000000>
+length of reference sequence/genome
+.PP
+.B pA=<0.25>
+relative frequency of base A in reference sequence/genome
+.PP
+.B pC=<0.25>
+relative frequency of base C in reference sequence/genome
+.PP
+.B pG=<0.25>
+relative frequency of base G in reference sequence/genome
+.PP
+.B pT=<0.25>
+relative frequency of base T in reference sequence/genome
+.SH AUTHOR
+Written by German Tischler.
+.SH "REPORTING BUGS"
+Report bugs to <gt1@sanger.ac.uk>
+.SH COPYRIGHT
+Copyright \(co 2009-2013 German Tischler, \(co 2011-2013 Genome Research Limited.
+License GPLv3+: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.

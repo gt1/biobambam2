@@ -1,0 +1,173 @@
+.TH BAMMARKDUPLICATES2 1 "October 2013" BIOBAMBAM
+.SH NAME
+bammarkduplicates2 - mark duplicate reads/alignments in BAM files
+.SH SYNOPSIS
+.PP
+.B bammarkduplicates2
+[options]
+.SH DESCRIPTION
+bammarkduplicates2 reads a coordinate sorted BAM file containing alignments computed by an
+aligner, marks duplicate reads/alignments using the coordinates of the alignments and writes the
+marked alignments to a BAM file. By default input is via standard input and
+output via standard output. Duplication metrics are provided on the standard
+error channel by default. bammarkduplicates2 scans the input BAM file twice,
+it is thus of benefit to set the I key (described below) to give the name of
+an input file. If the input BAM file is given via standard input, then a
+copy of the input will be stored in a temporary file during the first run
+for processing in a second run. bammarkduplicates2 assumes that each read
+end of a pair occurs in exactly one entry in the file.
+.PP
+The following key=value pairs can be given:
+.PP
+.B I=<stdin>: 
+name of the input file (input is read from standard input if not set). This
+key can be given multiple times. If it is given multiple times, then all the
+input files need to be in coordinate sorted order and will be merged for
+output such that the output will be coordinate sorted.
+.PP
+.B O=<stdout>: 
+name of the output file (output is written to standard output if not set)
+.PP
+.B M=<stderr>: 
+name of the metrics file (metrics are written to standard error if not set)
+.PP
+.B tmpfile=<filename>: 
+prefix for temporary files. By default the temporary files are created in the current directory
+.PP
+.B level=<-1|0|1|9|11>:
+set compression level of the output BAM file. Valid
+values are
+.IP -1:
+zlib/gzip default compression level
+.IP 0:
+uncompressed
+.IP 1:
+zlib/gzip level 1 (fast) compression
+.IP 9:
+zlib/gzip level 9 (best) compression
+.P
+If libmaus has been compiled with support for igzip (see
+https://software.intel.com/en-us/articles/igzip-a-high-performance-deflate-compressor-with-optimizations-for-genomic-data)
+then an additional valid value is
+.IP 11:
+igzip compression
+.PP
+.B markthreads=<1>: 
+Number of threads used during marking duplicate alignments.
+.PP
+.B verbose=<1>:
+Valid values are
+.IP 1:
+print progress report on standard error
+.IP 0:
+do not print progress report
+.PP
+.B mod=<1048576>:
+print progress after processing every mod'th input read/alignment (default is 1M)
+.PP
+.B rewritebam=<0|1|2>:
+compression type of the temporary file stored if I key is not given (input is via standard input). Valid values are
+.IP 0:
+temporary data is compressed using snappy (if available, see http://code.google.com/p/snappy/)
+.IP 1:
+gzip/BAM, recompress input and store it as a BAM file
+.IP 2:
+copy, produce a 1/1 copy of the input stream as a temporary file
+.PP
+.B rewritebamlevel=<-1|0|1|9|11>:
+compression level of temporary BAM file if rewritebam is 1 (see level key for possible values).
+.PP
+.B colhashbits=<20>:
+base two logarithm of the size of the hash table used for collation (the
+default value is 18 and should work reasonably well for most input files.
+Please see the biobambam paper at arxiv.org/abs/1306.0836 for details).
+.PP
+.B collistsize=<33554432>:
+size of hash table overflow list in bytes (the default is 128MB and should
+work reasonably well for most input files. Please see the biobambam paper at 
+arxiv.org/abs/1306.0836 for details).
+.PP
+.B fragbufsize=<50331648>: 
+size of each fragment/pair file buffer in bytes (bammarkduplicates2 uses two
+such buffer for detecting duplicates)
+.PP
+.B rmdup=<0|1>:
+sets how duplicates are handled
+.IP 0:
+duplicates will be retained in the output file and have the duplication flag set
+.IP 1:
+duplicates will be remove when writing the output file
+.PP
+.B maxreadlength=<[500]>:
+maximum read length in input. This value can be set higher than the actual
+maximum in the file but not lower.
+.PP
+.B md5=<0|1>:
+md5 checksum creation for output file. Valid values are
+.IP 0:
+do not compute checksum. This is the default.
+.IP 1:
+compute checksum. If the md5filename key is set, then the checksum is
+written to the given file. If the md5filename key is not given but set O key
+is set the checksum will be written as output file name with .md5 appended.
+If md5filename and O are unset, then no checksum will be computed.
+.PP
+.B md5filename
+file name for md5 checksum if md5=1.
+.PP
+.B index=<0|1>:
+compute BAM index for output file. Valid values are
+.IP 0:
+do not compute BAM index. This is the default.
+.IP 1:
+compute BAM index. If the indexfilename key is set, then the BAM index is
+written to the given file. If the indexfilename key is not given but set O key
+is set the checksum will be written as output file name with .bai appended.
+If indexfilename and O are unset, then no BAM index will be computed.
+.PP
+.B indexfilename
+file name for BAM index if index=1.
+.PP
+.B tag=<tag>
+name of auxiliary field storing tag information in string form. Read fragments or pairs 
+with different tags will not be considered as duplicates, even they would be according to their
+mapping coordinates. For pairs the tag field information of the first and
+second mate are concatenated to obtain the tag of the pair.
+.PP
+.B nucltag=<tag>
+this option works like the tag option but is restricted to sequences of
+nucleotides (A,C,G or T) as tags. The length of each tag sequence is not
+allowed to exceed 15 bases. All tags are required to have the same length.
+Each non nucleotide symbol is mapped to A. In constrast to the tag option, 
+nucltag uses less memory for processing and can be expected to be faster.
+.PP
+.B D
+ouptut file name for removed duplicates if rmdup=1. By default the reads and
+read pairs marked as duplicates are discarded when rmdup=1. If the D key is
+set, then the sequence of reads which is not written to the output file is
+written to a separate file. The name of this separate file is the value of
+the D key.
+.PP
+.B dupmd5=<0|1>:
+compute md5 checksum of file given by D key if rmdup=1. By default no md5
+checksum is computed for this file.
+.PP
+.B dupmd5filename:
+file name for storing the md5 checksum of the D file if rmdup=1, D is set and dupmd5=1.
+.PP
+.B dupindex=<0|1>:
+compute BAM index for file given by D key if rmdup=1. By default no index
+is compute for this file.
+.PP
+.B dupindexfilename:
+file name for storing the BAM index of the D file if rmdup=1, D is set and dupmd5=1.
+.SH AUTHOR
+Written by German Tischler.
+.SH "REPORTING BUGS"
+Report bugs to <gt1@sanger.ac.uk>
+.SH COPYRIGHT
+Copyright \(co 2009-2013 German Tischler, \(co 2011-2013 Genome Research Limited.
+License GPLv3+: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
