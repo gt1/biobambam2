@@ -21,15 +21,15 @@
 
 #include <iostream>
 
-#include <libmaus/bambam/ChecksumsFactory.hpp>
-#include <libmaus/bambam/BamMultiAlignmentDecoderFactory.hpp>
-#include <libmaus/util/ArgInfo.hpp>
+#include <libmaus2/bambam/ChecksumsFactory.hpp>
+#include <libmaus2/bambam/BamMultiAlignmentDecoderFactory.hpp>
+#include <libmaus2/util/ArgInfo.hpp>
 
 #include <biobambam/Licensing.hpp>
 #include <biobambam/BamBamConfig.hpp>
 
 #if defined(BIOBAMBAM_HAVE_GMP)
-#include <libmaus/math/UnsignedInteger.hpp>
+#include <libmaus2/math/UnsignedInteger.hpp>
 #include <gmp.h>
 #endif
 
@@ -39,17 +39,17 @@ static std::string getDefaultHash() { return "crc32prod"; }
 
 
 
-int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
+int bamseqchksum(::libmaus2::util::ArgInfo const & arginfo)
 {
 	if ( isatty(STDIN_FILENO) )
 	{
-		::libmaus::exception::LibMausException se;
+		::libmaus2::exception::LibMausException se;
 		se.getStream() << "Refusing to read data from terminal, please redirect standard input to pipe or file." << std::endl;
 		se.finish();
 		throw se;
 	}
 	
-	libmaus::timing::RealTimeClock rtc;
+	libmaus2::timing::RealTimeClock rtc;
 	rtc.start();
 	double prevtime = 0;
 	
@@ -57,15 +57,15 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 	std::string const hash = arginfo.getValue<std::string>("hash",getDefaultHash());
 
 	// input decoder wrapper
-	libmaus::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
-		libmaus::bambam::BamMultiAlignmentDecoderFactory::construct(arginfo));
-	::libmaus::bambam::BamAlignmentDecoder & dec = decwrapper->getDecoder();
-	::libmaus::bambam::BamHeader const & header = dec.getHeader();
+	libmaus2::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
+		libmaus2::bambam::BamMultiAlignmentDecoderFactory::construct(arginfo));
+	::libmaus2::bambam::BamAlignmentDecoder & dec = decwrapper->getDecoder();
+	::libmaus2::bambam::BamHeader const & header = dec.getHeader();
 
-	::libmaus::bambam::BamAlignment & algn = dec.getAlignment();
+	::libmaus2::bambam::BamAlignment & algn = dec.getAlignment();
 
-	libmaus::bambam::ChecksumsInterface::unique_ptr_type Pchksums(libmaus::bambam::ChecksumsFactory::construct(hash,header));
-	libmaus::bambam::ChecksumsInterface & chksums = *Pchksums;
+	libmaus2::bambam::ChecksumsInterface::unique_ptr_type Pchksums(libmaus2::bambam::ChecksumsFactory::construct(hash,header));
+	libmaus2::bambam::ChecksumsInterface & chksums = *Pchksums;
 
 	uint64_t c = 0;
 	while ( dec.readAlignment() )
@@ -93,23 +93,23 @@ int bamseqchksum(::libmaus::util::ArgInfo const & arginfo)
 
 #if defined(BIOBAMBAM_HAVE_GMP)
 template<size_t k>
-static libmaus::math::UnsignedInteger<k> convertNumber(mpz_t const & gmpnum)
+static libmaus2::math::UnsignedInteger<k> convertNumber(mpz_t const & gmpnum)
 {
 	size_t const numbitsperel = 8 * sizeof(uint32_t);
 	size_t const numwords = (mpz_sizeinbase(gmpnum,2) + numbitsperel - 1) / numbitsperel;
-	libmaus::autoarray::AutoArray<uint32_t> A(numwords,false);
+	libmaus2::autoarray::AutoArray<uint32_t> A(numwords,false);
 	size_t countp = numwords;
 	mpz_export(A.begin(),&countp,-1,sizeof(uint32_t),0,0,gmpnum);
-	libmaus::math::UnsignedInteger<k> U;
+	libmaus2::math::UnsignedInteger<k> U;
 	for ( size_t i = 0; i < std::min(countp,static_cast<size_t>(k)); ++i )
 		U[i] = A[i];
 	return U;
 }
 // search for next prime number larger than 2^(32*k) using probabilistic algorithm in gmp library
 template<size_t k>
-libmaus::math::UnsignedInteger<k+1> nextPrime()
+libmaus2::math::UnsignedInteger<k+1> nextPrime()
 {
-	libmaus::math::UnsignedInteger<k+1> U(1);
+	libmaus2::math::UnsignedInteger<k+1> U(1);
 	U <<= (k*32);
 	
 	mpz_t gmpU;
@@ -119,7 +119,7 @@ libmaus::math::UnsignedInteger<k+1> nextPrime()
 	while ( mpz_probab_prime_p(gmpU,200) == 0 )
 		mpz_add_ui(gmpU,gmpU,1);
 	
-	libmaus::math::UnsignedInteger<k+1> const R = convertNumber<k+1>(gmpU);
+	libmaus2::math::UnsignedInteger<k+1> const R = convertNumber<k+1>(gmpU);
 	
 	mpz_clear(gmpU);
 	
@@ -131,7 +131,7 @@ int main(int argc, char * argv[])
 {
 	try
 	{
-		::libmaus::util::ArgInfo const arginfo(argc,argv);
+		::libmaus2::util::ArgInfo const arginfo(argc,argv);
 		
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
 			if ( 
@@ -140,7 +140,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--version"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
 			else if ( 
@@ -149,24 +149,24 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--help"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
 				
 				std::vector< std::pair<std::string,std::string> > V;
 			
-				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress information" ) );
-				#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
+				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress information" ) );
+				#if defined(BIOBAMBAM_LIBMAUS2_HAVE_IO_LIB)
 				V.push_back ( std::pair<std::string,std::string> ( std::string("inputformat=<[")+getDefaultInputFormat()+"]>", "input format: cram, bam or sam" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "reference=<[]>", "name of reference FastA in case of inputformat=cram" ) );
 				#else
 				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<[bam]>", "input format: bam" ) );
 				#endif
 
-				V.push_back ( std::pair<std::string,std::string> ( std::string("hash=<[")+getDefaultHash()+"]>", "hash digest function: " + libmaus::bambam::ChecksumsFactory::getSupportedHashVariantsList()) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("hash=<[")+getDefaultHash()+"]>", "hash digest function: " + libmaus2::bambam::ChecksumsFactory::getSupportedHashVariantsList()) );
 				
-				::biobambam::Licensing::printMap(std::cerr,V);
+				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 								

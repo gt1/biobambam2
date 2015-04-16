@@ -19,7 +19,7 @@
 #if ! defined(BIOBAMBAM_STRIP12_HPP)
 #define BIOBAMBAM_STRIP12_HPP
 
-#include <libmaus/bambam/BamAlignment.hpp>
+#include <libmaus2/bambam/BamAlignment.hpp>
 
-bool strip12(libmaus::bambam::BamAlignment & algn);
+bool strip12(libmaus2::bambam::BamAlignment & algn);
 #endif

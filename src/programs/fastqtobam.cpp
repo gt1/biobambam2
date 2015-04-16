@@ -16,16 +16,16 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
-#include <libmaus/fastx/StreamFastQReader.hpp>
-#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
-#include <libmaus/bambam/BamWriter.hpp>
-#include <libmaus/bambam/BamHeaderUpdate.hpp>
-#include <libmaus/bambam/BamFlagBase.hpp>
-#include <libmaus/lz/BgzfDeflateOutputCallbackMD5.hpp>
-#include <libmaus/util/MemUsage.hpp>
-#include <libmaus/util/ToUpperTable.hpp>
+#include <libmaus2/fastx/StreamFastQReader.hpp>
+#include <libmaus2/bambam/BamBlockWriterBaseFactory.hpp>
+#include <libmaus2/bambam/BamWriter.hpp>
+#include <libmaus2/bambam/BamHeaderUpdate.hpp>
+#include <libmaus2/bambam/BamFlagBase.hpp>
+#include <libmaus2/lz/BgzfDeflateOutputCallbackMD5.hpp>
+#include <libmaus2/util/MemUsage.hpp>
+#include <libmaus2/util/ToUpperTable.hpp>
 
-#include <libmaus/lz/BufferedGzipStream.hpp>
+#include <libmaus2/lz/BufferedGzipStream.hpp>
 
 #include <biobambam/BamBamConfig.hpp>
 #include <biobambam/Licensing.hpp>
@@ -75,9 +75,9 @@ static std::string getDefaultNameScheme()
 	return "generic";
 }
 
-static int getLevel(libmaus::util::ArgInfo const & arginfo)
+static int getLevel(libmaus2::util::ArgInfo const & arginfo)
 {
-	return libmaus::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
+	return libmaus2::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
 }
 
 struct RgInfo
@@ -96,7 +96,7 @@ struct RgInfo
 	std::string SM;
 	
 	RgInfo() {}
-	RgInfo(libmaus::util::ArgInfo const & arginfo)
+	RgInfo(libmaus2::util::ArgInfo const & arginfo)
 	:
 		ID(arginfo.getUnparsedValue("RGID","")),
 		CN(arginfo.getUnparsedValue("RGCN","")),
@@ -146,10 +146,10 @@ struct RgInfo
 struct FastQSeqMapTable
 {
 	typedef FastQSeqMapTable this_type;
-	typedef ::libmaus::util::unique_ptr<this_type>::type unique_ptr_type;
-	typedef ::libmaus::util::shared_ptr<this_type>::type shared_ptr_type;
+	typedef ::libmaus2::util::unique_ptr<this_type>::type unique_ptr_type;
+	typedef ::libmaus2::util::shared_ptr<this_type>::type shared_ptr_type;
 
-	::libmaus::autoarray::AutoArray<uint8_t> touppertable;
+	::libmaus2::autoarray::AutoArray<uint8_t> touppertable;
 
 	FastQSeqMapTable() : touppertable(256)
 	{
@@ -229,7 +229,7 @@ static fastq_name_scheme_type parseNameScheme(std::string const & schemename)
 		return fastq_name_scheme_pairedfiles;
 	else
 	{
-		libmaus::exception::LibMausException lme;
+		libmaus2::exception::LibMausException lme;
 		lme.getStream() << "unknown read name scheme " << schemename << std::endl;
 		lme.finish();
 		throw lme;	
@@ -248,7 +248,7 @@ struct NameInfo
 	NameInfo() : name(), ispair(false), isfirst(false), gl(0), gr(0), namescheme(fastq_name_scheme_generic) {}
 	NameInfo(
 		std::string const & rname, 
-		libmaus::fastx::SpaceTable const & ST,
+		libmaus2::fastx::SpaceTable const & ST,
 		fastq_name_scheme_type const rnamescheme
 	)
 	: name(rname), ispair(false), isfirst(true), gl(0), gr(name.size()), namescheme(rnamescheme)
@@ -325,7 +325,7 @@ struct NameInfo
 			
 				if ( l0c != 6 || l1c != 3 )
 				{
-					::libmaus::exception::LibMausException se;
+					::libmaus2::exception::LibMausException se;
 					se.getStream() << "malformed read name " << name << " (wrong number of colon separated fields) for name scheme " << namescheme << std::endl;
 					se.finish();
 					throw se;
@@ -354,7 +354,7 @@ struct NameInfo
 					
 					if ( (! fragidlen) || (fragid<1) || (fragid>2) || name[p] != ':' )
 					{
-						::libmaus::exception::LibMausException se;
+						::libmaus2::exception::LibMausException se;
 						se.getStream() << "malformed read name " << name << " (malformed fragment id) for name scheme" << namescheme << std::endl;
 						se.finish();
 						throw se;	
@@ -367,7 +367,7 @@ struct NameInfo
 			}
 			case fastq_name_scheme_pairedfiles:
 			{
-				::libmaus::exception::LibMausException se;
+				::libmaus2::exception::LibMausException se;
 				se.getStream() << "pairedfiles name scheme is not supported in NameInfo" << std::endl;
 				se.finish();
 				throw se;	
@@ -391,7 +391,7 @@ struct NameInfo
 				return name.substr(gl,gr-gl);
 			default:
 			{
-				::libmaus::exception::LibMausException se;
+				::libmaus2::exception::LibMausException se;
 				se.getStream() << "NameInfo::getName(): invalid name scheme" << std::endl;
 				se.finish();
 				throw se;			
@@ -414,7 +414,7 @@ void checkFastQElement(
 			static_cast<int>(static_cast<uint8_t>(element.quality[i])) - qualityoffset > maxvalid
 		)
 	{
-		libmaus::exception::LibMausException lme;
+		libmaus2::exception::LibMausException lme;
 		lme.getStream() 
 			<< "quality string " << element.quality << " of read " << element.sid 
 			<< " is invalid, first invalid symbol is " << element.quality[i]
@@ -452,10 +452,10 @@ void fastqtobamSingleTemplate(
 	uint64_t * const H
 	)
 {
-	typedef ::libmaus::fastx::StreamFastQReaderWrapper reader_type;
+	typedef ::libmaus2::fastx::StreamFastQReaderWrapper reader_type;
 	typedef reader_type::pattern_type pattern_type;
-	::libmaus::fastx::StreamFastQReaderWrapper fqin(in);	
-	libmaus::fastx::SpaceTable ST;
+	::libmaus2::fastx::StreamFastQReaderWrapper fqin(in);	
+	libmaus2::fastx::SpaceTable ST;
 	uint64_t proc = 0;
 	FastQSeqMapTable const toup;
 	
@@ -485,10 +485,10 @@ void fastqtobamSingleTemplate(
 						-1,
 						-1,
 						0,
-						libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FPAIRED |
-						libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FUNMAP |
-						libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FMUNMAP |
-						(NI.isfirst ? libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREAD1 : libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREAD2),
+						libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FPAIRED |
+						libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FUNMAP |
+						libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FMUNMAP |
+						(NI.isfirst ? libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FREAD1 : libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FREAD2),
 						std::string(),
 						-1,
 						-1,
@@ -508,7 +508,7 @@ void fastqtobamSingleTemplate(
 						-1,
 						-1,
 						0,
-						libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FUNMAP,
+						libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FUNMAP,
 						std::string(),
 						-1,
 						-1,
@@ -538,7 +538,7 @@ void fastqtobamSingleTemplate(
 				bool const ok_2 = fqin.getNextPatternUnlocked(element_2);
 				if ( ! ok_2 )
 				{
-					libmaus::exception::LibMausException ex;
+					libmaus2::exception::LibMausException ex;
 					ex.getStream() << "number of fragments is not even" << std::endl;
 					ex.finish();
 					throw ex;
@@ -588,7 +588,7 @@ void fastqtobamSingleTemplate(
 				
 				if ( element_1.sid != element_2.sid )
 				{
-					::libmaus::exception::LibMausException se;
+					::libmaus2::exception::LibMausException se;
 					se.getStream() << "Pair names " << element_1.sid << " and " << element_2.sid << " are not in sync." << std::endl;
 					se.finish();
 					throw se;
@@ -599,10 +599,10 @@ void fastqtobamSingleTemplate(
 					-1,
 					-1,
 					0,
-					libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FPAIRED |
-					libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FUNMAP |
-					libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FMUNMAP |
-					(true ? libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREAD1 : libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREAD2),
+					libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FPAIRED |
+					libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FUNMAP |
+					libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FMUNMAP |
+					(true ? libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FREAD1 : libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FREAD2),
 					std::string(),
 					-1,
 					-1,
@@ -620,10 +620,10 @@ void fastqtobamSingleTemplate(
 					-1,
 					-1,
 					0,
-					libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FPAIRED |
-					libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FUNMAP |
-					libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FMUNMAP |
-					(false ? libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREAD1 : libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREAD2),
+					libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FPAIRED |
+					libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FUNMAP |
+					libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FMUNMAP |
+					(false ? libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FREAD1 : libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FREAD2),
 					std::string(),
 					-1,
 					-1,
@@ -679,12 +679,12 @@ void fastqtobamPairTemplate(
 	uint64_t * const H
 )
 {
-	typedef ::libmaus::fastx::StreamFastQReaderWrapper reader_type;
+	typedef ::libmaus2::fastx::StreamFastQReaderWrapper reader_type;
 	typedef reader_type::pattern_type pattern_type;
-	::libmaus::fastx::StreamFastQReaderWrapper fqin_1(in_1);	
-	::libmaus::fastx::StreamFastQReaderWrapper fqin_2(in_2);
+	::libmaus2::fastx::StreamFastQReaderWrapper fqin_1(in_1);	
+	::libmaus2::fastx::StreamFastQReaderWrapper fqin_2(in_2);
 	pattern_type element_1, element_2;
-	libmaus::fastx::SpaceTable ST;
+	libmaus2::fastx::SpaceTable ST;
 	uint64_t proc = 0;
 	FastQSeqMapTable const toup;
 	
@@ -694,7 +694,7 @@ void fastqtobamPairTemplate(
 		
 		if ( ! ok_2 )
 		{
-			libmaus::exception::LibMausException ex;
+			libmaus2::exception::LibMausException ex;
 			ex.getStream() << "fastq input files contain a different number of reads" << std::endl;
 			ex.finish();
 			throw ex;
@@ -728,14 +728,14 @@ void fastqtobamPairTemplate(
 				
 				if ( (!NI_1.ispair) || (!NI_1.isfirst) )
 				{
-					libmaus::exception::LibMausException ex;
+					libmaus2::exception::LibMausException ex;
 					ex.getStream() << "name " << name_1 << " does not look like a first mate read name in name scheme " << namescheme << ". Please check the namescheme parameter." << std::endl;
 					ex.finish();
 					throw ex;		
 				}
 				if ( NI_2.isfirst )
 				{
-					libmaus::exception::LibMausException ex;
+					libmaus2::exception::LibMausException ex;
 					ex.getStream() << "name " << name_2 << " does not look like a second mate read name in name scheme " << namescheme << ". Please check the namescheme parameter." << std::endl;
 					ex.finish();
 					throw ex;		
@@ -746,10 +746,10 @@ void fastqtobamPairTemplate(
 					-1,
 					-1,
 					0,
-					libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FPAIRED |
-					libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FUNMAP |
-					libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FMUNMAP |
-					(NI_1.isfirst ? libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREAD1 : libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREAD2),
+					libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FPAIRED |
+					libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FUNMAP |
+					libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FMUNMAP |
+					(NI_1.isfirst ? libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FREAD1 : libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FREAD2),
 					std::string(),
 					-1,
 					-1,
@@ -767,10 +767,10 @@ void fastqtobamPairTemplate(
 					-1,
 					-1,
 					0,
-					libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FPAIRED |
-					libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FUNMAP |
-					libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FMUNMAP |
-					(NI_2.isfirst ? libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREAD1 : libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREAD2),
+					libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FPAIRED |
+					libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FUNMAP |
+					libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FMUNMAP |
+					(NI_2.isfirst ? libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FREAD1 : libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FREAD2),
 					std::string(),
 					-1,
 					-1,
@@ -817,7 +817,7 @@ void fastqtobamPairTemplate(
 				
 				if ( element_1.sid != element_2.sid )
 				{
-					::libmaus::exception::LibMausException se;
+					::libmaus2::exception::LibMausException se;
 					se.getStream() << "Pair names " << element_1.sid << " and " << element_2.sid << " are not in sync." << std::endl;
 					se.finish();
 					throw se;
@@ -828,10 +828,10 @@ void fastqtobamPairTemplate(
 					-1,
 					-1,
 					0,
-					libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FPAIRED |
-					libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FUNMAP |
-					libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FMUNMAP |
-					(true ? libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREAD1 : libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREAD2),
+					libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FPAIRED |
+					libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FUNMAP |
+					libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FMUNMAP |
+					(true ? libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FREAD1 : libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FREAD2),
 					std::string(),
 					-1,
 					-1,
@@ -849,10 +849,10 @@ void fastqtobamPairTemplate(
 					-1,
 					-1,
 					0,
-					libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FPAIRED |
-					libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FUNMAP |
-					libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FMUNMAP |
-					(false ? libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREAD1 : libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREAD2),
+					libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FPAIRED |
+					libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FUNMAP |
+					libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FMUNMAP |
+					(false ? libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FREAD1 : libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FREAD2),
 					std::string(),
 					-1,
 					-1,
@@ -902,7 +902,7 @@ void fastqtobamPair(
 	}
 }
 
-void fastqtobam(libmaus::util::ArgInfo const & arginfo)
+void fastqtobam(libmaus2::util::ArgInfo const & arginfo)
 {
 	std::vector<std::string> filenames = arginfo.getPairValues("I");
 	for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
@@ -924,7 +924,7 @@ void fastqtobam(libmaus::util::ArgInfo const & arginfo)
 	uint64_t const bamqualmax = ('~'-'!'+1);
 	if ( maxvalid > static_cast<int>(bamqualmax) )
 	{
-		libmaus::exception::LibMausException lme;
+		libmaus2::exception::LibMausException lme;
 		lme.getStream() << "Quality values of more than " << bamqualmax << " cannot be represented in BAM files\n";
 		lme.finish();
 		throw lme;
@@ -937,7 +937,7 @@ void fastqtobam(libmaus::util::ArgInfo const & arginfo)
 	RgInfo const rginfo(arginfo);
 	std::string const rgid = rginfo.ID; // ;arginfo.getUnparsedValue("RG","");
 
-	::libmaus::bambam::BamHeader bamheader;
+	::libmaus2::bambam::BamHeader bamheader;
 	std::ostringstream headerostr;
 	headerostr << "@HD\tVN:1.4\tSO:unknown\n";
 	headerostr 
@@ -956,8 +956,8 @@ void fastqtobam(libmaus::util::ArgInfo const & arginfo)
 	 */
 	std::string md5filename;
 
-	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > cbs;
-	::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
+	std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > cbs;
+	::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
 	if ( arginfo.getValue<unsigned int>("md5",getDefaultMD5()) )
 	{
 		if ( arginfo.hasArg("md5filename") &&  arginfo.getUnparsedValue("md5filename","") != "" )
@@ -967,12 +967,12 @@ void fastqtobam(libmaus::util::ArgInfo const & arginfo)
 
 		if ( md5filename.size() )
 		{
-			::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5cb(new ::libmaus::lz::BgzfDeflateOutputCallbackMD5);
+			::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5cb(new ::libmaus2::lz::BgzfDeflateOutputCallbackMD5);
 			Pmd5cb = UNIQUE_PTR_MOVE(Tmd5cb);
 			cbs.push_back(Pmd5cb.get());
 		}
 	}
-	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
+	std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
 	if ( cbs.size() )
 		Pcbs = &cbs;
 	/*
@@ -981,8 +981,8 @@ void fastqtobam(libmaus::util::ArgInfo const & arginfo)
 
 	if ( threads <= 1 )
 	{
-		::libmaus::bambam::BamWriter::unique_ptr_type bamwr(
-			new ::libmaus::bambam::BamWriter(
+		::libmaus2::bambam::BamWriter::unique_ptr_type bamwr(
+			new ::libmaus2::bambam::BamWriter(
 				std::cout,bamheader,level,Pcbs
 			)
 		);
@@ -991,7 +991,7 @@ void fastqtobam(libmaus::util::ArgInfo const & arginfo)
 		{
 			if ( gz )
 			{
-				libmaus::lz::BufferedGzipStream BGS(std::cin);
+				libmaus2::lz::BufferedGzipStream BGS(std::cin);
 				fastqtobamSingle(BGS,*bamwr,verbose,rgid,qualityoffset,maxvalid,checkquality,H,namescheme);
 			}
 			else
@@ -1001,11 +1001,11 @@ void fastqtobam(libmaus::util::ArgInfo const & arginfo)
 		}
 		else if ( filenames.size() == 1 )
 		{
-			libmaus::aio::CheckedInputStream CIS(filenames[0]);		
+			libmaus2::aio::CheckedInputStream CIS(filenames[0]);		
 			
 			if ( gz )
 			{
-				libmaus::lz::BufferedGzipStream BGS(CIS);
+				libmaus2::lz::BufferedGzipStream BGS(CIS);
 				fastqtobamSingle(BGS,*bamwr,verbose,rgid,qualityoffset,maxvalid,checkquality,H,namescheme);
 			}
 			else
@@ -1018,13 +1018,13 @@ void fastqtobam(libmaus::util::ArgInfo const & arginfo)
 			if ( filenames.size() > 2 )
 				std::cerr << "[D] warning, ignoring additional input files past first two" << std::endl;
 		
-			libmaus::aio::CheckedInputStream CIS_1(filenames[0]);
-			libmaus::aio::CheckedInputStream CIS_2(filenames[1]);
+			libmaus2::aio::CheckedInputStream CIS_1(filenames[0]);
+			libmaus2::aio::CheckedInputStream CIS_2(filenames[1]);
 
 			if ( gz )
 			{
-				libmaus::lz::BufferedGzipStream BGS_1(CIS_1);
-				libmaus::lz::BufferedGzipStream BGS_2(CIS_2);
+				libmaus2::lz::BufferedGzipStream BGS_1(CIS_1);
+				libmaus2::lz::BufferedGzipStream BGS_2(CIS_2);
 				fastqtobamPair(BGS_1,BGS_2,*bamwr,verbose,rgid,qualityoffset,maxvalid,checkquality,H,namescheme);
 			}
 			else
@@ -1037,8 +1037,8 @@ void fastqtobam(libmaus::util::ArgInfo const & arginfo)
 	}
 	else
 	{
-		::libmaus::bambam::BamParallelWriter::unique_ptr_type bamwr(
-			new ::libmaus::bambam::BamParallelWriter(
+		::libmaus2::bambam::BamParallelWriter::unique_ptr_type bamwr(
+			new ::libmaus2::bambam::BamParallelWriter(
 				std::cout,threads,bamheader,level,Pcbs
 			)
 		);
@@ -1047,7 +1047,7 @@ void fastqtobam(libmaus::util::ArgInfo const & arginfo)
 		{
 			if ( gz )
 			{
-				libmaus::lz::BufferedGzipStream BGS(std::cin);
+				libmaus2::lz::BufferedGzipStream BGS(std::cin);
 				fastqtobamSingle(BGS,*bamwr,verbose,rgid,qualityoffset,maxvalid,checkquality,H,namescheme);
 			}
 			else
@@ -1057,11 +1057,11 @@ void fastqtobam(libmaus::util::ArgInfo const & arginfo)
 		}
 		else if ( filenames.size() == 1 )
 		{
-			libmaus::aio::CheckedInputStream CIS(filenames[0]);		
+			libmaus2::aio::CheckedInputStream CIS(filenames[0]);		
 			
 			if ( gz )
 			{
-				libmaus::lz::BufferedGzipStream BGS(CIS);
+				libmaus2::lz::BufferedGzipStream BGS(CIS);
 				fastqtobamSingle(BGS,*bamwr,verbose,rgid,qualityoffset,maxvalid,checkquality,H,namescheme);
 			}
 			else
@@ -1074,13 +1074,13 @@ void fastqtobam(libmaus::util::ArgInfo const & arginfo)
 			if ( filenames.size() > 2 )
 				std::cerr << "[D] warning, ignoring additional input files past first two" << std::endl;
 		
-			libmaus::aio::CheckedInputStream CIS_1(filenames[0]);
-			libmaus::aio::CheckedInputStream CIS_2(filenames[1]);
+			libmaus2::aio::CheckedInputStream CIS_1(filenames[0]);
+			libmaus2::aio::CheckedInputStream CIS_2(filenames[1]);
 
 			if ( gz )
 			{
-				libmaus::lz::BufferedGzipStream BGS_1(CIS_1);
-				libmaus::lz::BufferedGzipStream BGS_2(CIS_2);
+				libmaus2::lz::BufferedGzipStream BGS_1(CIS_1);
+				libmaus2::lz::BufferedGzipStream BGS_2(CIS_2);
 				fastqtobamPair(BGS_1,BGS_2,*bamwr,verbose,rgid,qualityoffset,maxvalid,checkquality,H,namescheme);			
 			}
 			else
@@ -1122,37 +1122,37 @@ static void testNameInfo()
 {
 	{
 		std::string const name = "read1";
-		libmaus::fastx::SpaceTable const ST;
+		libmaus2::fastx::SpaceTable const ST;
 		NameInfo const NI(name,ST,fastq_name_scheme_generic);
 		std::cerr << NI.getName() << " " << NI.ispair << " " << NI.isfirst << std::endl;
 	}
 	{
 		std::string const name = "read1/1";
-		libmaus::fastx::SpaceTable const ST;
+		libmaus2::fastx::SpaceTable const ST;
 		NameInfo const NI(name,ST,fastq_name_scheme_generic);
 		std::cerr << NI.getName() << " " << NI.ispair << " " << NI.isfirst << std::endl;
 	}
 	{
 		std::string const name = "read1/2";
-		libmaus::fastx::SpaceTable const ST;
+		libmaus2::fastx::SpaceTable const ST;
 		NameInfo const NI(name,ST,fastq_name_scheme_generic);
 		std::cerr << NI.getName() << " " << NI.ispair << " " << NI.isfirst << std::endl;
 	}
 	{
 		std::string const name = "HWI-ST1289:72:C18CTACXX:8:1101:1116:2072 1:N:0:";
-		libmaus::fastx::SpaceTable const ST;
+		libmaus2::fastx::SpaceTable const ST;
 		NameInfo const NI(name,ST,fastq_name_scheme_casava18_single);
 		std::cerr << NI.getName() << " " << NI.ispair << " " << NI.isfirst << std::endl;
 	}
 	{
 		std::string const name = "HWI-ST1289:72:C18CTACXX:8:1101:1116:2072 1:N:0:";
-		libmaus::fastx::SpaceTable const ST;
+		libmaus2::fastx::SpaceTable const ST;
 		NameInfo const NI(name,ST,fastq_name_scheme_casava18_paired_end);
 		std::cerr << NI.getName() << " " << NI.ispair << " " << NI.isfirst << std::endl;
 	}
 	{
 		std::string const name = "HWI-ST1289:72:C18CTACXX:8:1101:1116:2072 2:N:0:";
-		libmaus::fastx::SpaceTable const ST;
+		libmaus2::fastx::SpaceTable const ST;
 		NameInfo const NI(name,ST,fastq_name_scheme_casava18_paired_end);
 		std::cerr << NI.getName() << " " << NI.ispair << " " << NI.isfirst << std::endl;
 	}
@@ -1163,8 +1163,8 @@ int main(int argc, char * argv[])
 {
 	try
 	{
-		libmaus::timing::RealTimeClock rtc; rtc.start();	
-		::libmaus::util::ArgInfo const arginfo(argc,argv);
+		libmaus2::timing::RealTimeClock rtc; rtc.start();	
+		::libmaus2::util::ArgInfo const arginfo(argc,argv);
 		
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
 			if ( 
@@ -1173,7 +1173,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--version"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
 			else if ( 
@@ -1182,16 +1182,16 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--help"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license() << std::endl;
+				std::cerr << ::biobambam2::Licensing::license() << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
 				
 				std::vector< std::pair<std::string,std::string> > V;
 
-				V.push_back ( std::pair<std::string,std::string> ( "level=<[-1]>", libmaus::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
+				V.push_back ( std::pair<std::string,std::string> ( "level=<[-1]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
 				V.push_back ( std::pair<std::string,std::string> ( "gz=<[0]>", "input is gzip compressed FastQ (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<[0]>", "print progress report (default: 0)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam2::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "md5filename=<filename>", "file name for md5 check sum" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "I=<[input file name]>", "input file names (standard input if unset)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "threads=<[1]>", "additional BAM encoding helper threads (default: serial encoding)" ) );
@@ -1208,13 +1208,13 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "RGPL=<>", "PL field of RG header line if RGID is set (default: not present)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "RGPU=<>", "PU field of RG header line if RGID is set (default: not present)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "RGSM=<>", "SM field of RG header line if RGID is set (default: not present)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "qualityoffset=<["+::biobambam::Licensing::formatNumber(getDefaultQualityOffset())+"]>", "quality offset (default: 33)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "qualitymax=<["+::biobambam::Licensing::formatNumber(getDefaultQualityMaximum())+"]>", "maximum valid quality value (default: 41)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "checkquality=<["+::biobambam::Licensing::formatNumber(getDefaultCheckQuality())+"]>", "check quality (default: true)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "qualityoffset=<["+::biobambam2::Licensing::formatNumber(getDefaultQualityOffset())+"]>", "quality offset (default: 33)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "qualitymax=<["+::biobambam2::Licensing::formatNumber(getDefaultQualityMaximum())+"]>", "maximum valid quality value (default: 41)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "checkquality=<["+::biobambam2::Licensing::formatNumber(getDefaultCheckQuality())+"]>", "check quality (default: true)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("namescheme=<[")+(getDefaultNameScheme())+"]>", "read name scheme (generic, c18s, c18pe, pairedfiles)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "qualityhist=<["+::biobambam::Licensing::formatNumber(getDefaultQualityHist())+"]>", "compute quality histogram and print it on standard error" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "qualityhist=<["+::biobambam2::Licensing::formatNumber(getDefaultQualityHist())+"]>", "compute quality histogram and print it on standard error" ) );
 				
-				::biobambam::Licensing::printMap(std::cerr,V);
+				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 				
@@ -1227,7 +1227,7 @@ int main(int argc, char * argv[])
 			
 		fastqtobam(arginfo);
 		
-		std::cerr << "[V] " << libmaus::util::MemUsage() << " wall clock time " << rtc.formatTime(rtc.getElapsedSeconds()) << std::endl;
+		std::cerr << "[V] " << libmaus2::util::MemUsage() << " wall clock time " << rtc.formatTime(rtc.getElapsedSeconds()) << std::endl;
 	}
 	catch(std::exception const & ex)
 	{

@@ -19,7 +19,7 @@
 #if ! defined(BIOBAMBAM_KMERPROB_HPP)
 #define BIOBAMBAM_KMERPROB_HPP
 
-#include <libmaus/types/types.hpp>
+#include <libmaus2/types/types.hpp>
 
 /**
  * this function computes an approximation of the probability

@@ -21,18 +21,18 @@
 #include <biobambam/BamBamConfig.hpp>
 #include <biobambam/Licensing.hpp>
 
-#include <libmaus/aio/PosixFdInputStream.hpp>
-#include <libmaus/aio/PosixFdOutputStream.hpp>
-#include <libmaus/bambam/RgInfo.hpp>
-#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
-#include <libmaus/bambam/parallel/FastqToBamControl.hpp>
-#include <libmaus/lz/BgzfDeflate.hpp>
-#include <libmaus/parallel/NumCpus.hpp>
-#include <libmaus/util/MemUsage.hpp>
+#include <libmaus2/aio/PosixFdInputStream.hpp>
+#include <libmaus2/aio/PosixFdOutputStream.hpp>
+#include <libmaus2/bambam/RgInfo.hpp>
+#include <libmaus2/bambam/BamBlockWriterBaseFactory.hpp>
+#include <libmaus2/bambam/parallel/FastqToBamControl.hpp>
+#include <libmaus2/lz/BgzfDeflate.hpp>
+#include <libmaus2/parallel/NumCpus.hpp>
+#include <libmaus2/util/MemUsage.hpp>
 
-static std::string writeHeader(libmaus::util::ArgInfo const & arginfo, std::ostream & out)
+static std::string writeHeader(libmaus2::util::ArgInfo const & arginfo, std::ostream & out)
 {
-	libmaus::bambam::RgInfo const rginfo(arginfo);
+	libmaus2::bambam::RgInfo const rginfo(arginfo);
 
 	std::ostringstream headerostr;
 	headerostr << "@HD\tVN:1.4\tSO:unknown\n";
@@ -44,30 +44,30 @@ static std::string writeHeader(libmaus::util::ArgInfo const & arginfo, std::ostr
 		<< "VN:" << std::string(PACKAGE_VERSION)
 		<< std::endl;
 	headerostr << rginfo.toString();
-	::libmaus::bambam::BamHeader bamheader;
+	::libmaus2::bambam::BamHeader bamheader;
 	bamheader.text = headerostr.str();		
 
-	libmaus::lz::BgzfOutputStream bgzf(out);
+	libmaus2::lz::BgzfOutputStream bgzf(out);
 	bamheader.serialise(bgzf);
 	bgzf.flush();
 	
 	return rginfo.ID;
 }
 
-static int fastqtobampar(libmaus::util::ArgInfo const & arginfo)
+static int fastqtobampar(libmaus2::util::ArgInfo const & arginfo)
 {
 	std::ostream & out = std::cout;
-	uint64_t const numlogcpus = arginfo.getValue<int>("threads", 1 /* libmaus::parallel::NumCpus::getNumLogicalProcessors() */);
+	uint64_t const numlogcpus = arginfo.getValue<int>("threads", 1 /* libmaus2::parallel::NumCpus::getNumLogicalProcessors() */);
 	int const level = arginfo.getValue<int>("level",Z_DEFAULT_COMPRESSION);
 		
 	std::string const rgid = writeHeader(arginfo,out);
 
-	libmaus::parallel::SimpleThreadPool STP(numlogcpus);
+	libmaus2::parallel::SimpleThreadPool STP(numlogcpus);
 	uint64_t const outblocks = 1024;
 	uint64_t const inputblocksize = 1024*1024*64;
 	uint64_t const inblocks = 64;
-	libmaus::aio::PosixFdInputStream PFIS(STDIN_FILENO);
-	libmaus::bambam::parallel::FastqToBamControl FTBC(PFIS,out,STP,inblocks,inputblocksize,outblocks,level,rgid);
+	libmaus2::aio::PosixFdInputStream PFIS(STDIN_FILENO);
+	libmaus2::bambam::parallel::FastqToBamControl FTBC(PFIS,out,STP,inblocks,inputblocksize,outblocks,level,rgid);
 
 	FTBC.enqueReadPackage();
 	FTBC.waitCompressionFinished();
@@ -82,8 +82,8 @@ int main(int argc, char * argv[])
 {
 	try
 	{
-		libmaus::timing::RealTimeClock rtc; rtc.start();	
-		::libmaus::util::ArgInfo const arginfo(argc,argv);
+		libmaus2::timing::RealTimeClock rtc; rtc.start();	
+		::libmaus2::util::ArgInfo const arginfo(argc,argv);
 		
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
 			if ( 
@@ -92,7 +92,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--version"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
 			else if ( 
@@ -101,16 +101,16 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--help"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license() << std::endl;
+				std::cerr << ::biobambam2::Licensing::license() << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
 				
 				std::vector< std::pair<std::string,std::string> > V;
 
-				V.push_back ( std::pair<std::string,std::string> ( "level=<[-1]>", libmaus::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
+				V.push_back ( std::pair<std::string,std::string> ( "level=<[-1]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
 				#if 0
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<[0]>", "print progress report (default: 0)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam2::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "md5filename=<filename>", "file name for md5 check sum" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "I=<[input file name]>", "input file names (standard input if unset)" ) );
 				#endif
@@ -130,14 +130,14 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "RGSM=<>", "SM field of RG header line if RGID is set (default: not present)" ) );
 				
 				#if 0
-				V.push_back ( std::pair<std::string,std::string> ( "qualityoffset=<["+::biobambam::Licensing::formatNumber(getDefaultQualityOffset())+"]>", "quality offset (default: 33)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "qualitymax=<["+::biobambam::Licensing::formatNumber(getDefaultQualityMaximum())+"]>", "maximum valid quality value (default: 41)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "checkquality=<["+::biobambam::Licensing::formatNumber(getDefaultCheckQuality())+"]>", "check quality (default: true)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "qualityoffset=<["+::biobambam2::Licensing::formatNumber(getDefaultQualityOffset())+"]>", "quality offset (default: 33)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "qualitymax=<["+::biobambam2::Licensing::formatNumber(getDefaultQualityMaximum())+"]>", "maximum valid quality value (default: 41)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "checkquality=<["+::biobambam2::Licensing::formatNumber(getDefaultCheckQuality())+"]>", "check quality (default: true)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("namescheme=<[")+(getDefaultNameScheme())+"]>", "read name scheme (generic, c18s, c18pe, pairedfiles)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "qualityhist=<["+::biobambam::Licensing::formatNumber(getDefaultQualityHist())+"]>", "compute quality histogram and print it on standard error" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "qualityhist=<["+::biobambam2::Licensing::formatNumber(getDefaultQualityHist())+"]>", "compute quality histogram and print it on standard error" ) );
 				#endif
 				
-				::biobambam::Licensing::printMap(std::cerr,V);
+				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 				
@@ -150,7 +150,7 @@ int main(int argc, char * argv[])
 			
 		fastqtobampar(arginfo);
 		
-		std::cerr << "[V] " << libmaus::util::MemUsage() << " wall clock time " << rtc.formatTime(rtc.getElapsedSeconds()) << std::endl;
+		std::cerr << "[V] " << libmaus2::util::MemUsage() << " wall clock time " << rtc.formatTime(rtc.getElapsedSeconds()) << std::endl;
 	}
 	catch(std::exception const & ex)
 	{

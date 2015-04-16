@@ -1,5 +1,5 @@
-biobambam
-======
+biobambam2
+==========
 
 This package contains some tools for processing BAM files including
 
@@ -24,18 +24,18 @@ with the -h parameter, e.g.
 Source
 ------
 
-The biobambam source code is hosted on github:
+The biobambam2 source code is hosted on github:
 
-	git@github.com:gt1/biobambam.git
+	git@github.com:gt1/biobambam2.git
 
-Compilation of biobambam
-------------------------
+Compilation of biobambam2
+-------------------------
 
-biobambam needs libmaus [https://github.com/gt1/libmaus] . When libmaus
-is installed in ${LIBMAUSPREFIX} then biobambam can be compiled and
-installed in ${HOME}/biobambam using
+biobambam2 needs libmaus2 [https://github.com/gt1/libmaus2] . When libmaus2
+is installed in ${LIBMAUSPREFIX} then biobambam2 can be compiled and
+installed in ${HOME}/biobambam2 using
 
 	- autoreconf -i -f
-	- ./configure --with-libmaus=${LIBMAUSPREFIX} \
-		--prefix=${HOME}/biobambam
+	- ./configure --with-libmaus2=${LIBMAUSPREFIX} \
+		--prefix=${HOME}/biobambam2
 	- make install

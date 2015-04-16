@@ -18,7 +18,7 @@
 **/
 #include <biobambam/Strip12.hpp>
 
-bool strip12(libmaus::bambam::BamAlignment & algn)
+bool strip12(libmaus2::bambam::BamAlignment & algn)
 {
 	char const * name = algn.getName();
 	

@@ -21,7 +21,7 @@
 #include <iomanip>
 #include "config.h"
 
-std::string biobambam::Licensing::license()
+std::string biobambam2::Licensing::license()
 {
 	std::ostringstream ostr;
 	ostr << "This is " << PACKAGE_NAME << " version " << PACKAGE_VERSION << "." << std::endl;
@@ -29,7 +29,7 @@ std::string biobambam::Licensing::license()
 	return ostr.str();
 }
 
-std::string biobambam::Licensing::printLeft(std::string const & s, uint64_t const w, char const fill)
+std::string biobambam2::Licensing::printLeft(std::string const & s, uint64_t const w, char const fill)
 {
 	std::ostringstream ostr;
 	ostr << std::setiosflags(std::ios::left);
@@ -39,7 +39,7 @@ std::string biobambam::Licensing::printLeft(std::string const & s, uint64_t cons
 	return ostr.str();
 }
 
-std::ostream & biobambam::Licensing::printMap(std::ostream & out, std::vector< std::pair<std::string,std::string> > const & M)
+std::ostream & biobambam2::Licensing::printMap(std::ostream & out, std::vector< std::pair<std::string,std::string> > const & M)
 {
 	uint64_t maxfield = 0;
 	for ( std::vector< std::pair<std::string,std::string> >::const_iterator ita = M.begin(); ita != M.end(); ++ita )
@@ -51,5 +51,5 @@ std::ostream & biobambam::Licensing::printMap(std::ostream & out, std::vector< s
 	return out;
 }
 
-std::string biobambam::Licensing::formatNumber(int64_t const n) { std::ostringstream ostr; ostr << n; return ostr.str(); }
-std::string biobambam::Licensing::formatFloatingPoint(double const n) { std::ostringstream ostr; ostr << n; return ostr.str(); }
+std::string biobambam2::Licensing::formatNumber(int64_t const n) { std::ostringstream ostr; ostr << n; return ostr.str(); }
+std::string biobambam2::Licensing::formatFloatingPoint(double const n) { std::ostringstream ostr; ostr << n; return ostr.str(); }

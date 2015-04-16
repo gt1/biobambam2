@@ -19,15 +19,15 @@
 #if ! defined(BIOBAMBAM_CLIPREINSERT_HPP)
 #define BIOBAMBAM_CLIPREINSERT_HPP
 
-#include <libmaus/bambam/BamAlignment.hpp>
+#include <libmaus2/bambam/BamAlignment.hpp>
 
 bool clipReinsert(
-	libmaus::bambam::BamAlignment & algn,
-	libmaus::autoarray::AutoArray < std::pair<uint8_t,uint8_t> > & auxtags,
- 	libmaus::bambam::BamAuxFilterVector & bafv,
-	libmaus::autoarray::AutoArray<libmaus::bambam::cigar_operation> & cigop,
-	libmaus::bambam::BamAlignment::D_array_type & Tcigar,
-	std::stack < libmaus::bambam::cigar_operation > & hardstack,
- 	libmaus::bambam::BamAuxFilterVector const & auxfilterout
+	libmaus2::bambam::BamAlignment & algn,
+	libmaus2::autoarray::AutoArray < std::pair<uint8_t,uint8_t> > & auxtags,
+ 	libmaus2::bambam::BamAuxFilterVector & bafv,
+	libmaus2::autoarray::AutoArray<libmaus2::bambam::cigar_operation> & cigop,
+	libmaus2::bambam::BamAlignment::D_array_type & Tcigar,
+	std::stack < libmaus2::bambam::cigar_operation > & hardstack,
+ 	libmaus2::bambam::BamAuxFilterVector const & auxfilterout
 );
 #endif

@@ -134,130 +134,130 @@ if test "${CXX}" = "g++" ; then
 	CPPFLAGS="${CPPFLAGS} -W -Wall"
 fi
 
-AC_ARG_WITH([libmaus],
-            [AS_HELP_STRING([--with-libmaus@<:@=PATH@:>@], [path to installed libmaus library @<:@default=@:>@])],
-            [with_libmaus=${withval}],
-            [with_libmaus=])
+AC_ARG_WITH([libmaus2],
+            [AS_HELP_STRING([--with-libmaus2@<:@=PATH@:>@], [path to installed libmaus2 library @<:@default=@:>@])],
+            [with_libmaus2=${withval}],
+            [with_libmaus2=])
 
-if test ! -z "${with_libmaus}" ; then
+if test ! -z "${with_libmaus2}" ; then
 	PKGCONFIGPATHSAVE="${PKG_CONFIG_PATH}"
 	if test -z "${PKG_CONFIG_PATH}" ; then
-		export PKG_CONFIG_PATH="${with_libmaus}/lib/pkgconfig"
+		export PKG_CONFIG_PATH="${with_libmaus2}/lib/pkgconfig"
 	else
-		export PKG_CONFIG_PATH="${with_libmaus}/lib/pkgconfig:${PKG_CONFIG_PATH}"
+		export PKG_CONFIG_PATH="${with_libmaus2}/lib/pkgconfig:${PKG_CONFIG_PATH}"
 	fi
 fi
 
-PKG_CHECK_MODULES([libmaus],[libmaus >= 0.0.196])
-PKG_CHECK_MODULES([libmausdigests],[libmausdigests >= 0.0.196])
-PKG_CHECK_MODULES([libmausseqchksumsfactory],[libmausseqchksumsfactory >= 0.0.196])
+PKG_CHECK_MODULES([libmaus2],[libmaus2 >= 2.0.0])
+PKG_CHECK_MODULES([libmaus2digests],[libmaus2digests >= 2.0.0])
+PKG_CHECK_MODULES([libmaus2seqchksumsfactory],[libmaus2seqchksumsfactory >= 2.0.0])
 
-if test ! -z "${with_libmaus}" ; then
+if test ! -z "${with_libmaus2}" ; then
 	if test ! -z "${PKGCONFIGPATHSAVE}" ; then
 		export PKG_CONFIG_PATH="${PKGCONFIGPATHSAVE}"
 	fi
 fi
 
-LIBMAUSCPPFLAGS="${libmaus_CFLAGS} ${libmausseqchksumsfactory_CFLAGS} ${libmausdigests_CFLAGS}"
-LIBMAUSLIBS="${libmaus_LIBS} ${libmausseqchksumsfactory_LIBS} ${libmausdigests_LIBS}"
+LIBMAUS2CPPFLAGS="${libmaus2_CFLAGS} ${libmaus2seqchksumsfactory_CFLAGS} ${libmaus2digests_CFLAGS}"
+LIBMAUS2LIBS="${libmaus2_LIBS} ${libmaus2seqchksumsfactory_LIBS} ${libmaus2digests_LIBS}"
 
 CPPFLAGS_SAVE="${CPPFLAGS}"
 LDFLAGS_SAVE="${LDFLAGS}"
 LIBS_SAVE="${LIBS}"
 
-CPPFLAGS="${CPPFLAGS} ${libmaus_CFLAGS}"
-LIBS="${LIBS} ${libmaus_LIBS}"
+CPPFLAGS="${CPPFLAGS} ${libmaus2_CFLAGS}"
+LIBS="${LIBS} ${libmaus2_LIBS}"
 
 AC_LANG_PUSH([C++])
-AC_MSG_CHECKING([whether we can compile a program using libmaus])
+AC_MSG_CHECKING([whether we can compile a program using libmaus2])
 	AC_LINK_IFELSE([AC_LANG_SOURCE([
-#include <libmaus/util/ArgInfo.hpp>
+#include <libmaus2/util/ArgInfo.hpp>
 
 				int main(int argc, char * argv[[]]) {
-					::libmaus::util::ArgInfo const arginfo(argc,argv);
+					::libmaus2::util::ArgInfo const arginfo(argc,argv);
 					return 0;
 			}])],
-			have_libmaus=yes,
-			have_libmaus=no
+			have_libmaus2=yes,
+			have_libmaus2=no
 		)
 AC_LANG_POP
-AC_MSG_RESULT($have_libmaus)
+AC_MSG_RESULT($have_libmaus2)
 
-if test "${have_libmaus}" = "no" ; then
-	AC_MSG_ERROR([Required libmaus is not available.])
+if test "${have_libmaus2}" = "no" ; then
+	AC_MSG_ERROR([Required libmaus2 is not available.])
 fi
 
 AC_LANG_PUSH([C++])
-AC_MSG_CHECKING([whether libmaus has support for io_lib])
+AC_MSG_CHECKING([whether libmaus2 has support for io_lib])
 	AC_LINK_IFELSE([AC_LANG_SOURCE([
-#include <libmaus/LibMausConfig.hpp>
+#include <libmaus2/LibMausConfig.hpp>
 
 				int main(int argc, char * argv[[]]) {
-					#if ! defined(LIBMAUS_HAVE_IO_LIB)
-					#error "installed libmaus does not support io_lib"
+					#if ! defined(LIBMAUS2_HAVE_IO_LIB)
+					#error "installed libmaus2 does not support io_lib"
 					#endif
 					return 0;
 			}])],
-			have_libmaus_iolib=yes,
-			have_libmaus_iolib=no
+			have_libmaus2_iolib=yes,
+			have_libmaus2_iolib=no
 		)
 AC_LANG_POP
-AC_MSG_RESULT($have_libmaus_iolib)
+AC_MSG_RESULT($have_libmaus2_iolib)
 
-LIBMAUSIOLIBDEFINE=
-if test "${have_libmaus_iolib}" = "yes" ; then
-	LIBMAUSIOLIBDEFINE="#define BIOBAMBAM_LIBMAUS_HAVE_IO_LIB"
+LIBMAUS2IOLIBDEFINE=
+if test "${have_libmaus2_iolib}" = "yes" ; then
+	LIBMAUS2IOLIBDEFINE="#define BIOBAMBAM_LIBMAUS2_HAVE_IO_LIB"
 fi
 
 ## zzzz
 
 AC_LANG_PUSH([C++])
-AC_MSG_CHECKING([whether libmaus has support for iRODS])
+AC_MSG_CHECKING([whether libmaus2 has support for iRODS])
 	AC_LINK_IFELSE([AC_LANG_SOURCE([
-#include <libmaus/LibMausConfig.hpp>
+#include <libmaus2/LibMausConfig.hpp>
 
 				int main(int argc, char * argv[[]]) {
-					#if ! defined(LIBMAUS_HAVE_IRODS)
-					#error "installed libmaus does not support iRODS"
+					#if ! defined(LIBMAUS2_HAVE_IRODS)
+					#error "installed libmaus2 does not support iRODS"
 					#endif
 					return 0;
 			}])],
-			have_libmaus_irods=yes,
-			have_libmaus_irods=no
+			have_libmaus2_irods=yes,
+			have_libmaus2_irods=no
 		)
 AC_LANG_POP
-AC_MSG_RESULT($have_libmaus_irods)
+AC_MSG_RESULT($have_libmaus2_irods)
 
-LIBMAUSIRODSDEFINE=
-LIBMAUSIRODSCPPFLAGS=
-LIBMAUSIRODSLIBS=
-if test "${have_libmaus_irods}" = "yes" ; then
-	if test ! -z "${with_libmaus}" ; then
+LIBMAUS2IRODSDEFINE=
+LIBMAUS2IRODSCPPFLAGS=
+LIBMAUS2IRODSLIBS=
+if test "${have_libmaus2_irods}" = "yes" ; then
+	if test ! -z "${with_libmaus2}" ; then
 		PKGCONFIGPATHSAVE="${PKG_CONFIG_PATH}"
 		if test -z "${PKG_CONFIG_PATH}" ; then
-			export PKG_CONFIG_PATH="${with_libmaus}/lib/pkgconfig"
+			export PKG_CONFIG_PATH="${with_libmaus2}/lib/pkgconfig"
 		else
-			export PKG_CONFIG_PATH="${with_libmaus}/lib/pkgconfig:${PKG_CONFIG_PATH}"
+			export PKG_CONFIG_PATH="${with_libmaus2}/lib/pkgconfig:${PKG_CONFIG_PATH}"
 		fi
 	fi
 
-	PKG_CHECK_MODULES([libmausirods],[libmausirods >= 0.0.196])
+	PKG_CHECK_MODULES([libmaus2irods],[libmaus2irods >= 0.0.196])
 
-	LIBMAUSIRODSCPPFLAGS="${libmausirods_CFLAGS}"
-	LIBMAUSIRODSLIBS="${libmausirods_LIBS}"
+	LIBMAUS2IRODSCPPFLAGS="${libmaus2irods_CFLAGS}"
+	LIBMAUS2IRODSLIBS="${libmaus2irods_LIBS}"
 	
-	LIBMAUSCPPFLAGS="${LIBMAUSCPPFLAGS} ${LIBMAUSIRODSCPPFLAGS}"
-	LIBMAUSLIBS="${LIBMAUSLIBS} ${LIBMAUSIRODSLIBS}"
-	CPPFLAGS="${CPPFLAGS} ${LIBMAUSIRODSCPPFLAGS}"
-	LIBS="${LIBS} ${LIBMAUSIRODSLIBS}"
+	LIBMAUS2CPPFLAGS="${LIBMAUS2CPPFLAGS} ${LIBMAUS2IRODSCPPFLAGS}"
+	LIBMAUS2LIBS="${LIBMAUS2LIBS} ${LIBMAUS2IRODSLIBS}"
+	CPPFLAGS="${CPPFLAGS} ${LIBMAUS2IRODSCPPFLAGS}"
+	LIBS="${LIBS} ${LIBMAUS2IRODSLIBS}"
 
-	if test ! -z "${with_libmaus}" ; then
+	if test ! -z "${with_libmaus2}" ; then
 		if test ! -z "${PKGCONFIGPATHSAVE}" ; then
 			export PKG_CONFIG_PATH="${PKGCONFIGPATHSAVE}"
 		fi
 	fi
 	
-	LIBMAUSIRODSDEFINE="#define BIOBAMBAM_LIBMAUS_HAVE_IRODS"
+	LIBMAUS2IRODSDEFINE="#define BIOBAMBAM_LIBMAUS2_HAVE_IRODS"
 fi
 
 CPPFLAGS="${CPPFLAGS_SAVE}"
@@ -404,12 +404,12 @@ AC_SUBST([PACKAGE_VERSION])
 AC_SUBST([BAMBAM_CFLAGS])
 AC_SUBST([BAMBAM_LDFLAGS])
 AC_SUBST([BAMBAM_LIBS])
-# libmaus
-AC_SUBST([LIBMAUSCPPFLAGS])
-AC_SUBST([LIBMAUSLIBS])
+# libmaus2
+AC_SUBST([LIBMAUS2CPPFLAGS])
+AC_SUBST([LIBMAUS2LIBS])
 # 
-AC_SUBST([LIBMAUSIOLIBDEFINE])
-AC_SUBST([LIBMAUSIRODSDEFINE])
+AC_SUBST([LIBMAUS2IOLIBDEFINE])
+AC_SUBST([LIBMAUS2IRODSDEFINE])
 #
 AC_SUBST([LIFTINGWAVELETTRANSFORMDEFINE])
 AC_SUBST([BAMREFDEPTHPEAKS])

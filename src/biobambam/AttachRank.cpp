@@ -18,7 +18,7 @@
 **/
 #include <biobambam/AttachRank.hpp>
 
-bool attachRank(libmaus::bambam::BamAlignment & algn, uint64_t const c, libmaus::bambam::BamAuxFilterVector const & zzbafv)
+bool attachRank(libmaus2::bambam::BamAlignment & algn, uint64_t const c, libmaus2::bambam::BamAuxFilterVector const & zzbafv)
 {
 	algn.filterOutAux(zzbafv);
 

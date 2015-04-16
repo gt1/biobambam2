@@ -17,17 +17,17 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#include <libmaus/util/ArgInfo.hpp>
-#include <libmaus/bambam/BamDecoder.hpp>
+#include <libmaus2/util/ArgInfo.hpp>
+#include <libmaus2/bambam/BamDecoder.hpp>
 
 int main(int argc, char * argv[])
 {
 	try
 	{
-		libmaus::util::ArgInfo const arginfo(argc,argv);
-		libmaus::bambam::BamDecoder bamdec1(std::cin);
-		libmaus::bambam::BamHeader const & header1(bamdec1.getHeader());
-		libmaus::bambam::BamAlignment const &  al1 = bamdec1.getAlignment();
+		libmaus2::util::ArgInfo const arginfo(argc,argv);
+		libmaus2::bambam::BamDecoder bamdec1(std::cin);
+		libmaus2::bambam::BamHeader const & header1(bamdec1.getHeader());
+		libmaus2::bambam::BamAlignment const &  al1 = bamdec1.getAlignment();
 		
 		std::cout << header1.text;
 		while ( bamdec1.readAlignment() )

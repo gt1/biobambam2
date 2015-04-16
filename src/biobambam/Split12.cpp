@@ -18,7 +18,7 @@
 **/
 #include <biobambam/Split12.hpp>
 
-bool split12(libmaus::bambam::BamAlignment & algn)
+bool split12(libmaus2::bambam::BamAlignment & algn)
 {
 	char const * name = algn.getName();
 	

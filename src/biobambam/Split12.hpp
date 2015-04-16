@@ -19,7 +19,7 @@
 #if ! defined(BIOBAMBAM_SPLIT12_HPP)
 #define BIOBAMBAM_SPLIT12_HPP
 
-#include <libmaus/bambam/BamAlignment.hpp>
+#include <libmaus2/bambam/BamAlignment.hpp>
 
-bool split12(libmaus::bambam::BamAlignment & algn);
+bool split12(libmaus2::bambam::BamAlignment & algn);
 #endif

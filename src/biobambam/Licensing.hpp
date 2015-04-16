@@ -24,7 +24,7 @@
 #include <map>
 #include <ostream>
 
-namespace biobambam
+namespace biobambam2
 {
 	struct Licensing
 	{
