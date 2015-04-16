@@ -16,7 +16,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
-#include <biobambam/zzToName.hpp>
+#include <biobambam2/zzToName.hpp>
 
 bool zzToRank(libmaus2::bambam::BamAlignment & algn, libmaus2::bambam::BamAuxFilterVector const & zzbafv)
 {

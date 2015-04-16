@@ -25,7 +25,7 @@
 #include <libmaus2/util/TempFileRemovalContainer.hpp>
 
 #include <config.h>
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/Licensing.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static unsigned int getDefaultColHashBits() { return 20; }

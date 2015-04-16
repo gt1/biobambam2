@@ -40,8 +40,8 @@
 #include <libmaus2/parallel/NumCpus.hpp>
 
 #include <libmaus2/util/ArgInfo.hpp>
-#include <biobambam/BamBamConfig.hpp>
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/BamBamConfig.hpp>
+#include <biobambam2/Licensing.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultTempLevel() { return Z_BEST_SPEED; }

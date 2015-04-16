@@ -25,8 +25,8 @@
 #include <libmaus2/util/ArgInfo.hpp>
 #include <libmaus2/util/GetFileSize.hpp>
 
-#include <biobambam/BamBamConfig.hpp>
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/BamBamConfig.hpp>
+#include <biobambam2/Licensing.hpp>
 
 void fastabgzfextract(libmaus2::util::ArgInfo const & arginfo)
 {

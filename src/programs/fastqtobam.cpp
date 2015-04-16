@@ -27,8 +27,8 @@
 
 #include <libmaus2/lz/BufferedGzipStream.hpp>
 
-#include <biobambam/BamBamConfig.hpp>
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/BamBamConfig.hpp>
+#include <biobambam2/Licensing.hpp>
 
 #include <iomanip>
 

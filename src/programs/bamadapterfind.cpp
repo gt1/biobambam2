@@ -34,9 +34,9 @@
 #include <libmaus2/util/ArgInfo.hpp>
 #include <libmaus2/util/Histogram.hpp>
 
-#include <biobambam/Licensing.hpp>
-#include <biobambam/ClipAdapters.hpp>
-#include <biobambam/KmerPoisson.hpp>
+#include <biobambam2/Licensing.hpp>
+#include <biobambam2/ClipAdapters.hpp>
+#include <biobambam2/KmerPoisson.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; }

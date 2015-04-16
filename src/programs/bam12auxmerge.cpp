@@ -35,11 +35,11 @@
 #include <libmaus2/util/Histogram.hpp>
 
 
-#include <biobambam/Licensing.hpp>
-#include <biobambam/Split12.hpp>
-#include <biobambam/Strip12.hpp>
-#include <biobambam/ClipReinsert.hpp>
-#include <biobambam/zzToName.hpp>
+#include <biobambam2/Licensing.hpp>
+#include <biobambam2/Split12.hpp>
+#include <biobambam2/Strip12.hpp>
+#include <biobambam2/ClipReinsert.hpp>
+#include <biobambam2/zzToName.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; }

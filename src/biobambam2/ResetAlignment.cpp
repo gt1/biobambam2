@@ -16,7 +16,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
-#include <biobambam/ResetAlignment.hpp>
+#include <biobambam2/ResetAlignment.hpp>
 
 uint64_t resetAlignment(uint8_t * const D, uint64_t blocksize, bool const resetaux, 
 	libmaus2::bambam::BamAuxFilterVector const * rgfilter

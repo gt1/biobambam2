@@ -27,7 +27,7 @@
 
 #include <liftingwavelettransform/LiftingWaveletTransform.hpp>
 
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/Licensing.hpp>
 
 static int getDefaultVerbose() { return 0; }
 

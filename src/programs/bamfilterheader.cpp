@@ -23,7 +23,7 @@
 #include <libmaus2/bitio/BitVector.hpp>
 #include <libmaus2/util/ArgInfo.hpp>
 
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/Licensing.hpp>
 
 #include "config.h"
 

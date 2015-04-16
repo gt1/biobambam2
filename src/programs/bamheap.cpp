@@ -24,8 +24,8 @@
 #include <libmaus2/fastx/Phred.hpp>
 #include <libmaus2/math/binom.hpp>
 
-#include <biobambam/BamBamConfig.hpp>
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/BamBamConfig.hpp>
+#include <biobambam2/Licensing.hpp>
 
 static int getDefaultVerbose() { return 1; }
 static std::string getDefaultInputFormat() { return "bam"; }

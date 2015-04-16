@@ -25,7 +25,7 @@
 #include <libmaus2/bambam/BamDecoder.hpp>
 #include <libmaus2/bambam/BamMultiAlignmentDecoderFactory.hpp>
 
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/Licensing.hpp>
 
 static int getDefaultVerbose() { return 0; }
 

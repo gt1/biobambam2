@@ -42,8 +42,8 @@
 #include <libmaus2/util/OutputFileNameTools.hpp>
 #include <libmaus2/util/TempFileRemovalContainer.hpp>
 
-#include <biobambam/BamBamConfig.hpp>
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/BamBamConfig.hpp>
+#include <biobambam2/Licensing.hpp>
 
 static int getDefaultIndex() { return 0; }
 static int getDefaultMD5() { return 0; }

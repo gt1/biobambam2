@@ -16,7 +16,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
-#include <biobambam/AttachRank.hpp>
+#include <biobambam2/AttachRank.hpp>
 
 bool attachRank(libmaus2::bambam::BamAlignment & algn, uint64_t const c, libmaus2::bambam::BamAuxFilterVector const & zzbafv)
 {

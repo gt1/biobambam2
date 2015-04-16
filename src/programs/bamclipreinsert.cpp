@@ -29,8 +29,8 @@
 
 #include <libmaus2/util/ArgInfo.hpp>
 
-#include <biobambam/Licensing.hpp>
-#include <biobambam/ClipReinsert.hpp>
+#include <biobambam2/Licensing.hpp>
+#include <biobambam2/ClipReinsert.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; }

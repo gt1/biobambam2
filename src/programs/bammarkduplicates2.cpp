@@ -61,7 +61,7 @@
 #include <libmaus2/util/ArgInfo.hpp>
 #include <libmaus2/util/ContainerGetObject.hpp>
 #include <libmaus2/util/MemUsage.hpp>
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/Licensing.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static unsigned int getDefaultVerbose() { return 1; }

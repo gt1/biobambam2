@@ -19,8 +19,8 @@
 #include <libmaus2/bambam/BamMultiAlignmentDecoderFactory.hpp>
 #include <libmaus2/bambam/BamBlockWriterBaseFactory.hpp>
 
-#include <biobambam/BamBamConfig.hpp>
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/BamBamConfig.hpp>
+#include <biobambam2/Licensing.hpp>
 
 int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 int getDefaultVerbose() { return 0; }

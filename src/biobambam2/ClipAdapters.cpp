@@ -1,4 +1,4 @@
-#include <biobambam/ClipAdapters.hpp>
+#include <biobambam2/ClipAdapters.hpp>
 
 bool clipAdapters(
 	libmaus2::bambam::BamAlignment & algn,

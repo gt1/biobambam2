@@ -22,8 +22,8 @@
 #include <libmaus2/util/ArgInfo.hpp>
 #include <libmaus2/util/MemUsage.hpp>
 
-#include <biobambam/BamBamConfig.hpp>
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/BamBamConfig.hpp>
+#include <biobambam2/Licensing.hpp>
 
 static int getDefaultVerbose() { return 1; }
 static std::string getDefaultInputFormat() { return "bam"; }

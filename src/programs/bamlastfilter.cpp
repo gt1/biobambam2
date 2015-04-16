@@ -30,8 +30,8 @@
 #include <libmaus2/lz/BgzfDeflateOutputCallbackMD5.hpp>
 #include <libmaus2/bambam/StrCmpNum.hpp>
 
-#include <biobambam/BamBamConfig.hpp>
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/BamBamConfig.hpp>
+#include <biobambam2/Licensing.hpp>
 
 #include <config.h>
 

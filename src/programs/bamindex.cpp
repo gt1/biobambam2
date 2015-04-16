@@ -23,7 +23,7 @@
 #include <libmaus2/util/ArgInfo.hpp>
 #include <libmaus2/util/MemUsage.hpp>
 
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/Licensing.hpp>
 
 bool getDefaultVerbose() { return true; }
 bool getDefaultDisableValidation() { return false; }

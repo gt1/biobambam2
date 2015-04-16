@@ -16,7 +16,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
-#include <biobambam/Strip12.hpp>
+#include <biobambam2/Strip12.hpp>
 
 bool strip12(libmaus2::bambam::BamAlignment & algn)
 {

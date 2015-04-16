@@ -37,8 +37,8 @@
 #include <libmaus2/util/PutObject.hpp>
 #include <libmaus2/util/TempFileRemovalContainer.hpp>
 
-#include <biobambam/Licensing.hpp>
-#include <biobambam/Strip12.hpp>
+#include <biobambam2/Licensing.hpp>
+#include <biobambam2/Strip12.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; }

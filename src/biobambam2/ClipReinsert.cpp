@@ -16,7 +16,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
-#include <biobambam/ClipReinsert.hpp>
+#include <biobambam2/ClipReinsert.hpp>
 
 bool clipReinsert(
 	libmaus2::bambam::BamAlignment & algn,

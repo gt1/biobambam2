@@ -17,10 +17,10 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#include <biobambam/BamBamConfig.hpp>
-#include <biobambam/Licensing.hpp>
-#include <biobambam/AttachRank.hpp>
-#include <biobambam/ResetAlignment.hpp>
+#include <biobambam2/BamBamConfig.hpp>
+#include <biobambam2/Licensing.hpp>
+#include <biobambam2/AttachRank.hpp>
+#include <biobambam2/ResetAlignment.hpp>
 
 #include <iomanip>
 

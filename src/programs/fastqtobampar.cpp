@@ -18,8 +18,8 @@
 **/
 #include <config.h>
 
-#include <biobambam/BamBamConfig.hpp>
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/BamBamConfig.hpp>
+#include <biobambam2/Licensing.hpp>
 
 #include <libmaus2/aio/PosixFdInputStream.hpp>
 #include <libmaus2/aio/PosixFdOutputStream.hpp>

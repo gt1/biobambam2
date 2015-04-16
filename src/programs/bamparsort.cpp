@@ -47,8 +47,8 @@
 #include <libmaus2/util/GetObject.hpp>
 #include <libmaus2/util/TempFileRemovalContainer.hpp>
 
-#include <biobambam/BamBamConfig.hpp>
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/BamBamConfig.hpp>
+#include <biobambam2/Licensing.hpp>
 
 #include <config.h>
 

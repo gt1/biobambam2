@@ -52,7 +52,7 @@
 #include <libmaus2/util/ArgInfo.hpp>
 #include <libmaus2/util/ContainerGetObject.hpp>
 #include <libmaus2/util/MemUsage.hpp>
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/Licensing.hpp>
 
 // static std::string formatNumber(int64_t const n) { std::ostringstream ostr; ostr << n; return ostr.str(); }
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }

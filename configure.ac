@@ -1,4 +1,4 @@
-AC_INIT(biobambam,0.0.191,[gt1@sanger.ac.uk],[biobambam],[http://www.sanger.ac.uk])
+AC_INIT(biobambam2,2.0.0,[gt1@sanger.ac.uk],[biobambam2],[http://www.sanger.ac.uk])
 AC_CANONICAL_SYSTEM
 AC_PROG_LIBTOOL
 
@@ -431,4 +431,4 @@ AC_SUBST([GMPLDFLAGS])
 AC_SUBST([GMPCPPFLAGS])
 AC_SUBST([GMPLIBS])
 # 
-AC_OUTPUT(Makefile src/Makefile test/Makefile src/biobambam/BamBamConfig.hpp)
+AC_OUTPUT(Makefile src/Makefile test/Makefile src/biobambam2/BamBamConfig.hpp)

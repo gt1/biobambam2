@@ -41,7 +41,7 @@
 #include <libmaus2/lz/BgzfDeflateOutputCallbackMD5.hpp>
 #include <libmaus2/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
 
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/Licensing.hpp>
 
 static int getDefaultMD5() { return 0; }
 static int getDefaultIndex() { return 0; }

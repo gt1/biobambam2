@@ -22,7 +22,7 @@
 #include <libmaus2/lz/BgzfInflateDeflateParallelThread.hpp>
 #include <libmaus2/util/ArgInfo.hpp>
 
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/Licensing.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; };

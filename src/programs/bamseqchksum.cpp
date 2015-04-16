@@ -25,8 +25,8 @@
 #include <libmaus2/bambam/BamMultiAlignmentDecoderFactory.hpp>
 #include <libmaus2/util/ArgInfo.hpp>
 
-#include <biobambam/Licensing.hpp>
-#include <biobambam/BamBamConfig.hpp>
+#include <biobambam2/Licensing.hpp>
+#include <biobambam2/BamBamConfig.hpp>
 
 #if defined(BIOBAMBAM_HAVE_GMP)
 #include <libmaus2/math/UnsignedInteger.hpp>

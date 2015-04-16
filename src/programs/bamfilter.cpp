@@ -22,7 +22,7 @@
 #include <libmaus2/bambam/BamWriter.hpp>
 #include <libmaus2/bambam/BamHeaderUpdate.hpp>
 #include <libmaus2/util/ArgInfo.hpp>
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/Licensing.hpp>
 
 #include <libmaus2/lz/BgzfDeflateOutputCallbackMD5.hpp>
 #include <libmaus2/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>

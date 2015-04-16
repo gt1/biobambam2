@@ -27,7 +27,7 @@
 #include <libmaus2/bambam/BamMergeQueryName.hpp>
 #include <libmaus2/bambam/BamWriter.hpp>
 
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/Licensing.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; }

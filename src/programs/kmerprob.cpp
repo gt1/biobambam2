@@ -28,8 +28,8 @@
 
 #include <libmaus2/util/ArgInfo.hpp>
 
-#include <biobambam/Licensing.hpp>
-#include <biobambam/KmerPoisson.hpp>
+#include <biobambam2/Licensing.hpp>
+#include <biobambam2/KmerPoisson.hpp>
 
 int main(int argc, char * argv[])
 {

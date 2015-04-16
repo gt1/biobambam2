@@ -44,13 +44,13 @@
 static int getDefaultMD5() { return 0; }
 static int getDefaultIndex() { return 0; }
 
-#include <biobambam/BamBamConfig.hpp>
+#include <biobambam2/BamBamConfig.hpp>
 
 #if defined(BIOBAMBAM_LIBMAUS2_HAVE_IO_LIB)
 #include <libmaus2/bambam/ScramDecoder.hpp>
 #endif
 
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/Licensing.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; }

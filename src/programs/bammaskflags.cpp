@@ -21,7 +21,7 @@
 #include <libmaus2/bambam/BamWriter.hpp>
 #include <libmaus2/bambam/ProgramHeaderLineSet.hpp>
 #include <libmaus2/util/ArgInfo.hpp>
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/Licensing.hpp>
 
 #include <config.h>
 

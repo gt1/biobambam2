@@ -20,8 +20,8 @@
 #include <libmaus2/fastx/FastAIndex.hpp>
 #include <libmaus2/aio/PosixFdOutputStream.hpp>
 #include <libmaus2/util/Histogram.hpp>
-#include <biobambam/BamBamConfig.hpp>
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/BamBamConfig.hpp>
+#include <biobambam2/Licensing.hpp>
 
 static int getDefaultVerbose()
 {
