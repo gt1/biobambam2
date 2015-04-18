@@ -1,3 +1,9 @@
+biobambam2 (2.0.1) unstable; urgency=medium
+
+  * no change version bump to check version bumping script 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Sun, 19 Apr 2015 00:15:29 +0100
+
 biobambam2 (2.0.0) unstable; urgency=low
 
   * import of biobambam code
