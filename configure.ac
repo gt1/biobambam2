@@ -150,7 +150,7 @@ fi
 
 PKG_CHECK_MODULES([libmaus2],[libmaus2 >= 2.0.1])
 PKG_CHECK_MODULES([libmaus2digests],[libmaus2digests >= 2.0.1])
-PKG_CHECK_MODULES([libmaus2seqchksumsfactory],[libmaus2seqchksumsfactory >= 2.0.0])
+PKG_CHECK_MODULES([libmaus2seqchksumsfactory],[libmaus2seqchksumsfactory >= 2.0.1])
 
 if test ! -z "${with_libmaus2}" ; then
 	if test ! -z "${PKGCONFIGPATHSAVE}" ; then
