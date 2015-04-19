@@ -1,3 +1,9 @@
+biobambam2 (2.0.2) unstable; urgency=medium
+
+  * update to libmaus 2.0.2 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Sun, 19 Apr 2015 10:36:05 +0100
+
 biobambam2 (2.0.1) unstable; urgency=medium
 
   * no change version bump to check version bumping script 
