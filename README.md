@@ -1,8 +1,8 @@
 biobambam
 =========
 
-<span style="color:red"><em>Please note that development on biobambam has stopped on this repository. Please see
-biobambam2 at https://github.com/gt1/biobambam2 for recent developments.<span>
+<em style="color:red">Please note that development on biobambam has stopped on this repository. Please see
+biobambam2 at https://github.com/gt1/biobambam2 for recent developments.</em>
 
 This package contains some tools for processing BAM files including
 
