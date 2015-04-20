@@ -53,3 +53,24 @@ sorted by coordinate and in bam format, then program can also produce a bam inde
 of threads used can be set with the threads option (e.g. threads=4). If no such option is given then the number of logical CPUs (cores) of the machine is used
 as the number of threads. Parallel sorting of alignment files is I/O heavy, so a fast I/O system is crucial. We recommend to store all data
 (input, tempory and output) on solid state storage (SSD).
+
+### bamsormadup and cram output
+
+CRAM output with bamsormadup requires libmaus to be built with support for io_lib version 1.3.11 (or newer) or a sufficiently recent svn revision of version 1.3.10.
+The binaries provided on github have support for CRAM writing. The program will look for reference sequences in the following places while encoding cram:
+
+- The directory stored in the environment variable REF_CACHE (if any). The md5 hash value is used as a file names within this directory. For instance if REQ_CACHE is
+  set to ${HOME}/ref and a reference sequence (as stated in a SQ header line) has and md5 hash 01234567890123456789012345678901 then the program would look up the file
+  ${HOME}/ref/01234567890123456789012345678901 . If REF_CACHE contains finite length string references, then parts of the hash will be inserted before adding
+  the rest of the hash in the end . If for instance REF_CACHE is set to ${HOME}/ref/%2s/%2s/%s then the program would look for the sequence above in the file
+  ${HOME}/ref/01/23/4567890123456789012345678901 . REF_CACHE designates a read and write cache . The program will try to produce reference sequences not previously 
+  stored in this directory if it is given a FastA or gzipped FastA file as a reference (either via the reference command line key or via the UR field of the corresponding
+  sequence line).
+- The list of directories and URL prefixes stored in the environment variable REF_PATH (if any). Multiple pathes are separated by the colon symbol ':'.
+  A colon sign in a path can be escaped by duplicating it, e.g. the URL http://www.ebi.ac.uk/ena/cram/md5/ would be escaped as http:://www.ebi.ac.uk/ena/cram/md5/ .
+  The locations given in this list are considered as read only.
+- A FastA or gzipped FastA file given as the UR parameter in the header of the input file. This file will be scanned to obtain the reference sequence. All newly found
+  sequences will be stored in the REF_CACHE directory if the respective environment variable is set.
+- A FastA file given via the reference key on the command line.
+
+If the program cannot find a required reference sequence for encoding CRAM in any of these locations, then it fails.

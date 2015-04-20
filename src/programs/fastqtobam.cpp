@@ -92,6 +92,7 @@ struct RgInfo
 	std::string PG; // = fastqtobam
 	std::string PI;
 	std::string PL;
+	std::string PM;
 	std::string PU;
 	std::string SM;
 	
@@ -108,6 +109,7 @@ struct RgInfo
 		PG(arginfo.getUnparsedValue("RGPG","fastqtobam")),
 		PI(arginfo.getUnparsedValue("RGPI","")),
 		PL(arginfo.getUnparsedValue("RGPL","")),
+		PM(arginfo.getUnparsedValue("RGPM","")),
 		PU(arginfo.getUnparsedValue("RGPU","")),
 		SM(arginfo.getUnparsedValue("RGSM",""))
 	{
@@ -131,6 +133,7 @@ struct RgInfo
 			if ( PG.size() ) ostr << "\tPG:" << PG;
 			if ( PI.size() ) ostr << "\tPI:" << PI;
 			if ( PL.size() ) ostr << "\tPL:" << PL;
+			if ( PM.size() ) ostr << "\tPM:" << PM;
 			if ( PU.size() ) ostr << "\tPU:" << PU;
 			if ( SM.size() ) ostr << "\tSM:" << SM;
 			
