@@ -36,7 +36,9 @@ then an additional valid value is
 igzip compression
 .PP
 .B tmpfile=<filename>:
-set the prefix for temporary file names
+set the prefix for temporary file names. Set tmpfile=mem:tmp_ to store
+temporary files in RAM instead of on disk. Note that this may require very
+large amounts of RAM depending on the input.
 .PP
 .B inputformat=<bam>: 
 set the input file format.
