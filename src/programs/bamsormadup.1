@@ -35,11 +35,6 @@ then an additional valid value is
 .IP 11:
 igzip compression
 .PP
-.B tmpfile=<filename>:
-set the prefix for temporary file names. Set tmpfile=mem:tmp_ to store
-temporary files in RAM instead of on disk. Note that this may require very
-large amounts of RAM depending on the input.
-.PP
 .B inputformat=<bam>: 
 set the input file format.
 This can be either bam or sam (see http://samtools.sourceforge.net/SAM1.pdf)
@@ -52,6 +47,11 @@ name of the metrics file for duplicate marking (metrics are written to standard 
 .PP
 .B tmpfile=<bamsormadup_hostname_pid_starttime>:
 prefix for temporary files. By default the temporary files are created in the current directory.
+Set 
+.nh
+tmpfile=mem:tmp_ 
+.hy
+to store temporary files in RAM instead of on disk. Note that this may require very large amounts of RAM depending on the input.
 .PP
 .B SO=<coordinate|queryname>: 
 set the sort order. Valid values are
