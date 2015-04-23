@@ -1,3 +1,9 @@
+biobambam2 (2.0.4) unstable; urgency=low
+
+  * add option to store temp data in RAM instead of on disc in bamsormadup 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Thu, 23 Apr 2015 13:53:51 +0100
+
 biobambam2 (2.0.3) unstable; urgency=medium
 
   * update to libmaus 2.0.3 
