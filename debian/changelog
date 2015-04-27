@@ -1,3 +1,9 @@
+biobambam2 (2.0.7) unstable; urgency=low
+
+  * update libmaus version to 2.0.6 (fix for bam indexing) 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Mon, 27 Apr 2015 11:43:45 +0100
+
 biobambam2 (2.0.6) unstable; urgency=low
 
   * update libmaus version to 2.0.5 
