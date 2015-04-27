@@ -1,3 +1,9 @@
+biobambam2 (2.0.8) unstable; urgency=low
+
+  * fix for random failures in bamsormadup due to missing/incomplete initialisation 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Mon, 27 Apr 2015 23:49:56 +0100
+
 biobambam2 (2.0.7) unstable; urgency=low
 
   * update libmaus version to 2.0.6 (fix for bam indexing) 
