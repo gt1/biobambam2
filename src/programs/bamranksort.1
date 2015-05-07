@@ -1,0 +1,78 @@
+.TH BAMRANKSORT 1 "May 2015" BIOBAMBAM
+.SH NAME
+bamranksort - sort BAM files by rank
+.SH SYNOPSIS
+.PP
+.B bamranksort
+[options]
+.SH DESCRIPTION
+\fBbamranksort\fR reads a BAM file (preferably in nearly sorted order),
+sorts it in rank order and then outputs a BAM.
+.PP
+The input BAM file must already have the rank prefix added to the
+alignment names and any attempt to sort a file without these name
+prefixes will fail.
+\fBbamranksort\fR also assumes that all alignments of the same name are
+grouped together (a pair of reads plus any number of
+supplementary/secondary reads).  If it finds any alignments in a
+separate group the program will exit. 
+.PP
+The following key=value pairs can be given:
+.PP
+.B level=<-1|0|1|9|11>:
+set compression level of the output BAM file. Valid
+values are
+.IP -1:
+zlib/gzip default compression level.
+.IP 0:
+uncompressed.
+.IP 1:
+zlib/gzip level 1 (fast) compression.
+.IP 9:
+zlib/gzip level 9 (best) compression.
+.P
+If libmaus has been compiled with support for igzip (see
+https://software.intel.com/en-us/articles/igzip-a-high-performance-deflate-compressor-with-optimizations-for-genomic-data)
+then an additional valid value is
+.IP 11:
+igzip compression.
+.PP
+.B verbose=<0|1|2>:
+Valid values are
+.IP 0:
+do not print progress report (default).
+.IP 1:
+print progress report to standard error.
+.IP 2:
+print more values for debugging only to standard error.
+.PP
+.B md5=<0|1>:
+md5 checksum creation for output file. This option can only be given if
+outputformat=bam. Then valid values are
+.IP 0:
+do not compute checksum. This is the default.
+.IP 1:
+compute checksum. If the md5filename key is set, then the checksum is
+written to the given file. If md5filename is unset, then no checksum will be computed.
+.PP
+.B md5filename
+file name for md5 checksum if md5=1.
+.PP
+.B misordered=<500000>:
+number of alignments to accumulate before giving up.
+.PP
+.B step=<2>:
+expected increment between ranks.
+.PP
+.B outputthreads=<[1]>:
+output helper threads.
+.SH AUTHOR
+Written by Andrew Whitwham.
+.SH "REPORTING BUGS"
+Report bugs to <aw7@sanger.ac.uk>
+.SH COPYRIGHT
+Copyright \(co 2015 Genome Research Limited.
+License GPLv3+: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
