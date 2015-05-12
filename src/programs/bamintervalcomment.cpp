@@ -21,28 +21,28 @@
 #include <iostream>
 #include <queue>
 
-#include <libmaus/aio/CheckedOutputStream.hpp>
+#include <libmaus2/aio/CheckedOutputStream.hpp>
 
-#include <libmaus/bambam/BamAlignment.hpp>
-#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
-#include <libmaus/bambam/BamHeaderUpdate.hpp>
-#include <libmaus/bambam/BamMultiAlignmentDecoderFactory.hpp>
-#include <libmaus/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
-#include <libmaus/bambam/GeneFlatFile.hpp>
-#include <libmaus/bambam/MdNmRecalculation.hpp>
+#include <libmaus2/bambam/BamAlignment.hpp>
+#include <libmaus2/bambam/BamBlockWriterBaseFactory.hpp>
+#include <libmaus2/bambam/BamHeaderUpdate.hpp>
+#include <libmaus2/bambam/BamMultiAlignmentDecoderFactory.hpp>
+#include <libmaus2/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
+#include <libmaus2/bambam/GeneFlatFile.hpp>
+#include <libmaus2/bambam/MdNmRecalculation.hpp>
 
-#include <libmaus/lz/BgzfDeflateOutputCallbackMD5.hpp>
-#include <libmaus/lz/BufferedGzipStream.hpp>
+#include <libmaus2/lz/BgzfDeflateOutputCallbackMD5.hpp>
+#include <libmaus2/lz/BufferedGzipStream.hpp>
 
-#include <libmaus/math/IntegerInterval.hpp>
+#include <libmaus2/math/IntegerInterval.hpp>
 
-#include <libmaus/regex/PosixRegex.hpp>
+#include <libmaus2/regex/PosixRegex.hpp>
 
-#include <libmaus/util/ArgInfo.hpp>
-#include <libmaus/util/TempFileRemovalContainer.hpp>
+#include <libmaus2/util/ArgInfo.hpp>
+#include <libmaus2/util/TempFileRemovalContainer.hpp>
 
-#include <biobambam/BamBamConfig.hpp>
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/BamBamConfig.hpp>
+#include <biobambam2/Licensing.hpp>
 
 static int getDefaultMD5() { return 0; }
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
@@ -146,7 +146,7 @@ struct NamedIntervalGeneSet
 	{
 		if ( ! s.size() )
 		{
-			libmaus::exception::LibMausException lme;
+			libmaus2::exception::LibMausException lme;
 			lme.getStream() << "[E] cannot parse empty string as number." << std::endl;
 			lme.finish();
 			throw lme;	
@@ -157,7 +157,7 @@ struct NamedIntervalGeneSet
 		for ( uint64_t i = 0; i < s.size(); ++i )
 			if ( ! isdigit(c[i]) )
 			{
-				libmaus::exception::LibMausException lme;
+				libmaus2::exception::LibMausException lme;
 				lme.getStream() << "[E] cannot parse " << s << " as number." << std::endl;
 				lme.finish();
 				throw lme;
@@ -173,10 +173,10 @@ struct NamedIntervalGeneSet
 	
 	static std::string unifyTranscripts(std::string const & fn, std::string const & refregex)
 	{
-		libmaus::regex::PosixRegex regex(refregex);
-		libmaus::bambam::GeneFlatFile::unique_ptr_type PGFF(libmaus::bambam::GeneFlatFile::construct(fn));
+		libmaus2::regex::PosixRegex regex(refregex);
+		libmaus2::bambam::GeneFlatFile::unique_ptr_type PGFF(libmaus2::bambam::GeneFlatFile::construct(fn));
 		std::ostringstream ostr;
-		libmaus::bambam::GeneFlatFileEntry entry;
+		libmaus2::bambam::GeneFlatFileEntry entry;
 		
 		// compute map gene -> set of chromosomes
 		std::map< std::string, std::set<std::string> > genechroms;
@@ -255,8 +255,8 @@ struct NamedIntervalGeneSet
 				// name is already there
 				else
 				{
-					libmaus::math::IntegerInterval<int64_t> prevint(ita->second.first,ita->second.second);
-					libmaus::math::IntegerInterval<int64_t> newint(entry.txStart,entry.txEnd);
+					libmaus2::math::IntegerInterval<int64_t> prevint(ita->second.first,ita->second.second);
+					libmaus2::math::IntegerInterval<int64_t> newint(entry.txStart,entry.txEnd);
 				
 					// no intersection?
 					if ( prevint.intersection(newint).isEmpty() )
@@ -357,7 +357,7 @@ struct NamedIntervalGeneSet
 	}
 
 	NamedIntervalGeneSet(
-		std::string const & fn, libmaus::bambam::BamHeader const & header,
+		std::string const & fn, libmaus2::bambam::BamHeader const & header,
 		bool const unify = false,
 		std::string const chromregex = ".*"
 	)
@@ -365,9 +365,9 @@ struct NamedIntervalGeneSet
 	{
 		
 		std::istream * Pistr = 0;
-		libmaus::util::unique_ptr<std::istringstream>::type Puistr;		
-		libmaus::aio::CheckedInputStream CIS(fn);
-		libmaus::lz::BufferedGzipStream::unique_ptr_type PBGS;
+		libmaus2::util::unique_ptr<std::istringstream>::type Puistr;		
+		libmaus2::aio::CheckedInputStream CIS(fn);
+		libmaus2::lz::BufferedGzipStream::unique_ptr_type PBGS;
 		std::string unif;
 
 		// std::cerr << "unify " << unify << std::endl;
@@ -375,17 +375,17 @@ struct NamedIntervalGeneSet
 		if ( unify )
 		{
 			unif = unifyTranscripts(fn,chromregex);
-			libmaus::util::unique_ptr<std::istringstream>::type Tuistr(new std::istringstream(unif));
+			libmaus2::util::unique_ptr<std::istringstream>::type Tuistr(new std::istringstream(unif));
 			Puistr = UNIQUE_PTR_MOVE(Tuistr);
 			Pistr = Puistr.get();
 		}
 		else
 		{
-			bool const isgz = libmaus::bambam::MdNmRecalculation::isGzip(fn);
+			bool const isgz = libmaus2::bambam::MdNmRecalculation::isGzip(fn);
 			
 			if ( isgz )
 			{
-				libmaus::lz::BufferedGzipStream::unique_ptr_type TBGS(new libmaus::lz::BufferedGzipStream(CIS));
+				libmaus2::lz::BufferedGzipStream::unique_ptr_type TBGS(new libmaus2::lz::BufferedGzipStream(CIS));
 				PBGS = UNIQUE_PTR_MOVE(TBGS);
 				Pistr = PBGS.get();
 			}
@@ -413,7 +413,7 @@ struct NamedIntervalGeneSet
 			
 			if ( line.size() )
 			{
-				std::deque<std::string> const Q = libmaus::util::stringFunctions::tokenize<std::string>(line,std::string("\t"));
+				std::deque<std::string> const Q = libmaus2::util::stringFunctions::tokenize<std::string>(line,std::string("\t"));
 				
 				// ignore line if it does not have a  sufficient number of columns
 				if ( Q.size() < 6 )
@@ -434,7 +434,7 @@ struct NamedIntervalGeneSet
 					continue;
 					
 					#if 0
-					libmaus::exception::LibMausException lme;
+					libmaus2::exception::LibMausException lme;
 					lme.getStream() << "[E] cannot find reference " << refname << " in BAM file" << std::endl;
 					lme.finish();
 					throw lme;
@@ -460,9 +460,9 @@ struct NamedIntervalGeneSet
 			maxtop = std::max(maxtop,intervals[i].to);
 			
 		// next power of two
-		uint64_t const ntp = libmaus::math::nextTwoPow(maxtop+1);
+		uint64_t const ntp = libmaus2::math::nextTwoPow(maxtop+1);
 		// number of bits used
-		ilog = libmaus::math::ilog(ntp);
+		ilog = libmaus2::math::ilog(ntp);
 		// mask
 		int const maxbinbits1 = maxbinbits-1;
 		blockmask = ~((1ull << ((ilog>=maxbinbits1) ? (ilog-maxbinbits1) : 0))-1);
@@ -524,7 +524,7 @@ struct NamedIntervalGeneSet
 	
 
 	void findIntervals(
-		libmaus::bambam::BamAlignment const & algn,
+		libmaus2::bambam::BamAlignment const & algn,
 		std::vector<uint64_t> & binMatchingIntervals
 	)
 	const
@@ -536,7 +536,7 @@ struct NamedIntervalGeneSet
 			uint64_t const refid = algn.getRefID();
 			uint64_t const from = algn.getPos();
 			uint64_t const to = algn.getAlignmentEnd();
-			libmaus::math::IntegerInterval<int64_t> const A(from,to);
+			libmaus2::math::IntegerInterval<int64_t> const A(from,to);
 
 			#if defined(FIND_INTERVALS_DEBUG)
 			#if 0
@@ -548,7 +548,7 @@ struct NamedIntervalGeneSet
 			{
 				assert ( intervals[i].refseq == refid );
 
-				if ( ! A.intersection(libmaus::math::IntegerInterval(intervals[i].from,intervals[i].to)).isEmpty() )
+				if ( ! A.intersection(libmaus2::math::IntegerInterval(intervals[i].from,intervals[i].to)).isEmpty() )
 				{
 					matchingIntervals.push_back(i);
 					#if 0
@@ -578,7 +578,7 @@ struct NamedIntervalGeneSet
 				);
 				
 				for ( ; it != intervals.end() && it->bin == C.bin; ++it )
-					if ( ! A.intersection(libmaus::math::IntegerInterval<int64_t>(it->from,it->to)).isEmpty() )
+					if ( ! A.intersection(libmaus2::math::IntegerInterval<int64_t>(it->from,it->to)).isEmpty() )
 					{
 						binMatchingIntervals.push_back(it-intervals.begin());
 						
@@ -594,9 +594,9 @@ struct NamedIntervalGeneSet
 					if ( ( C.subfrom & m ) != (C.subto & m) )
 					{
 						uint64_t leftfrom = C.subfrom;
-						uint64_t leftto = C.subfrom | libmaus::math::lowbits(C.s);
+						uint64_t leftto = C.subfrom | libmaus2::math::lowbits(C.s);
 					
-						uint64_t rightfrom = C.subto & (~libmaus::math::lowbits(C.s));
+						uint64_t rightfrom = C.subto & (~libmaus2::math::lowbits(C.s));
 						uint64_t rightto = C.subto;
 
 						#if 0					
@@ -678,15 +678,15 @@ std::ostream & operator<<(std::ostream & out, NamedIntervalGeneSet const & NIGS)
 	return out;
 }
 
-int bamintervalcomment(::libmaus::util::ArgInfo const & arginfo)
+int bamintervalcomment(::libmaus2::util::ArgInfo const & arginfo)
 {
-	::libmaus::util::TempFileRemovalContainer::setup();
+	::libmaus2::util::TempFileRemovalContainer::setup();
 	
 	bool const inputisstdin = (!arginfo.hasArg("I")) || (arginfo.getUnparsedValue("I","-") == "-");
 
 	if ( isatty(STDIN_FILENO) && inputisstdin && (arginfo.getValue<std::string>("inputformat","bam") != "sam") )
 	{
-		::libmaus::exception::LibMausException se;
+		::libmaus2::exception::LibMausException se;
 		se.getStream() << "Refusing to read binary data from terminal, please redirect standard input to pipe or file." << std::endl;
 		se.finish();
 		throw se;
@@ -694,7 +694,7 @@ int bamintervalcomment(::libmaus::util::ArgInfo const & arginfo)
 	
 	if ( ! arginfo.hasArg("intervals") )
 	{
-		::libmaus::exception::LibMausException se;
+		::libmaus2::exception::LibMausException se;
 		se.getStream() << "[E] required intervals key is missing" << std::endl;
 		se.finish();
 		throw se;
@@ -705,16 +705,16 @@ int bamintervalcomment(::libmaus::util::ArgInfo const & arginfo)
 	bool const disablevalidation = arginfo.getValue<int>("disablevalidation",getDefaultDisableValidation());
 
 	// input decoder wrapper
-	libmaus::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
-		libmaus::bambam::BamMultiAlignmentDecoderFactory::construct(
+	libmaus2::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
+		libmaus2::bambam::BamMultiAlignmentDecoderFactory::construct(
 			arginfo,false // put rank
 		)
 	);
-	::libmaus::bambam::BamAlignmentDecoder * ppdec = &(decwrapper->getDecoder());
-	::libmaus::bambam::BamAlignmentDecoder & dec = *ppdec;
+	::libmaus2::bambam::BamAlignmentDecoder * ppdec = &(decwrapper->getDecoder());
+	::libmaus2::bambam::BamAlignmentDecoder & dec = *ppdec;
 	if ( disablevalidation )
 		dec.disableValidation();
-	::libmaus::bambam::BamHeader const & header = dec.getHeader();
+	::libmaus2::bambam::BamHeader const & header = dec.getHeader();
 	
 	std::string const chromregex = arginfo.getUnparsedValue("chromregex",".*");
 	bool const unifytranscripts = arginfo.getValue<unsigned int>("unifytranscripts",false);
@@ -725,24 +725,24 @@ int bamintervalcomment(::libmaus::util::ArgInfo const & arginfo)
 	std::string const tmpfilenamebase = arginfo.getValue<std::string>("tmpfile",arginfo.getDefaultTmpFileName());
 	std::string const tmpfilenameout = tmpfilenamebase + "_bamintervalcomment";
 	std::string const tmpfileindex = tmpfilenamebase + "_bamintervalcomment_index";
-	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilenameout);
-	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
+	::libmaus2::util::TempFileRemovalContainer::addTempFile(tmpfilenameout);
+	::libmaus2::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
 	
-	::libmaus::bambam::BamHeader::unique_ptr_type genuphead(
-		libmaus::bambam::BamHeaderUpdate::updateHeader(arginfo,header,"bamintervalcomment",std::string(PACKAGE_VERSION))
+	::libmaus2::bambam::BamHeader::unique_ptr_type genuphead(
+		libmaus2::bambam::BamHeaderUpdate::updateHeader(arginfo,header,"bamintervalcomment",std::string(PACKAGE_VERSION))
 	);
 
-	::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5;
-	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > cbs;
+	::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5;
+	std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > cbs;
 
 	if ( arginfo.hasArg("md5") && arginfo.hasArg("md5filename") && arginfo.getValue<unsigned int>("md5",getDefaultMD5()) )
 	{
-		::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5(new ::libmaus::lz::BgzfDeflateOutputCallbackMD5);
+		::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5(new ::libmaus2::lz::BgzfDeflateOutputCallbackMD5);
 		Pmd5 = UNIQUE_PTR_MOVE(Tmd5);
 		cbs.push_back(Pmd5.get());
 	}
 
-	libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Pindex;
+	libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Pindex;
 	std::string indexfilename;
 	if ( arginfo.getValue<unsigned int>("index",getDefaultIndex()) )
 	{
@@ -753,21 +753,21 @@ int bamintervalcomment(::libmaus::util::ArgInfo const & arginfo)
 
 		if ( indexfilename.size() )
 		{
-			libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Tindex(new libmaus::bambam::BgzfDeflateOutputCallbackBamIndex(tmpfileindex));
+			libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Tindex(new libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex(tmpfileindex));
 			Pindex = UNIQUE_PTR_MOVE(Tindex);
 			cbs.push_back(Pindex.get());
 		}
 	}
 	
-	libmaus::bambam::BamBlockWriterBase::unique_ptr_type Pwriter(
-		libmaus::bambam::BamBlockWriterBaseFactory::construct(
+	libmaus2::bambam::BamBlockWriterBase::unique_ptr_type Pwriter(
+		libmaus2::bambam::BamBlockWriterBaseFactory::construct(
 			*genuphead,arginfo,
 			cbs.size() ? (&cbs) : 0
 		)
 	);
 
-	libmaus::bambam::BamAlignment & curalgn = dec.getAlignment();
-	libmaus::bambam::BamAuxFilterVector COfilter;
+	libmaus2::bambam::BamAlignment & curalgn = dec.getAlignment();
+	libmaus2::bambam::BamAuxFilterVector COfilter;
 	COfilter.set("CO");
 	uint64_t c = 0;
 	std::vector<uint64_t> matchingIntervals;
@@ -835,7 +835,7 @@ int main(int argc, char * argv[])
 {
 	try
 	{
-		::libmaus::util::ArgInfo const arginfo(argc,argv);
+		::libmaus2::util::ArgInfo const arginfo(argc,argv);
 		
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
 			if ( 
@@ -844,7 +844,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--version"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
 			else if ( 
@@ -853,18 +853,18 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--help"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
 				
 				std::vector< std::pair<std::string,std::string> > V;
 			
-				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
-				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "disablevalidation=<["+::biobambam::Licensing::formatNumber(getDefaultDisableValidation())+"]>", "disable input validation (default is 0)" ) );				
+				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
+				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "disablevalidation=<["+::biobambam2::Licensing::formatNumber(getDefaultDisableValidation())+"]>", "disable input validation (default is 0)" ) );				
 
-				V.push_back ( std::pair<std::string,std::string> ( std::string("inputformat=<[")+getDefaultInputFormat()+"]>", std::string("input format (") + libmaus::bambam::BamMultiAlignmentDecoderFactory::getValidInputFormats() + ")" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("inputformat=<[")+getDefaultInputFormat()+"]>", std::string("input format (") + libmaus2::bambam::BamMultiAlignmentDecoderFactory::getValidInputFormats() + ")" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "I=<[stdin]>", "input filename (standard input if unset)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "inputthreads=<[1]>", "input helper threads (for inputformat=bam only, default: 1)" ) );
 
@@ -873,13 +873,13 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "outputthreads=<[1]>", "output helper threads (for outputformat=bam only, default: 1)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "O=<[stdout]>", "output filename (standard output if unset)" ) );
 
-				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam2::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "indexfilename=<filename>", "file name for BAM index file" ) );
-				V.push_back ( std::pair<std::string,std::string> ( std::string("outputformat=<[")+libmaus::bambam::BamBlockWriterBaseFactory::getDefaultOutputFormat()+"]>", std::string("output format (") + libmaus::bambam::BamBlockWriterBaseFactory::getValidOutputFormats() + ")" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("outputformat=<[")+libmaus2::bambam::BamBlockWriterBaseFactory::getDefaultOutputFormat()+"]>", std::string("output format (") + libmaus2::bambam::BamBlockWriterBaseFactory::getValidOutputFormats() + ")" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "reference=<>", "reference FastA (.fai file required, for cram i/o only)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "intervals=<>", "intervals file (plain tab separated or tab separated gzip compressed)" ) );
 				
-				::biobambam::Licensing::printMap(std::cerr,V);
+				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;

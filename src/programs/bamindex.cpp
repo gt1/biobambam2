@@ -18,29 +18,29 @@
 **/
 #include <config.h>
 
-#include <libmaus/bambam/BamIndexGenerator.hpp>
-#include <libmaus/lz/BgzfInflate.hpp>
-#include <libmaus/util/ArgInfo.hpp>
-#include <libmaus/util/MemUsage.hpp>
+#include <libmaus2/bambam/BamIndexGenerator.hpp>
+#include <libmaus2/lz/BgzfInflate.hpp>
+#include <libmaus2/util/ArgInfo.hpp>
+#include <libmaus2/util/MemUsage.hpp>
 
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/Licensing.hpp>
 
 bool getDefaultVerbose() { return true; }
 bool getDefaultDisableValidation() { return false; }
 
-int bamindex(libmaus::util::ArgInfo const & arginfo, std::istream & in, std::ostream & out)
+int bamindex(libmaus2::util::ArgInfo const & arginfo, std::istream & in, std::ostream & out)
 {
 	bool const debug = arginfo.getValue<unsigned int>("debug",0);
 	unsigned int const verbose = arginfo.getValue<unsigned int>("verbose",getDefaultVerbose());
 	bool const validate = !(arginfo.getValue<unsigned int>("disablevalidation",getDefaultDisableValidation()));
 	std::string const tmpfileprefix = arginfo.getValue<std::string>("tmpfile",arginfo.getDefaultTmpFileName());
 
-	libmaus::lz::BgzfInflate<std::istream> rec(in);
+	libmaus2::lz::BgzfInflate<std::istream> rec(in);
 	
-	libmaus::bambam::BamIndexGenerator BIG(tmpfileprefix,verbose,validate,debug);
+	libmaus2::bambam::BamIndexGenerator BIG(tmpfileprefix,verbose,validate,debug);
 
-	libmaus::autoarray::AutoArray<uint8_t> B(libmaus::lz::BgzfConstants::getBgzfMaxBlockSize());
-	libmaus::lz::BgzfInflateInfo rinfo;
+	libmaus2::autoarray::AutoArray<uint8_t> B(libmaus2::lz::BgzfConstants::getBgzfMaxBlockSize());
+	libmaus2::lz::BgzfInflateInfo rinfo;
 	while ( ! (rinfo=rec.readAndInfo(reinterpret_cast<char *>(B.begin()),B.size())).streameof )
 		BIG.addBlock(B.begin(),rinfo.compressed,rinfo.uncompressed);
 
@@ -53,7 +53,7 @@ int main(int argc, char * argv[])
 {
 	try
 	{
-		::libmaus::util::ArgInfo const arginfo(argc,argv);
+		::libmaus2::util::ArgInfo const arginfo(argc,argv);
 		
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
 			if ( 
@@ -62,7 +62,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--version"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
 			else if ( 
@@ -71,18 +71,18 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--help"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
 				
 				std::vector< std::pair<std::string,std::string> > V;
 
-				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report (default: 1)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "disablevalidation=<["+::biobambam::Licensing::formatNumber(getDefaultDisableValidation())+"]>", "disable alignment validation (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report (default: 1)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "disablevalidation=<["+::biobambam2::Licensing::formatNumber(getDefaultDisableValidation())+"]>", "disable alignment validation (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "tmpfile=<["+arginfo.getDefaultTmpFileName()+"]>", "temporary file prefix (default: create in current directory)" ) );
 
-				::biobambam::Licensing::printMap(std::cerr,V);
+				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;

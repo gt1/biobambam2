@@ -16,18 +16,10 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
-#if ! defined(BIOBAMBAM_CLIPREINSERT_HPP)
-#define BIOBAMBAM_CLIPREINSERT_HPP
+#if ! defined(BIOBAMBAM_SPLIT12_HPP)
+#define BIOBAMBAM_SPLIT12_HPP
 
-#include <libmaus/bambam/BamAlignment.hpp>
+#include <libmaus2/bambam/BamAlignment.hpp>
 
-bool clipReinsert(
-	libmaus::bambam::BamAlignment & algn,
-	libmaus::autoarray::AutoArray < std::pair<uint8_t,uint8_t> > & auxtags,
- 	libmaus::bambam::BamAuxFilterVector & bafv,
-	libmaus::autoarray::AutoArray<libmaus::bambam::cigar_operation> & cigop,
-	libmaus::bambam::BamAlignment::D_array_type & Tcigar,
-	std::stack < libmaus::bambam::cigar_operation > & hardstack,
- 	libmaus::bambam::BamAuxFilterVector const & auxfilterout
-);
+bool split12(libmaus2::bambam::BamAlignment & algn);
 #endif

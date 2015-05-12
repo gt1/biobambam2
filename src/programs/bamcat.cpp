@@ -21,55 +21,55 @@
 #include <iostream>
 #include <queue>
 
-#include <libmaus/util/ArgInfo.hpp>
-#include <libmaus/bambam/BamCat.hpp>
-#include <libmaus/bambam/BamWriter.hpp>
-#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
+#include <libmaus2/util/ArgInfo.hpp>
+#include <libmaus2/bambam/BamCat.hpp>
+#include <libmaus2/bambam/BamWriter.hpp>
+#include <libmaus2/bambam/BamBlockWriterBaseFactory.hpp>
 
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/Licensing.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; }
 
-#include <libmaus/lz/BgzfDeflateOutputCallbackMD5.hpp>
-#include <libmaus/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
+#include <libmaus2/lz/BgzfDeflateOutputCallbackMD5.hpp>
+#include <libmaus2/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
 static int getDefaultMD5() { return 0; }
 static int getDefaultIndex() { return 0; }
 static int getDefaultStreaming() { return 0; }
 
-::libmaus::bambam::BamHeader::unique_ptr_type updateHeader(
-	::libmaus::util::ArgInfo const & arginfo,
-	::libmaus::bambam::BamHeader const & header
+::libmaus2::bambam::BamHeader::unique_ptr_type updateHeader(
+	::libmaus2::util::ArgInfo const & arginfo,
+	::libmaus2::bambam::BamHeader const & header
 )
 {
 	std::string const headertext(header.text);
 
 	// add PG line to header
-	std::string const upheadtext = ::libmaus::bambam::ProgramHeaderLineSet::addProgramLine(
+	std::string const upheadtext = ::libmaus2::bambam::ProgramHeaderLineSet::addProgramLine(
 		headertext,
 		"bamcat", // ID
 		"bamcat", // PN
 		arginfo.commandline, // CL
-		::libmaus::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
+		::libmaus2::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
 		std::string(PACKAGE_VERSION) // VN			
 	);
 	// construct new header
-	::libmaus::bambam::BamHeader::unique_ptr_type uphead(new ::libmaus::bambam::BamHeader(upheadtext));
+	::libmaus2::bambam::BamHeader::unique_ptr_type uphead(new ::libmaus2::bambam::BamHeader(upheadtext));
 	
 	return UNIQUE_PTR_MOVE(uphead);
 }
 
-int bamcat(libmaus::util::ArgInfo const & arginfo)
+int bamcat(libmaus2::util::ArgInfo const & arginfo)
 {
 	if ( isatty(STDOUT_FILENO) )
 	{
-		::libmaus::exception::LibMausException se;
+		::libmaus2::exception::LibMausException se;
 		se.getStream() << "Refusing write binary data to terminal, please redirect standard output to pipe or file." << std::endl;
 		se.finish();
 		throw se;
 	}
 
-	int const level = libmaus::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
+	int const level = libmaus2::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
 	int const streaming = arginfo.getValue<int>("streaming",getDefaultStreaming());
 
@@ -78,23 +78,23 @@ int bamcat(libmaus::util::ArgInfo const & arginfo)
 	for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
 		inputfilenames.push_back(arginfo.restargs[i]);
 	
-	libmaus::bambam::BamCat bamdec(inputfilenames, false /* put rank */, streaming);
-	libmaus::bambam::BamAlignment const & algn = bamdec.getAlignment();
-	libmaus::bambam::BamHeader const & header = bamdec.getHeader();
-	::libmaus::bambam::BamHeader::unique_ptr_type uphead(updateHeader(arginfo,header));
+	libmaus2::bambam::BamCat bamdec(inputfilenames, false /* put rank */, streaming);
+	libmaus2::bambam::BamAlignment const & algn = bamdec.getAlignment();
+	libmaus2::bambam::BamHeader const & header = bamdec.getHeader();
+	::libmaus2::bambam::BamHeader::unique_ptr_type uphead(updateHeader(arginfo,header));
 
 	/*
 	 * start index/md5 callbacks
 	 */
 	std::string const tmpfilenamebase = arginfo.getValue<std::string>("tmpfile",arginfo.getDefaultTmpFileName());
 	std::string const tmpfileindex = tmpfilenamebase + "_index";
-	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
+	::libmaus2::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
 
 	std::string md5filename;
 	std::string indexfilename;
 
-	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > cbs;
-	::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
+	std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > cbs;
+	::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
 	if ( arginfo.getValue<unsigned int>("md5",getDefaultMD5()) )
 	{
 		if ( arginfo.hasArg("md5filename") &&  arginfo.getUnparsedValue("md5filename","") != "" )
@@ -104,12 +104,12 @@ int bamcat(libmaus::util::ArgInfo const & arginfo)
 
 		if ( md5filename.size() )
 		{
-			::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5cb(new ::libmaus::lz::BgzfDeflateOutputCallbackMD5);
+			::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5cb(new ::libmaus2::lz::BgzfDeflateOutputCallbackMD5);
 			Pmd5cb = UNIQUE_PTR_MOVE(Tmd5cb);
 			cbs.push_back(Pmd5cb.get());
 		}
 	}
-	libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Pindex;
+	libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Pindex;
 	if ( arginfo.getValue<unsigned int>("index",getDefaultIndex()) )
 	{
 		if ( arginfo.hasArg("indexfilename") &&  arginfo.getUnparsedValue("indexfilename","") != "" )
@@ -119,12 +119,12 @@ int bamcat(libmaus::util::ArgInfo const & arginfo)
 
 		if ( indexfilename.size() )
 		{
-			libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Tindex(new libmaus::bambam::BgzfDeflateOutputCallbackBamIndex(tmpfileindex));
+			libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Tindex(new libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex(tmpfileindex));
 			Pindex = UNIQUE_PTR_MOVE(Tindex);
 			cbs.push_back(Pindex.get());
 		}
 	}
-	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
+	std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
 	if ( cbs.size() )
 		Pcbs = &cbs;
 	/*
@@ -132,8 +132,8 @@ int bamcat(libmaus::util::ArgInfo const & arginfo)
 	 */
 
 
-	::libmaus::bambam::BamWriter::unique_ptr_type writer(new ::libmaus::bambam::BamWriter(std::cout,*uphead,level,Pcbs));
-	libmaus::bambam::BamWriter::stream_type & bamoutstr = writer->getStream();
+	::libmaus2::bambam::BamWriter::unique_ptr_type writer(new ::libmaus2::bambam::BamWriter(std::cout,*uphead,level,Pcbs));
+	libmaus2::bambam::BamWriter::stream_type & bamoutstr = writer->getStream();
 	if ( verbose )
 	{
 		uint64_t c = 0;
@@ -169,7 +169,7 @@ int main(int argc, char * argv[])
 {
 	try
 	{
-		::libmaus::util::ArgInfo const arginfo(argc,argv);
+		::libmaus2::util::ArgInfo const arginfo(argc,argv);
 		
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
 			if ( 
@@ -178,7 +178,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--version"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
 			else if ( 
@@ -187,7 +187,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--help"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
@@ -195,16 +195,16 @@ int main(int argc, char * argv[])
 				std::vector< std::pair<std::string,std::string> > V;
 			
 				V.push_back ( std::pair<std::string,std::string> ( "I=<filename>", "input file, can be set multiple times" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
-				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
+				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam2::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "md5filename=<filename>", "file name for md5 check sum (default: extend output file name)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam2::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "indexfilename=<filename>", "file name for BAM index file (default: extend output file name)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "tmpfile=<filename>", "prefix for temporary files, default: create files in current directory" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "streaming=<["+::biobambam::Licensing::formatNumber(getDefaultStreaming())+"]>", "streaming mode (0: off, 1: on)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "streaming=<["+::biobambam2::Licensing::formatNumber(getDefaultStreaming())+"]>", "streaming mode (0: off, 1: on)" ) );
 
-				::biobambam::Licensing::printMap(std::cerr,V);
+				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;

@@ -23,16 +23,16 @@
 #include <queue>
 #include <vector>
 
-#include <libmaus/util/ArgInfo.hpp>
-#include <libmaus/bambam/BamDecoder.hpp>
-#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
-#include <libmaus/bambam/BamMultiAlignmentDecoderFactory.hpp>
-#include <libmaus/bambam/BamHeaderUpdate.hpp>
-#include <libmaus/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
-#include <libmaus/lz/BgzfDeflateOutputCallbackMD5.hpp>
+#include <libmaus2/util/ArgInfo.hpp>
+#include <libmaus2/bambam/BamDecoder.hpp>
+#include <libmaus2/bambam/BamBlockWriterBaseFactory.hpp>
+#include <libmaus2/bambam/BamMultiAlignmentDecoderFactory.hpp>
+#include <libmaus2/bambam/BamHeaderUpdate.hpp>
+#include <libmaus2/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
+#include <libmaus2/lz/BgzfDeflateOutputCallbackMD5.hpp>
 
-#include <biobambam/BamBamConfig.hpp>
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/BamBamConfig.hpp>
+#include <biobambam2/Licensing.hpp>
 
 
 static int getDefaultVerbose() {return 0;}
@@ -40,7 +40,7 @@ static int getDefaultLevel() {return Z_DEFAULT_COMPRESSION;}
 static int getDefaultMaxMisordered() {return 500000;}
 static int getDefaultExpectedStep() {return 2;}
 
-#include <libmaus/lz/BgzfDeflateOutputCallbackMD5.hpp>
+#include <libmaus2/lz/BgzfDeflateOutputCallbackMD5.hpp>
 
 static int getDefaultMD5() { return 0; }
 
@@ -48,9 +48,9 @@ static int getDefaultMD5() { return 0; }
 // structs to hold unsorted data
 struct Grouped {
     uint64_t rank;
-    libmaus::bambam::BamAlignment *algn;
+    libmaus2::bambam::BamAlignment *algn;
     
-    Grouped(uint64_t irank, libmaus::bambam::BamAlignment *ialgn) : rank(irank), algn(ialgn) {
+    Grouped(uint64_t irank, libmaus2::bambam::BamAlignment *ialgn) : rank(irank), algn(ialgn) {
     }
     
     ~Grouped() {
@@ -76,7 +76,7 @@ static bool rank_cmp(Unsorted *one, Unsorted *two) {
 }
 
 
-static uint64_t get_rank(libmaus::bambam::BamAlignment &algn) {
+static uint64_t get_rank(libmaus2::bambam::BamAlignment &algn) {
     char const *name = algn.getName();
     char const *u1 = name;
     bool ok = true;
@@ -91,7 +91,7 @@ static uint64_t get_rank(libmaus::bambam::BamAlignment &algn) {
 
     // unable to find rank?
     if (!ok) {
-	::libmaus::exception::LibMausException se;
+	::libmaus2::exception::LibMausException se;
 	se.getStream() << "Aborting, no rank found.  Read name is " << name << std::endl;
 	se.finish();
 	throw se;
@@ -101,15 +101,15 @@ static uint64_t get_rank(libmaus::bambam::BamAlignment &algn) {
 }
 
 
-uint64_t get_grouped_reads(libmaus::bambam::BamAlignment &alg, libmaus::bambam::BamAlignmentDecoder &decoder, std::vector<Grouped *> &group, bool &cont) {
-    uint64_t rank = get_rank(alg);
+uint64_t get_grouped_reads(libmaus2::bambam::BamAlignment &alg, libmaus2::bambam::BamAlignmentDecoder &decoder, std::vector<Grouped *> &group, bool &cont) {
+    uint64_t const rank = get_rank(alg);
     uint64_t found_rank = rank;
     bool first_found  = false;
     bool second_found = false;
     
     while (found_rank == rank) {
 	// store read line
-	Grouped *tmp_group = new Grouped(rank, new libmaus::bambam::BamAlignment); 
+	Grouped *tmp_group = new Grouped(rank, new libmaus2::bambam::BamAlignment); 
 	tmp_group->algn->swap(alg);
 	group.push_back(tmp_group);
 	
@@ -126,7 +126,7 @@ uint64_t get_grouped_reads(libmaus::bambam::BamAlignment &alg, libmaus::bambam::
     }
     
     if (!(first_found && second_found)) {
-	::libmaus::exception::LibMausException se;
+	::libmaus2::exception::LibMausException se;
 	se.getStream() << "Aborting, rank " << rank << "_" << (rank + 1) << " lacks first and second reads " << first_found << " " << second_found << std::endl;
 	se.finish();
 	throw se;
@@ -136,7 +136,7 @@ uint64_t get_grouped_reads(libmaus::bambam::BamAlignment &alg, libmaus::bambam::
 }
 
     
-void write_grouped_reads(std::vector<Grouped *> &group, libmaus::bambam::BamBlockWriterBase::unique_ptr_type const &scribe, int const verbose) {
+void write_grouped_reads(std::vector<Grouped *> &group, libmaus2::bambam::BamBlockWriterBase::unique_ptr_type const &scribe, int const verbose) {
 
     for (std::vector<Grouped *>::iterator itr = group.begin(); itr != group.end(); ++itr) {
 	scribe->writeAlignment(*((*itr)->algn));
@@ -159,14 +159,14 @@ void store_group(std::vector<Grouped *> &group, std::vector<Unsorted *> &unsorte
 }
 
 
-bool check_ranks(std::vector<Unsorted *> &unsorted, uint64_t &wanted, int const verbose, int const step) {
+bool check_ranks(std::vector<Unsorted *> const &unsorted, uint64_t &wanted, int const verbose, int const step) {
     wanted = unsorted[0]->rank;
     
     if (verbose > 0) {
     	std::cerr << "check_ranks called on " << unsorted.size() << " reading groups" << std::endl;
     }
 
-    for (std::vector<Unsorted *>::iterator itr = unsorted.begin(); itr != unsorted.end(); ++itr) {
+    for (std::vector<Unsorted *>::const_iterator itr = unsorted.begin(); itr != unsorted.end(); ++itr) {
     	if ((*itr)->rank == wanted) {
 	    wanted += step;
 	} else {
@@ -182,24 +182,24 @@ bool check_ranks(std::vector<Unsorted *> &unsorted, uint64_t &wanted, int const 
 }
 
  	
-void search_for_missing_group(libmaus::bambam::BamAlignment &alg, libmaus::bambam::BamAlignmentDecoder &decoder,
-    	    	    	       std::vector<Grouped *> &group, libmaus::bambam::BamBlockWriterBase::unique_ptr_type 
+void search_for_missing_group(libmaus2::bambam::BamAlignment &alg, libmaus2::bambam::BamAlignmentDecoder &decoder,
+    	    	    	       std::vector<Grouped *> &group, libmaus2::bambam::BamBlockWriterBase::unique_ptr_type 
 			       const &scribe, bool &cont, uint64_t &expected, int const verbose,
 			       int const misordered, int const step) {
-    bool still_missing = true;
     std::vector<Unsorted *> unsorted;
     
     // store current group
     store_group(group, unsorted);
     group.clear();
     
-    bool found    = false;
-    int interval  = 10;
-    int count     = 0;
-    int max_count = 0;
+    bool still_missing  = true;
+    bool found          = false;
+    int const interval  = 10;
+    int count           = 0;
+    int max_count       = 0;
     
     while (still_missing) {
-    	uint64_t current_rank = get_grouped_reads(alg, decoder, group, cont);
+    	uint64_t const current_rank = get_grouped_reads(alg, decoder, group, cont);
     	store_group(group, unsorted);
     	group.clear();
 	
@@ -226,12 +226,12 @@ void search_for_missing_group(libmaus::bambam::BamAlignment &alg, libmaus::bamba
 	}
 	
 	if (!cont && still_missing) {
-	    ::libmaus::exception::LibMausException se;
+	    ::libmaus2::exception::LibMausException se;
 	    se.getStream() << "Aborting, rank " << expected << "_" << (expected + 1) << " not found, end of file" << std::endl;
 	    se.finish();
 	    throw se;
 	} else if (((count + max_count) >= misordered) && still_missing) {
-	    ::libmaus::exception::LibMausException se;
+	    ::libmaus2::exception::LibMausException se;
 	    se.getStream() << "Aborting, number of misordered is greater than " << misordered << std::endl;
 	    se.finish();
 	    throw se;
@@ -240,17 +240,17 @@ void search_for_missing_group(libmaus::bambam::BamAlignment &alg, libmaus::bamba
 }    	
     
 
-int bamranksort(libmaus::util::ArgInfo const &arginfo) {
+int bamranksort(libmaus2::util::ArgInfo const &arginfo) {
 
     if (isatty(STDIN_FILENO)) {
-	::libmaus::exception::LibMausException se;
+	::libmaus2::exception::LibMausException se;
 	se.getStream() << "Refusing to read binary data from terminal, please redirect standard input to pipe or file." << std::endl;
 	se.finish();
 	throw se;
     }
 
     if (isatty(STDOUT_FILENO)) {
-	::libmaus::exception::LibMausException se;
+	::libmaus2::exception::LibMausException se;
 	se.getStream() << "Refusing write binary data to terminal, please redirect standard output to pipe or file." << std::endl;
 	se.finish();
 	throw se;
@@ -261,17 +261,17 @@ int bamranksort(libmaus::util::ArgInfo const &arginfo) {
     int const step = arginfo.getValue<int>("step", getDefaultExpectedStep());
 
     // input decoder wrapper
-    libmaus::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
-	    libmaus::bambam::BamMultiAlignmentDecoderFactory::construct(
+    libmaus2::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
+	    libmaus2::bambam::BamMultiAlignmentDecoderFactory::construct(
 		    arginfo,false // put rank
 	    )
     );
 
-    ::libmaus::bambam::BamAlignmentDecoder * ppdec = &(decwrapper->getDecoder());
-    ::libmaus::bambam::BamAlignmentDecoder & dec = *ppdec;
+    ::libmaus2::bambam::BamAlignmentDecoder * ppdec = &(decwrapper->getDecoder());
+    ::libmaus2::bambam::BamAlignmentDecoder & dec = *ppdec;
 
-    libmaus::bambam::BamAlignment &algn = dec.getAlignment();
-    libmaus::bambam::BamHeader const &header = dec.getHeader();
+    libmaus2::bambam::BamAlignment &algn = dec.getAlignment();
+    libmaus2::bambam::BamHeader const &header = dec.getHeader();
     
     if (verbose > 0) {
     	std::cerr << "Running bamranksort" << std::endl;
@@ -280,24 +280,24 @@ int bamranksort(libmaus::util::ArgInfo const &arginfo) {
     std::string const headertext(header.text);
 
     // add PG line to header
-    std::string const upheadtext = ::libmaus::bambam::ProgramHeaderLineSet::addProgramLine(
+    std::string const upheadtext = ::libmaus2::bambam::ProgramHeaderLineSet::addProgramLine(
 	    headertext,
 	    "bamranksort", // ID
 	    "bamranksort", // PN
 	    arginfo.commandline, // CL
-	    ::libmaus::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
+	    ::libmaus2::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
 	    std::string(PACKAGE_VERSION) // VN			
     );
     
-    ::libmaus::bambam::BamHeader uphead(upheadtext);
+    ::libmaus2::bambam::BamHeader uphead(upheadtext);
     
     /*
      * start md5 callbacks
      */
     std::string md5filename;
 
-    std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > cbs;
-    ::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
+    std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > cbs;
+    ::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
 
     if ( arginfo.getValue<unsigned int>("md5",getDefaultMD5()) )
     {
@@ -308,13 +308,13 @@ int bamranksort(libmaus::util::ArgInfo const &arginfo) {
 
 	    if ( md5filename.size() )
 	    {
-		    ::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5cb(new ::libmaus::lz::BgzfDeflateOutputCallbackMD5);
+		    ::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5cb(new ::libmaus2::lz::BgzfDeflateOutputCallbackMD5);
 		    Pmd5cb = UNIQUE_PTR_MOVE(Tmd5cb);
 		    cbs.push_back(Pmd5cb.get());
 	    }
     }
 
-    std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
+    std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
 
     if ( cbs.size() )
 	    Pcbs = &cbs;
@@ -322,8 +322,8 @@ int bamranksort(libmaus::util::ArgInfo const &arginfo) {
      * end md5
      */
 
-    libmaus::bambam::BamBlockWriterBase::unique_ptr_type writer(
-	    libmaus::bambam::BamBlockWriterBaseFactory::construct(uphead, arginfo, Pcbs)
+    libmaus2::bambam::BamBlockWriterBase::unique_ptr_type writer(
+	    libmaus2::bambam::BamBlockWriterBaseFactory::construct(uphead, arginfo, Pcbs)
     );
 
     // major assumption is that all alignments are grouped by read name
@@ -332,7 +332,7 @@ int bamranksort(libmaus::util::ArgInfo const &arginfo) {
     
     // get the first read
     if (!dec.readAlignment()) {
-	::libmaus::exception::LibMausException se;
+	::libmaus2::exception::LibMausException se;
 	se.getStream() << "Aborting, unable to read first alignment" << std::endl;
 	se.finish();
 	throw se;
@@ -344,7 +344,7 @@ int bamranksort(libmaus::util::ArgInfo const &arginfo) {
     bool keep_going = true;
     
     while (keep_going) {
-    	uint64_t current_rank = get_grouped_reads(algn, dec, grouped_reads, keep_going);
+    	uint64_t const current_rank = get_grouped_reads(algn, dec, grouped_reads, keep_going);
 	
 	if (current_rank == expected_rank) {
 	    // we have what we came for
@@ -371,32 +371,32 @@ int bamranksort(libmaus::util::ArgInfo const &arginfo) {
 
 int main(int argc, char* argv[]) {
     try {
-    	::libmaus::util::ArgInfo const arginfo(argc, argv);
+    	::libmaus2::util::ArgInfo const arginfo(argc, argv);
 	
 	for (uint64_t i = 0; i < arginfo.restargs.size(); ++i) {
 	    if (arginfo.restargs[i] == "-v" ||
 	    	arginfo.restargs[i] == "--version") {
-	    	std::cerr << ::biobambam::Licensing::license();
+	    	std::cerr << ::biobambam2::Licensing::license();
 		return EXIT_SUCCESS;
 		
 	    } else if (arginfo.restargs[i] == "-h" ||
 	    	    	arginfo.restargs[i] == "--help") {
-		std::cerr << ::biobambam::Licensing::license();
+		std::cerr << ::biobambam2::Licensing::license();
 		std::cerr << std::endl;
 		std::cerr << "Key=Value pairs:" << std::endl;
 		std::cerr << std::endl;
 		
 		std::vector<std::pair<std::string,std::string>> V;
 			
-		V.push_back(std::pair<std::string,std::string> ("level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText()));
-		V.push_back(std::pair<std::string,std::string> ("verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report"));
-		V.push_back(std::pair<std::string,std::string> ("md5=<["+::biobambam::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)"));
+		V.push_back(std::pair<std::string,std::string> ("level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText()));
+		V.push_back(std::pair<std::string,std::string> ("verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report"));
+		V.push_back(std::pair<std::string,std::string> ("md5=<["+::biobambam2::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)"));
 		V.push_back(std::pair<std::string,std::string> ("md5filename=<filename>", "file name for md5 check sum (default: extend output file name)"));
-		V.push_back(std::pair<std::string,std::string> ("misordered=<["+::biobambam::Licensing::formatNumber(getDefaultMaxMisordered())+"]>", "number of read pairs (including secondary/supplementary alignments) allowed to accumulate before exiting"));
-		V.push_back(std::pair<std::string,std::string> ("step=<["+::biobambam::Licensing::formatNumber(getDefaultExpectedStep())+"]>", "the increment expected between one rank and the next"));
+		V.push_back(std::pair<std::string,std::string> ("misordered=<["+::biobambam2::Licensing::formatNumber(getDefaultMaxMisordered())+"]>", "number of read pairs (including secondary/supplementary alignments) allowed to accumulate before exiting"));
+		V.push_back(std::pair<std::string,std::string> ("step=<["+::biobambam2::Licensing::formatNumber(getDefaultExpectedStep())+"]>", "the increment expected between one rank and the next"));
 		V.push_back(std::pair<std::string,std::string> ("outputthreads=<1>", "output helper threads (for outputformat=bam only, default: 1)"));
 
-    	    	::biobambam::Licensing::printMap(std::cerr,V);
+    	    	::biobambam2::Licensing::printMap(std::cerr,V);
 		
 		std::cerr << std::endl;
 		return EXIT_SUCCESS;

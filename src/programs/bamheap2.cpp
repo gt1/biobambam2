@@ -16,12 +16,12 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
-#include <libmaus/bambam/BamMultiAlignmentDecoderFactory.hpp>
-#include <libmaus/fastx/FastAIndex.hpp>
-#include <libmaus/aio/PosixFdOutputStream.hpp>
-#include <libmaus/util/Histogram.hpp>
-#include <biobambam/BamBamConfig.hpp>
-#include <biobambam/Licensing.hpp>
+#include <libmaus2/bambam/BamMultiAlignmentDecoderFactory.hpp>
+#include <libmaus2/fastx/FastAIndex.hpp>
+#include <libmaus2/aio/PosixFdOutputStream.hpp>
+#include <libmaus2/util/Histogram.hpp>
+#include <biobambam2/BamBamConfig.hpp>
+#include <biobambam2/Licensing.hpp>
 
 static int getDefaultVerbose()
 {
@@ -51,7 +51,7 @@ struct ConsensusAccuracy
 	uint64_t deletions;
 	uint64_t refbasesprocessed;
 	uint64_t refbasesexpected;
-	libmaus::util::Histogram depthhistogram;
+	libmaus2::util::Histogram depthhistogram;
 	
 	ConsensusAccuracy() : matches(0), mismatches(0), insertions(0), deletions(0), refbasesprocessed(0), refbasesexpected(0) {}
 	ConsensusAccuracy(
@@ -103,8 +103,8 @@ std::ostream & operator<<(std::ostream & out, ConsensusAccuracy const & C)
 
 struct ConsensusAux
 {
-	libmaus::autoarray::AutoArray<uint64_t> M;
-	libmaus::autoarray::AutoArray<uint64_t> C;
+	libmaus2::autoarray::AutoArray<uint64_t> M;
+	libmaus2::autoarray::AutoArray<uint64_t> C;
 
 	ConsensusAux() : M(256), C(256)
 	{
@@ -288,18 +288,18 @@ struct HeapEntry
 	}
 };
 
-int bamheap2(libmaus::util::ArgInfo const & arginfo)
+int bamheap2(libmaus2::util::ArgInfo const & arginfo)
 {
 	bool const verbose = arginfo.getValue("verbose",getDefaultVerbose());
 	std::string const reference = arginfo.getUnparsedValue("reference",std::string());
 	std::string const outputprefix = arginfo.getUnparsedValue("outputprefix",std::string());
 	
-	libmaus::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
-		libmaus::bambam::BamMultiAlignmentDecoderFactory::construct(arginfo));
-	::libmaus::bambam::BamAlignmentDecoder * ppdec = &(decwrapper->getDecoder());
-	::libmaus::bambam::BamAlignmentDecoder & dec = *ppdec;
-	::libmaus::bambam::BamHeader const & header = dec.getHeader();	
-	::libmaus::bambam::BamAlignment const & algn = dec.getAlignment();
+	libmaus2::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
+		libmaus2::bambam::BamMultiAlignmentDecoderFactory::construct(arginfo));
+	::libmaus2::bambam::BamAlignmentDecoder * ppdec = &(decwrapper->getDecoder());
+	::libmaus2::bambam::BamAlignmentDecoder & dec = *ppdec;
+	::libmaus2::bambam::BamHeader const & header = dec.getHeader();	
+	::libmaus2::bambam::BamAlignment const & algn = dec.getAlignment();
 	
 	double const damult = arginfo.getValue<double>("amult",1);
 	double const dcmult = arginfo.getValue<double>("cmult",1);
@@ -320,21 +320,21 @@ int bamheap2(libmaus::util::ArgInfo const & arginfo)
 	uint64_t const tmult = std::floor((dtmult / maxmult) * (1ull<<16) + 0.5);
 	uint64_t const padmult = std::floor((dpadmult / maxmult) * (1ull<<16) + 0.5);
 	
-	libmaus::fastx::FastAIndex::unique_ptr_type Pindex;
-	libmaus::aio::CheckedInputStream::unique_ptr_type PCIS;
+	libmaus2::fastx::FastAIndex::unique_ptr_type Pindex;
+	libmaus2::aio::CheckedInputStream::unique_ptr_type PCIS;
 	if ( reference.size() )
 	{
-		libmaus::fastx::FastAIndex::unique_ptr_type Tindex(
-			libmaus::fastx::FastAIndex::load(reference+".fai")
+		libmaus2::fastx::FastAIndex::unique_ptr_type Tindex(
+			libmaus2::fastx::FastAIndex::load(reference+".fai")
 		);
 		Pindex = UNIQUE_PTR_MOVE(Tindex);
 		
-		libmaus::aio::CheckedInputStream::unique_ptr_type TCIS(new libmaus::aio::CheckedInputStream(reference));
+		libmaus2::aio::CheckedInputStream::unique_ptr_type TCIS(new libmaus2::aio::CheckedInputStream(reference));
 		PCIS = UNIQUE_PTR_MOVE(TCIS);
 	}
 
-	libmaus::autoarray::AutoArray<libmaus::bambam::cigar_operation> cigop;
-	libmaus::autoarray::AutoArray<char> bases;
+	libmaus2::autoarray::AutoArray<libmaus2::bambam::cigar_operation> cigop;
+	libmaus2::autoarray::AutoArray<char> bases;
 	
 	int64_t prevrefid = -1;
 	std::string refidname = "*";
@@ -344,10 +344,10 @@ int bamheap2(libmaus::util::ArgInfo const & arginfo)
 	std::vector< std::pair<char,uint8_t> > pendinginserts;
 	int64_t loadedRefId = -1;
 	int64_t streamRefId = -1;
-	libmaus::autoarray::AutoArray<char> refseqbases;
+	libmaus2::autoarray::AutoArray<char> refseqbases;
 	ConsensusAccuracy * consacc = 0;
 	std::map<uint64_t,ConsensusAccuracy> Mconsacc;
-	typedef libmaus::util::shared_ptr<std::ostringstream>::type stream_ptr_type;
+	typedef libmaus2::util::shared_ptr<std::ostringstream>::type stream_ptr_type;
 	stream_ptr_type Pstream;
 	ConsensusAux Caux;
 	
@@ -367,7 +367,7 @@ int bamheap2(libmaus::util::ArgInfo const & arginfo)
 			uint64_t readpos = 0;
 			uint64_t refpos = algn.getPos();
 			uint64_t const seqlen = algn.decodeRead(bases);
-			uint8_t const * qual = libmaus::bambam::BamAlignmentDecoderBase::getQual(algn.D.begin());
+			uint8_t const * qual = libmaus2::bambam::BamAlignmentDecoderBase::getQual(algn.D.begin());
 			
 			// handle finished columns
 			if ( algn.getRefID() != prevrefid )
@@ -382,7 +382,7 @@ int bamheap2(libmaus::util::ArgInfo const & arginfo)
 						{
 							std::ostringstream fnostr;
 							fnostr << outputprefix << "_" << header.getRefIDName(streamRefId);
-							libmaus::aio::PosixFdOutputStream PFOS(fnostr.str());
+							libmaus2::aio::PosixFdOutputStream PFOS(fnostr.str());
 							PFOS << ">" << header.getRefIDName(streamRefId) << '\n';
 							PFOS << Pstream->str() << '\n';
 							
@@ -425,7 +425,7 @@ int bamheap2(libmaus::util::ArgInfo const & arginfo)
 						{
 							std::ostringstream fnostr;
 							fnostr << outputprefix << "_" << header.getRefIDName(streamRefId);
-							libmaus::aio::PosixFdOutputStream PFOS(fnostr.str());
+							libmaus2::aio::PosixFdOutputStream PFOS(fnostr.str());
 							PFOS << ">" << header.getRefIDName(streamRefId) << '\n';
 							PFOS << Pstream->str() << '\n';
 
@@ -460,9 +460,9 @@ int bamheap2(libmaus::util::ArgInfo const & arginfo)
 				
 				switch ( cigop[ci].first )
 				{
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CMATCH:
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CEQUAL:
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CDIFF:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CMATCH:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CEQUAL:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CDIFF:
 					{
 						if ( pendinginserts.size() )
 						{
@@ -478,13 +478,13 @@ int bamheap2(libmaus::util::ArgInfo const & arginfo)
 						}
 						break;
 					}
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CINS:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CINS:
 					{
 						for ( uint64_t i = 0; i < ciglen; ++i, ++readpos )
 							pendinginserts.push_back(std::make_pair(bases[readpos],qual[readpos]));
 						break;
 					}
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CDEL:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CDEL:
 						// handle pending inserts
 						if ( pendinginserts.size() )
 						{
@@ -496,7 +496,7 @@ int bamheap2(libmaus::util::ArgInfo const & arginfo)
 						for ( uint64_t i = 0; i < ciglen; ++i, ++refpos )
 							M[refpos].V.push_back(std::make_pair(padsym,0));
 						break;
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CREF_SKIP:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CREF_SKIP:
 						// handle pending inserts
 						if ( pendinginserts.size() )
 						{
@@ -510,16 +510,16 @@ int bamheap2(libmaus::util::ArgInfo const & arginfo)
 							refpos++;
 						}
 						break;
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CSOFT_CLIP:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CSOFT_CLIP:
 						// skip bases on read
 						for ( uint64_t i = 0; i < ciglen; ++i )
 						{
 							readpos++;
 						}
 						break;
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CHARD_CLIP:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CHARD_CLIP:
 						break;
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CPAD:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CPAD:
 					{
 						for ( uint64_t i = 0; i < ciglen; ++i, ++readpos )
 							pendinginserts.push_back(std::make_pair(padsym,0));
@@ -552,7 +552,7 @@ int bamheap2(libmaus::util::ArgInfo const & arginfo)
 			{
 				std::ostringstream fnostr;
 				fnostr << outputprefix << "_" << header.getRefIDName(streamRefId);
-				libmaus::aio::PosixFdOutputStream PFOS(fnostr.str());
+				libmaus2::aio::PosixFdOutputStream PFOS(fnostr.str());
 				PFOS << ">" << header.getRefIDName(streamRefId) << '\n';
 				PFOS << Pstream->str() << '\n';
 
@@ -584,7 +584,7 @@ int bamheap2(libmaus::util::ArgInfo const & arginfo)
 	{
 		std::ostringstream fnostr;
 		fnostr << outputprefix << "_" << header.getRefIDName(streamRefId);
-		libmaus::aio::PosixFdOutputStream PFOS(fnostr.str());
+		libmaus2::aio::PosixFdOutputStream PFOS(fnostr.str());
 		PFOS << ">" << header.getRefIDName(streamRefId) << '\n';
 		PFOS << Pstream->str() << '\n';
 
@@ -668,7 +668,7 @@ int main(int argc, char * argv[])
 {
 	try
 	{
-		libmaus::util::ArgInfo const arginfo(argc,argv);
+		libmaus2::util::ArgInfo const arginfo(argc,argv);
 
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
 			if ( 
@@ -677,7 +677,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--version"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
 			else if ( 
@@ -686,22 +686,22 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--help"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
 				
 				std::vector< std::pair<std::string,std::string> > V;
 			
-				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "disablevalidation=<["+::biobambam::Licensing::formatNumber(getDefaultDisableValidation())+"]>", "disable input validation (default is 0)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( std::string("inputformat=<[")+getDefaultInputFormat()+"]>", std::string("input format (") + libmaus::bambam::BamMultiAlignmentDecoderFactory::getValidInputFormats() + ")" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "disablevalidation=<["+::biobambam2::Licensing::formatNumber(getDefaultDisableValidation())+"]>", "disable input validation (default is 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("inputformat=<[")+getDefaultInputFormat()+"]>", std::string("input format (") + libmaus2::bambam::BamMultiAlignmentDecoderFactory::getValidInputFormats() + ")" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "I=<[stdin]>", "input filename (standard input if unset)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "inputthreads=<[1]>", "input helper threads (for inputformat=bam only, default: 1)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "reference=<>", "reference FastA (.fai file required, for cram i/o only)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "range=<>", "coordinate range to be processed (for coordinate sorted indexed BAM input only)" ) );
 
-				::biobambam::Licensing::printMap(std::cerr,V);
+				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;

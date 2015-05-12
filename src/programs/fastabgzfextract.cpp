@@ -19,20 +19,20 @@
 #include <config.h>
 #include <cstdlib>
 #include <iostream>
-#include <libmaus/aio/PosixFdInputStream.hpp>
-#include <libmaus/fastx/FastABgzfIndex.hpp>
-#include <libmaus/timing/RealTimeClock.hpp>
-#include <libmaus/util/ArgInfo.hpp>
-#include <libmaus/util/GetFileSize.hpp>
+#include <libmaus2/aio/PosixFdInputStream.hpp>
+#include <libmaus2/fastx/FastABgzfIndex.hpp>
+#include <libmaus2/timing/RealTimeClock.hpp>
+#include <libmaus2/util/ArgInfo.hpp>
+#include <libmaus2/util/GetFileSize.hpp>
 
-#include <biobambam/BamBamConfig.hpp>
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/BamBamConfig.hpp>
+#include <biobambam2/Licensing.hpp>
 
-void fastabgzfextract(libmaus::util::ArgInfo const & arginfo)
+void fastabgzfextract(libmaus2::util::ArgInfo const & arginfo)
 {
 	if ( ! arginfo.hasArg("reference") )
 	{
-		libmaus::exception::LibMausException se;
+		libmaus2::exception::LibMausException se;
 		se.getStream() << "reference key is missing." << std::endl;
 		se.finish();
 		throw se;			
@@ -40,26 +40,26 @@ void fastabgzfextract(libmaus::util::ArgInfo const & arginfo)
 	
 	std::string const reference = arginfo.getUnparsedValue("reference","");
 	
-	if ( ! libmaus::util::GetFileSize::fileExists(reference) )
+	if ( ! libmaus2::util::GetFileSize::fileExists(reference) )
 	{
-		libmaus::exception::LibMausException se;
+		libmaus2::exception::LibMausException se;
 		se.getStream() << "file " << reference << " does not exist." << std::endl;
 		se.finish();
 		throw se;				
 	}
 
-	if ( ! libmaus::util::GetFileSize::fileExists(reference+".idx") )
+	if ( ! libmaus2::util::GetFileSize::fileExists(reference+".idx") )
 	{
-		libmaus::exception::LibMausException se;
+		libmaus2::exception::LibMausException se;
 		se.getStream() << "file " << reference << " does not exist." << std::endl;
 		se.finish();
 		throw se;				
 	}
 	
-	libmaus::aio::PosixFdInputStream PFIS(reference,128*1024);
-	libmaus::aio::CheckedInputStream indexCIS(reference+".idx");
-	libmaus::fastx::FastABgzfIndex index(indexCIS);
-	libmaus::autoarray::AutoArray<char> B;
+	libmaus2::aio::PosixFdInputStream PFIS(reference,128*1024);
+	libmaus2::aio::CheckedInputStream indexCIS(reference+".idx");
+	libmaus2::fastx::FastABgzfIndex index(indexCIS);
+	libmaus2::autoarray::AutoArray<char> B;
 	
 	while ( std::cin )
 	{
@@ -68,7 +68,7 @@ void fastabgzfextract(libmaus::util::ArgInfo const & arginfo)
 		
 		if ( line.size() )
 		{
-			std::deque<std::string> tokens = ::libmaus::util::stringFunctions::tokenize(line,std::string("\t"));
+			std::deque<std::string> tokens = ::libmaus2::util::stringFunctions::tokenize(line,std::string("\t"));
 			
 			if ( tokens.size() != 3 )
 				continue;
@@ -85,11 +85,11 @@ void fastabgzfextract(libmaus::util::ArgInfo const & arginfo)
 			
 			if ( thisseqid >= 0 )
 			{
-				libmaus::fastx::FastABgzfDecoder::unique_ptr_type Pstr = index.getStream(PFIS,thisseqid);
+				libmaus2::fastx::FastABgzfDecoder::unique_ptr_type Pstr = index.getStream(PFIS,thisseqid);
 				Pstr->seekg(pos);
 				
 				if ( len > B.size() )
-					B = libmaus::autoarray::AutoArray<char>(len,false);
+					B = libmaus2::autoarray::AutoArray<char>(len,false);
 					
 				Pstr->read(B.begin(),len);
 				uint64_t const rlen = Pstr->gcount();
@@ -105,7 +105,7 @@ int main(int argc, char * argv[])
 {
 	try
 	{
-		::libmaus::util::ArgInfo const arginfo(argc,argv);
+		::libmaus2::util::ArgInfo const arginfo(argc,argv);
 
 		
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
@@ -115,7 +115,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--version"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
 			else if ( 
@@ -124,7 +124,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--help"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
@@ -133,7 +133,7 @@ int main(int argc, char * argv[])
 			
 				V.push_back ( std::pair<std::string,std::string> ( "reference=<>", "reference FastA.bgzf" ) );
 
-				::biobambam::Licensing::printMap(std::cerr,V);
+				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;

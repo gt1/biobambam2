@@ -16,10 +16,17 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
-#if ! defined(BIOBAMBAM_STRIP12_HPP)
-#define BIOBAMBAM_STRIP12_HPP
+#include <biobambam2/zzToName.hpp>
 
-#include <libmaus/bambam/BamAlignment.hpp>
+bool zzToRank(libmaus2::bambam::BamAlignment & algn, libmaus2::bambam::BamAuxFilterVector const & zzbafv)
+{
+	uint64_t const rank = algn.getRank("zz");
+	algn.filterOutAux(zzbafv);
+	
+	std::string const newname = 
+		libmaus2::util::NumberSerialisation::formatNumber(rank,0) + "_" + algn.getName();
+		
+	algn.replaceName(newname.begin(),newname.size());
 
-bool strip12(libmaus::bambam::BamAlignment & algn);
-#endif
+	return true;
+}

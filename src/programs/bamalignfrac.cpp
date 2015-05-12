@@ -16,39 +16,39 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
-#include <biobambam/BamBamConfig.hpp>
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/BamBamConfig.hpp>
+#include <biobambam2/Licensing.hpp>
 
-#include <libmaus/util/ArgInfo.hpp>
-#include <libmaus/util/MemUsage.hpp>
-#include <libmaus/timing/RealTimeClock.hpp>
-#include <libmaus/bambam/BamMultiAlignmentDecoderFactory.hpp>
-#include <libmaus/regex/PosixRegex.hpp>
+#include <libmaus2/util/ArgInfo.hpp>
+#include <libmaus2/util/MemUsage.hpp>
+#include <libmaus2/timing/RealTimeClock.hpp>
+#include <libmaus2/bambam/BamMultiAlignmentDecoderFactory.hpp>
+#include <libmaus2/regex/PosixRegex.hpp>
 
 static std::string getDefaultInputFormat()
 {
 	return "bam";
 }
 
-void bamalignfrac(::libmaus::util::ArgInfo const & arginfo)
+void bamalignfrac(::libmaus2::util::ArgInfo const & arginfo)
 {
-	libmaus::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
-		libmaus::bambam::BamMultiAlignmentDecoderFactory::construct(arginfo));
-	::libmaus::bambam::BamAlignmentDecoder * ppdec = &(decwrapper->getDecoder());
-	::libmaus::bambam::BamAlignmentDecoder & dec = *ppdec;
-	::libmaus::bambam::BamAlignment const & algn = dec.getAlignment();
-        libmaus::autoarray::AutoArray<libmaus::bambam::cigar_operation> cigop;
+	libmaus2::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
+		libmaus2::bambam::BamMultiAlignmentDecoderFactory::construct(arginfo));
+	::libmaus2::bambam::BamAlignmentDecoder * ppdec = &(decwrapper->getDecoder());
+	::libmaus2::bambam::BamAlignmentDecoder & dec = *ppdec;
+	::libmaus2::bambam::BamAlignment const & algn = dec.getAlignment();
+        libmaus2::autoarray::AutoArray<libmaus2::bambam::cigar_operation> cigop;
 
         uint64_t basealgn = 0;
         uint64_t clip = 0;
         uint64_t totalbases = 0;
 
-        #if defined(LIBMAUS_HAVE_REGEX_H)
+        #if defined(LIBMAUS2_HAVE_REGEX_H)
         std::string const regexs = arginfo.getUnparsedValue("name","");
-        libmaus::util::unique_ptr<libmaus::regex::PosixRegex>::type regex_ptr;
+        libmaus2::util::unique_ptr<libmaus2::regex::PosixRegex>::type regex_ptr;
         if ( regexs.size() )
 	{
-	        libmaus::util::unique_ptr<libmaus::regex::PosixRegex>::type tregex_ptr(new libmaus::regex::PosixRegex(regexs));
+	        libmaus2::util::unique_ptr<libmaus2::regex::PosixRegex>::type tregex_ptr(new libmaus2::regex::PosixRegex(regexs));
 	        regex_ptr = UNIQUE_PTR_MOVE(tregex_ptr);
 	}
 	#endif
@@ -57,7 +57,7 @@ void bamalignfrac(::libmaus::util::ArgInfo const & arginfo)
 	{
 		if ( 
 			algn.isMapped()
-			#if defined(LIBMAUS_HAVE_REGEX_H)
+			#if defined(LIBMAUS2_HAVE_REGEX_H)
 			&&
 			(
 				(!regex_ptr)
@@ -75,21 +75,21 @@ void bamalignfrac(::libmaus::util::ArgInfo const & arginfo)
 		        {
 		        	switch ( cigop[i].first )
 		        	{
-		        		case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CMATCH:
-		        		case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CINS:
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CEQUAL:
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CDIFF:
+		        		case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CMATCH:
+		        		case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CINS:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CEQUAL:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CDIFF:
 						basealgn += cigop[i].second;
 						break;
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CSOFT_CLIP:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CSOFT_CLIP:
 						clip += cigop[i].second;
 						break;
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CHARD_CLIP:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CHARD_CLIP:
 						totalbases += cigop[i].second;
 						clip += cigop[i].second;
 						break;
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CDEL:
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CREF_SKIP:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CDEL:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CREF_SKIP:
 						break;
 		        	}
 		        }
@@ -105,9 +105,9 @@ int main(int argc, char *argv[])
 {
 	try
 	{
-		libmaus::timing::RealTimeClock rtc; rtc.start();
+		libmaus2::timing::RealTimeClock rtc; rtc.start();
 		
-		::libmaus::util::ArgInfo arginfo(argc,argv);
+		::libmaus2::util::ArgInfo arginfo(argc,argv);
 		
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
 			if ( 
@@ -116,7 +116,7 @@ int main(int argc, char *argv[])
 				arginfo.restargs[i] == "--version"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
 			else if ( 
@@ -125,25 +125,25 @@ int main(int argc, char *argv[])
 				arginfo.restargs[i] == "--help"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license() << std::endl;
+				std::cerr << ::biobambam2::Licensing::license() << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
 				
 				std::vector< std::pair<std::string,std::string> > V;
 								
 				V.push_back ( std::pair<std::string,std::string> ( "I=<[stdin]>", "input filename (default: read file from standard input)" ) );
-				#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
+				#if defined(BIOBAMBAM_LIBMAUS2_HAVE_IO_LIB)
 				V.push_back ( std::pair<std::string,std::string> ( std::string("inputformat=<[")+getDefaultInputFormat()+"]>", "input format: cram, bam or sam" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "reference=<[]>", "name of reference FastA in case of inputformat=cram" ) );
 				#else
 				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<[bam]>", "input format: bam" ) );
 				#endif
 				
-				#if defined(LIBMAUS_HAVE_REGEX_H)
+				#if defined(LIBMAUS2_HAVE_REGEX_H)
 				V.push_back ( std::pair<std::string,std::string> ( "name=<[]>", "consider only reads with names matching the given regualr expression (default: use all reads)" ) );
 				#endif
 				
-				::biobambam::Licensing::printMap(std::cerr,V);
+				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 
@@ -152,7 +152,7 @@ int main(int argc, char *argv[])
 		
 		bamalignfrac(arginfo);
 		
-		std::cerr << "[V] " << libmaus::util::MemUsage() << " wall clock time " << rtc.formatTime(rtc.getElapsedSeconds()) << std::endl;		
+		std::cerr << "[V] " << libmaus2::util::MemUsage() << " wall clock time " << rtc.formatTime(rtc.getElapsedSeconds()) << std::endl;		
 	}
 	catch(std::exception const & ex)
 	{

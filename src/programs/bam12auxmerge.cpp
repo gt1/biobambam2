@@ -21,25 +21,25 @@
 #include <iostream>
 #include <queue>
 
-#include <libmaus/aio/CheckedOutputStream.hpp>
+#include <libmaus2/aio/CheckedOutputStream.hpp>
 
-#include <libmaus/bambam/AdapterFilter.hpp>
-#include <libmaus/bambam/BamAlignment.hpp>
-#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
-#include <libmaus/bambam/BamDecoder.hpp>
-#include <libmaus/bambam/BamWriter.hpp>
-#include <libmaus/bambam/ProgramHeaderLineSet.hpp>
-#include <libmaus/fastx/acgtnMap.hpp>
-#include <libmaus/rank/popcnt.hpp>
-#include <libmaus/util/ArgInfo.hpp>
-#include <libmaus/util/Histogram.hpp>
+#include <libmaus2/bambam/AdapterFilter.hpp>
+#include <libmaus2/bambam/BamAlignment.hpp>
+#include <libmaus2/bambam/BamBlockWriterBaseFactory.hpp>
+#include <libmaus2/bambam/BamDecoder.hpp>
+#include <libmaus2/bambam/BamWriter.hpp>
+#include <libmaus2/bambam/ProgramHeaderLineSet.hpp>
+#include <libmaus2/fastx/acgtnMap.hpp>
+#include <libmaus2/rank/popcnt.hpp>
+#include <libmaus2/util/ArgInfo.hpp>
+#include <libmaus2/util/Histogram.hpp>
 
 
-#include <biobambam/Licensing.hpp>
-#include <biobambam/Split12.hpp>
-#include <biobambam/Strip12.hpp>
-#include <biobambam/ClipReinsert.hpp>
-#include <biobambam/zzToName.hpp>
+#include <biobambam2/Licensing.hpp>
+#include <biobambam2/Split12.hpp>
+#include <biobambam2/Strip12.hpp>
+#include <biobambam2/ClipReinsert.hpp>
+#include <biobambam2/zzToName.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; }
@@ -50,8 +50,8 @@ static uint64_t getDefaultRankStrip() { return 1; }
 static uint64_t getDefaultClipReinsert() { return 1; }
 static uint64_t getDefaultZZToName() { return 1; }
 
-#include <libmaus/lz/BgzfDeflateOutputCallbackMD5.hpp>
-#include <libmaus/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
+#include <libmaus2/lz/BgzfDeflateOutputCallbackMD5.hpp>
+#include <libmaus2/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
 static int getDefaultMD5() { return 0; }
 static int getDefaultIndex() { return 0; }
 
@@ -73,11 +73,11 @@ bool is_suffix(const char *str, const char *suf)
     	    	return false;
 } 
 
-int bam12auxmerge(::libmaus::util::ArgInfo const & arginfo)
+int bam12auxmerge(::libmaus2::util::ArgInfo const & arginfo)
 {
 	if ( isatty(STDIN_FILENO) )
 	{
-		::libmaus::exception::LibMausException se;
+		::libmaus2::exception::LibMausException se;
 		se.getStream() << "Refusing to read binary data from terminal, please redirect standard input to pipe or file." << std::endl;
 		se.finish();
 		throw se;
@@ -85,16 +85,16 @@ int bam12auxmerge(::libmaus::util::ArgInfo const & arginfo)
 
 	if ( isatty(STDOUT_FILENO) )
 	{
-		::libmaus::exception::LibMausException se;
+		::libmaus2::exception::LibMausException se;
 		se.getStream() << "Refusing write binary data to terminal, please redirect standard output to pipe or file." << std::endl;
 		se.finish();
 		throw se;
 	}
 	
 	std::string const prefilename = arginfo.getRestArg<std::string>(0);
-	libmaus::bambam::BamDecoder bampredec(prefilename);
+	libmaus2::bambam::BamDecoder bampredec(prefilename);
 
-	int const level = libmaus::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
+	int const level = libmaus2::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
 	int const ranksplit = arginfo.getValue<int>("ranksplit",getDefaultRankSplit());
 	int const rankstrip = arginfo.getValue<int>("rankstrip",getDefaultRankSplit());
@@ -102,22 +102,22 @@ int bam12auxmerge(::libmaus::util::ArgInfo const & arginfo)
 	int const zztoname = arginfo.getValue<int>("zztoname",getDefaultZZToName());
 	int const sanity = arginfo.getValue<int>("sanity",getDefaultSanity());
 	uint64_t const mod = arginfo.getValue<int>("mod",getDefaultMod());
-	uint64_t const bmod = libmaus::math::nextTwoPow(mod);
+	uint64_t const bmod = libmaus2::math::nextTwoPow(mod);
 	uint64_t const bmask = bmod-1;
 	
-	libmaus::autoarray::AutoArray<char> Aread;
+	libmaus2::autoarray::AutoArray<char> Aread;
 
-	::libmaus::bambam::BamDecoder bamdec(std::cin,false);
-	::libmaus::bambam::BamHeader const & header = bamdec.getHeader();
-	::libmaus::bambam::BamHeader const & preheader = bampredec.getHeader();
+	::libmaus2::bambam::BamDecoder bamdec(std::cin,false);
+	::libmaus2::bambam::BamHeader const & header = bamdec.getHeader();
+	::libmaus2::bambam::BamHeader const & preheader = bampredec.getHeader();
 
 	std::string const headertext(header.text);
-	std::string const preheadertext(libmaus::bambam::HeaderLine::removeSequenceLines(preheader.text));
+	std::string const preheadertext(libmaus2::bambam::HeaderLine::removeSequenceLines(preheader.text));
 	
-	libmaus::bambam::ProgramHeaderLineSet headerlines(headertext);
-	libmaus::bambam::ProgramHeaderLineSet preheaderlines(preheadertext);
+	libmaus2::bambam::ProgramHeaderLineSet headerlines(headertext);
+	libmaus2::bambam::ProgramHeaderLineSet preheaderlines(preheadertext);
 	
-	std::vector<libmaus::bambam::HeaderLine> allheaderlines = libmaus::bambam::HeaderLine::extractLines(headertext);
+	std::vector<libmaus2::bambam::HeaderLine> allheaderlines = libmaus2::bambam::HeaderLine::extractLines(headertext);
 	
 	std::string const lastid = preheaderlines.getLastIdInChain();
 	
@@ -131,7 +131,7 @@ int bam12auxmerge(::libmaus::util::ArgInfo const & arginfo)
 		uint64_t const hid = pgtodo.top().first;
 		std::string const PP = pgtodo.top().second;
 		pgtodo.pop();
-		libmaus::bambam::HeaderLine const & line = headerlines.lines[hid];
+		libmaus2::bambam::HeaderLine const & line = headerlines.lines[hid];
 		
 		// ID, PP, PN, CL, VN
 		std::string       ID = (line.M.find("ID") != line.M.end()) ? line.M.find("ID")->second : "";
@@ -139,7 +139,7 @@ int bam12auxmerge(::libmaus::util::ArgInfo const & arginfo)
 		std::string const CL = (line.M.find("CL") != line.M.end()) ? line.M.find("CL")->second : "";
 		std::string const VN = (line.M.find("VN") != line.M.end()) ? line.M.find("VN")->second : "";
 		
-		upheadtext = ::libmaus::bambam::ProgramHeaderLineSet::addProgramLineRef(
+		upheadtext = ::libmaus2::bambam::ProgramHeaderLineSet::addProgramLineRef(
 			upheadtext,
 			ID,
 			PN,
@@ -165,7 +165,7 @@ int bam12auxmerge(::libmaus::util::ArgInfo const & arginfo)
 			sqconcstr << allheaderlines[i].line << "\n";
 	upheadtext = sqconcstr.str();
 
-	::libmaus::bambam::BamHeader uphead(upheadtext);
+	::libmaus2::bambam::BamHeader uphead(upheadtext);
 	uphead.changeSortOrder("unknown");
 
 	/*
@@ -173,13 +173,13 @@ int bam12auxmerge(::libmaus::util::ArgInfo const & arginfo)
 	 */
 	std::string const tmpfilenamebase = arginfo.getValue<std::string>("tmpfile",arginfo.getDefaultTmpFileName());
 	std::string const tmpfileindex = tmpfilenamebase + "_index";
-	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
+	::libmaus2::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
 
 	std::string md5filename;
 	std::string indexfilename;
 
-	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > cbs;
-	::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
+	std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > cbs;
+	::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
 	if ( arginfo.getValue<unsigned int>("md5",getDefaultMD5()) )
 	{
 		if ( arginfo.hasArg("md5filename") &&  arginfo.getUnparsedValue("md5filename","") != "" )
@@ -189,12 +189,12 @@ int bam12auxmerge(::libmaus::util::ArgInfo const & arginfo)
 
 		if ( md5filename.size() )
 		{
-			::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5cb(new ::libmaus::lz::BgzfDeflateOutputCallbackMD5);
+			::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5cb(new ::libmaus2::lz::BgzfDeflateOutputCallbackMD5);
 			Pmd5cb = UNIQUE_PTR_MOVE(Tmd5cb);
 			cbs.push_back(Pmd5cb.get());
 		}
 	}
-	libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Pindex;
+	libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Pindex;
 	if ( arginfo.getValue<unsigned int>("index",getDefaultIndex()) )
 	{
 		if ( arginfo.hasArg("indexfilename") &&  arginfo.getUnparsedValue("indexfilename","") != "" )
@@ -204,41 +204,41 @@ int bam12auxmerge(::libmaus::util::ArgInfo const & arginfo)
 
 		if ( indexfilename.size() )
 		{
-			libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Tindex(new libmaus::bambam::BgzfDeflateOutputCallbackBamIndex(tmpfileindex));
+			libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Tindex(new libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex(tmpfileindex));
 			Pindex = UNIQUE_PTR_MOVE(Tindex);
 			cbs.push_back(Pindex.get());
 		}
 	}
-	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
+	std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
 	if ( cbs.size() )
 		Pcbs = &cbs;
 	/*
 	 * end md5/index callbacks
 	 */
 
-	::libmaus::bambam::BamWriter::unique_ptr_type writer(new ::libmaus::bambam::BamWriter(std::cout,uphead,level,Pcbs));
+	::libmaus2::bambam::BamWriter::unique_ptr_type writer(new ::libmaus2::bambam::BamWriter(std::cout,uphead,level,Pcbs));
 	
-	::libmaus::bambam::BamAlignment & algn = bamdec.getAlignment();
-	::libmaus::bambam::BamAlignment & prealgn = bampredec.getAlignment();
+	::libmaus2::bambam::BamAlignment & algn = bamdec.getAlignment();
+	::libmaus2::bambam::BamAlignment & prealgn = bampredec.getAlignment();
 	int64_t curid = -1;
 	
-	libmaus::autoarray::AutoArray< std::pair<uint8_t,uint8_t> > auxpre;
-	libmaus::autoarray::AutoArray< std::pair<uint8_t,uint8_t> > auxnew;
+	libmaus2::autoarray::AutoArray< std::pair<uint8_t,uint8_t> > auxpre;
+	libmaus2::autoarray::AutoArray< std::pair<uint8_t,uint8_t> > auxnew;
 	
-	libmaus::bambam::BamAuxFilterVector auxfilter;
+	libmaus2::bambam::BamAuxFilterVector auxfilter;
 
 	// helpers for clipReinsert
-	libmaus::autoarray::AutoArray < std::pair<uint8_t,uint8_t> > auxtags;
-	libmaus::autoarray::AutoArray<libmaus::bambam::cigar_operation> cigop;
-	std::stack < libmaus::bambam::cigar_operation > hardstack;
-	libmaus::bambam::BamAlignment::D_array_type Tcigar;
-	libmaus::bambam::BamAuxFilterVector bafv;
-	libmaus::bambam::BamAuxFilterVector auxfilterout;
+	libmaus2::autoarray::AutoArray < std::pair<uint8_t,uint8_t> > auxtags;
+	libmaus2::autoarray::AutoArray<libmaus2::bambam::cigar_operation> cigop;
+	std::stack < libmaus2::bambam::cigar_operation > hardstack;
+	libmaus2::bambam::BamAlignment::D_array_type Tcigar;
+	libmaus2::bambam::BamAuxFilterVector bafv;
+	libmaus2::bambam::BamAuxFilterVector auxfilterout;
 	auxfilterout.set('q','s');
 	auxfilterout.set('q','q');
 
 	// helpers for zztoname	
- 	libmaus::bambam::BamAuxFilterVector zzbafv;
+ 	libmaus2::bambam::BamAuxFilterVector zzbafv;
  	zzbafv.set('z','z');
 
 	// loop over aligned BAM file
@@ -274,7 +274,7 @@ int bam12auxmerge(::libmaus::util::ArgInfo const & arginfo)
 			
 			if ( ! a_ok )
 			{
-				libmaus::exception::LibMausException se;
+				libmaus2::exception::LibMausException se;
 				se.getStream() << "Found unexpected EOF on file " << prefilename << std::endl;
 				se.finish();
 				throw se;
@@ -304,7 +304,7 @@ int bam12auxmerge(::libmaus::util::ArgInfo const & arginfo)
 			
 			if ( !is_suffix(prename, u1) ) // names do not match
 			{
-			    	libmaus::exception::LibMausException se;
+			    	libmaus2::exception::LibMausException se;
 			    	se.getStream() << "Sanity check failed on read names, found " << name << " and " << prename << std::endl;
 				se.finish();
 				throw se;
@@ -316,7 +316,7 @@ int bam12auxmerge(::libmaus::util::ArgInfo const & arginfo)
 			     algn.isRead1() == prealgn.isRead1() &&
 			     algn.isRead2() == prealgn.isRead2()) )
 			{
-			    	libmaus::exception::LibMausException se;
+			    	libmaus2::exception::LibMausException se;
 				se.getStream() << "Sanity check failed on flags, " << std::endl
 				    	       << "Aligned " << name << " paired " << algn.isPaired() << " first " << algn.isRead1() << " last " << algn.isRead2() << std::endl
 			    	    	       << "Unaligned " << prename << " paired " << prealgn.isPaired() << " first " << prealgn.isRead1() << " last " << prealgn.isRead2() << std::endl;
@@ -390,7 +390,7 @@ int bam12auxmerge(::libmaus::util::ArgInfo const & arginfo)
 
 		// copy QC fail flag from original file to aligner output		
 		if ( prealgn.isQCFail() )
-			algn.putFlags( algn.getFlags() | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL );
+			algn.putFlags( algn.getFlags() | libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FQCFAIL );
 		
 		if ( rankstrip )
 			strip12(algn);
@@ -422,7 +422,7 @@ int main(int argc, char * argv[])
 {
 	try
 	{
-		::libmaus::util::ArgInfo const arginfo(argc,argv);
+		::libmaus2::util::ArgInfo const arginfo(argc,argv);
 		
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
 			if ( 
@@ -431,7 +431,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--version"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
 			else if ( 
@@ -440,28 +440,28 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--help"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
 				
 				std::vector< std::pair<std::string,std::string> > V;
 			
-				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
-				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "mod=<["+::biobambam::Licensing::formatNumber(getDefaultMod())+"]>", "print progress for every mod'th alignment if verbose" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "ranksplit=<["+::biobambam::Licensing::formatNumber(getDefaultRankSplit())+"]>", "split rank pairs in names (see bam12split command)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "rankstrip=<["+::biobambam::Licensing::formatNumber(getDefaultRankStrip())+"]>", "strip ranks of names (see bam12strip command)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "clipreinsert=<["+::biobambam::Licensing::formatNumber(getDefaultClipReinsert())+"]>", "reinsert clipped sequence fragments (see bamclipreinsert command)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "zztoname=<["+::biobambam::Licensing::formatNumber(getDefaultZZToName())+"]>", "move rank from zz to name aux field to name (see bamzztoname command)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
+				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "mod=<["+::biobambam2::Licensing::formatNumber(getDefaultMod())+"]>", "print progress for every mod'th alignment if verbose" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "ranksplit=<["+::biobambam2::Licensing::formatNumber(getDefaultRankSplit())+"]>", "split rank pairs in names (see bam12split command)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "rankstrip=<["+::biobambam2::Licensing::formatNumber(getDefaultRankStrip())+"]>", "strip ranks of names (see bam12strip command)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "clipreinsert=<["+::biobambam2::Licensing::formatNumber(getDefaultClipReinsert())+"]>", "reinsert clipped sequence fragments (see bamclipreinsert command)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "zztoname=<["+::biobambam2::Licensing::formatNumber(getDefaultZZToName())+"]>", "move rank from zz to name aux field to name (see bamzztoname command)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam2::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "md5filename=<filename>", "file name for md5 check sum (default: extend output file name)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam2::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "indexfilename=<filename>", "file name for BAM index file (default: extend output file name)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "tmpfile=<filename>", "prefix for temporary files, default: create files in current directory" ) );
-    	    	    	    	V.push_back ( std::pair<std::string,std::string> ( "sanity=<["+::biobambam::Licensing::formatNumber(getDefaultSanity())+"]>", "extra checking of reads" ) );
+    	    	    	    	V.push_back ( std::pair<std::string,std::string> ( "sanity=<["+::biobambam2::Licensing::formatNumber(getDefaultSanity())+"]>", "extra checking of reads" ) );
 				
-				::biobambam::Licensing::printMap(std::cerr,V);
+				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;

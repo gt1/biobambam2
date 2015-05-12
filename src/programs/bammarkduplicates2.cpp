@@ -18,49 +18,50 @@
 **/
 #include <config.h>
 
-#include <libmaus/util/TempFileRemovalContainer.hpp>
-#include <libmaus/aio/CheckedInputStream.hpp>
-#include <libmaus/aio/CheckedOutputStream.hpp>
-#include <libmaus/aio/SynchronousGenericInput.hpp>
-#include <libmaus/bambam/BamAlignmentFreeList.hpp>
-#include <libmaus/bambam/BamAlignmentPairFreeList.hpp>
-#include <libmaus/bambam/ReadEndsFreeList.hpp>
-#include <libmaus/bambam/BamAlignmentSnappyInput.hpp>
-#include <libmaus/bambam/BamAlignmentInputCallbackBam.hpp>
-#include <libmaus/bambam/BamAlignmentInputCallbackSnappy.hpp>
-#include <libmaus/bambam/BamAlignmentInputPositionCallbackNull.hpp>
-#include <libmaus/bambam/BamAlignmentInputCallbackSnappy.hpp>
-#include <libmaus/bambam/BamAlignmentInputCallbackBam.hpp>
-#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
-#include <libmaus/bambam/BamParallelRewrite.hpp>
-#include <libmaus/bambam/BamWriter.hpp>
-#include <libmaus/bambam/BamHeaderUpdate.hpp>
-#include <libmaus/bambam/BamAlignmentInputPositionUpdateCallback.hpp>
-#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
-#include <libmaus/bambam/CircularHashCollatingBamDecoder.hpp>
-#include <libmaus/bambam/CollatingBamDecoder.hpp>
-#include <libmaus/bambam/DuplicationMetrics.hpp>
-#include <libmaus/bambam/DupMarkBase.hpp>
-#include <libmaus/bambam/DupSetCallbackStream.hpp>
-#include <libmaus/bambam/DupSetCallbackSet.hpp>
-#include <libmaus/bambam/DupSetCallbackVector.hpp>
-#include <libmaus/bambam/OpticalComparator.hpp>
-#include <libmaus/bambam/ProgramHeaderLineSet.hpp>
-#include <libmaus/bambam/ReadEndsContainer.hpp>
-#include <libmaus/bambam/SortedFragDecoder.hpp>
-#include <libmaus/fastx/FastATwoBitTable.hpp>
-#include <libmaus/bitio/BitVector.hpp>
-#include <libmaus/lz/BgzfInflateDeflateParallel.hpp>
-#include <libmaus/lz/BgzfRecode.hpp>
-#include <libmaus/lz/BgzfRecodeParallel.hpp>
-#include <libmaus/math/iabs.hpp>
-#include <libmaus/math/numbits.hpp>
-#include <libmaus/timing/RealTimeClock.hpp>
-#include <libmaus/trie/SimpleTrie.hpp>
-#include <libmaus/util/ArgInfo.hpp>
-#include <libmaus/util/ContainerGetObject.hpp>
-#include <libmaus/util/MemUsage.hpp>
-#include <biobambam/Licensing.hpp>
+#include <libmaus2/util/TempFileRemovalContainer.hpp>
+#include <libmaus2/aio/CheckedInputStream.hpp>
+#include <libmaus2/aio/CheckedOutputStream.hpp>
+#include <libmaus2/aio/SynchronousGenericInput.hpp>
+#include <libmaus2/bambam/BamAlignmentFreeList.hpp>
+#include <libmaus2/bambam/BamAlignmentPairFreeList.hpp>
+#include <libmaus2/bambam/ReadEndsFreeList.hpp>
+#include <libmaus2/bambam/BamAlignmentSnappyInput.hpp>
+#include <libmaus2/bambam/BamAlignmentInputCallbackBam.hpp>
+#include <libmaus2/bambam/BamAlignmentInputCallbackSnappy.hpp>
+#include <libmaus2/bambam/BamAlignmentInputPositionCallbackNull.hpp>
+#include <libmaus2/bambam/BamAlignmentInputCallbackSnappy.hpp>
+#include <libmaus2/bambam/BamAlignmentInputCallbackBam.hpp>
+#include <libmaus2/bambam/BamBlockWriterBaseFactory.hpp>
+#include <libmaus2/bambam/BamParallelRewrite.hpp>
+#include <libmaus2/bambam/BamWriter.hpp>
+#include <libmaus2/bambam/BamHeaderUpdate.hpp>
+#include <libmaus2/bambam/BamAlignmentInputPositionUpdateCallback.hpp>
+#include <libmaus2/bambam/BamBlockWriterBaseFactory.hpp>
+#include <libmaus2/bambam/CircularHashCollatingBamDecoder.hpp>
+#include <libmaus2/bambam/CollatingBamDecoder.hpp>
+#include <libmaus2/bambam/DuplicationMetrics.hpp>
+#include <libmaus2/bambam/DupMarkBase.hpp>
+#include <libmaus2/bambam/DupSetCallbackStream.hpp>
+#include <libmaus2/bambam/DupSetCallbackSet.hpp>
+#include <libmaus2/bambam/DupSetCallbackVector.hpp>
+#include <libmaus2/bambam/OpticalComparator.hpp>
+#include <libmaus2/bambam/ProgramHeaderLineSet.hpp>
+#include <libmaus2/bambam/ReadEndsBasePointerComparator.hpp>
+#include <libmaus2/bambam/ReadEndsContainer.hpp>
+#include <libmaus2/bambam/SortedFragDecoder.hpp>
+#include <libmaus2/fastx/FastATwoBitTable.hpp>
+#include <libmaus2/bitio/BitVector.hpp>
+#include <libmaus2/lz/BgzfInflateDeflateParallel.hpp>
+#include <libmaus2/lz/BgzfRecode.hpp>
+#include <libmaus2/lz/BgzfRecodeParallel.hpp>
+#include <libmaus2/math/iabs.hpp>
+#include <libmaus2/math/numbits.hpp>
+#include <libmaus2/timing/RealTimeClock.hpp>
+#include <libmaus2/trie/SimpleTrie.hpp>
+#include <libmaus2/util/ArgInfo.hpp>
+#include <libmaus2/util/ContainerGetObject.hpp>
+#include <libmaus2/util/MemUsage.hpp>
+#include <biobambam2/Licensing.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static unsigned int getDefaultVerbose() { return 1; }
@@ -78,7 +79,7 @@ static int getDefaultMD5() { return 0; }
 static int getDefaultIndex() { return 0; }
 static uint64_t getDefaultInputBufferSize() { return 64*1024; }
 
-#include <libmaus/aio/PosixFdInput.hpp>
+#include <libmaus2/aio/PosixFdInput.hpp>
 
 /**
  * class storing elements for a given coordinate
@@ -174,10 +175,10 @@ std::ostream & operator<<(std::ostream & out, PairActiveCountTemplate<free_list_
 	return out;
 }
 
-typedef PairActiveCountTemplate<libmaus::bambam::BamAlignmentPairFreeList> BamPairActiveCount;
-typedef PairActiveCountTemplate<libmaus::bambam::ReadEndsFreeList> ReadEndsActiveCount;
+typedef PairActiveCountTemplate<libmaus2::bambam::BamAlignmentPairFreeList> BamPairActiveCount;
+typedef PairActiveCountTemplate<libmaus2::bambam::ReadEndsFreeList> ReadEndsActiveCount;
 
-struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAlignmentInputPositionUpdateCallback
+struct BamAlignmentInputPositionCallbackDupMark : public libmaus2::bambam::BamAlignmentInputPositionUpdateCallback
 {
 	static unsigned int const defaultfreelistsize = 16*1024;
 
@@ -194,9 +195,9 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 	#endif
 
 
-	libmaus::bambam::BamHeader const & bamheader;
+	libmaus2::bambam::BamHeader const & bamheader;
 
-	libmaus::bambam::ReadEndsBasePointerComparator const REcomp;
+	libmaus2::bambam::ReadEndsBasePointerComparator const REcomp;
 
 	std::pair<int32_t,int32_t> position;
 
@@ -208,9 +209,9 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 	uint64_t fincntpairs;
 	uint64_t strcntpairs;
 	#if defined(POS_READ_ENDS)
-	std::vector<libmaus::bambam::ReadEnds *> REpairs;
+	std::vector<libmaus2::bambam::ReadEnds *> REpairs;
 	#else
-	std::vector<libmaus::bambam::ReadEnds> REpairs;
+	std::vector<libmaus2::bambam::ReadEnds> REpairs;
 	#endif
 
 	std::pair<int32_t,int32_t> expungepositionfrags;
@@ -220,13 +221,13 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 	uint64_t excntfrags;
 	uint64_t fincntfrags;
 	uint64_t strcntfrags;
-	std::vector<libmaus::bambam::ReadEnds *> REfrags;
+	std::vector<libmaus2::bambam::ReadEnds *> REfrags;
 
-	::libmaus::bambam::DupSetCallback * DSC;
+	::libmaus2::bambam::DupSetCallback * DSC;
 	
 	int maxreadlength;
 
-	BamAlignmentInputPositionCallbackDupMark(libmaus::bambam::BamHeader const & rbamheader, uint64_t const freelistsize = defaultfreelistsize)
+	BamAlignmentInputPositionCallbackDupMark(libmaus2::bambam::BamHeader const & rbamheader, uint64_t const freelistsize = defaultfreelistsize)
 	: 
 		bamheader(rbamheader), REcomp(), position(-1,-1), 
 		expungepositionpairs(-1,-1), activepairs(), totalactivepairs(0), APFLpairs(freelistsize), excntpairs(0), fincntpairs(0), strcntpairs(0), REpairs(),
@@ -236,7 +237,7 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 	{
 	}
 	
-	void setDupSetCallback(::libmaus::bambam::DupSetCallback * rDSC)
+	void setDupSetCallback(::libmaus2::bambam::DupSetCallback * rDSC)
 	{
 		DSC = rDSC;
 	}
@@ -251,7 +252,7 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 	/**
 	 * check whether this alignment is part of an innie pair
 	 **/
-	static bool isSimplePair(::libmaus::bambam::BamAlignment const & A)
+	static bool isSimplePair(::libmaus2::bambam::BamAlignment const & A)
 	{
 		// both ends need to be mapped
 		if ( ! (A.isMapped() && A.isMateMapped()) )
@@ -278,7 +279,7 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 	/**
 	 * update input position
 	 **/	
-	void updatePosition(::libmaus::bambam::BamAlignment const & A)
+	void updatePosition(::libmaus2::bambam::BamAlignment const & A)
 	{
 		int32_t const refid = A.getRefID();
 		int32_t const pos = A.getPos();
@@ -298,7 +299,7 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 			)
 		)
 			{
-				libmaus::exception::LibMausException se;
+				libmaus2::exception::LibMausException se;
 				se.getStream() << "Input file is not sorted by coordinate." << std::endl;
 				se.finish();
 				throw se;
@@ -415,11 +416,11 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 		while ( l != lfincntfrags )
 		{
 			uint64_t h = l+1;
-			while ( h != lfincntfrags && libmaus::bambam::DupMarkBase::isDupFrag(*REfrags[l],*REfrags[h]) )
+			while ( h != lfincntfrags && libmaus2::bambam::DupMarkBase::isDupFrag(*REfrags[l],*REfrags[h]) )
 				++h;
 				
 			if ( h-l > 1 )
-				libmaus::bambam::DupMarkBase::markDuplicateFragsPointers(REfrags.begin()+l,REfrags.begin()+h,*DSC);
+				libmaus2::bambam::DupMarkBase::markDuplicateFragsPointers(REfrags.begin()+l,REfrags.begin()+h,*DSC);
 			
 			l = h;
 		}
@@ -459,7 +460,7 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 				#if defined(POS_READ_ENDS)
 				REpairs[lfincntpairs] = &(ptr->A);
 				#else
-				libmaus::bambam::ReadEndsBase::fillFragPair(
+				libmaus2::bambam::ReadEndsBase::fillFragPair(
 					ptr->A[0],
 					ptr->A[1],
 					bamheader,
@@ -470,7 +471,7 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 				#if defined(POS_READ_ENDS)
 				REpairs.push_back(&(ptr->A));
 				#else
-				REpairs.push_back(libmaus::bambam::ReadEnds(ptr->A[0],ptr->A[1],bamheader));
+				REpairs.push_back(libmaus2::bambam::ReadEnds(ptr->A[0],ptr->A[1],bamheader));
 				#endif
 			}
 
@@ -489,15 +490,15 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 		while ( l != lfincntpairs )
 		{
 			uint64_t h = l+1;
-			while ( h != lfincntpairs && libmaus::bambam::DupMarkBase::isDupPair(*REpairs[l],*REpairs[h]) )
+			while ( h != lfincntpairs && libmaus2::bambam::DupMarkBase::isDupPair(*REpairs[l],*REpairs[h]) )
 				++h;
 				
 			if ( h-l > 1 )
 			{
 				#if defined(POS_READ_ENDS)
-				libmaus::bambam::DupMarkBase::markDuplicatePairsPointers(REpairs.begin()+l,REpairs.begin()+h,*DSC);
+				libmaus2::bambam::DupMarkBase::markDuplicatePairsPointers(REpairs.begin()+l,REpairs.begin()+h,*DSC);
 				#else
-				libmaus::bambam::DupMarkBase::markDuplicatePairs(REpairs.begin()+l,REpairs.begin()+h,*DSC);
+				libmaus2::bambam::DupMarkBase::markDuplicatePairs(REpairs.begin()+l,REpairs.begin()+h,*DSC);
 				#endif			
 			}
 			
@@ -527,7 +528,7 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 	}
 
 	void expungeActiveFrontPairs(
-		::libmaus::bambam::ReadEndsContainer * pairREC, ::libmaus::bambam::BamHeader const & /* header */
+		::libmaus2::bambam::ReadEndsContainer * pairREC, ::libmaus2::bambam::BamHeader const & /* header */
 	)
 	{
 		assert ( activepairs.size() );
@@ -566,7 +567,7 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 		activepairs.pop_front();	
 	}
 
-	void expungeActiveFrontFrags(::libmaus::bambam::ReadEndsContainer * fragREC, ::libmaus::bambam::BamHeader const & /* header */)
+	void expungeActiveFrontFrags(::libmaus2::bambam::ReadEndsContainer * fragREC, ::libmaus2::bambam::BamHeader const & /* header */)
 	{
 		assert ( activefrags.size() );
 	
@@ -599,7 +600,7 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 		activefrags.pop_front();	
 	}
 
-	bool isActivePair(::libmaus::bambam::BamAlignment const & B)
+	bool isActivePair(::libmaus2::bambam::BamAlignment const & B)
 	{
 		bool const isactivepairs = 
 			B.getRefID() > expungepositionpairs.first
@@ -614,7 +615,7 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 		return isactivepairs;
 	}
 
-	bool isActiveFrag(::libmaus::bambam::BamAlignment const & B)
+	bool isActiveFrag(::libmaus2::bambam::BamAlignment const & B)
 	{
 		bool const isactivefrag = 
 			B.getRefID() > expungepositionfrags.first
@@ -629,7 +630,7 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 		return isactivefrag;
 	}
 	
-	void setExpungePairs(libmaus::bambam::BamAlignment const & B)
+	void setExpungePairs(libmaus2::bambam::BamAlignment const & B)
 	{
 		if ( isActivePair(B) )
 		{
@@ -670,7 +671,7 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 		}
 	}
 
-	void setExpungeFrag(libmaus::bambam::BamAlignment const & B)
+	void setExpungeFrag(libmaus2::bambam::BamAlignment const & B)
 	{
 		if ( isActiveFrag(B) )
 		{
@@ -712,9 +713,9 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 	}
 	
 	void expungeUntilPairs(
-		libmaus::bambam::BamAlignment const & A,
-		::libmaus::bambam::ReadEndsContainer * pairREC, 
-		::libmaus::bambam::BamHeader const & header
+		libmaus2::bambam::BamAlignment const & A,
+		::libmaus2::bambam::ReadEndsContainer * pairREC, 
+		::libmaus2::bambam::BamHeader const & header
 	)
 	{
 		if ( isActivePair(A) )
@@ -744,9 +745,9 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 	}
 
 	void expungeUntilFrag(
-		libmaus::bambam::BamAlignment const & A,
-		::libmaus::bambam::ReadEndsContainer * fragREC, 
-		::libmaus::bambam::BamHeader const & header
+		libmaus2::bambam::BamAlignment const & A,
+		::libmaus2::bambam::ReadEndsContainer * fragREC, 
+		::libmaus2::bambam::BamHeader const & header
 	)
 	{
 		if ( isActiveFrag(A) )
@@ -775,7 +776,7 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 		}
 	}
 	
-	void flushPairs(::libmaus::bambam::ReadEndsContainer * pairREC, ::libmaus::bambam::BamHeader const & header)
+	void flushPairs(::libmaus2::bambam::ReadEndsContainer * pairREC, ::libmaus2::bambam::BamHeader const & header)
 	{
 		while ( activepairs.size() )
 		{
@@ -798,7 +799,7 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 		}
 	}
 
-	void flushFrags(::libmaus::bambam::ReadEndsContainer * fragREC, ::libmaus::bambam::BamHeader const & header)
+	void flushFrags(::libmaus2::bambam::ReadEndsContainer * fragREC, ::libmaus2::bambam::BamHeader const & header)
 	{
 		while ( activefrags.size() )
 		{
@@ -825,9 +826,9 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 	 * flush lists
 	 **/
 	void flush(
-		::libmaus::bambam::ReadEndsContainer * pairREC,
-		::libmaus::bambam::ReadEndsContainer * fragREC,
-		::libmaus::bambam::BamHeader const & header
+		::libmaus2::bambam::ReadEndsContainer * pairREC,
+		::libmaus2::bambam::ReadEndsContainer * fragREC,
+		::libmaus2::bambam::BamHeader const & header
 	)
 	{
 		flushPairs(pairREC,header);
@@ -835,8 +836,8 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 	}
 	
 	static bool isMatchingPair(
-		::libmaus::bambam::BamAlignment const & A,
-		::libmaus::bambam::BamAlignment const & B
+		::libmaus2::bambam::BamAlignment const & A,
+		::libmaus2::bambam::BamAlignment const & B
 	)
 	{
 		bool ok = true;
@@ -864,9 +865,9 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 	 * add a pair
 	 **/
 	void addAlignmentPair(
-		::libmaus::bambam::BamAlignment const & A, ::libmaus::bambam::BamAlignment const & B,
-		::libmaus::bambam::ReadEndsContainer * pairREC,
-		::libmaus::bambam::BamHeader const & header,
+		::libmaus2::bambam::BamAlignment const & A, ::libmaus2::bambam::BamAlignment const & B,
+		::libmaus2::bambam::ReadEndsContainer * pairREC,
+		::libmaus2::bambam::BamHeader const & header,
 		uint64_t tagid
 	)
 	{
@@ -906,7 +907,7 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 					{
 						if ( isMatchingPair(A,B) )
 						{
-							libmaus::exception::LibMausException se;
+							libmaus2::exception::LibMausException se;
 							se.getStream() 
 								<< "Unable to find active object for B=\n" <<  B.formatAlignment(header) << '\n' 
 								<< "mate A=\n" << A.formatAlignment(header) << '\n'
@@ -935,7 +936,7 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 						// BamAlignmentPairListNode * ptr = APFLpairs.get();
 						active_count_type::list_node_type * ptr = APFLpairs.get();
 						#if defined(POS_READ_ENDS)
-						libmaus::bambam::ReadEndsBase::fillFragPair(A,B,header,ptr->A,tagid);
+						libmaus2::bambam::ReadEndsBase::fillFragPair(A,B,header,ptr->A,tagid);
 						#else
 						ptr->A[0].copyFrom(A);
 						ptr->A[1].copyFrom(B);
@@ -963,15 +964,15 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 	 * add a pair
 	 **/
 	void addAlignmentFrag(
-		::libmaus::bambam::BamAlignment const & B,
-		::libmaus::bambam::ReadEndsContainer * fragREC,
-		::libmaus::bambam::BamHeader const & header,
+		::libmaus2::bambam::BamAlignment const & B,
+		::libmaus2::bambam::ReadEndsContainer * fragREC,
+		::libmaus2::bambam::BamHeader const & header,
 		uint64_t const tagid
 	)
 	{
 		if ( B.getLseq() > maxreadlength )
 		{
-			libmaus::exception::LibMausException se;
+			libmaus2::exception::LibMausException se;
 			se.getStream() << "BamAlignmentInputPositionCallbackDupMark::addAlignmentFrag(): maximum allowed read length is " <<
 				maxreadlength << " but input contains read of length " << B.getLseq() << "." << std::endl
 				<< "Please set the maxreadlength parameter to a sufficiently high value." << std::endl;
@@ -1011,7 +1012,7 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 					// copy alignments
 					active_count_type::list_node_type * ptr = APFLfrags.get();
 					ptr->A.reset();
-					libmaus::bambam::ReadEndsBase::fillFrag(B,header,ptr->A,tagid);
+					libmaus2::bambam::ReadEndsBase::fillFrag(B,header,ptr->A,tagid);
 					ita->addAlignmentPair(ptr);
 					ita->incOut();
 
@@ -1031,8 +1032,8 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 	}
 	
 	void checkFinishedPairs(
-		::libmaus::bambam::ReadEndsContainer * pairREC,
-		::libmaus::bambam::BamHeader const & header
+		::libmaus2::bambam::ReadEndsContainer * pairREC,
+		::libmaus2::bambam::BamHeader const & header
 	)
 	{
 		// check for finished pair intervals
@@ -1067,8 +1068,8 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 	}
 
 	void checkFinishedFrags(
-		::libmaus::bambam::ReadEndsContainer * fragREC,
-		::libmaus::bambam::BamHeader const & header
+		::libmaus2::bambam::ReadEndsContainer * fragREC,
+		::libmaus2::bambam::BamHeader const & header
 	)
 	{
 	
@@ -1105,31 +1106,31 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus::bambam::BamAli
 };
 
 struct PositionTrackCallback : 
-	public ::libmaus::bambam::CollatingBamDecoderAlignmentInputCallback,
+	public ::libmaus2::bambam::CollatingBamDecoderAlignmentInputCallback,
 	public BamAlignmentInputPositionCallbackDupMark
 {
-	PositionTrackCallback(libmaus::bambam::BamHeader const & bamheader, uint64_t const freelistsize = getDefaultFreeListSize()) 
+	PositionTrackCallback(libmaus2::bambam::BamHeader const & bamheader, uint64_t const freelistsize = getDefaultFreeListSize()) 
 	: BamAlignmentInputPositionCallbackDupMark(bamheader,freelistsize) 
 	{
 	
 	}
 	virtual ~PositionTrackCallback() {}
 	
-	void operator()(::libmaus::bambam::BamAlignment const & A)
+	void operator()(::libmaus2::bambam::BamAlignment const & A)
 	{
 		updatePosition(A);
 	}
 };
 
-static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
+static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 {
-	libmaus::timing::RealTimeClock globrtc; globrtc.start();
+	libmaus2::timing::RealTimeClock globrtc; globrtc.start();
 
-	::libmaus::util::TempFileRemovalContainer::setup();
+	::libmaus2::util::TempFileRemovalContainer::setup();
 
 	if ( (!(arginfo.hasArg("I") && (arginfo.getValue<std::string>("I","") != ""))) && isatty(STDIN_FILENO) )
 	{
-		::libmaus::exception::LibMausException se;
+		::libmaus2::exception::LibMausException se;
 		se.getStream() << "refusing to read compressed data from terminal. please use I=<filename> or redirect standard input to a file" << std::endl;
 		se.finish();
 		throw se;
@@ -1137,7 +1138,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	
 	if ( (!(arginfo.hasArg("O") && (arginfo.getValue<std::string>("O","") != ""))) && isatty(STDOUT_FILENO) )
 	{
-		::libmaus::exception::LibMausException se;
+		::libmaus2::exception::LibMausException se;
 		se.getStream() << "refusing to write compressed data to terminal. please use O=<filename> or redirect standard output to a file" << std::endl;
 		se.finish();
 		throw se;		
@@ -1167,11 +1168,11 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	// tag field
 	bool const havetag = arginfo.hasArg("tag");
 	std::string const tag = arginfo.getUnparsedValue("tag","no tag");
-	libmaus::trie::SimpleTrie::unique_ptr_type Ptagtrie;
+	libmaus2::trie::SimpleTrie::unique_ptr_type Ptagtrie;
 
 	if ( havetag && (tag.size() != 2 || (!isalpha(tag[0])) || (!isalnum(tag[1])) ) )
 	{
-		::libmaus::exception::LibMausException se;
+		::libmaus2::exception::LibMausException se;
 		se.getStream() << "tag " << tag << " is invalid" << std::endl;
 		se.finish();
 		throw se;			
@@ -1179,7 +1180,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	
 	if ( havetag )
 	{
-		libmaus::trie::SimpleTrie::unique_ptr_type Ttagtrie(new libmaus::trie::SimpleTrie);
+		libmaus2::trie::SimpleTrie::unique_ptr_type Ttagtrie(new libmaus2::trie::SimpleTrie);
 		Ptagtrie = UNIQUE_PTR_MOVE(Ttagtrie);
 
 		// allocate tag id 0 for empty tag
@@ -1193,7 +1194,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 
 	if ( havenucltag && (nucltag.size() != 2 || (!isalpha(nucltag[0])) || (!isalnum(nucltag[1])) ) )
 	{
-		::libmaus::exception::LibMausException se;
+		::libmaus2::exception::LibMausException se;
 		se.getStream() << "nucltag " << tag << " is invalid" << std::endl;
 		se.finish();
 		throw se;			
@@ -1201,7 +1202,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	
 	if ( havetag && havenucltag )
 	{
-		::libmaus::exception::LibMausException se;
+		::libmaus2::exception::LibMausException se;
 		se.getStream() << "tag and nucltag are mutually exclusive" << std::endl;
 		se.finish();
 		throw se;					
@@ -1220,46 +1221,46 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	char const * cnucltag = havenucltag ? nucltag.c_str() : 0;
 	char const * tag1 = 0;
 	char const * tag2 = 0;
-	libmaus::autoarray::AutoArray<char> tagbuffer;
+	libmaus2::autoarray::AutoArray<char> tagbuffer;
 	uint64_t taglen = 0;
 	uint64_t tagid = 0;
-	libmaus::fastx::FastATwoBitTable const FATBT;
+	libmaus2::fastx::FastATwoBitTable const FATBT;
 
 	// prefix for tmp files
 	std::string const tmpfilenamebase = arginfo.getValue<std::string>("tmpfile",arginfo.getDefaultTmpFileName());
 	std::string const tmpfilename = tmpfilenamebase + "_bamcollate";
-	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilename);
+	::libmaus2::util::TempFileRemovalContainer::addTempFile(tmpfilename);
 	std::string const tmpfilenamereadfrags = tmpfilenamebase + "_readfrags";
-	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilenamereadfrags);
+	::libmaus2::util::TempFileRemovalContainer::addTempFile(tmpfilenamereadfrags);
 	std::string const tmpfilenamereadpairs = tmpfilenamebase + "_readpairs";
-	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilenamereadpairs);
+	::libmaus2::util::TempFileRemovalContainer::addTempFile(tmpfilenamereadpairs);
 	std::string const tmpfilesnappyreads = tmpfilenamebase + "_alignments";
-	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilesnappyreads);
+	::libmaus2::util::TempFileRemovalContainer::addTempFile(tmpfilesnappyreads);
 	std::string const tmpfileindex = tmpfilenamebase + "_index";
-	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
+	::libmaus2::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
 
 	std::string const tmpfiledupset = tmpfilenamebase + "_dupset";
-	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfiledupset);
+	::libmaus2::util::TempFileRemovalContainer::addTempFile(tmpfiledupset);
 
-	int const level = libmaus::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
-	int const rewritebamlevel = libmaus::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("rewritebamlevel",getDefaultRewriteBamLevel()));
+	int const level = libmaus2::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
+	int const rewritebamlevel = libmaus2::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("rewritebamlevel",getDefaultRewriteBamLevel()));
 		
 	if ( verbose )
 		std::cerr << "[V] output compression level " << level << std::endl;
 
-	::libmaus::timing::RealTimeClock fragrtc; fragrtc.start();
+	::libmaus2::timing::RealTimeClock fragrtc; fragrtc.start();
 
-	libmaus::bambam::BamAlignmentInputCallbackSnappy<BamAlignmentInputPositionCallbackDupMark>::unique_ptr_type SRC;
-	libmaus::bambam::BamAlignmentInputCallbackBam<BamAlignmentInputPositionCallbackDupMark>::unique_ptr_type BWR;
+	libmaus2::bambam::BamAlignmentInputCallbackSnappy<BamAlignmentInputPositionCallbackDupMark>::unique_ptr_type SRC;
+	libmaus2::bambam::BamAlignmentInputCallbackBam<BamAlignmentInputPositionCallbackDupMark>::unique_ptr_type BWR;
 	BamAlignmentInputPositionCallbackDupMark * PTI = 0;
-	::libmaus::aio::CheckedInputStream::unique_ptr_type CIS;
-	libmaus::aio::PosixFdInputStream::unique_ptr_type PFIS;
-	libmaus::aio::CheckedOutputStream::unique_ptr_type copybamstr;
+	::libmaus2::aio::CheckedInputStream::unique_ptr_type CIS;
+	libmaus2::aio::PosixFdInputStream::unique_ptr_type PFIS;
+	libmaus2::aio::CheckedOutputStream::unique_ptr_type copybamstr;
 
-	typedef ::libmaus::bambam::BamCircularHashCollatingBamDecoder col_type;
-	typedef ::libmaus::bambam::BamParallelCircularHashCollatingBamDecoder par_col_type;
-	typedef ::libmaus::bambam::CircularHashCollatingBamDecoder col_base_type;
-	typedef ::libmaus::bambam::BamMergeCoordinateCircularHashCollatingBamDecoder merge_col_type;
+	typedef ::libmaus2::bambam::BamCircularHashCollatingBamDecoder col_type;
+	typedef ::libmaus2::bambam::BamParallelCircularHashCollatingBamDecoder par_col_type;
+	typedef ::libmaus2::bambam::CircularHashCollatingBamDecoder col_base_type;
+	typedef ::libmaus2::bambam::BamMergeCoordinateCircularHashCollatingBamDecoder merge_col_type;
 	typedef col_base_type::unique_ptr_type col_base_ptr_type;	
 	col_base_ptr_type CBD;
 
@@ -1267,9 +1268,9 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 		std::max(static_cast<uint64_t>(1),arginfo.getValue<uint64_t>("markthreads",getDefaultMarkThreads()));
 
 	uint64_t const colexcludeflags =
-		libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY |
-		libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSUPPLEMENTARY |
-		libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FQCFAIL;
+		libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FSECONDARY |
+		libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FSUPPLEMENTARY |
+		libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FQCFAIL;
 	
 	if ( arginfo.getPairCount("I") > 1 )
 	{
@@ -1282,7 +1283,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	{
 		std::string const inputfilename = arginfo.getValue<std::string>("I","I");
 		uint64_t const inputbuffersize = arginfo.getValueUnsignedNumeric<uint64_t>("inputbuffersize",getDefaultInputBufferSize());
-		libmaus::aio::PosixFdInputStream::unique_ptr_type tPFIS(new libmaus::aio::PosixFdInputStream(inputfilename,inputbuffersize,0));
+		libmaus2::aio::PosixFdInputStream::unique_ptr_type tPFIS(new libmaus2::aio::PosixFdInputStream(inputfilename,inputbuffersize,0));
 		PFIS = UNIQUE_PTR_MOVE(tPFIS);
 		
 		if ( markthreads > 1 )
@@ -1327,7 +1328,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 		{
 			if ( rewritebam > 1 )
 			{
-				libmaus::aio::CheckedOutputStream::unique_ptr_type tcopybamstr(new libmaus::aio::CheckedOutputStream(tmpfilesnappyreads));
+				libmaus2::aio::CheckedOutputStream::unique_ptr_type tcopybamstr(new libmaus2::aio::CheckedOutputStream(tmpfilesnappyreads));
 				copybamstr = UNIQUE_PTR_MOVE(tcopybamstr);
 
 				if ( markthreads > 1 )
@@ -1377,7 +1378,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 				}
 
 				// rewrite file and mark duplicates
-				libmaus::bambam::BamAlignmentInputCallbackBam<BamAlignmentInputPositionCallbackDupMark>::unique_ptr_type tBWR(new libmaus::bambam::BamAlignmentInputCallbackBam<BamAlignmentInputPositionCallbackDupMark>(tmpfilesnappyreads,CBD->getHeader(),rewritebamlevel));
+				libmaus2::bambam::BamAlignmentInputCallbackBam<BamAlignmentInputPositionCallbackDupMark>::unique_ptr_type tBWR(new libmaus2::bambam::BamAlignmentInputCallbackBam<BamAlignmentInputPositionCallbackDupMark>(tmpfilesnappyreads,CBD->getHeader(),rewritebamlevel));
 				BWR = UNIQUE_PTR_MOVE(tBWR);
 				CBD->setInputCallback(BWR.get());
 
@@ -1394,8 +1395,8 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
                                 colhashbits,collistsize));
 			CBD = UNIQUE_PTR_MOVE(tCBD);
 
-			libmaus::bambam::BamAlignmentInputCallbackSnappy<BamAlignmentInputPositionCallbackDupMark>::unique_ptr_type 
-				tSRC(new libmaus::bambam::BamAlignmentInputCallbackSnappy<BamAlignmentInputPositionCallbackDupMark>(tmpfilesnappyreads,CBD->getHeader()));
+			libmaus2::bambam::BamAlignmentInputCallbackSnappy<BamAlignmentInputPositionCallbackDupMark>::unique_ptr_type 
+				tSRC(new libmaus2::bambam::BamAlignmentInputCallbackSnappy<BamAlignmentInputPositionCallbackDupMark>(tmpfilesnappyreads,CBD->getHeader()));
 			SRC = UNIQUE_PTR_MOVE(tSRC);
 			CBD->setInputCallback(SRC.get());
 			if ( verbose )
@@ -1403,7 +1404,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 		}
 	}
 
-	::libmaus::bambam::BamHeader const bamheader = CBD->getHeader();
+	::libmaus2::bambam::BamHeader const bamheader = CBD->getHeader();
 	
 	if ( arginfo.getValue<unsigned int>("disablevalidation",0) )
 		CBD->disableValidation();
@@ -1436,24 +1437,24 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	#else
 	bool const copyAlignments = false;
 	#endif
-	::libmaus::bambam::ReadEndsContainer::unique_ptr_type fragREC(new ::libmaus::bambam::ReadEndsContainer(fragbufsize,tmpfilenamereadfrags,copyAlignments)); // fragment container
-	::libmaus::bambam::ReadEndsContainer::unique_ptr_type pairREC(new ::libmaus::bambam::ReadEndsContainer(fragbufsize,tmpfilenamereadpairs,copyAlignments)); // pair container
+	::libmaus2::bambam::ReadEndsContainer::unique_ptr_type fragREC(new ::libmaus2::bambam::ReadEndsContainer(fragbufsize,tmpfilenamereadfrags,copyAlignments)); // fragment container
+	::libmaus2::bambam::ReadEndsContainer::unique_ptr_type pairREC(new ::libmaus2::bambam::ReadEndsContainer(fragbufsize,tmpfilenamereadpairs,copyAlignments)); // pair container
 	
 	int64_t maxrank = -1; // maximal appearing rank
 	uint64_t als = 0; // number of processed alignments (= mapped+unmapped fragments)
-	std::map<uint64_t,::libmaus::bambam::DuplicationMetrics> metrics;
+	std::map<uint64_t,::libmaus2::bambam::DuplicationMetrics> metrics;
 
-	::libmaus::timing::RealTimeClock rtc; rtc.start(); // clock
+	::libmaus2::timing::RealTimeClock rtc; rtc.start(); // clock
 
 	// #define UNPAIREDDEBUG
 
 	#if defined(UNPAIREDDEBUG)
-	::libmaus::bambam::BamFormatAuxiliary bamauxiliary;
+	::libmaus2::bambam::BamFormatAuxiliary bamauxiliary;
 	#endif
 	
-	libmaus::timing::RealTimeClock readinrtc; readinrtc.start();
+	libmaus2::timing::RealTimeClock readinrtc; readinrtc.start();
 
-	::libmaus::bambam::DupSetCallbackStream DSCV(tmpfiledupset,metrics);
+	::libmaus2::bambam::DupSetCallbackStream DSCV(tmpfiledupset,metrics);
 	// DupSetCallbackSet DSCV(metrics);
 	
 	PTI->setDupSetCallback(&DSCV);
@@ -1476,7 +1477,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 			:
 			P.second->getLibraryId(bamheader) 				
 			;
-		::libmaus::bambam::DuplicationMetrics & met = metrics[lib];
+		::libmaus2::bambam::DuplicationMetrics & met = metrics[lib];
 		
 		if ( P.first )
 		{
@@ -1537,7 +1538,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 				taglen = l1 + l2 + 2;
 				// expand buffer if necessary
 				if ( taglen > tagbuffer.size() )
-					tagbuffer = libmaus::autoarray::AutoArray<char>(taglen,false);
+					tagbuffer = libmaus2::autoarray::AutoArray<char>(taglen,false);
 
 				// concatenate tags
 				char * outptr = tagbuffer.begin();
@@ -1672,7 +1673,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 				<< fragcnt << " mapped frags, " 
 				<< paircnt << " mapped pairs, "
 				<< fragcnt/rtc.getElapsedSeconds() << " frags/s "
-				<< ::libmaus::util::MemUsage()
+				<< ::libmaus2::util::MemUsage()
 				<< " time "
 				<< readinrtc.getElapsedSeconds()
 				<< " total "
@@ -1730,7 +1731,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 			<< fragcnt << " mapped frags, " 
 			<< paircnt << " mapped pairs, "
 			<< fragcnt/rtc.getElapsedSeconds() << " frags/s "
-			<< ::libmaus::util::MemUsage()
+			<< ::libmaus2::util::MemUsage()
 			<< std::endl;
 
 	// DupSetCallbackVector DSCV(numranks,metrics);
@@ -1738,30 +1739,30 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	/*
 	 * process fragment and pair data to determine which reads are to be marked as duplicates
 	 */		
-	::libmaus::bambam::ReadEnds nextfrag;
-	std::vector< ::libmaus::bambam::ReadEnds > lfrags;
+	::libmaus2::bambam::ReadEnds nextfrag;
+	std::vector< ::libmaus2::bambam::ReadEnds > lfrags;
 	uint64_t dupcnt = 0;
 
 	if ( verbose )
 		std::cerr << "[V] Checking pairs...";
 	rtc.start();
-	::libmaus::bambam::SortedFragDecoder::unique_ptr_type pairDec(pairREC->getDecoder());
+	::libmaus2::bambam::SortedFragDecoder::unique_ptr_type pairDec(pairREC->getDecoder());
 	pairREC.reset();
 	pairDec->getNext(lfrags);
 
 	while ( pairDec->getNext(nextfrag) )
 	{
-		if ( ! libmaus::bambam::DupMarkBase::isDupPair(nextfrag,lfrags.front()) )
+		if ( ! libmaus2::bambam::DupMarkBase::isDupPair(nextfrag,lfrags.front()) )
 		{
 			// dupcnt += markDuplicatePairs(lfrags.begin(),lfrags.end(),DSCV);
-			dupcnt += libmaus::bambam::DupMarkBase::markDuplicatePairsVector(lfrags,DSCV);
+			dupcnt += libmaus2::bambam::DupMarkBase::markDuplicatePairsVector(lfrags,DSCV);
 			lfrags.resize(0);
 		}
 
 		lfrags.push_back(nextfrag);
 	}
 	// dupcnt += markDuplicatePairs(lfrags.begin(),lfrags.end(),DSCV);
-	dupcnt += libmaus::bambam::DupMarkBase::markDuplicatePairsVector(lfrags,DSCV);
+	dupcnt += libmaus2::bambam::DupMarkBase::markDuplicatePairsVector(lfrags,DSCV);
 	lfrags.resize(0);
 	pairDec.reset();
 	if ( verbose )
@@ -1770,20 +1771,20 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	if ( verbose )
 		std::cerr << "[V] Checking single fragments...";
 	rtc.start();
-	::libmaus::bambam::SortedFragDecoder::unique_ptr_type fragDec(fragREC->getDecoder());
+	::libmaus2::bambam::SortedFragDecoder::unique_ptr_type fragDec(fragREC->getDecoder());
 	fragREC.reset();
 	fragDec->getNext(lfrags);
 	while ( fragDec->getNext(nextfrag) )
 	{
-		if ( !libmaus::bambam::DupMarkBase::isDupFrag(nextfrag,lfrags.front()) )
+		if ( !libmaus2::bambam::DupMarkBase::isDupFrag(nextfrag,lfrags.front()) )
 		{
-			dupcnt += libmaus::bambam::DupMarkBase::markDuplicateFrags(lfrags,DSCV);
+			dupcnt += libmaus2::bambam::DupMarkBase::markDuplicateFrags(lfrags,DSCV);
 			lfrags.resize(0);
 		}
 
 		lfrags.push_back(nextfrag);
 	}
-	dupcnt += libmaus::bambam::DupMarkBase::markDuplicateFrags(lfrags,DSCV);
+	dupcnt += libmaus2::bambam::DupMarkBase::markDuplicateFrags(lfrags,DSCV);
 	lfrags.resize(0);
 	fragDec.reset();
 	if ( verbose )
@@ -1800,13 +1801,13 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	/**
 	 * write metrics
 	 **/
-	::libmaus::aio::CheckedOutputStream::unique_ptr_type pM;
+	::libmaus2::aio::CheckedOutputStream::unique_ptr_type pM;
 	std::ostream * pmetricstr = 0;
 	
 	if ( arginfo.hasArg("M") && (arginfo.getValue<std::string>("M","") != "") )
 	{
-		::libmaus::aio::CheckedOutputStream::unique_ptr_type tpM(
-                                new ::libmaus::aio::CheckedOutputStream(arginfo.getValue<std::string>("M",std::string("M")))
+		::libmaus2::aio::CheckedOutputStream::unique_ptr_type tpM(
+                                new ::libmaus2::aio::CheckedOutputStream(arginfo.getValue<std::string>("M",std::string("M")))
                         );
 		pM = UNIQUE_PTR_MOVE(tpM);
 		pmetricstr = pM.get();
@@ -1818,8 +1819,8 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 
 	std::ostream & metricsstr = *pmetricstr;
 
-	::libmaus::bambam::DuplicationMetrics::printFormatHeader(arginfo.commandline,metricsstr);
-	for ( std::map<uint64_t,::libmaus::bambam::DuplicationMetrics>::const_iterator ita = metrics.begin(); ita != metrics.end();
+	::libmaus2::bambam::DuplicationMetrics::printFormatHeader(arginfo.commandline,metricsstr);
+	for ( std::map<uint64_t,::libmaus2::bambam::DuplicationMetrics>::const_iterator ita = metrics.begin(); ita != metrics.end();
 		++ita )
 		ita->second.format(metricsstr, bamheader.getLibraryName(ita->first));
 	
@@ -1839,7 +1840,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	/*
 	 * mark the duplicates
 	 */
-	libmaus::bambam::DupMarkBase::markDuplicatesInFile(
+	libmaus2::bambam::DupMarkBase::markDuplicatesInFile(
 		arginfo,verbose,bamheader,maxrank,mod,level,DSCV,tmpfilesnappyreads,rewritebam,tmpfileindex,
 		getProgId(),
 		std::string(PACKAGE_VERSION),
@@ -1850,7 +1851,7 @@ static int markDuplicates(::libmaus::util::ArgInfo const & arginfo)
 	);
 		
 	if ( verbose )
-		std::cerr << "[V] " << ::libmaus::util::MemUsage() << " " 
+		std::cerr << "[V] " << ::libmaus2::util::MemUsage() << " " 
 			<< globrtc.getElapsedSeconds() 
 			<< " ("
 			<< globrtc.formatTime(globrtc.getElapsedSeconds())
@@ -1864,7 +1865,7 @@ int main(int argc, char * argv[])
 {
 	try
 	{
-		::libmaus::util::ArgInfo const arginfo(argc,argv);
+		::libmaus2::util::ArgInfo const arginfo(argc,argv);
 		
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
 			if ( 
@@ -1873,7 +1874,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--version"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
 			else if ( 
@@ -1882,7 +1883,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--help"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
@@ -1893,32 +1894,32 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "O=<filename>", "output file, stdout if unset" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "M=<filename>", "metrics file, stderr if unset" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "tmpfile=<filename>", "prefix for temporary files, default: create files in current directory" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
-				V.push_back ( std::pair<std::string,std::string> ( "markthreads=<["+::biobambam::Licensing::formatNumber(getDefaultMarkThreads())+"]>", "number of helper threads" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report (default: 1)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "mod=<["+::biobambam::Licensing::formatNumber(getDefaultMod())+"]>", "print progress for each mod'th record/alignment" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "rewritebam=<["+::biobambam::Licensing::formatNumber(getDefaultRewriteBam())+"]>", "compression of temporary alignment file when input is via stdin (0=snappy,1=gzip/bam,2=copy)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "rewritebamlevel=<["+::biobambam::Licensing::formatNumber(getDefaultRewriteBamLevel())+"]>", std::string("compression setting for rewritten input file if rewritebam=1 (") + libmaus::bambam::BamBlockWriterBaseFactory::getLevelHelpText() + ")" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "rmdup=<["+::biobambam::Licensing::formatNumber(getDefaultRmDup())+"]>", "remove duplicates (default: 0)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "colhashbits=<["+::biobambam::Licensing::formatNumber(getDefaultColHashBits())+"]>", "log_2 of size of hash table used for collation" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "collistsize=<["+::biobambam::Licensing::formatNumber(getDefaultColListSize())+"]>", "output list size for collation" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "fragbufsize=<["+::biobambam::Licensing::formatNumber(getDefaultFragBufSize())+"]>", "size of each fragment/pair file buffer in bytes" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "maxreadlength=<["+::biobambam::Licensing::formatNumber(getDefaultMaxReadLength())+"]>", "maximum allowed read length" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
+				V.push_back ( std::pair<std::string,std::string> ( "markthreads=<["+::biobambam2::Licensing::formatNumber(getDefaultMarkThreads())+"]>", "number of helper threads" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report (default: 1)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "mod=<["+::biobambam2::Licensing::formatNumber(getDefaultMod())+"]>", "print progress for each mod'th record/alignment" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "rewritebam=<["+::biobambam2::Licensing::formatNumber(getDefaultRewriteBam())+"]>", "compression of temporary alignment file when input is via stdin (0=snappy,1=gzip/bam,2=copy)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "rewritebamlevel=<["+::biobambam2::Licensing::formatNumber(getDefaultRewriteBamLevel())+"]>", std::string("compression setting for rewritten input file if rewritebam=1 (") + libmaus2::bambam::BamBlockWriterBaseFactory::getLevelHelpText() + ")" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "rmdup=<["+::biobambam2::Licensing::formatNumber(getDefaultRmDup())+"]>", "remove duplicates (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "colhashbits=<["+::biobambam2::Licensing::formatNumber(getDefaultColHashBits())+"]>", "log_2 of size of hash table used for collation" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "collistsize=<["+::biobambam2::Licensing::formatNumber(getDefaultColListSize())+"]>", "output list size for collation" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "fragbufsize=<["+::biobambam2::Licensing::formatNumber(getDefaultFragBufSize())+"]>", "size of each fragment/pair file buffer in bytes" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "maxreadlength=<["+::biobambam2::Licensing::formatNumber(getDefaultMaxReadLength())+"]>", "maximum allowed read length" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam2::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "md5filename=<filename>", "file name for md5 check sum (default: extend output file name)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam2::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "indexfilename=<filename>", "file name for BAM index file (default: extend output file name)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "trackfreelistsize=<["+::biobambam::Licensing::formatNumber(PositionTrackCallback::getDefaultFreeListSize())+"]>", "tracking lists free pool size" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "inputbuffersize=<["+::biobambam::Licensing::formatNumber(getDefaultInputBufferSize())+"]>", "size of input buffer" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "trackfreelistsize=<["+::biobambam2::Licensing::formatNumber(PositionTrackCallback::getDefaultFreeListSize())+"]>", "tracking lists free pool size" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "inputbuffersize=<["+::biobambam2::Licensing::formatNumber(getDefaultInputBufferSize())+"]>", "size of input buffer" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "tag=<[a-zA-Z][a-zA-Z0-9]>", "aux field id for tag string extraction" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "nucltag=<[a-zA-Z][a-zA-Z0-9]>", "aux field id for nucleotide tag extraction" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "D=<filename>", "duplicates output file if rmdup=1" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "dupmd5=<["+::biobambam::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum for duplicates output file (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "dupmd5=<["+::biobambam2::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum for duplicates output file (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "dupmd5filename=<filename>", "file name for md5 check sum of dup file (default: extend duplicates output file name)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "dupindex=<["+::biobambam::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index for duplicates file (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "dupindex=<["+::biobambam2::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index for duplicates file (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "dupindexfilename=<filename>", "file name for BAM index file for duplicates file (default: extend duplicates output file name)" ) );
 
-				::biobambam::Licensing::printMap(std::cerr,V);
+				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;

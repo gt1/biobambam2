@@ -18,67 +18,67 @@
 **/
 #include <config.h>
 
-#include <libmaus/bambam/BamDecoder.hpp>
-#include <libmaus/bambam/BamWriter.hpp>
-#include <libmaus/bambam/BamHeader.hpp>
-#include <libmaus/bambam/ProgramHeaderLineSet.hpp>
-#include <libmaus/util/ArgInfo.hpp>
+#include <libmaus2/bambam/BamDecoder.hpp>
+#include <libmaus2/bambam/BamWriter.hpp>
+#include <libmaus2/bambam/BamHeader.hpp>
+#include <libmaus2/bambam/ProgramHeaderLineSet.hpp>
+#include <libmaus2/util/ArgInfo.hpp>
 
-#include <libmaus/timing/RealTimeClock.hpp>
+#include <libmaus2/timing/RealTimeClock.hpp>
 
-#include <libmaus/lz/BgzfDeflateOutputCallbackMD5.hpp>
-#include <libmaus/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
-#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
+#include <libmaus2/lz/BgzfDeflateOutputCallbackMD5.hpp>
+#include <libmaus2/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
+#include <libmaus2/bambam/BamBlockWriterBaseFactory.hpp>
 
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/Licensing.hpp>
 
 static int getDefaultMD5() { return 0; }
 static int getDefaultIndex() { return 0; }
 static int getDefaultVerbose() { return 1; }
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 
-int bamfixmatecoordinatesnamesorted(::libmaus::util::ArgInfo const & arginfo)
+int bamfixmatecoordinatesnamesorted(::libmaus2::util::ArgInfo const & arginfo)
 {
 	bool const verbose = arginfo.getValue<unsigned int>("verbose",getDefaultVerbose());
 	
-	::libmaus::timing::RealTimeClock rtc; rtc.start();
+	::libmaus2::timing::RealTimeClock rtc; rtc.start();
 	
 	// gzip compression level for output
-	int const level = libmaus::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
+	int const level = libmaus2::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
 	
-	::libmaus::bambam::BamDecoder bamfile(std::cin);
+	::libmaus2::bambam::BamDecoder bamfile(std::cin);
 	std::string const headertext(bamfile.getHeader().text);
 
 	// add PG line to header
-	std::string const upheadtext = ::libmaus::bambam::ProgramHeaderLineSet::addProgramLine(
+	std::string const upheadtext = ::libmaus2::bambam::ProgramHeaderLineSet::addProgramLine(
 		headertext,
 		"bamfixmatecoordinatesnamesorted", // ID
 		"bamfixmatecoordinatesnamesorted", // PN
 		arginfo.commandline, // CL
-		::libmaus::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
+		::libmaus2::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
 		std::string(PACKAGE_VERSION) // VN			
 	);
 	// construct new header
-	::libmaus::bambam::BamHeader uphead(upheadtext);
+	::libmaus2::bambam::BamHeader uphead(upheadtext);
 	
 	if ( uphead.getSortOrder() != "queryname" )
 		uphead.changeSortOrder("unknown");
 		
 	std::string const & finalheadtext = uphead.text;
-	::libmaus::bambam::BamHeader finalheader(finalheadtext);
+	::libmaus2::bambam::BamHeader finalheader(finalheadtext);
 
 	/*
 	 * start index/md5 callbacks
 	 */
 	std::string const tmpfilenamebase = arginfo.getValue<std::string>("tmpfile",arginfo.getDefaultTmpFileName());
 	std::string const tmpfileindex = tmpfilenamebase + "_index";
-	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
+	::libmaus2::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
 
 	std::string md5filename;
 	std::string indexfilename;
 
-	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > cbs;
-	::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
+	std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > cbs;
+	::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
 	if ( arginfo.getValue<unsigned int>("md5",getDefaultMD5()) )
 	{
 		if ( arginfo.hasArg("md5filename") &&  arginfo.getUnparsedValue("md5filename","") != "" )
@@ -88,12 +88,12 @@ int bamfixmatecoordinatesnamesorted(::libmaus::util::ArgInfo const & arginfo)
 
 		if ( md5filename.size() )
 		{
-			::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5cb(new ::libmaus::lz::BgzfDeflateOutputCallbackMD5);
+			::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5cb(new ::libmaus2::lz::BgzfDeflateOutputCallbackMD5);
 			Pmd5cb = UNIQUE_PTR_MOVE(Tmd5cb);
 			cbs.push_back(Pmd5cb.get());
 		}
 	}
-	libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Pindex;
+	libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Pindex;
 	if ( arginfo.getValue<unsigned int>("index",getDefaultIndex()) )
 	{
 		if ( arginfo.hasArg("indexfilename") &&  arginfo.getUnparsedValue("indexfilename","") != "" )
@@ -103,21 +103,21 @@ int bamfixmatecoordinatesnamesorted(::libmaus::util::ArgInfo const & arginfo)
 
 		if ( indexfilename.size() )
 		{
-			libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Tindex(new libmaus::bambam::BgzfDeflateOutputCallbackBamIndex(tmpfileindex));
+			libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Tindex(new libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex(tmpfileindex));
 			Pindex = UNIQUE_PTR_MOVE(Tindex);
 			cbs.push_back(Pindex.get());
 		}
 	}
-	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
+	std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
 	if ( cbs.size() )
 		Pcbs = &cbs;
 	/*
 	 * end md5/index callbacks
 	 */
 
-	::libmaus::bambam::BamWriter::unique_ptr_type writer(new ::libmaus::bambam::BamWriter(std::cout,finalheader,level,Pcbs));
-	std::pair< std::pair< ::libmaus::bambam::BamAlignment::shared_ptr_type, bool> , std::pair< ::libmaus::bambam::BamAlignment::shared_ptr_type, bool> > 
-		P(std::pair< ::libmaus::bambam::BamAlignment::shared_ptr_type, bool>(::libmaus::bambam::BamAlignment::shared_ptr_type(),false),std::pair< ::libmaus::bambam::BamAlignment::shared_ptr_type, bool>(::libmaus::bambam::BamAlignment::shared_ptr_type(),false));
+	::libmaus2::bambam::BamWriter::unique_ptr_type writer(new ::libmaus2::bambam::BamWriter(std::cout,finalheader,level,Pcbs));
+	std::pair< std::pair< ::libmaus2::bambam::BamAlignment::shared_ptr_type, bool> , std::pair< ::libmaus2::bambam::BamAlignment::shared_ptr_type, bool> > 
+		P(std::pair< ::libmaus2::bambam::BamAlignment::shared_ptr_type, bool>(::libmaus2::bambam::BamAlignment::shared_ptr_type(),false),std::pair< ::libmaus2::bambam::BamAlignment::shared_ptr_type, bool>(::libmaus2::bambam::BamAlignment::shared_ptr_type(),false));
 	
 	// try to read two alignments	
 	P.first.second  = bamfile.readAlignment();
@@ -141,22 +141,22 @@ int bamfixmatecoordinatesnamesorted(::libmaus::util::ArgInfo const & arginfo)
 	
 		// same name?
 		if ( 
-			(aflags & ::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FPAIRED)
+			(aflags & ::libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FPAIRED)
 			&&
-			(bflags & ::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FPAIRED)
+			(bflags & ::libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FPAIRED)
 			&&
 			(! strcmp(P.first.first->getName(),P.second.first->getName()))
 		)
 		{			
-			unsigned int const amap = (aflags & ::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FUNMAP) ? 0 : 1;
-			unsigned int const bmap = (bflags & ::libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FUNMAP) ? 0 : 1;
+			unsigned int const amap = (aflags & ::libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FUNMAP) ? 0 : 1;
+			unsigned int const bmap = (bflags & ::libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FUNMAP) ? 0 : 1;
 
 			// std::cerr << "Pair " << bam1_qname(P.first.first->alignment) << " amap=" << amap << " bmap=" << bmap << std::endl;
 			
 			// if exactly one of the two is mapped
 			if ( amap + bmap == 1 )
 			{
-				::libmaus::bambam::BamAlignment::shared_ptr_type mapped = amap ? P.first.first : P.second.first;
+				::libmaus2::bambam::BamAlignment::shared_ptr_type mapped = amap ? P.first.first : P.second.first;
 				int64_t const tid = mapped->getRefID();
 				int64_t const pos = mapped->getPos();
 				
@@ -245,7 +245,7 @@ int main(int argc, char * argv[])
 {
 	try
 	{
-		::libmaus::util::ArgInfo const arginfo(argc,argv);
+		::libmaus2::util::ArgInfo const arginfo(argc,argv);
 
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
 			if ( 
@@ -254,7 +254,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--version"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
 			else if ( 
@@ -263,22 +263,22 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--help"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
 				
 				std::vector< std::pair<std::string,std::string> > V;
 				
-				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report (default: 1)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
+				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report (default: 1)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
 				V.push_back ( std::pair<std::string,std::string> ( "tmpfile=<filename>", "prefix for temporary files, default: create files in current directory" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam2::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "md5filename=<filename>", "file name for md5 check sum (default: extend output file name)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam2::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "indexfilename=<filename>", "file name for BAM index file (default: extend output file name)" ) );
 
-				::biobambam::Licensing::printMap(std::cerr,V);
+				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;

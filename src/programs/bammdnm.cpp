@@ -19,31 +19,31 @@
 #include <config.h>
 #include <cstdlib>
 #include <iostream>
-#include <libmaus/aio/PosixFdInputStream.hpp>
-#include <libmaus/aio/PosixFdOutputStream.hpp>
-#include <libmaus/fastx/FastAReader.hpp>
-#include <libmaus/fastx/FastABgzfIndex.hpp>
-#include <libmaus/fastx/FastAIndex.hpp>
-#include <libmaus/fastx/StreamFastAReader.hpp>
-#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
-#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
-#include <libmaus/bambam/BamDecoder.hpp>
-#include <libmaus/bambam/BamWriter.hpp>
-#include <libmaus/bambam/BamHeaderUpdate.hpp>
-#include <libmaus/bambam/BamMultiAlignmentDecoderFactory.hpp>
-#include <libmaus/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
-#include <libmaus/bambam/MdNmRecalculation.hpp>
-#include <libmaus/lz/BgzfDeflateOutputCallbackMD5.hpp>
-#include <libmaus/lz/RAZFIndex.hpp>
-#include <libmaus/lz/RAZFDecoder.hpp>
-#include <libmaus/timing/RealTimeClock.hpp>
-#include <libmaus/util/ArgInfo.hpp>
-#include <libmaus/util/GetFileSize.hpp>
-#include <libmaus/util/OutputFileNameTools.hpp>
-#include <libmaus/util/TempFileRemovalContainer.hpp>
+#include <libmaus2/aio/PosixFdInputStream.hpp>
+#include <libmaus2/aio/PosixFdOutputStream.hpp>
+#include <libmaus2/fastx/FastAReader.hpp>
+#include <libmaus2/fastx/FastABgzfIndex.hpp>
+#include <libmaus2/fastx/FastAIndex.hpp>
+#include <libmaus2/fastx/StreamFastAReader.hpp>
+#include <libmaus2/bambam/BamBlockWriterBaseFactory.hpp>
+#include <libmaus2/bambam/BamBlockWriterBaseFactory.hpp>
+#include <libmaus2/bambam/BamDecoder.hpp>
+#include <libmaus2/bambam/BamWriter.hpp>
+#include <libmaus2/bambam/BamHeaderUpdate.hpp>
+#include <libmaus2/bambam/BamMultiAlignmentDecoderFactory.hpp>
+#include <libmaus2/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
+#include <libmaus2/bambam/MdNmRecalculation.hpp>
+#include <libmaus2/lz/BgzfDeflateOutputCallbackMD5.hpp>
+#include <libmaus2/lz/RAZFIndex.hpp>
+#include <libmaus2/lz/RAZFDecoder.hpp>
+#include <libmaus2/timing/RealTimeClock.hpp>
+#include <libmaus2/util/ArgInfo.hpp>
+#include <libmaus2/util/GetFileSize.hpp>
+#include <libmaus2/util/OutputFileNameTools.hpp>
+#include <libmaus2/util/TempFileRemovalContainer.hpp>
 
-#include <biobambam/BamBamConfig.hpp>
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/BamBamConfig.hpp>
+#include <biobambam2/Licensing.hpp>
 
 static int getDefaultIndex() { return 0; }
 static int getDefaultMD5() { return 0; }
@@ -55,19 +55,19 @@ static int getDefaultWarnChange() { return 0; }
 static uint64_t getDefaultIOBlockSize() { return 128*1024; }
 
 
-static int bammdnm(libmaus::util::ArgInfo const & arginfo)
+static int bammdnm(libmaus2::util::ArgInfo const & arginfo)
 {
-	libmaus::timing::RealTimeClock rtc;
+	libmaus2::timing::RealTimeClock rtc;
 	rtc.start();
 	
-	::libmaus::util::TempFileRemovalContainer::setup();
+	::libmaus2::util::TempFileRemovalContainer::setup();
 
 	std::string const tmpfilenamebase = arginfo.getValue<std::string>("tmpfile",arginfo.getDefaultTmpFileName());
 	std::string const tmpfileindex = tmpfilenamebase + "_index";
-	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
+	::libmaus2::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
 
-	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > cbs;
-	::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
+	std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > cbs;
+	::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
 	std::string md5filename;
 	if ( arginfo.getValue<unsigned int>("md5",getDefaultMD5()) )
 	{
@@ -78,12 +78,12 @@ static int bammdnm(libmaus::util::ArgInfo const & arginfo)
 
 		if ( md5filename.size() )
 		{
-			::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5cb(new ::libmaus::lz::BgzfDeflateOutputCallbackMD5);
+			::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5cb(new ::libmaus2::lz::BgzfDeflateOutputCallbackMD5);
 			Pmd5cb = UNIQUE_PTR_MOVE(Tmd5cb);
 			cbs.push_back(Pmd5cb.get());
 		}
 	}
-	libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Pindex;
+	libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Pindex;
 	std::string indexfilename;
 	if ( arginfo.getValue<unsigned int>("index",getDefaultIndex()) )
 	{
@@ -94,18 +94,18 @@ static int bammdnm(libmaus::util::ArgInfo const & arginfo)
 
 		if ( indexfilename.size() )
 		{
-			libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Tindex(new libmaus::bambam::BgzfDeflateOutputCallbackBamIndex(tmpfileindex));
+			libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Tindex(new libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex(tmpfileindex));
 			Pindex = UNIQUE_PTR_MOVE(Tindex);
 			cbs.push_back(Pindex.get());
 		}
 	}
-	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
+	std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
 	if ( cbs.size() )
 		Pcbs = &cbs;
 
 	if ( !arginfo.hasArg("reference") )
 	{
-		::libmaus::exception::LibMausException se;
+		::libmaus2::exception::LibMausException se;
 		se.getStream() << "Reference key not set, aborting." << std::endl;
 		se.finish();
 		throw se;
@@ -114,13 +114,13 @@ static int bammdnm(libmaus::util::ArgInfo const & arginfo)
 	std::string const reference = arginfo.getUnparsedValue("reference","");
 	uint64_t const ioblocksize = arginfo.getValueUnsignedNumeric<uint64_t>("ioblocksize",getDefaultIOBlockSize());
 
-	::libmaus::aio::PosixFdInputStream PFIS(STDIN_FILENO,ioblocksize);
-	::libmaus::lz::BgzfInflate< ::libmaus::aio::PosixFdInputStream > infl(PFIS);
-	libmaus::lz::BgzfInflateInfo bgzfinfo;
-	libmaus::autoarray::AutoArray<char> B(libmaus::lz::BgzfConstants::getBgzfMaxBlockSize(),false);
+	::libmaus2::aio::PosixFdInputStream PFIS(STDIN_FILENO,ioblocksize);
+	::libmaus2::lz::BgzfInflate< ::libmaus2::aio::PosixFdInputStream > infl(PFIS);
+	libmaus2::lz::BgzfInflateInfo bgzfinfo;
+	libmaus2::autoarray::AutoArray<char> B(libmaus2::lz::BgzfConstants::getBgzfMaxBlockSize(),false);
 	bool haveheader = false;
-	::libmaus::bambam::BamHeader header;
-	::libmaus::bambam::BamHeader::BamHeaderParserState bamheaderparsestate;
+	::libmaus2::bambam::BamHeader header;
+	::libmaus2::bambam::BamHeaderParserState bamheaderparsestate;
 
 	/* parser state types */
 	enum parsestate { state_reading_blocklen,  state_post_skip };
@@ -129,20 +129,20 @@ static int bammdnm(libmaus::util::ArgInfo const & arginfo)
 	uint32_t blocklen = 0;
 	uint64_t alcnt = 0;
 
-	::libmaus::bambam::BamAlignment algn;
+	::libmaus2::bambam::BamAlignment algn;
 	uint8_t * copyptr = 0;
 	
 	bool const validate = !arginfo.getValue<unsigned int>("disablevalidation",getDefaultDisableValidation());
-	int const level = libmaus::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue("level",Z_DEFAULT_COMPRESSION));
+	int const level = libmaus2::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue("level",Z_DEFAULT_COMPRESSION));
 	bool const verbose = arginfo.getValue<unsigned int>("verbose",getDefaultVerbose());
 	bool const recompindetonly = arginfo.getValue<unsigned int>("recompindetonly",getDefaultRecompIndetOnly());
 	bool const warnchange = arginfo.getValue<unsigned int>("warnchange",getDefaultWarnChange());
 
-	libmaus::aio::PosixFdOutputStream::unique_ptr_type Ppfos;
-	libmaus::bambam::BamWriter::unique_ptr_type Pout;
-	libmaus::bambam::BamWriter::stream_type * bamout = 0;
+	libmaus2::aio::PosixFdOutputStream::unique_ptr_type Ppfos;
+	libmaus2::bambam::BamWriter::unique_ptr_type Pout;
+	libmaus2::bambam::BamWriter::stream_type * bamout = 0;
 	
-	libmaus::bambam::MdNmRecalculation::unique_ptr_type Precalc;
+	libmaus2::bambam::MdNmRecalculation::unique_ptr_type Precalc;
 
 	while ( !(bgzfinfo = infl.readAndInfo(B.begin(),B.size())).streameof )
 	{
@@ -151,8 +151,8 @@ static int bammdnm(libmaus::util::ArgInfo const & arginfo)
 		
 		if ( (! haveheader) && (pa != pc) )
 		{			
-			::libmaus::util::GetObject<uint8_t const *> G(pa);
-			std::pair<bool,uint64_t> const P = ::libmaus::bambam::BamHeader::parseHeader(G,bamheaderparsestate,bgzfinfo.uncompressed);
+			::libmaus2::util::GetObject<uint8_t const *> G(pa);
+			std::pair<bool,uint64_t> const P = bamheaderparsestate.parseHeader(G,bgzfinfo.uncompressed);
 
 			// header complete?
 			if ( P.first )
@@ -161,16 +161,16 @@ static int bammdnm(libmaus::util::ArgInfo const & arginfo)
 				haveheader = true;
 				pa = reinterpret_cast<uint8_t *>(B.begin()) + P.second;
 				
-				::libmaus::bambam::BamHeader::unique_ptr_type uphead(libmaus::bambam::BamHeaderUpdate::updateHeader(arginfo,header,"bammdnm",std::string(PACKAGE_VERSION)));
+				::libmaus2::bambam::BamHeader::unique_ptr_type uphead(libmaus2::bambam::BamHeaderUpdate::updateHeader(arginfo,header,"bammdnm",std::string(PACKAGE_VERSION)));
 
-				libmaus::aio::PosixFdOutputStream::unique_ptr_type Tpfos(new libmaus::aio::PosixFdOutputStream(STDOUT_FILENO,ioblocksize));
+				libmaus2::aio::PosixFdOutputStream::unique_ptr_type Tpfos(new libmaus2::aio::PosixFdOutputStream(STDOUT_FILENO,ioblocksize));
 				Ppfos = UNIQUE_PTR_MOVE(Tpfos);
 
-				libmaus::bambam::BamWriter::unique_ptr_type Tout(new libmaus::bambam::BamWriter(*Ppfos,*uphead,level,Pcbs));
+				libmaus2::bambam::BamWriter::unique_ptr_type Tout(new libmaus2::bambam::BamWriter(*Ppfos,*uphead,level,Pcbs));
 				Pout = UNIQUE_PTR_MOVE(Tout);
 				bamout = &(Pout->getStream());
 				
-				libmaus::bambam::MdNmRecalculation::unique_ptr_type Trecalc(new libmaus::bambam::MdNmRecalculation(reference,validate,recompindetonly,warnchange,ioblocksize));
+				libmaus2::bambam::MdNmRecalculation::unique_ptr_type Trecalc(new libmaus2::bambam::MdNmRecalculation(reference,validate,recompindetonly,warnchange,ioblocksize));
 				Precalc = UNIQUE_PTR_MOVE(Trecalc);
 			}
 		}
@@ -184,7 +184,7 @@ static int bammdnm(libmaus::util::ArgInfo const & arginfo)
 					/* read length of next alignment block */
 					case state_reading_blocklen:
 						/* if this is a little endian machine allowing unaligned access */
-						#if defined(LIBMAUS_HAVE_i386)
+						#if defined(LIBMAUS2_HAVE_i386)
 						if ( 
 							(!blocklenred) && 
 							((pc-pa) >= static_cast<ptrdiff_t>(sizeof(uint32_t))) 
@@ -200,7 +200,7 @@ static int bammdnm(libmaus::util::ArgInfo const & arginfo)
 								if ( needupdate )
 								{
 									if ( algn.D.size() < blocklen )
-										algn.D = ::libmaus::bambam::BamAlignment::D_array_type(blocklen,false);
+										algn.D = ::libmaus2::bambam::BamAlignment::D_array_type(blocklen,false);
 									algn.blocksize = blocklen;
 									
 									std::copy(pa,pa+blocklen,algn.D.begin());
@@ -229,7 +229,7 @@ static int bammdnm(libmaus::util::ArgInfo const & arginfo)
 							{
 								state = state_post_skip;
 								if ( algn.D.size() < blocklen )
-									algn.D = ::libmaus::bambam::BamAlignment::D_array_type(blocklen,false);
+									algn.D = ::libmaus2::bambam::BamAlignment::D_array_type(blocklen,false);
 								algn.blocksize = blocklen;
 								copyptr = algn.D.begin();
 							}
@@ -248,7 +248,7 @@ static int bammdnm(libmaus::util::ArgInfo const & arginfo)
 									if ( needupdate )
 									{
 										if ( algn.D.size() < blocklen )
-											algn.D = ::libmaus::bambam::BamAlignment::D_array_type(blocklen,false);
+											algn.D = ::libmaus2::bambam::BamAlignment::D_array_type(blocklen,false);
 										algn.blocksize = blocklen;
 										
 										std::copy(pa,pa+blocklen,algn.D.begin());
@@ -277,7 +277,7 @@ static int bammdnm(libmaus::util::ArgInfo const & arginfo)
 								{
 									state = state_post_skip;
 									if ( algn.D.size() < blocklen )
-										algn.D = ::libmaus::bambam::BamAlignment::D_array_type(blocklen,false);
+										algn.D = ::libmaus2::bambam::BamAlignment::D_array_type(blocklen,false);
 									algn.blocksize = blocklen;
 									copyptr = algn.D.begin();
 								}
@@ -341,7 +341,7 @@ int main(int argc, char * argv[])
 {
 	try
 	{
-		::libmaus::util::ArgInfo const arginfo(argc,argv);
+		::libmaus2::util::ArgInfo const arginfo(argc,argv);
 
 		
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
@@ -351,7 +351,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--version"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
 			else if ( 
@@ -360,27 +360,27 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--help"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
 				
 				std::vector< std::pair<std::string,std::string> > V;
 			
-				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
-				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "disablevalidation=<["+::biobambam::Licensing::formatNumber(getDefaultDisableValidation())+"]>", "disable input validation (default is 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
+				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "disablevalidation=<["+::biobambam2::Licensing::formatNumber(getDefaultDisableValidation())+"]>", "disable input validation (default is 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "tmpfile=<filename>", "prefix for temporary files, default: create files in current directory" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam2::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "md5filename=<filename>", "file name for md5 check sum" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam2::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "indexfilename=<filename>", "file name for BAM index file" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "reference=<>", "reference FastA" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "recompindetonly=<["+::biobambam::Licensing::formatNumber(getDefaultRecompIndetOnly())+"]>", "only compute MD/NM fields in the presence of indeterminate bases (default: 0)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "warnchange=<["+::biobambam::Licensing::formatNumber(getDefaultWarnChange())+"]>", "print a warning message when MD/NM field is present but different from the recomputed value (default: 0)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "ioblocksize=<["+::biobambam::Licensing::formatNumber(getDefaultIOBlockSize())+"]>", "block size for I/O operations" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "recompindetonly=<["+::biobambam2::Licensing::formatNumber(getDefaultRecompIndetOnly())+"]>", "only compute MD/NM fields in the presence of indeterminate bases (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "warnchange=<["+::biobambam2::Licensing::formatNumber(getDefaultWarnChange())+"]>", "print a warning message when MD/NM field is present but different from the recomputed value (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "ioblocksize=<["+::biobambam2::Licensing::formatNumber(getDefaultIOBlockSize())+"]>", "block size for I/O operations" ) );
 
-				::biobambam::Licensing::printMap(std::cerr,V);
+				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;

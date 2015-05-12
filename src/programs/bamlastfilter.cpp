@@ -16,22 +16,22 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
-#include <libmaus/aio/PosixFdOutputStream.hpp>
-#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
-#include <libmaus/bambam/BamMultiAlignmentDecoderFactory.hpp>
-#include <libmaus/fastx/FastAIndex.hpp>
-#include <libmaus/math/IntegerInterval.hpp>
-#include <libmaus/math/iabs.hpp>
-#include <libmaus/util/GrowingFreeList.hpp>
-#include <libmaus/util/Histogram.hpp>
-#include <libmaus/util/TempFileRemovalContainer.hpp>
-#include <libmaus/bambam/BamHeaderUpdate.hpp>
-#include <libmaus/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
-#include <libmaus/lz/BgzfDeflateOutputCallbackMD5.hpp>
-#include <libmaus/bambam/StrCmpNum.hpp>
+#include <libmaus2/aio/PosixFdOutputStream.hpp>
+#include <libmaus2/bambam/BamBlockWriterBaseFactory.hpp>
+#include <libmaus2/bambam/BamMultiAlignmentDecoderFactory.hpp>
+#include <libmaus2/fastx/FastAIndex.hpp>
+#include <libmaus2/math/IntegerInterval.hpp>
+#include <libmaus2/math/iabs.hpp>
+#include <libmaus2/util/GrowingFreeList.hpp>
+#include <libmaus2/util/Histogram.hpp>
+#include <libmaus2/util/TempFileRemovalContainer.hpp>
+#include <libmaus2/bambam/BamHeaderUpdate.hpp>
+#include <libmaus2/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
+#include <libmaus2/lz/BgzfDeflateOutputCallbackMD5.hpp>
+#include <libmaus2/bambam/StrCmpNum.hpp>
 
-#include <biobambam/BamBamConfig.hpp>
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/BamBamConfig.hpp>
+#include <biobambam2/Licensing.hpp>
 
 #include <config.h>
 
@@ -57,7 +57,7 @@ static std::string getDefaultInputFormat()
 
 struct AlignmentComparator
 {
-	bool operator()(::libmaus::bambam::BamAlignment const * A, ::libmaus::bambam::BamAlignment const * B)
+	bool operator()(::libmaus2::bambam::BamAlignment const * A, ::libmaus2::bambam::BamAlignment const * B)
 	{
 		// put mapped reads before 
 		if ( A->isMapped() != B->isMapped() )
@@ -79,7 +79,7 @@ struct MappingRegion
 	uint64_t refId;
 	uint64_t refFrom;
 	uint64_t refTo;
-	libmaus::bambam::BamAlignment * algn;
+	libmaus2::bambam::BamAlignment * algn;
 	
 	MappingRegion() : readFrom(0), readTo(0), refFrom(0), refTo(0), algn(0) {}
 	MappingRegion(
@@ -88,7 +88,7 @@ struct MappingRegion
 		uint64_t const rrefId,
 		uint64_t const rrefFrom,
 		uint64_t const rrefTo,
-		libmaus::bambam::BamAlignment * ralgn
+		libmaus2::bambam::BamAlignment * ralgn
 	) : readFrom(rreadFrom), readTo(rreadTo), refId(rrefId), refFrom(rrefFrom), refTo(rrefTo), algn(ralgn) {}
 };
 
@@ -156,7 +156,7 @@ struct ScoredAlignment
 	friend std::ostream & operator<<(std::ostream & out, ScoredAlignment const & S);
 
 	private:	
-	libmaus::bambam::BamAlignment * algn;
+	libmaus2::bambam::BamAlignment * algn;
 	int64_t score;
 	uint64_t readfrom;
 	uint64_t readto;
@@ -166,7 +166,7 @@ struct ScoredAlignment
 	public:
 	ScoredAlignment() : algn(0), score(0), readfrom(0), readto(0), reffrom(0), refto(0) {}
 	ScoredAlignment(
-		libmaus::bambam::BamAlignment * const ralgn,
+		libmaus2::bambam::BamAlignment * const ralgn,
 		int64_t const rscore,
 		uint64_t const rreadfrom,
 		uint64_t const rreadto,
@@ -187,7 +187,7 @@ struct ScoredAlignment
 	
 	bool overlaps(ScoredAlignment const & O) const
 	{
-		typedef libmaus::math::IntegerInterval<uint64_t> int_type;
+		typedef libmaus2::math::IntegerInterval<uint64_t> int_type;
 		return ! int_type::intersection(int_type(readfrom,readto-1),int_type(O.readfrom,O.readto-1)).isEmpty();
 	}
 	
@@ -199,7 +199,7 @@ struct ScoredAlignment
 		return false;
 	}
 	
-	libmaus::bambam::BamAlignment * getAlignment()
+	libmaus2::bambam::BamAlignment * getAlignment()
 	{
 		return algn;
 	}
@@ -215,12 +215,12 @@ std::ostream & operator<<(std::ostream & out, ScoredAlignment const & S)
 }
 
 void handleVector(
-	std::vector< ::libmaus::bambam::BamAlignment * > & samename,
-	libmaus::autoarray::AutoArray<libmaus::bambam::cigar_operation> & cigop,
-	libmaus::bambam::BamHeader const & header,
+	std::vector< ::libmaus2::bambam::BamAlignment * > & samename,
+	libmaus2::autoarray::AutoArray<libmaus2::bambam::cigar_operation> & cigop,
+	libmaus2::bambam::BamHeader const & header,
 	uint64_t & readbases,
 	uint64_t & mappedbases,
-	libmaus::bambam::BamBlockWriterBase & writer,
+	libmaus2::bambam::BamBlockWriterBase & writer,
 	link_type_enum const link_type,
 	double const erate = 0.3
 )
@@ -246,8 +246,8 @@ void handleVector(
 		
 		for ( uint64_t z = i ; z < j; ++z )
 		{
-			::libmaus::bambam::BamAlignment * palgn = samename[z];
-			::libmaus::bambam::BamAlignment & algn = *palgn;
+			::libmaus2::bambam::BamAlignment * palgn = samename[z];
+			::libmaus2::bambam::BamAlignment & algn = *palgn;
 
 			uint32_t const numcigop = algn.getCigarOperations(cigop);
 			uint64_t const seqlen = algn.getLseq();
@@ -262,26 +262,26 @@ void handleVector(
 			uint64_t cl = 0;
 			uint64_t cr = numcigop;
 				
-			while ( cl < cr && cigop[cl].first == libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CHARD_CLIP )
+			while ( cl < cr && cigop[cl].first == libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CHARD_CLIP )
 				hleft += cigop[cl++].second;
-			while ( cr > cl && cigop[cr-1].first == libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CHARD_CLIP )
+			while ( cr > cl && cigop[cr-1].first == libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CHARD_CLIP )
 				hright += cigop[--cr].second;
 
-			while ( cl < cr && cigop[cl].first == libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CSOFT_CLIP )
+			while ( cl < cr && cigop[cl].first == libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CSOFT_CLIP )
 				sleft += cigop[cl++].second;
-			while ( cr > cl && cigop[cr-1].first == libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CSOFT_CLIP )
+			while ( cr > cl && cigop[cr-1].first == libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CSOFT_CLIP )
 				sright += cigop[--cr].second;
 				
 			readpos += sleft;
 
 			for ( uint64_t ci = cl; ci < cr; ++ci )
 				if ( 
-					cigop[ci].first == libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CSOFT_CLIP
+					cigop[ci].first == libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CSOFT_CLIP
 					||
-					cigop[ci].first == libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CHARD_CLIP
+					cigop[ci].first == libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CHARD_CLIP
 				)
 				{
-					libmaus::exception::LibMausException lme;
+					libmaus2::exception::LibMausException lme;
 					lme.getStream() << "Malformed cigar string in read " << algn.getName() << "\n";
 					lme.getStream() << algn.formatAlignment(header) << "\n";
 					lme.finish();
@@ -297,42 +297,42 @@ void handleVector(
 				
 				switch ( cigop[ci].first )
 				{
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CMATCH:
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CEQUAL:
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CDIFF:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CMATCH:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CEQUAL:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CDIFF:
 					{
 						readpos += ciglen;
 						refpos += ciglen;
 						break;
 					}
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CINS:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CINS:
 					{
 						readpos += ciglen;
 						break;
 					}
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CDEL:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CDEL:
 					{
 						// deleting bases from the reference
 						refpos += ciglen;
 						break;
 					}
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CREF_SKIP:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CREF_SKIP:
 					{
 						// skip bases on reference
 						refpos += ciglen;
 						break;
 					}
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CSOFT_CLIP:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CSOFT_CLIP:
 					{
 						// skip bases on read
 						readpos += ciglen;
 						break;
 					}
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CHARD_CLIP:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CHARD_CLIP:
 					{
 						break;
 					}
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CPAD:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CPAD:
 					{
 						break;
 					}
@@ -351,7 +351,7 @@ void handleVector(
 
 			if ( readpos != seqlen )
 			{
-				libmaus::exception::LibMausException lme;
+				libmaus2::exception::LibMausException lme;
 				lme.getStream() << "Malformed cigar string in read " << algn.getName() << "\n";
 				lme.getStream() << algn.formatAlignment(header) << "\n";
 				lme.getStream() << "cl=" << cl << " cr=" << cr << std::endl;
@@ -381,12 +381,12 @@ void handleVector(
 	
 	std::sort(M.begin(),M.end(),MappingRegionReadCoordComparator());
 
-	std::vector < libmaus::math::IntegerInterval<uint64_t> > PIIV;
+	std::vector < libmaus2::math::IntegerInterval<uint64_t> > PIIV;
 	for ( uint64_t i = 0; i < M.size(); ++i )
 		if ( M[i].readFrom < M[i].readTo )
-			PIIV.push_back(libmaus::math::IntegerInterval<uint64_t>(M[i].readFrom,M[i].readTo-1));
+			PIIV.push_back(libmaus2::math::IntegerInterval<uint64_t>(M[i].readFrom,M[i].readTo-1));
 	
-	std::vector < libmaus::math::IntegerInterval<uint64_t> > const IIV = libmaus::math::IntegerInterval<uint64_t>::mergeOverlapping(PIIV);
+	std::vector < libmaus2::math::IntegerInterval<uint64_t> > const IIV = libmaus2::math::IntegerInterval<uint64_t>::mergeOverlapping(PIIV);
 
 	readbases += readlen;
 
@@ -419,7 +419,7 @@ void handleVector(
 				// check error rate implied by distance of fragments on read and reference
 				(
 					(
-						libmaus::math::iabs(
+						libmaus2::math::iabs(
 							static_cast<int64_t>(M[readhigh].readFrom - M[readhigh-1].readTo)
 							-
 							static_cast<int64_t>(M[readhigh].refFrom - M[readhigh-1].refTo)
@@ -465,7 +465,7 @@ void handleVector(
 	// sort by descending score
 	std::sort(alintervals.begin(),alintervals.end(),ScoredIntervalComparator());
 	
-	std::vector< ::libmaus::bambam::BamAlignment * > outputvec;
+	std::vector< ::libmaus2::bambam::BamAlignment * > outputvec;
 	
 	if ( link_type == link_type_chain )
 	{
@@ -498,7 +498,7 @@ void handleVector(
 	{
 		for ( uint64_t i = 1; i < outputvec.size(); ++i )
 		{
-			outputvec[i]->putFlags(outputvec[i]->getFlags() | libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSUPPLEMENTARY);
+			outputvec[i]->putFlags(outputvec[i]->getFlags() | libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FSUPPLEMENTARY);
 		}
 		for ( uint64_t i = 0; i < outputvec.size(); ++i )
 		{
@@ -511,7 +511,7 @@ void handleVector(
 	}
 }
 
-int bamlastfilter(libmaus::util::ArgInfo const & arginfo)
+int bamlastfilter(libmaus2::util::ArgInfo const & arginfo)
 {
 	bool const verbose = arginfo.getValue("verbose",getDefaultVerbose());
 	std::string const reference = arginfo.getUnparsedValue("reference",std::string());
@@ -528,7 +528,7 @@ int bamlastfilter(libmaus::util::ArgInfo const & arginfo)
 			link_type = link_type_cluster;
 		else
 		{
-			libmaus::exception::LibMausException lme;
+			libmaus2::exception::LibMausException lme;
 			lme.getStream() << "Unknown linktype " << ltype << "\n";
 			lme.getStream() << "Supported options are chain and cluster\n";
 			lme.finish();
@@ -536,28 +536,28 @@ int bamlastfilter(libmaus::util::ArgInfo const & arginfo)
 		}
 	}
 	
-	libmaus::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
-		libmaus::bambam::BamMultiAlignmentDecoderFactory::construct(arginfo));
-	::libmaus::bambam::BamAlignmentDecoder * ppdec = &(decwrapper->getDecoder());
-	::libmaus::bambam::BamAlignmentDecoder & dec = *ppdec;
-	::libmaus::bambam::BamHeader const & header = dec.getHeader();	
-	::libmaus::bambam::BamAlignment & algn = dec.getAlignment();
-	::libmaus::bambam::BamAlignment prevalgn;
+	libmaus2::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
+		libmaus2::bambam::BamMultiAlignmentDecoderFactory::construct(arginfo));
+	::libmaus2::bambam::BamAlignmentDecoder * ppdec = &(decwrapper->getDecoder());
+	::libmaus2::bambam::BamAlignmentDecoder & dec = *ppdec;
+	::libmaus2::bambam::BamHeader const & header = dec.getHeader();	
+	::libmaus2::bambam::BamAlignment & algn = dec.getAlignment();
+	::libmaus2::bambam::BamAlignment prevalgn;
 	bool haveprevalgn = false;
 	uint64_t alcnt = 0;
-	libmaus::autoarray::AutoArray<libmaus::bambam::cigar_operation> cigop;
+	libmaus2::autoarray::AutoArray<libmaus2::bambam::cigar_operation> cigop;
 
 	/*
 	 * start index/md5 callbacks
 	 */
 	std::string const tmpfileindex = tmpfilenamebase + "_index";
-	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
+	::libmaus2::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
 
 	std::string md5filename;
 	std::string indexfilename;
 
-	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > cbs;
-	::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
+	std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > cbs;
+	::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
 	if ( arginfo.getValue<unsigned int>("md5",getDefaultMD5()) )
 	{
 		if ( arginfo.hasArg("md5filename") &&  arginfo.getUnparsedValue("md5filename","") != "" )
@@ -567,12 +567,12 @@ int bamlastfilter(libmaus::util::ArgInfo const & arginfo)
 
 		if ( md5filename.size() )
 		{
-			::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5cb(new ::libmaus::lz::BgzfDeflateOutputCallbackMD5);
+			::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5cb(new ::libmaus2::lz::BgzfDeflateOutputCallbackMD5);
 			Pmd5cb = UNIQUE_PTR_MOVE(Tmd5cb);
 			cbs.push_back(Pmd5cb.get());
 		}
 	}
-	libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Pindex;
+	libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Pindex;
 	if ( arginfo.getValue<unsigned int>("index",getDefaultIndex()) )
 	{
 		if ( arginfo.hasArg("indexfilename") &&  arginfo.getUnparsedValue("indexfilename","") != "" )
@@ -582,26 +582,26 @@ int bamlastfilter(libmaus::util::ArgInfo const & arginfo)
 
 		if ( indexfilename.size() )
 		{
-			libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Tindex(new libmaus::bambam::BgzfDeflateOutputCallbackBamIndex(tmpfileindex));
+			libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Tindex(new libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex(tmpfileindex));
 			Pindex = UNIQUE_PTR_MOVE(Tindex);
 			cbs.push_back(Pindex.get());
 		}
 	}
-	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
+	std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
 	if ( cbs.size() )
 		Pcbs = &cbs;
 	/*
 	 * end md5/index callbacks
 	 */
 
-	::libmaus::bambam::BamHeader::unique_ptr_type genuphead(
-		libmaus::bambam::BamHeaderUpdate::updateHeader(arginfo,header,"bamlastfilter",std::string(PACKAGE_VERSION))
+	::libmaus2::bambam::BamHeader::unique_ptr_type genuphead(
+		libmaus2::bambam::BamHeaderUpdate::updateHeader(arginfo,header,"bamlastfilter",std::string(PACKAGE_VERSION))
 	);
-	libmaus::bambam::BamBlockWriterBase::unique_ptr_type Pwriter(libmaus::bambam::BamBlockWriterBaseFactory::construct(*genuphead,arginfo,Pcbs));
-	libmaus::bambam::BamBlockWriterBase & wr = *Pwriter;
+	libmaus2::bambam::BamBlockWriterBase::unique_ptr_type Pwriter(libmaus2::bambam::BamBlockWriterBaseFactory::construct(*genuphead,arginfo,Pcbs));
+	libmaus2::bambam::BamBlockWriterBase & wr = *Pwriter;
 
-	libmaus::util::GrowingFreeList< ::libmaus::bambam::BamAlignment > alfl;
-	std::vector< ::libmaus::bambam::BamAlignment * > samename;
+	libmaus2::util::GrowingFreeList< ::libmaus2::bambam::BamAlignment > alfl;
+	std::vector< ::libmaus2::bambam::BamAlignment * > samename;
 	uint64_t readbases = 0;
 	uint64_t mappedbases = 0;
 	
@@ -609,14 +609,14 @@ int bamlastfilter(libmaus::util::ArgInfo const & arginfo)
 	{
 		if ( haveprevalgn )
 		{
-			int const r = libmaus::bambam::StrCmpNum::strcmpnum(
+			int const r = libmaus2::bambam::StrCmpNum::strcmpnum(
 				prevalgn.getName(),
 				algn.getName()
 			);
 			
 			if ( r > 0 )
 			{
-				libmaus::exception::LibMausException lme;
+				libmaus2::exception::LibMausException lme;
 				lme.getStream() << "Input file is not sorted by query name\n";
 				lme.finish();
 				throw lme;
@@ -635,7 +635,7 @@ int bamlastfilter(libmaus::util::ArgInfo const & arginfo)
 			}
 		}
 
-		::libmaus::bambam::BamAlignment * calgn = alfl.get();
+		::libmaus2::bambam::BamAlignment * calgn = alfl.get();
 		calgn->copyFrom(algn);
 		samename.push_back(calgn);
 		
@@ -675,7 +675,7 @@ int main(int argc, char * argv[])
 {
 	try
 	{
-		libmaus::util::ArgInfo const arginfo(argc,argv);
+		libmaus2::util::ArgInfo const arginfo(argc,argv);
 
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
 			if ( 
@@ -684,7 +684,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--version"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
 			else if ( 
@@ -693,22 +693,22 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--help"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
 				
 				std::vector< std::pair<std::string,std::string> > V;
 			
-				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "disablevalidation=<["+::biobambam::Licensing::formatNumber(getDefaultDisableValidation())+"]>", "disable input validation (default is 0)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( std::string("inputformat=<[")+getDefaultInputFormat()+"]>", std::string("input format (") + libmaus::bambam::BamMultiAlignmentDecoderFactory::getValidInputFormats() + ")" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "disablevalidation=<["+::biobambam2::Licensing::formatNumber(getDefaultDisableValidation())+"]>", "disable input validation (default is 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("inputformat=<[")+getDefaultInputFormat()+"]>", std::string("input format (") + libmaus2::bambam::BamMultiAlignmentDecoderFactory::getValidInputFormats() + ")" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "I=<[stdin]>", "input filename (standard input if unset)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "inputthreads=<[1]>", "input helper threads (for inputformat=bam only, default: 1)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "reference=<>", "reference FastA (.fai file required, for cram i/o only)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "linktype=<>", "method used for selecting mapped fragments (chain or cluster)" ) );
 
-				::biobambam::Licensing::printMap(std::cerr,V);
+				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;

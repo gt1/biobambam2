@@ -17,25 +17,25 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#include <biobambam/BamBamConfig.hpp>
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/BamBamConfig.hpp>
+#include <biobambam2/Licensing.hpp>
 
 #include <iomanip>
 
 #include <config.h>
 
-#include <libmaus/bambam/CircularHashCollatingBamDecoder.hpp>
-#include <libmaus/bambam/BamToFastqOutputFileSet.hpp>
-#include <libmaus/util/TempFileRemovalContainer.hpp>
-#include <libmaus/util/Histogram.hpp>
-#include <libmaus/bambam/CollatingBamDecoderAlignmentInputCallback.hpp>
+#include <libmaus2/bambam/CircularHashCollatingBamDecoder.hpp>
+#include <libmaus2/bambam/BamToFastqOutputFileSet.hpp>
+#include <libmaus2/util/TempFileRemovalContainer.hpp>
+#include <libmaus2/util/Histogram.hpp>
+#include <libmaus2/bambam/CollatingBamDecoderAlignmentInputCallback.hpp>
 
-struct DepthHist : public libmaus::bambam::CollatingBamDecoderAlignmentInputCallback
+struct DepthHist : public libmaus2::bambam::CollatingBamDecoderAlignmentInputCallback
 {
 	std::pair<int64_t,int64_t> prev;
 	std::vector < uint32_t > D;
-	libmaus::bambam::BamHeader const * bamheader;
-	libmaus::util::Histogram hist;
+	libmaus2::bambam::BamHeader const * bamheader;
+	libmaus2::util::Histogram hist;
 	
 	DepthHist()
 	: prev(-1,-1), D(), bamheader(0)
@@ -56,7 +56,7 @@ struct DepthHist : public libmaus::bambam::CollatingBamDecoderAlignmentInputCall
 			handleD();
 	}
 
-	void operator()(::libmaus::bambam::BamAlignment const & A)
+	void operator()(::libmaus2::bambam::BamAlignment const & A)
 	{
 		// consider only mapped pairs
 		if (  (!A.isUnmap()) && (!A.isMateUnmap()) )
@@ -70,7 +70,7 @@ struct DepthHist : public libmaus::bambam::CollatingBamDecoderAlignmentInputCall
 			// check for order
 			if ( next < prev )
 			{
-				libmaus::exception::LibMausException se;
+				libmaus2::exception::LibMausException se;
 				se.getStream() << "File is not sorted: "
 					<< " prev=(" << prev.first << "," << prev.second << ")"
 					<< " next=(" << chr << "," << pos << ")"
@@ -104,44 +104,44 @@ struct DepthHist : public libmaus::bambam::CollatingBamDecoderAlignmentInputCall
 struct BamDistHistInputFileStream
 {
 	std::string const fn;
-	libmaus::aio::CheckedInputStream::unique_ptr_type CIS;
+	libmaus2::aio::CheckedInputStream::unique_ptr_type CIS;
 	std::istream & in;
 	
-	static libmaus::aio::CheckedInputStream::unique_ptr_type openFile(std::string const & fn)
+	static libmaus2::aio::CheckedInputStream::unique_ptr_type openFile(std::string const & fn)
 	{
-		libmaus::aio::CheckedInputStream::unique_ptr_type ptr(new libmaus::aio::CheckedInputStream(fn));
+		libmaus2::aio::CheckedInputStream::unique_ptr_type ptr(new libmaus2::aio::CheckedInputStream(fn));
 		return UNIQUE_PTR_MOVE(ptr);
 	}
 	
-	BamDistHistInputFileStream(libmaus::util::ArgInfo const & arginfo)
+	BamDistHistInputFileStream(libmaus2::util::ArgInfo const & arginfo)
 	: fn(arginfo.getValue<std::string>("filename","-")),
 	  CIS(
-		(fn != "-") ? (openFile(fn)) : (libmaus::aio::CheckedInputStream::unique_ptr_type())
+		(fn != "-") ? (openFile(fn)) : (libmaus2::aio::CheckedInputStream::unique_ptr_type())
 	), in((fn != "-") ? (*CIS) : std::cin) {}
 
 	BamDistHistInputFileStream(std::string const & rfn)
 	: fn(rfn), CIS(
-		(fn != "-") ? (openFile(fn)) : (libmaus::aio::CheckedInputStream::unique_ptr_type())
+		(fn != "-") ? (openFile(fn)) : (libmaus2::aio::CheckedInputStream::unique_ptr_type())
 	), in((fn != "-") ? (*CIS) : std::cin) {}
 };
 
 void bamdisthist(
-	libmaus::util::ArgInfo const & arginfo,
-	libmaus::bambam::CircularHashCollatingBamDecoder & CHCBD
+	libmaus2::util::ArgInfo const & arginfo,
+	libmaus2::bambam::CircularHashCollatingBamDecoder & CHCBD
 )
 {
-	libmaus::bambam::BamToFastqOutputFileSet OFS(arginfo);
+	libmaus2::bambam::BamToFastqOutputFileSet OFS(arginfo);
 
-	libmaus::bambam::CircularHashCollatingBamDecoder::OutputBufferEntry const * ob = 0;
+	libmaus2::bambam::CircularHashCollatingBamDecoder::OutputBufferEntry const * ob = 0;
 	
 	// number of alignments written to files
 	uint64_t cnt = 0;
 	unsigned int const verbshift = 20;
-	libmaus::timing::RealTimeClock rtc; rtc.start();
-	::libmaus::autoarray::AutoArray<uint8_t> T;
-	libmaus::util::Histogram hist;
-	libmaus::util::Histogram tlenhist;
-	libmaus::util::Histogram tlenproperhist;
+	libmaus2::timing::RealTimeClock rtc; rtc.start();
+	::libmaus2::autoarray::AutoArray<uint8_t> T;
+	libmaus2::util::Histogram hist;
+	libmaus2::util::Histogram tlenhist;
+	libmaus2::util::Histogram tlenproperhist;
 	
 	while ( (ob = CHCBD.process()) )
 	{
@@ -149,21 +149,21 @@ void bamdisthist(
 		
 		if ( 
 			ob->fpair &&
-			(!libmaus::bambam::BamAlignmentDecoderBase::isUnmap(libmaus::bambam::BamAlignmentDecoderBase::getFlags(ob->Da))) &&
-			(!libmaus::bambam::BamAlignmentDecoderBase::isUnmap(libmaus::bambam::BamAlignmentDecoderBase::getFlags(ob->Db)))
+			(!libmaus2::bambam::BamAlignmentDecoderBase::isUnmap(libmaus2::bambam::BamAlignmentDecoderBase::getFlags(ob->Da))) &&
+			(!libmaus2::bambam::BamAlignmentDecoderBase::isUnmap(libmaus2::bambam::BamAlignmentDecoderBase::getFlags(ob->Db)))
 		)
 		{
-			uint64_t const ranka = libmaus::bambam::BamAlignmentDecoderBase::getAuxRank(ob->Da, ob->blocksizea);
-			uint64_t const rankb = libmaus::bambam::BamAlignmentDecoderBase::getAuxRank(ob->Db, ob->blocksizeb);
+			uint64_t const ranka = libmaus2::bambam::BamAlignmentDecoderBase::getAuxRank(ob->Da, ob->blocksizea);
+			uint64_t const rankb = libmaus2::bambam::BamAlignmentDecoderBase::getAuxRank(ob->Db, ob->blocksizeb);
 			
 			if ( ranka > rankb )
 				hist(ranka-rankb);
 			else
 				hist(rankb-ranka);
 				
-			int32_t const tlen = std::abs(libmaus::bambam::BamAlignmentDecoderBase::getTlen(ob->Da));
+			int32_t const tlen = std::abs(libmaus2::bambam::BamAlignmentDecoderBase::getTlen(ob->Da));
 			
-			if ( libmaus::bambam::BamAlignmentDecoderBase::isProper(libmaus::bambam::BamAlignmentDecoderBase::getFlags(ob->Da)))
+			if ( libmaus2::bambam::BamAlignmentDecoderBase::isProper(libmaus2::bambam::BamAlignmentDecoderBase::getFlags(ob->Da)))
 				tlenproperhist(tlen);
 			tlenhist(tlen);
 
@@ -183,21 +183,21 @@ void bamdisthist(
 		<< "\t" << static_cast<double>(cnt)/rtc.getElapsedSeconds() 
 		<< std::endl;	
 	
-	libmaus::aio::CheckedOutputStream disthiststr("disthist.gpl");
+	libmaus2::aio::CheckedOutputStream disthiststr("disthist.gpl");
 	hist.print(disthiststr);
 	disthiststr.flush();
 	disthiststr.close();
 	
 	std::cerr << "[D] median of dist hist " << hist.median() << std::endl;
 
-	libmaus::aio::CheckedOutputStream tlenhiststr("tlenhist.gpl");
+	libmaus2::aio::CheckedOutputStream tlenhiststr("tlenhist.gpl");
 	tlenhist.print(tlenhiststr);
 	tlenhiststr.flush();
 	tlenhiststr.close();
 
 	std::cerr << "[D] median of tlen hist " << tlenhist.median() << std::endl;
 
-	libmaus::aio::CheckedOutputStream tlenhistproperstr("tlenhistproper.gpl");
+	libmaus2::aio::CheckedOutputStream tlenhistproperstr("tlenhistproper.gpl");
 	tlenproperhist.print(tlenhistproperstr);
 	tlenhistproperstr.flush();
 	tlenhistproperstr.close();
@@ -205,12 +205,12 @@ void bamdisthist(
 	std::cerr << "[D] median of tlen hist proper " << tlenproperhist.median() << std::endl;
 }
 
-void bamdisthist(libmaus::util::ArgInfo const & arginfo)
+void bamdisthist(libmaus2::util::ArgInfo const & arginfo)
 {
-	uint32_t const excludeflags = libmaus::bambam::BamFlagBase::stringToFlags(arginfo.getValue<std::string>("exclude","SECONDARY,SUPPLEMENTARY"));
-	libmaus::util::TempFileRemovalContainer::setup();
+	uint32_t const excludeflags = libmaus2::bambam::BamFlagBase::stringToFlags(arginfo.getValue<std::string>("exclude","SECONDARY,SUPPLEMENTARY"));
+	libmaus2::util::TempFileRemovalContainer::setup();
 	std::string const tmpfilename = arginfo.getValue<std::string>("T",arginfo.getDefaultTmpFileName());
-	libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilename);
+	libmaus2::util::TempFileRemovalContainer::addTempFile(tmpfilename);
 	std::string const inputformat = arginfo.getValue<std::string>("inputformat","bam");
 	std::string const inputfilename = arginfo.getValue<std::string>("filename","-");
 	DepthHist dh;
@@ -218,7 +218,7 @@ void bamdisthist(libmaus::util::ArgInfo const & arginfo)
 	if ( inputformat == "bam" )
 	{
 		BamDistHistInputFileStream bamin(inputfilename);
-		libmaus::bambam::BamCircularHashCollatingBamDecoder CHCBD(bamin.in,
+		libmaus2::bambam::BamCircularHashCollatingBamDecoder CHCBD(bamin.in,
 			tmpfilename,excludeflags,
 			true /* put rank */
 		);
@@ -227,10 +227,10 @@ void bamdisthist(libmaus::util::ArgInfo const & arginfo)
 		bamdisthist(arginfo,CHCBD);
 		dh.flush();
 	}
-	#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
+	#if defined(BIOBAMBAM_LIBMAUS2_HAVE_IO_LIB)
 	else if ( inputformat == "sam" )
 	{
-		libmaus::bambam::ScramCircularHashCollatingBamDecoder CHCBD(inputfilename,"r","",
+		libmaus2::bambam::ScramCircularHashCollatingBamDecoder CHCBD(inputfilename,"r","",
 			tmpfilename,excludeflags,
 			true /* put rank */
 		);
@@ -242,7 +242,7 @@ void bamdisthist(libmaus::util::ArgInfo const & arginfo)
 	else if ( inputformat == "cram" )
 	{
 		std::string const reference = arginfo.getValue<std::string>("reference","");
-		libmaus::bambam::ScramCircularHashCollatingBamDecoder CHCBD(inputfilename,"rc",reference,
+		libmaus2::bambam::ScramCircularHashCollatingBamDecoder CHCBD(inputfilename,"rc",reference,
 			tmpfilename,excludeflags,
 			true /* put rank */
 		);
@@ -254,7 +254,7 @@ void bamdisthist(libmaus::util::ArgInfo const & arginfo)
 	#endif
 	else
 	{
-		libmaus::exception::LibMausException se;
+		libmaus2::exception::LibMausException se;
 		se.getStream() << "unknown input format " << inputformat << std::endl;
 		se.finish();
 		throw se;
@@ -268,7 +268,7 @@ int main(int argc, char * argv[])
 {
 	try
 	{
-		::libmaus::util::ArgInfo const arginfo(argc,argv);
+		::libmaus2::util::ArgInfo const arginfo(argc,argv);
 		
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
 			if ( 
@@ -277,7 +277,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--version"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
 			else if ( 
@@ -286,14 +286,14 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--help"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license() << std::endl;
+				std::cerr << ::biobambam2::Licensing::license() << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
 				
 				std::vector< std::pair<std::string,std::string> > V;
 				
 				V.push_back ( std::pair<std::string,std::string> ( "filename=<[stdin]>", "input filename (default: read file from standard input)" ) );
-				#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
+				#if defined(BIOBAMBAM_LIBMAUS2_HAVE_IO_LIB)
 				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<[bam]>", "input format, cram, bam or sam" ) );
 				#else
 				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<[bam]>", "input format, bam" ) );
@@ -301,7 +301,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "exclude=<[SECONDARY,SUPPLEMENTARY]>", "exclude alignments matching any of the given flags" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("T=<[") + arginfo.getDefaultTmpFileName() + "]>" , "temporary file name" ) );
 				
-				::biobambam::Licensing::printMap(std::cerr,V);
+				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 				std::cerr << "Alignment flags: PAIRED,PROPER_PAIR,UNMAP,MUNMAP,REVERSE,MREVERSE,READ1,READ2,SECONDARY,QCFAIL,DUP,SUPPLEMENTARY" << std::endl;

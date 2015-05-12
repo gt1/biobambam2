@@ -21,21 +21,21 @@
 #include <iostream>
 #include <queue>
 
-#include <libmaus/bambam/BamAlignment.hpp>
-#include <libmaus/bambam/BamDecoder.hpp>
-#include <libmaus/bambam/BamWriter.hpp>
-#include <libmaus/bambam/ProgramHeaderLineSet.hpp>
+#include <libmaus2/bambam/BamAlignment.hpp>
+#include <libmaus2/bambam/BamDecoder.hpp>
+#include <libmaus2/bambam/BamWriter.hpp>
+#include <libmaus2/bambam/ProgramHeaderLineSet.hpp>
 
-#include <libmaus/util/ArgInfo.hpp>
+#include <libmaus2/util/ArgInfo.hpp>
 
-#include <biobambam/Licensing.hpp>
-#include <biobambam/KmerPoisson.hpp>
+#include <biobambam2/Licensing.hpp>
+#include <biobambam2/KmerPoisson.hpp>
 
 int main(int argc, char * argv[])
 {
 	try
 	{
-		::libmaus::util::ArgInfo const arginfo(argc,argv);
+		::libmaus2::util::ArgInfo const arginfo(argc,argv);
 		
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
 			if ( 
@@ -44,7 +44,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--version"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
 			else if ( 
@@ -53,7 +53,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--help"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
@@ -71,7 +71,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "pG", "relative frequency of G base in reference" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "pT", "relative frequency of T base in reference" ) );
 				
-				::biobambam::Licensing::printMap(std::cerr,V);
+				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 								
@@ -80,42 +80,42 @@ int main(int argc, char * argv[])
 			
 		if ( !arginfo.hasArg("L") )
 		{
-			libmaus::exception::LibMausException se;
+			libmaus2::exception::LibMausException se;
 			se.getStream() << "Need length of reference sequence (set key L)" << std::endl;
 			se.finish();
 			throw se;
 		}
 		if ( !arginfo.hasArg("KA") )
 		{
-			libmaus::exception::LibMausException se;
+			libmaus2::exception::LibMausException se;
 			se.getStream() << "Need number of A bases in query (set key KA)" << std::endl;
 			se.finish();
 			throw se;
 		}
 		if ( !arginfo.hasArg("KC") )
 		{
-			libmaus::exception::LibMausException se;
+			libmaus2::exception::LibMausException se;
 			se.getStream() << "Need number of C bases in query (set key KC)" << std::endl;
 			se.finish();
 			throw se;
 		}
 		if ( !arginfo.hasArg("KG") )
 		{
-			libmaus::exception::LibMausException se;
+			libmaus2::exception::LibMausException se;
 			se.getStream() << "Need number of G bases in query (set key KG)" << std::endl;
 			se.finish();
 			throw se;
 		}
 		if ( !arginfo.hasArg("KT") )
 		{
-			libmaus::exception::LibMausException se;
+			libmaus2::exception::LibMausException se;
 			se.getStream() << "Need number of T bases in query (set key KT)" << std::endl;
 			se.finish();
 			throw se;
 		}
 		if ( !arginfo.hasArg("n") )
 		{
-			libmaus::exception::LibMausException se;
+			libmaus2::exception::LibMausException se;
 			se.getStream() << "Need number of occurences (set key n)" << std::endl;
 			se.finish();
 			throw se;
@@ -137,7 +137,7 @@ int main(int argc, char * argv[])
 		
 		if ( p < 1.0 - eps || p > 1.0 + eps )
 		{
-			libmaus::exception::LibMausException se;
+			libmaus2::exception::LibMausException se;
 			se.getStream() << "pA + pC + pG + pT = " << p << " which is not within eps=" << eps << " of 1" << std::endl;
 			se.finish();
 			throw se;			

@@ -1,12 +1,12 @@
-#include <biobambam/ClipAdapters.hpp>
+#include <biobambam2/ClipAdapters.hpp>
 
 bool clipAdapters(
-	libmaus::bambam::BamAlignment & algn,
-	libmaus::autoarray::AutoArray<char> & R,
-	libmaus::autoarray::AutoArray<char> & Q,
-	libmaus::bambam::BamSeqEncodeTable const & seqenc,
-	libmaus::autoarray::AutoArray<libmaus::bambam::cigar_operation> & cigop,
-	libmaus::bambam::BamAlignment::D_array_type & T
+	libmaus2::bambam::BamAlignment & algn,
+	libmaus2::autoarray::AutoArray<char> & R,
+	libmaus2::autoarray::AutoArray<char> & Q,
+	libmaus2::bambam::BamSeqEncodeTable const & seqenc,
+	libmaus2::autoarray::AutoArray<libmaus2::bambam::cigar_operation> & cigop,
+	libmaus2::bambam::BamAlignment::D_array_type & T
 )
 {
 	// a3,as
@@ -31,7 +31,7 @@ bool clipAdapters(
 					if ( numcigop == cigop.size() )
 						cigop.resize(numcigop+1);
 
-					cigop[numcigop] = libmaus::bambam::cigar_operation(5,aclip);
+					cigop[numcigop] = libmaus2::bambam::cigar_operation(5,aclip);
 					algn.replaceCigarString(cigop.begin(),numcigop+1,T);
 				}
 
@@ -53,7 +53,7 @@ bool clipAdapters(
 					    cigop[i] = cigop[i - 1];
 					}
 
-					cigop[0] = libmaus::bambam::cigar_operation(5,aclip);
+					cigop[0] = libmaus2::bambam::cigar_operation(5,aclip);
 					algn.replaceCigarString(cigop.begin(),numcigop+1,T);
 				}
 

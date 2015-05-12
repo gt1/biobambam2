@@ -16,10 +16,10 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
-#if ! defined(BIOBAMBAM_ATTACHRANK_HPP)
-#define BIOBAMBAM_ATTACHRANK_HPP
+#if ! defined(BIOBAMBAM_STRIP12_HPP)
+#define BIOBAMBAM_STRIP12_HPP
 
-#include <libmaus/bambam/BamAlignment.hpp>
+#include <libmaus2/bambam/BamAlignment.hpp>
 
-bool attachRank(libmaus::bambam::BamAlignment & algn, uint64_t const c, libmaus::bambam::BamAuxFilterVector const & zzbafv);
+bool strip12(libmaus2::bambam::BamAlignment & algn);
 #endif

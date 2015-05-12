@@ -27,10 +27,10 @@
 #include <xercesc/util/TransService.hpp>
 #include <xercesc/util/XMLUniDefs.hpp>
 
-#include <libmaus/fastx/acgtnMap.hpp>
-#include <libmaus/bambam/BamWriter.hpp>
-#include <libmaus/bambam/CramRange.hpp>
-#include <libmaus/util/ArgInfo.hpp>
+#include <libmaus2/fastx/acgtnMap.hpp>
+#include <libmaus2/bambam/BamWriter.hpp>
+#include <libmaus2/bambam/CramRange.hpp>
+#include <libmaus2/util/ArgInfo.hpp>
 
 #include <iostream>
 #include <map>
@@ -40,7 +40,7 @@
 struct XercesUtf8Transcoder
 {
 	typedef XercesUtf8Transcoder this_type;
-	typedef libmaus::util::unique_ptr<this_type>::type unique_ptr_type;
+	typedef libmaus2::util::unique_ptr<this_type>::type unique_ptr_type;
 
 	xercesc::XMLTransService * ts;
 	xercesc::XMLTranscoder * utf8transcoder;
@@ -56,7 +56,7 @@ struct XercesUtf8Transcoder
 		utf8transcoder = ts->makeNewTranscoderFor("UTF-8",transretcode,8192u,xercesc::XMLPlatformUtils::fgMemoryManager);
 		if ( transretcode != xercesc::XMLTransService::Ok )
 		{
-			libmaus::exception::LibMausException lme;
+			libmaus2::exception::LibMausException lme;
 			lme.getStream() << "Failed to instantiate xerces transcoder for code " << ucharset << std::endl;
 			lme.finish();
 			throw lme;
@@ -183,11 +183,11 @@ class StdISOInputSource : public xercesc::InputSource
 	}
 };
 
-#include <libmaus/util/ToUpperTable.hpp>
+#include <libmaus2/util/ToUpperTable.hpp>
 
 struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::ErrorHandler
 {
-	libmaus::util::ToUpperTable const toup;
+	libmaus2::util::ToUpperTable const toup;
 	
 	std::map<std::string,std::string> const & ref;
 	std::map<std::string,std::string> const & queries;
@@ -270,7 +270,7 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 
 	std::map<std::string,uint64_t> refnametoid;
 	std::map<std::string,uint64_t> queriesnametoid;
-	libmaus::bambam::BamWriter & bamwriter;
+	libmaus2::bambam::BamWriter & bamwriter;
 	
 	double hitFirstScore;
 	double hitFrac;
@@ -282,7 +282,7 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
         <Hsp_align-len>21778</Hsp_align-len>
 	#endif            
 	
-	std::vector<libmaus::bambam::CramRange> const * ranges;
+	std::vector<libmaus2::bambam::CramRange> const * ranges;
 	
 	bool inRange(std::string const & refname, int64_t const hitstart, int64_t const hitend)
 	{
@@ -291,7 +291,7 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 		
 		for ( uint64_t i = 0; i < ranges->size(); ++i )
 			if ( 
-				!(((*ranges)[i]).intersect(libmaus::bambam::CramRange(refname,hitstart,hitend)).empty())
+				!(((*ranges)[i]).intersect(libmaus2::bambam::CramRange(refname,hitstart,hitend)).empty())
 			)
 				return true;
 		
@@ -305,9 +305,9 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 		std::map<std::string,std::string> const & rqueries,
 		std::map<std::string,uint64_t> rrefnametoid,
 		std::map<std::string,uint64_t> rqueriesnametoid,
-		libmaus::bambam::BamWriter & rbamwriter,
+		libmaus2::bambam::BamWriter & rbamwriter,
 		double const rhitFrac,
-		std::vector<libmaus::bambam::CramRange> const * rranges
+		std::vector<libmaus2::bambam::CramRange> const * rranges
 	) : ref(rref), queries(rqueries), utf8transcoder(), readNameGatheringActive(false), readName(), readNameObtained(false), 
 		hitDefObtained(false), hitDefGatheringActive(false), hitDef(),
 		hitLenObtained(false), hitLenGatheringActive(false), hitLen(),	
@@ -606,7 +606,7 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 		
 		if ( ! istr )
 		{
-			libmaus::exception::LibMausException lme;
+			libmaus2::exception::LibMausException lme;
 			lme.getStream() << "Failed to parse " << s << " as number." << std::endl;
 			lme.finish();
 			throw lme;
@@ -826,7 +826,7 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 
 					std::string bamquery = qita->second;
 					if ( rc )
-						bamquery = libmaus::fastx::reverseComplementUnmapped(bamquery);
+						bamquery = libmaus2::fastx::reverseComplementUnmapped(bamquery);
 					
 					std::vector < std::pair<char,uint64_t> > opruns;
 					
@@ -855,9 +855,9 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 						refnametoid.find(hita->first)->second,
 						hitStart,
 						0, // mapq
-						(rc ? libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FREVERSE : 0)
+						(rc ? libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FREVERSE : 0)
 						|
-						(hspId == 0 ? 0 : libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FSECONDARY)
+						(hspId == 0 ? 0 : libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FSECONDARY)
 						, // flags
 						cigarostr.str(),
 						-1,
@@ -1051,7 +1051,7 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 	virtual void error(const xercesc::SAXParseException& toCatch)
 	{
 		std::string const msg = utf8transcoder.transcodeStringToUtf8(toCatch.getMessage());
-		libmaus::exception::LibMausException lme;
+		libmaus2::exception::LibMausException lme;
 		lme.getStream() << "[E] XML parsing error: " << msg << std::endl;
 		lme.finish();
 		throw lme;
@@ -1060,7 +1060,7 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 	virtual void fatalError(const xercesc::SAXParseException& toCatch)
 	{
 		std::string const msg = utf8transcoder.transcodeStringToUtf8(toCatch.getMessage());
-		libmaus::exception::LibMausException lme;
+		libmaus2::exception::LibMausException lme;
 		lme.getStream() << "[E] XML parsing error: " << msg << std::endl;
 		lme.finish();
 		throw lme;	
@@ -1074,12 +1074,12 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 
 #include <xercesc/parsers/SAXParser.hpp>
 
-#include <libmaus/fastx/FastAReader.hpp>
+#include <libmaus2/fastx/FastAReader.hpp>
 
 void loadFastAFile(std::string const & filename, std::map<std::string,std::string> & M, std::vector< std::pair<std::string,uint64_t> > & meta, std::map<std::string,uint64_t> & nametoid)
 {
-	libmaus::fastx::FastAReader fain(filename);
-	libmaus::fastx::FastAReader::pattern_type pattern;
+	libmaus2::fastx::FastAReader fain(filename);
+	libmaus2::fastx::FastAReader::pattern_type pattern;
 	
 	while ( fain.getNextPatternUnlocked(pattern) )
 	{
@@ -1124,23 +1124,23 @@ int main(int argc, char * argv[])
 	if ( ret == EXIT_SUCCESS )
 		try
 		{
-			libmaus::util::ArgInfo const arginfo(argc,argv);
+			libmaus2::util::ArgInfo const arginfo(argc,argv);
 			double const hitfrac = arginfo.getValue<double>("hitfrac",0.8);
 			std::string const reffn = arginfo.restargs.at(0);
 			std::string const queriesfn = arginfo.restargs.at(1);
 			
-			libmaus::util::unique_ptr< std::vector<libmaus::bambam::CramRange> >::type Pranges;
-			std::vector<libmaus::bambam::CramRange> * ranges = 0;
+			libmaus2::util::unique_ptr< std::vector<libmaus2::bambam::CramRange> >::type Pranges;
+			std::vector<libmaus2::bambam::CramRange> * ranges = 0;
 			
 			if ( arginfo.hasArg("range") )
 			{
-				libmaus::util::unique_ptr< std::vector<libmaus::bambam::CramRange> >::type Tranges(
-					new std::vector<libmaus::bambam::CramRange>
+				libmaus2::util::unique_ptr< std::vector<libmaus2::bambam::CramRange> >::type Tranges(
+					new std::vector<libmaus2::bambam::CramRange>
 				);
 				Pranges = UNIQUE_PTR_MOVE(Tranges);
 				
 				Pranges->push_back(
-					libmaus::bambam::CramRange(
+					libmaus2::bambam::CramRange(
 						arginfo.getUnparsedValue("range",std::string())
 					)
 				);
@@ -1170,10 +1170,10 @@ int main(int argc, char * argv[])
 				<< "VN:" << std::string(PACKAGE_VERSION)
 				<< std::endl;
 
-			::libmaus::bambam::BamHeader bamheader(headerostr.str());
+			::libmaus2::bambam::BamHeader bamheader(headerostr.str());
 
 			std::cerr << bamheader.text;
-			libmaus::bambam::BamWriter writer(std::cout,bamheader);
+			libmaus2::bambam::BamWriter writer(std::cout,bamheader);
 
 			XercesUtf8Transcoder transc;
 			StdISOInputSource in(std::cin);

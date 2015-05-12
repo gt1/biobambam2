@@ -16,17 +16,23 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
-#include <biobambam/zzToName.hpp>
+#if ! defined(LICENSEMESSAGE_HPP)
+#define LICENSEMESSAGE_HPP
 
-bool zzToRank(libmaus::bambam::BamAlignment & algn, libmaus::bambam::BamAuxFilterVector const & zzbafv)
+#include <string>
+#include <vector>
+#include <map>
+#include <ostream>
+
+namespace biobambam2
 {
-	uint64_t const rank = algn.getRank("zz");
-	algn.filterOutAux(zzbafv);
-	
-	std::string const newname = 
-		libmaus::util::NumberSerialisation::formatNumber(rank,0) + "_" + algn.getName();
-		
-	algn.replaceName(newname.begin(),newname.size());
-
-	return true;
+	struct Licensing
+	{
+		static std::string license();
+		static std::string printLeft(std::string const & s, uint64_t const w, char const fill = ' ');
+		static std::ostream & printMap(std::ostream & out, std::vector< std::pair<std::string,std::string> > const & M);
+		static std::string formatNumber(int64_t const n);
+		static std::string formatFloatingPoint(double const n);
+	};
 }
+#endif

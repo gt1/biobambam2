@@ -21,13 +21,13 @@
 #include <iostream>
 #include <queue>
 
-#include <libmaus/util/ArgInfo.hpp>
-#include <libmaus/bambam/BamDecoder.hpp>
-#include <libmaus/bambam/BamMultiAlignmentDecoderFactory.hpp>
+#include <libmaus2/util/ArgInfo.hpp>
+#include <libmaus2/bambam/BamDecoder.hpp>
+#include <libmaus2/bambam/BamMultiAlignmentDecoderFactory.hpp>
 
 #include <liftingwavelettransform/LiftingWaveletTransform.hpp>
 
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/Licensing.hpp>
 
 static int getDefaultVerbose() { return 0; }
 
@@ -423,8 +423,8 @@ void generateGPL(std::deque<float> const & Q, std::vector< PeakInfo > const & pe
 	std::ostringstream depthpeakstr;
 	depthpeakstr << "plot_" << seqname << "_peaks.gpl";
 	
-	libmaus::aio::CheckedOutputStream depthostr(depthstr.str());
-	libmaus::aio::CheckedOutputStream depthpeakostr(depthpeakstr.str());
+	libmaus2::aio::CheckedOutputStream depthostr(depthstr.str());
+	libmaus2::aio::CheckedOutputStream depthpeakostr(depthpeakstr.str());
 	
 	for ( uint64_t i = 0; i < peaks.size(); ++i )
 	{
@@ -499,27 +499,27 @@ void ztrim(container_type & Q, uint64_t const keep)
 	}
 }
 
-int bamrefdepth(libmaus::util::ArgInfo const & arginfo)
+int bamrefdepth(libmaus2::util::ArgInfo const & arginfo)
 {
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
 
-	libmaus::bambam::BamAlignmentDecoderWrapper::unique_ptr_type pdec(
-	libmaus::bambam::BamMultiAlignmentDecoderFactory::construct(arginfo));
-	libmaus::bambam::BamAlignmentDecoder & bamdec = pdec->getDecoder();
-	libmaus::bambam::BamAlignment & algn = bamdec.getAlignment();
-	libmaus::bambam::BamHeader const & header = bamdec.getHeader();
-	std::string const sortorder = libmaus::bambam::BamHeader::getSortOrderStatic(header.text);
+	libmaus2::bambam::BamAlignmentDecoderWrapper::unique_ptr_type pdec(
+	libmaus2::bambam::BamMultiAlignmentDecoderFactory::construct(arginfo));
+	libmaus2::bambam::BamAlignmentDecoder & bamdec = pdec->getDecoder();
+	libmaus2::bambam::BamAlignment & algn = bamdec.getAlignment();
+	libmaus2::bambam::BamHeader const & header = bamdec.getHeader();
+	std::string const sortorder = libmaus2::bambam::BamHeader::getSortOrderStatic(header.text);
 	float const peakthres = arginfo.getValue<float>("peakthres",1.0f);
 	uint64_t const minpeakwidth = arginfo.getValueUnsignedNumeric<uint64_t>("minpeakwidth",1);
 	uint64_t const maxpeakwidth = arginfo.getValueUnsignedNumeric<uint64_t>("maxpeakwidth",1024);
 	
-	libmaus::bambam::BamAlignment prevalgn;
+	libmaus2::bambam::BamAlignment prevalgn;
 	bool hasprev = false;
 	uint64_t c = 0;
 	
 	std::deque<float> Q;
-	libmaus::autoarray::AutoArray<libmaus::bambam::cigar_operation> cigop;
-	libmaus::autoarray::AutoArray<char> decread;
+	libmaus2::autoarray::AutoArray<libmaus2::bambam::cigar_operation> cigop;
+	libmaus2::autoarray::AutoArray<char> decread;
 	int64_t previd = -1;
 	
 	std::vector < std::string > refnames;
@@ -549,7 +549,7 @@ int bamrefdepth(libmaus::util::ArgInfo const & arginfo)
 			
 		if ( ! ok )
 		{
-			libmaus::exception::LibMausException se;
+			libmaus2::exception::LibMausException se;
 			se.getStream() << "File is not ordered by coordinate:";
 			se.getStream() << prevalgn.formatAlignment(header) << std::endl;
 			se.getStream() <<     algn.formatAlignment(header) << std::endl;
@@ -600,21 +600,21 @@ int bamrefdepth(libmaus::util::ArgInfo const & arginfo)
 				switch ( cigop[cidx].first )
 				{
 					// padding, ref skip, hard clip, deletion
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CPAD:
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CREF_SKIP:
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CHARD_CLIP:
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CDEL:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CPAD:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CREF_SKIP:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CHARD_CLIP:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CDEL:
 						cidx += 1;
 						break;
 					// insertion/soft clipping, advance on read
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CSOFT_CLIP:
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CINS:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CSOFT_CLIP:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CINS:
 						readpos += cigop[cidx++].second;
 						break;
 					// match/mismatch
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CMATCH:
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CEQUAL:
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CDIFF:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CMATCH:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CEQUAL:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CDIFF:
 						frontskip = false;
 						break;
 				}
@@ -623,23 +623,23 @@ int bamrefdepth(libmaus::util::ArgInfo const & arginfo)
 				switch ( cigop[cidx].first )
 				{
 					// padding, hard clipping (ignore)
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CPAD:
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CHARD_CLIP:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CPAD:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CHARD_CLIP:
 						break;
 					// ref skip, deletion (advance on reference)
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CREF_SKIP:
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CDEL:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CREF_SKIP:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CDEL:
 						pos += cigop[cidx].second;
 						break;
 					// insertion/soft clipping (advance on read)
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CSOFT_CLIP:
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CINS:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CSOFT_CLIP:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CINS:
 						readpos += cigop[cidx].second;
 						break;
 					// match/mismatch
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CMATCH:
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CEQUAL:
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CDIFF:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CMATCH:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CEQUAL:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CDIFF:
 						for ( uint64_t i = 0; i < static_cast<uint64_t>(cigop[cidx].second); ++i, ++pos, ++readpos )
 						{
 							while ( pos >= static_cast<int64_t>(Q.size()) )
@@ -734,7 +734,7 @@ int main(int argc, char * argv[])
 
 	try
 	{
-		::libmaus::util::ArgInfo const arginfo(argc,argv);
+		::libmaus2::util::ArgInfo const arginfo(argc,argv);
 		
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
 			if ( 
@@ -743,7 +743,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--version"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
 			else if ( 
@@ -752,16 +752,16 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--help"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
 				
 				std::vector< std::pair<std::string,std::string> > V;
 			
-				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
 
-				::biobambam::Licensing::printMap(std::cerr,V);
+				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;

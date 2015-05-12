@@ -1,5 +1,5 @@
 /*
-    libmaus
+    biobambam2
     Copyright (C) 2009-2015 German Tischler
     Copyright (C) 2011-2015 Genome Research Limited
 
@@ -16,11 +16,11 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include <libmaus/bambam/BamMultiAlignmentDecoderFactory.hpp>
-#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
+#include <libmaus2/bambam/BamMultiAlignmentDecoderFactory.hpp>
+#include <libmaus2/bambam/BamBlockWriterBaseFactory.hpp>
 
-#include <biobambam/BamBamConfig.hpp>
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/BamBamConfig.hpp>
+#include <biobambam2/Licensing.hpp>
 
 int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 int getDefaultVerbose() { return 0; }
@@ -28,19 +28,19 @@ std::string getDefaultInputFormat() { return "bam"; }
 uint64_t getDefaultSizeThres() { return 32*1024*1024; }
 std::string getDefaultPrefix() { return "split_"; }
 
-int bamexplode(libmaus::util::ArgInfo const & arginfo)
+int bamexplode(libmaus2::util::ArgInfo const & arginfo)
 {
-	libmaus::bambam::BamAlignmentDecoderWrapper::unique_ptr_type Preader(libmaus::bambam::BamMultiAlignmentDecoderFactory::construct(arginfo));
+	libmaus2::bambam::BamAlignmentDecoderWrapper::unique_ptr_type Preader(libmaus2::bambam::BamMultiAlignmentDecoderFactory::construct(arginfo));
 
-	libmaus::bambam::BamBlockWriterBase::unique_ptr_type Pwriter;
+	libmaus2::bambam::BamBlockWriterBase::unique_ptr_type Pwriter;
 	
-	libmaus::bambam::BamAlignmentDecoder & decoder = Preader->getDecoder();
-	libmaus::bambam::BamHeader const & header = decoder.getHeader();
-	libmaus::bambam::BamAlignment const & algn = decoder.getAlignment();
+	libmaus2::bambam::BamAlignmentDecoder & decoder = Preader->getDecoder();
+	libmaus2::bambam::BamHeader const & header = decoder.getHeader();
+	libmaus2::bambam::BamAlignment const & algn = decoder.getAlignment();
 	uint64_t nextfn = 0;
 	uint64_t written = std::numeric_limits<uint64_t>::max();
 	int32_t prevrefid = std::numeric_limits<int32_t>::max();
-	std::string const outputformat = arginfo.getUnparsedValue("outputformat",libmaus::bambam::BamBlockWriterBaseFactory::getDefaultOutputFormat());
+	std::string const outputformat = arginfo.getUnparsedValue("outputformat",libmaus2::bambam::BamBlockWriterBaseFactory::getDefaultOutputFormat());
 	std::string const prefix = arginfo.getUnparsedValue("prefix",getDefaultPrefix());
 	uint64_t const thres = arginfo.getValueUnsignedNumeric("sizethres",getDefaultSizeThres());
 	
@@ -51,11 +51,11 @@ int bamexplode(libmaus::util::ArgInfo const & arginfo)
 		if ( refid != prevrefid && written > thres )
 		{
 			Pwriter.reset();
-			libmaus::util::ArgInfo argcopy(arginfo);
+			libmaus2::util::ArgInfo argcopy(arginfo);
 			std::ostringstream fnostr;
 			fnostr << prefix << std::setw(6) << std::setfill('0') << nextfn++ << std::setw(0) << "." << outputformat;
 			argcopy.replaceKey("O",fnostr.str());
-			libmaus::bambam::BamBlockWriterBase::unique_ptr_type Twriter(libmaus::bambam::BamBlockWriterBaseFactory::construct(header,argcopy));
+			libmaus2::bambam::BamBlockWriterBase::unique_ptr_type Twriter(libmaus2::bambam::BamBlockWriterBaseFactory::construct(header,argcopy));
 			Pwriter = UNIQUE_PTR_MOVE(Twriter);
 			written = 0;
 		}
@@ -75,7 +75,7 @@ int main(int argc, char * argv[])
 {
 	try
 	{
-		libmaus::util::ArgInfo const arginfo(argc,argv);
+		libmaus2::util::ArgInfo const arginfo(argc,argv);
 
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
 			if ( 
@@ -84,7 +84,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--version"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
 			else if ( 
@@ -93,17 +93,17 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--help"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
 				
 				std::vector< std::pair<std::string,std::string> > V;
 			
-				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
-				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
-				V.push_back ( std::pair<std::string,std::string> ( std::string("inputformat=<[")+getDefaultInputFormat()+"]>", std::string("input format (") + libmaus::bambam::BamMultiAlignmentDecoderFactory::getValidInputFormats() + ")" ) );
-				V.push_back ( std::pair<std::string,std::string> ( std::string("outputformat=<[")+libmaus::bambam::BamBlockWriterBaseFactory::getDefaultOutputFormat()+"]>", std::string("output format (") + libmaus::bambam::BamBlockWriterBaseFactory::getValidOutputFormats() + ")" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
+				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("inputformat=<[")+getDefaultInputFormat()+"]>", std::string("input format (") + libmaus2::bambam::BamMultiAlignmentDecoderFactory::getValidInputFormats() + ")" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("outputformat=<[")+libmaus2::bambam::BamBlockWriterBaseFactory::getDefaultOutputFormat()+"]>", std::string("output format (") + libmaus2::bambam::BamBlockWriterBaseFactory::getValidOutputFormats() + ")" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "I=<[stdin]>", "input filename (standard input if unset)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "inputthreads=<[1]>", "input helper threads (for inputformat=bam only, default: 1)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "reference=<>", "reference FastA (.fai file required, for cram i/o only)" ) );
@@ -111,9 +111,9 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "outputthreads=<[1]>", "output helper threads (for outputformat=bam only, default: 1)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "O=<[stdout]>", "output filename (standard output if unset)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("prefix=<[")+getDefaultPrefix()+"]>", "prefix of output file names" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "thres=<["+::biobambam::Licensing::formatNumber(getDefaultSizeThres())+"]>", "size threshold for the creation of next file" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "thres=<["+::biobambam2::Licensing::formatNumber(getDefaultSizeThres())+"]>", "size threshold for the creation of next file" ) );
 
-				::biobambam::Licensing::printMap(std::cerr,V);
+				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;

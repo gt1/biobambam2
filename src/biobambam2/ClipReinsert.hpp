@@ -16,50 +16,18 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
-#include <biobambam/Strip12.hpp>
+#if ! defined(BIOBAMBAM_CLIPREINSERT_HPP)
+#define BIOBAMBAM_CLIPREINSERT_HPP
 
-bool strip12(libmaus::bambam::BamAlignment & algn)
-{
-	char const * name = algn.getName();
-	
-	char const * u1 = name;
-	
-	while ( *u1 && *u1 != '_' )
-		++u1;
-					
-	if ( ! *u1 )
-		return true;
-	else
-	{
-		bool ok = true;
-		uint64_t ranka = 0;
-			
-		for ( char const * t1 = name; t1 != u1; ++t1 )
-		{	
-			ranka *= 10;
-			ranka += ((*t1)-'0');
-			ok = ok && isdigit(*t1);
-		}
+#include <libmaus2/bambam/BamAlignment.hpp>
 
-		int const read1 = algn.isRead1() ? 1 : 0;
-		int const read2 = algn.isRead2() ? 1 : 0;
-			
-		if ( (read1+read2 != 1) || (!ok) )
-		{
-			return true;
-		}
-		else
-		{
-			std::ostringstream upnamestr;
-
-			upnamestr << (u1+1);
-
-			std::string const upname = upnamestr.str();
-				
-			algn.replaceName(upname.begin(),upname.size());
-			
-			return true;
-		}
-	}
-
-}
+bool clipReinsert(
+	libmaus2::bambam::BamAlignment & algn,
+	libmaus2::autoarray::AutoArray < std::pair<uint8_t,uint8_t> > & auxtags,
+ 	libmaus2::bambam::BamAuxFilterVector & bafv,
+	libmaus2::autoarray::AutoArray<libmaus2::bambam::cigar_operation> & cigop,
+	libmaus2::bambam::BamAlignment::D_array_type & Tcigar,
+	std::stack < libmaus2::bambam::cigar_operation > & hardstack,
+ 	libmaus2::bambam::BamAuxFilterVector const & auxfilterout
+);
+#endif

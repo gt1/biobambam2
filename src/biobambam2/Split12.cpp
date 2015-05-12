@@ -16,9 +16,9 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
-#include <biobambam/Split12.hpp>
+#include <biobambam2/Split12.hpp>
 
-bool split12(libmaus::bambam::BamAlignment & algn)
+bool split12(libmaus2::bambam::BamAlignment & algn)
 {
 	char const * name = algn.getName();
 	

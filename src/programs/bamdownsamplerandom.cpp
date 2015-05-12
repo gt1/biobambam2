@@ -17,81 +17,81 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#include <biobambam/BamBamConfig.hpp>
-#include <biobambam/Licensing.hpp>
-#include <biobambam/AttachRank.hpp>
-#include <biobambam/ResetAlignment.hpp>
+#include <biobambam2/BamBamConfig.hpp>
+#include <biobambam2/Licensing.hpp>
+#include <biobambam2/AttachRank.hpp>
+#include <biobambam2/ResetAlignment.hpp>
 
 #include <iomanip>
 
 #include <config.h>
 
-#include <libmaus/bambam/CircularHashCollatingBamDecoder.hpp>
-#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
-#include <libmaus/bambam/BamToFastqOutputFileSet.hpp>
-#include <libmaus/bambam/BamWriter.hpp>
-#include <libmaus/util/TempFileRemovalContainer.hpp>
-#include <libmaus/util/MemUsage.hpp>
-#include <libmaus/bambam/ProgramHeaderLineSet.hpp>
-#include <libmaus/random/Random.hpp>
+#include <libmaus2/bambam/CircularHashCollatingBamDecoder.hpp>
+#include <libmaus2/bambam/BamBlockWriterBaseFactory.hpp>
+#include <libmaus2/bambam/BamToFastqOutputFileSet.hpp>
+#include <libmaus2/bambam/BamWriter.hpp>
+#include <libmaus2/util/TempFileRemovalContainer.hpp>
+#include <libmaus2/util/MemUsage.hpp>
+#include <libmaus2/bambam/ProgramHeaderLineSet.hpp>
+#include <libmaus2/random/Random.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static std::string getDefaultInputFormat() { return "bam"; }
 static double getDefaultProb() { return 1.0; }
 
-#include <libmaus/lz/BgzfDeflateOutputCallbackMD5.hpp>
-#include <libmaus/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
+#include <libmaus2/lz/BgzfDeflateOutputCallbackMD5.hpp>
+#include <libmaus2/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
 static int getDefaultMD5() { return 0; }
 static int getDefaultIndex() { return 0; }
 
-static int getLevel(libmaus::util::ArgInfo const & arginfo)
+static int getLevel(libmaus2::util::ArgInfo const & arginfo)
 {
-	return libmaus::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
+	return libmaus2::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
 }
 
 struct BamDownsampleRandomInputFileStream
 {
 	std::string const fn;
-	libmaus::aio::CheckedInputStream::unique_ptr_type CIS;
+	libmaus2::aio::CheckedInputStream::unique_ptr_type CIS;
 	std::istream & in;
 	
-	static libmaus::aio::CheckedInputStream::unique_ptr_type openFile(std::string const & fn)
+	static libmaus2::aio::CheckedInputStream::unique_ptr_type openFile(std::string const & fn)
 	{
-		libmaus::aio::CheckedInputStream::unique_ptr_type ptr(new libmaus::aio::CheckedInputStream(fn));
+		libmaus2::aio::CheckedInputStream::unique_ptr_type ptr(new libmaus2::aio::CheckedInputStream(fn));
 		return UNIQUE_PTR_MOVE(ptr);
 	}
 	
-	BamDownsampleRandomInputFileStream(libmaus::util::ArgInfo const & arginfo)
+	BamDownsampleRandomInputFileStream(libmaus2::util::ArgInfo const & arginfo)
 	: fn(arginfo.getValue<std::string>("filename","-")),
 	  CIS(
-		(fn != "-") ? openFile(fn) : (libmaus::aio::CheckedInputStream::unique_ptr_type())
+		(fn != "-") ? openFile(fn) : (libmaus2::aio::CheckedInputStream::unique_ptr_type())
 	), in((fn != "-") ? (*CIS) : std::cin) {}
 
 	BamDownsampleRandomInputFileStream(std::string const & rfn)
 	: fn(rfn), CIS(
-		(fn != "-") ? openFile(fn) : (libmaus::aio::CheckedInputStream::unique_ptr_type())
+		(fn != "-") ? openFile(fn) : (libmaus2::aio::CheckedInputStream::unique_ptr_type())
 	), in((fn != "-") ? (*CIS) : std::cin) {}
 };
 
 template<typename decoder_type>
-std::string getModifiedHeaderText(decoder_type const & bamdec, libmaus::util::ArgInfo const & arginfo, bool reset = false)
+std::string getModifiedHeaderText(decoder_type const & bamdec, libmaus2::util::ArgInfo const & arginfo, bool reset = false)
 {
-	libmaus::bambam::BamHeader const & header = bamdec.getHeader();
+	libmaus2::bambam::BamHeader const & header = bamdec.getHeader();
 	std::string const headertext(header.text);
 
 	// add PG line to header
-	std::string upheadtext = ::libmaus::bambam::ProgramHeaderLineSet::addProgramLine(
+	std::string upheadtext = ::libmaus2::bambam::ProgramHeaderLineSet::addProgramLine(
 		headertext,
 		"bamdownsamplerandom", // ID
 		"bamdownsamplerandom", // PN
 		arginfo.commandline, // CL
-		::libmaus::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
+		::libmaus2::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
 		std::string(PACKAGE_VERSION) // VN			
 	);
 
 	if ( reset )
 	{
-		std::vector<libmaus::bambam::HeaderLine> allheaderlines = libmaus::bambam::HeaderLine::extractLines(upheadtext);
+		std::vector<libmaus2::bambam::HeaderLine> allheaderlines = libmaus2::bambam::HeaderLine::extractLines(upheadtext);
 
 		std::ostringstream upheadstr;
 		for ( uint64_t i = 0; i < allheaderlines.size(); ++i )
@@ -104,8 +104,8 @@ std::string getModifiedHeaderText(decoder_type const & bamdec, libmaus::util::Ar
 }
 
 void bamdownsamplerandom(
-	libmaus::util::ArgInfo const & arginfo,
-	libmaus::bambam::CircularHashCollatingBamDecoder & CHCBD
+	libmaus2::util::ArgInfo const & arginfo,
+	libmaus2::bambam::CircularHashCollatingBamDecoder & CHCBD
 )
 {
 	if ( arginfo.getValue<unsigned int>("disablevalidation",0) )
@@ -114,18 +114,18 @@ void bamdownsamplerandom(
 	if ( arginfo.hasArg("seed") )
 	{
 		uint64_t const seed = arginfo.getValue<uint64_t>("seed",0);
-		libmaus::random::Random::setup(seed);
+		libmaus2::random::Random::setup(seed);
 	}
 	else
 	{
-		libmaus::random::Random::setup();	
+		libmaus2::random::Random::setup();	
 	}
 	
 	double const p = arginfo.getValue<double>("p",getDefaultProb());
 	
 	if ( p < 0.0 || p > 1.0 )
 	{
-		libmaus::exception::LibMausException se;
+		libmaus2::exception::LibMausException se;
 		se.getStream() << "Value of p must be in [0,1] but is " << p << std::endl;
 		se.finish();
 		throw se;
@@ -142,7 +142,7 @@ void bamdownsamplerandom(
 		))
 		;
 
-	libmaus::bambam::CircularHashCollatingBamDecoder::OutputBufferEntry const * ob = 0;
+	libmaus2::bambam::CircularHashCollatingBamDecoder::OutputBufferEntry const * ob = 0;
 	
 	// number of alignments processed
 	uint64_t cnt = 0;
@@ -151,10 +151,10 @@ void bamdownsamplerandom(
 	// number of alignments written
 	uint64_t ocnt = 0;
 	unsigned int const verbshift = 20;
-	libmaus::timing::RealTimeClock rtc; rtc.start();
+	libmaus2::timing::RealTimeClock rtc; rtc.start();
 
 	// construct new header
-	::libmaus::bambam::BamHeader uphead(getModifiedHeaderText(CHCBD,arginfo));
+	::libmaus2::bambam::BamHeader uphead(getModifiedHeaderText(CHCBD,arginfo));
 	uphead.changeSortOrder("unknown");
 
 	/*
@@ -162,13 +162,13 @@ void bamdownsamplerandom(
 	 */
 	std::string const tmpfilenamebase = arginfo.getValue<std::string>("T",arginfo.getDefaultTmpFileName());
 	std::string const tmpfileindex = tmpfilenamebase + "_index";
-	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
+	::libmaus2::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
 
 	std::string md5filename;
 	std::string indexfilename;
 
-	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > cbs;
-	::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
+	std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > cbs;
+	::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
 	if ( arginfo.getValue<unsigned int>("md5",getDefaultMD5()) )
 	{
 		if ( arginfo.hasArg("md5filename") &&  arginfo.getUnparsedValue("md5filename","") != "" )
@@ -178,12 +178,12 @@ void bamdownsamplerandom(
 
 		if ( md5filename.size() )
 		{
-			::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5cb(new ::libmaus::lz::BgzfDeflateOutputCallbackMD5);
+			::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5cb(new ::libmaus2::lz::BgzfDeflateOutputCallbackMD5);
 			Pmd5cb = UNIQUE_PTR_MOVE(Tmd5cb);
 			cbs.push_back(Pmd5cb.get());
 		}
 	}
-	libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Pindex;
+	libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Pindex;
 	if ( arginfo.getValue<unsigned int>("index",getDefaultIndex()) )
 	{
 		if ( arginfo.hasArg("indexfilename") &&  arginfo.getUnparsedValue("indexfilename","") != "" )
@@ -193,12 +193,12 @@ void bamdownsamplerandom(
 
 		if ( indexfilename.size() )
 		{
-			libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Tindex(new libmaus::bambam::BgzfDeflateOutputCallbackBamIndex(tmpfileindex));
+			libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Tindex(new libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex(tmpfileindex));
 			Pindex = UNIQUE_PTR_MOVE(Tindex);
 			cbs.push_back(Pindex.get());
 		}
 	}
-	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
+	std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
 	if ( cbs.size() )
 		Pcbs = &cbs;
 	/*
@@ -206,14 +206,14 @@ void bamdownsamplerandom(
 	 */
 
 	// construct writer
-	libmaus::bambam::BamBlockWriterBase::unique_ptr_type Pout ( 
-		libmaus::bambam::BamBlockWriterBaseFactory::construct(uphead, arginfo, Pcbs) 
+	libmaus2::bambam::BamBlockWriterBase::unique_ptr_type Pout ( 
+		libmaus2::bambam::BamBlockWriterBaseFactory::construct(uphead, arginfo, Pcbs) 
 	);
 	
 	while ( (ob = CHCBD.process()) )
 	{
 		uint64_t const precnt = cnt;
-		uint32_t const rv = ::libmaus::random::Random::rand32();
+		uint32_t const rv = ::libmaus2::random::Random::rand32();
 		
 		if ( ob->fpair )
 		{
@@ -288,11 +288,11 @@ void bamdownsamplerandom(
 	}
 }
 
-void bamdownsamplerandom(libmaus::util::ArgInfo const & arginfo)
+void bamdownsamplerandom(libmaus2::util::ArgInfo const & arginfo)
 {
 	if ( arginfo.hasArg("ranges") && arginfo.getValue("inputformat", getDefaultInputFormat()) != "bam" )
 	{
-		libmaus::exception::LibMausException se;
+		libmaus2::exception::LibMausException se;
 		se.getStream() << "ranges are only supported for inputformat=bam" << std::endl;
 		se.finish();
 		throw se;
@@ -300,7 +300,7 @@ void bamdownsamplerandom(libmaus::util::ArgInfo const & arginfo)
 
 	if ( arginfo.hasArg("ranges") && ((!arginfo.hasArg("filename")) || arginfo.getValue<std::string>("filename","-") == "-") )
 	{
-		libmaus::exception::LibMausException se;
+		libmaus2::exception::LibMausException se;
 		se.getStream() << "ranges are not supported for reading via standard input" << std::endl;
 		se.finish();
 		throw se;
@@ -308,16 +308,16 @@ void bamdownsamplerandom(libmaus::util::ArgInfo const & arginfo)
 
 	if ( arginfo.hasArg("ranges") && arginfo.getValue<uint64_t>("collate",1) > 1 )
 	{
-		libmaus::exception::LibMausException se;
+		libmaus2::exception::LibMausException se;
 		se.getStream() << "ranges are not supported for collate > 1" << std::endl;
 		se.finish();
 		throw se;
 	}
 	
-	uint32_t const excludeflags = libmaus::bambam::BamFlagBase::stringToFlags(arginfo.getValue<std::string>("exclude","SECONDARY,SUPPLEMENTARY"));
-	libmaus::util::TempFileRemovalContainer::setup();
+	uint32_t const excludeflags = libmaus2::bambam::BamFlagBase::stringToFlags(arginfo.getValue<std::string>("exclude","SECONDARY,SUPPLEMENTARY"));
+	libmaus2::util::TempFileRemovalContainer::setup();
 	std::string const tmpfilename = arginfo.getValue<std::string>("T",arginfo.getDefaultTmpFileName());
-	libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilename);
+	libmaus2::util::TempFileRemovalContainer::addTempFile(tmpfilename);
 	std::string const inputformat = arginfo.getValue<std::string>("inputformat",getDefaultInputFormat());
 	std::string const inputfilename = arginfo.getValue<std::string>("filename","-");
 	uint64_t const numthreads = arginfo.getValue<uint64_t>("threads",0);
@@ -329,7 +329,7 @@ void bamdownsamplerandom(libmaus::util::ArgInfo const & arginfo)
 	{
 		if ( arginfo.hasArg("ranges") )
 		{
-			libmaus::bambam::BamRangeCircularHashCollatingBamDecoder CHCBD(inputfilename,arginfo.getUnparsedValue("ranges",""),tmpfilename,excludeflags,false,hlog,sbs);
+			libmaus2::bambam::BamRangeCircularHashCollatingBamDecoder CHCBD(inputfilename,arginfo.getUnparsedValue("ranges",""),tmpfilename,excludeflags,false,hlog,sbs);
 			bamdownsamplerandom(arginfo,CHCBD);
 		}
 		else
@@ -338,7 +338,7 @@ void bamdownsamplerandom(libmaus::util::ArgInfo const & arginfo)
 
 			if ( numthreads > 0 )
 			{
-				libmaus::bambam::BamParallelCircularHashCollatingBamDecoder CHCBD(
+				libmaus2::bambam::BamParallelCircularHashCollatingBamDecoder CHCBD(
 					bamin.in,
 					numthreads,
 					tmpfilename,excludeflags,
@@ -350,7 +350,7 @@ void bamdownsamplerandom(libmaus::util::ArgInfo const & arginfo)
 			}
 			else
 			{
-				libmaus::bambam::BamCircularHashCollatingBamDecoder CHCBD(
+				libmaus2::bambam::BamCircularHashCollatingBamDecoder CHCBD(
 					bamin.in,
 					tmpfilename,excludeflags,
 					false, /* put rank */
@@ -361,10 +361,10 @@ void bamdownsamplerandom(libmaus::util::ArgInfo const & arginfo)
 			}
 		}
 	}
-	#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
+	#if defined(BIOBAMBAM_LIBMAUS2_HAVE_IO_LIB)
 	else if ( inputformat == "sam" )
 	{
-		libmaus::bambam::ScramCircularHashCollatingBamDecoder CHCBD(inputfilename,"r","",
+		libmaus2::bambam::ScramCircularHashCollatingBamDecoder CHCBD(inputfilename,"r","",
 			tmpfilename,excludeflags,
 			false, /* put rank */
 			hlog,sbs
@@ -374,7 +374,7 @@ void bamdownsamplerandom(libmaus::util::ArgInfo const & arginfo)
 	else if ( inputformat == "cram" )
 	{
 		std::string const reference = arginfo.getValue<std::string>("reference","");
-		libmaus::bambam::ScramCircularHashCollatingBamDecoder CHCBD(inputfilename,"rc",reference,
+		libmaus2::bambam::ScramCircularHashCollatingBamDecoder CHCBD(inputfilename,"rc",reference,
 			tmpfilename,excludeflags,
 			false, /* put rank */
 			hlog,sbs
@@ -384,7 +384,7 @@ void bamdownsamplerandom(libmaus::util::ArgInfo const & arginfo)
 	#endif
 	else
 	{
-		libmaus::exception::LibMausException se;
+		libmaus2::exception::LibMausException se;
 		se.getStream() << "unknown input format " << inputformat << std::endl;
 		se.finish();
 		throw se;
@@ -397,9 +397,9 @@ int main(int argc, char * argv[])
 {
 	try
 	{
-		libmaus::timing::RealTimeClock rtc; rtc.start();
+		libmaus2::timing::RealTimeClock rtc; rtc.start();
 		
-		::libmaus::util::ArgInfo const arginfo(argc,argv);
+		::libmaus2::util::ArgInfo const arginfo(argc,argv);
 		
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
 			if ( 
@@ -408,7 +408,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--version"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
 			else if ( 
@@ -417,17 +417,17 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--help"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license() << std::endl;
+				std::cerr << ::biobambam2::Licensing::license() << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
 				
 				std::vector< std::pair<std::string,std::string> > V;
 				
-				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
-				V.push_back ( std::pair<std::string,std::string> ( std::string("p=<[")+libmaus::util::NumberSerialisation::formatNumber(getDefaultProb(),0)+"]>", "probability for keeping read" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("p=<[")+libmaus2::util::NumberSerialisation::formatNumber(getDefaultProb(),0)+"]>", "probability for keeping read" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("seed=<[]>"), "random seed" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "filename=<[stdin]>", "input filename (default: read file from standard input)" ) );
-				#if defined(BIOBAMBAM_LIBMAUS_HAVE_IO_LIB)
+				#if defined(BIOBAMBAM_LIBMAUS2_HAVE_IO_LIB)
 				V.push_back ( std::pair<std::string,std::string> ( std::string("inputformat=<[")+getDefaultInputFormat()+"]>", "input format: cram, bam or sam" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "reference=<[]>", "name of reference FastA in case of inputformat=cram" ) );
 				#else
@@ -437,18 +437,18 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "exclude=<[SECONDARY,SUPPLEMENTARY]>", "exclude alignments matching any of the given flags" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "disablevalidation=<[0]>", "disable validation of input data" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "colhlog=<[18]>", "base 2 logarithm of hash table size used for collation" ) );
-				V.push_back ( std::pair<std::string,std::string> ( std::string("colsbs=<[")+libmaus::util::NumberSerialisation::formatNumber(128ull*1024*1024,0)+"]>", "size of hash table overflow list in bytes" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("colsbs=<[")+libmaus2::util::NumberSerialisation::formatNumber(128ull*1024*1024,0)+"]>", "size of hash table overflow list in bytes" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("T=<[") + arginfo.getDefaultTmpFileName() + "]>" , "temporary file name" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam2::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "md5filename=<filename>", "file name for md5 check sum (default: extend output file name)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam2::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "indexfilename=<filename>", "file name for BAM index file (default: extend output file name)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( std::string("outputformat=<[")+libmaus::bambam::BamBlockWriterBaseFactory::getDefaultOutputFormat()+"]>", std::string("output format (") + libmaus::bambam::BamBlockWriterBaseFactory::getValidOutputFormats() + ")" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("outputformat=<[")+libmaus2::bambam::BamBlockWriterBaseFactory::getDefaultOutputFormat()+"]>", std::string("output format (") + libmaus2::bambam::BamBlockWriterBaseFactory::getValidOutputFormats() + ")" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "outputthreads=<[1]>", "output helper threads (for outputformat=bam only, default: 1)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "O=<[stdout]>", "output filename (standard output if unset)" ) );
 
 				
-				::biobambam::Licensing::printMap(std::cerr,V);
+				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 				std::cerr << "Alignment flags: PAIRED,PROPER_PAIR,UNMAP,MUNMAP,REVERSE,MREVERSE,READ1,READ2,SECONDARY,QCFAIL,DUP,SUPPLEMENTARY" << std::endl;
@@ -460,7 +460,7 @@ int main(int argc, char * argv[])
 			
 		bamdownsamplerandom(arginfo);
 		
-		std::cerr << "[V] " << libmaus::util::MemUsage() << " wall clock time " << rtc.formatTime(rtc.getElapsedSeconds()) << std::endl;		
+		std::cerr << "[V] " << libmaus2::util::MemUsage() << " wall clock time " << rtc.formatTime(rtc.getElapsedSeconds()) << std::endl;		
 	}
 	catch(std::exception const & ex)
 	{

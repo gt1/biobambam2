@@ -18,30 +18,30 @@
 **/
 #include <config.h>
 
-#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
-#include <libmaus/bambam/BamWriter.hpp>
-#include <libmaus/bambam/BamFlagBase.hpp>
-#include <libmaus/bambam/EncoderBase.hpp>
-#include <libmaus/bambam/BamDecoder.hpp>
-#include <libmaus/bambam/CollatingBamDecoder.hpp>
-#include <libmaus/bambam/ProgramHeaderLineSet.hpp>
-#include <libmaus/lz/BufferedGzipStream.hpp>
+#include <libmaus2/bambam/BamBlockWriterBaseFactory.hpp>
+#include <libmaus2/bambam/BamWriter.hpp>
+#include <libmaus2/bambam/BamFlagBase.hpp>
+#include <libmaus2/bambam/EncoderBase.hpp>
+#include <libmaus2/bambam/BamDecoder.hpp>
+#include <libmaus2/bambam/CollatingBamDecoder.hpp>
+#include <libmaus2/bambam/ProgramHeaderLineSet.hpp>
+#include <libmaus2/lz/BufferedGzipStream.hpp>
 
-#include <libmaus/fastx/CompactFastEncoder.hpp>
-#include <libmaus/bambam/BamAlignmentEncoderBase.hpp>
-#include <libmaus/util/GetObject.hpp>
+#include <libmaus2/fastx/CompactFastEncoder.hpp>
+#include <libmaus2/bambam/BamAlignmentEncoderBase.hpp>
+#include <libmaus2/util/GetObject.hpp>
 
-#include <libmaus/lz/Deflate.hpp>
-#include <libmaus/util/CountPutObject.hpp>
-#include <libmaus/util/ArgInfo.hpp>
-#include <libmaus/timing/RealTimeClock.hpp>
+#include <libmaus2/lz/Deflate.hpp>
+#include <libmaus2/util/CountPutObject.hpp>
+#include <libmaus2/util/ArgInfo.hpp>
+#include <libmaus2/timing/RealTimeClock.hpp>
 
-#include <libmaus/util/TempFileRemovalContainer.hpp>
+#include <libmaus2/util/TempFileRemovalContainer.hpp>
 
-#include <libmaus/lz/BgzfDeflateOutputCallbackMD5.hpp>
-#include <libmaus/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
+#include <libmaus2/lz/BgzfDeflateOutputCallbackMD5.hpp>
+#include <libmaus2/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
 
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/Licensing.hpp>
 
 static int getDefaultMD5() { return 0; }
 static int getDefaultIndex() { return 0; }
@@ -50,7 +50,7 @@ static int getDefaultVerbose() { return 1; }
 static unsigned int getDefaultColHashBits() { return 20; }
 static uint64_t getDefaultColListSize() { return 512*1024; }
 
-static uint64_t getMapCnt(::libmaus::bambam::CollatingBamDecoder::alignment_ptr_type const & p)
+static uint64_t getMapCnt(::libmaus2::bambam::CollatingBamDecoder::alignment_ptr_type const & p)
 {
 	if ( p && p->isMapped() )
 		return 1;
@@ -58,35 +58,35 @@ static uint64_t getMapCnt(::libmaus::bambam::CollatingBamDecoder::alignment_ptr_
 		return 0;
 }
 
-int bamfixmatecoordinates(::libmaus::util::ArgInfo const & arginfo)
+int bamfixmatecoordinates(::libmaus2::util::ArgInfo const & arginfo)
 {
-	::libmaus::util::TempFileRemovalContainer::setup();
-	::libmaus::timing::RealTimeClock rtc; rtc.start();
+	::libmaus2::util::TempFileRemovalContainer::setup();
+	::libmaus2::timing::RealTimeClock rtc; rtc.start();
 	
 	bool const verbose = arginfo.getValue<unsigned int>("verbose",getDefaultVerbose());
 	unsigned int const colhashbits = arginfo.getValue<unsigned int>("colhashbits",getDefaultColHashBits());
 	unsigned int const collistsize = arginfo.getValue<unsigned int>("collistsize",getDefaultColListSize());
-	int const level = libmaus::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
+	int const level = libmaus2::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
 	std::string const tmpfilenamebase = arginfo.getValue<std::string>("tmpfile",arginfo.getDefaultTmpFileName());
 	
 	std::string const tmpfilename = tmpfilenamebase + "_bamcollate";
-	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfilename);
+	::libmaus2::util::TempFileRemovalContainer::addTempFile(tmpfilename);
 	
-	::libmaus::bambam::CollatingBamDecoder CBD(std::cin,tmpfilename,false /* put rank */,colhashbits/*hash bits*/,collistsize/*size of output list*/);
-	::libmaus::bambam::BamFormatAuxiliary auxdata;
-	::libmaus::bambam::BamHeader const & bamheader = CBD.getHeader();
+	::libmaus2::bambam::CollatingBamDecoder CBD(std::cin,tmpfilename,false /* put rank */,colhashbits/*hash bits*/,collistsize/*size of output list*/);
+	::libmaus2::bambam::BamFormatAuxiliary auxdata;
+	::libmaus2::bambam::BamHeader const & bamheader = CBD.getHeader();
 	
 	// add PG line to header
-	std::string const upheadtext = ::libmaus::bambam::ProgramHeaderLineSet::addProgramLine(
+	std::string const upheadtext = ::libmaus2::bambam::ProgramHeaderLineSet::addProgramLine(
 		bamheader.text,
 		"bamfixmatecoordinates", // ID
 		"bamfixmatecoordinates", // PN
 		arginfo.commandline, // CL
-		::libmaus::bambam::ProgramHeaderLineSet(bamheader.text).getLastIdInChain(), // PP
+		::libmaus2::bambam::ProgramHeaderLineSet(bamheader.text).getLastIdInChain(), // PP
 		std::string(PACKAGE_VERSION) // VN			
 	);
 	// construct new header
-	::libmaus::bambam::BamHeader uphead(upheadtext);
+	::libmaus2::bambam::BamHeader uphead(upheadtext);
 	
 	if ( uphead.getSortOrder() != "queryname" )
 		uphead.changeSortOrder("unknown");
@@ -95,13 +95,13 @@ int bamfixmatecoordinates(::libmaus::util::ArgInfo const & arginfo)
 	 * start index/md5 callbacks
 	 */
 	std::string const tmpfileindex = tmpfilenamebase + "_index";
-	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
+	::libmaus2::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
 
 	std::string md5filename;
 	std::string indexfilename;
 
-	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > cbs;
-	::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
+	std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > cbs;
+	::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
 	if ( arginfo.getValue<unsigned int>("md5",getDefaultMD5()) )
 	{
 		if ( arginfo.hasArg("md5filename") &&  arginfo.getUnparsedValue("md5filename","") != "" )
@@ -111,12 +111,12 @@ int bamfixmatecoordinates(::libmaus::util::ArgInfo const & arginfo)
 
 		if ( md5filename.size() )
 		{
-			::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5cb(new ::libmaus::lz::BgzfDeflateOutputCallbackMD5);
+			::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5cb(new ::libmaus2::lz::BgzfDeflateOutputCallbackMD5);
 			Pmd5cb = UNIQUE_PTR_MOVE(Tmd5cb);
 			cbs.push_back(Pmd5cb.get());
 		}
 	}
-	libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Pindex;
+	libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Pindex;
 	if ( arginfo.getValue<unsigned int>("index",getDefaultIndex()) )
 	{
 		if ( arginfo.hasArg("indexfilename") &&  arginfo.getUnparsedValue("indexfilename","") != "" )
@@ -126,12 +126,12 @@ int bamfixmatecoordinates(::libmaus::util::ArgInfo const & arginfo)
 
 		if ( indexfilename.size() )
 		{
-			libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Tindex(new libmaus::bambam::BgzfDeflateOutputCallbackBamIndex(tmpfileindex));
+			libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Tindex(new libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex(tmpfileindex));
 			Pindex = UNIQUE_PTR_MOVE(Tindex);
 			cbs.push_back(Pindex.get());
 		}
 	}
-	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
+	std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
 	if ( cbs.size() )
 		Pcbs = &cbs;
 	/*
@@ -139,16 +139,16 @@ int bamfixmatecoordinates(::libmaus::util::ArgInfo const & arginfo)
 	 */
 	
 	// setup bam writer
-	::libmaus::bambam::BamWriter::unique_ptr_type writer(new ::libmaus::bambam::BamWriter(std::cout,uphead,level,Pcbs));
+	::libmaus2::bambam::BamWriter::unique_ptr_type writer(new ::libmaus2::bambam::BamWriter(std::cout,uphead,level,Pcbs));
 	
 	#if 0
-	::libmaus::bambam::ProgramHeaderLineSet PHLS(bamheader.text);
+	::libmaus2::bambam::ProgramHeaderLineSet PHLS(bamheader.text);
 	std::cerr << "Last id in PG chain: " << PHLS.getLastIdInChain() << std::endl;
 	#endif
 
 	// std::cout << bamheader.text;
 
-	typedef ::libmaus::bambam::CollatingBamDecoder::alignment_ptr_type alignment_ptr_type;
+	typedef ::libmaus2::bambam::CollatingBamDecoder::alignment_ptr_type alignment_ptr_type;
 	std::pair<alignment_ptr_type,alignment_ptr_type> P;
 	uint64_t const mod = 1024*1024;
 	uint64_t proc = 0;
@@ -236,7 +236,7 @@ int main(int argc, char * argv[])
 {
 	try
 	{
-		::libmaus::util::ArgInfo const arginfo(argc,argv);
+		::libmaus2::util::ArgInfo const arginfo(argc,argv);
 
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
 			if ( 
@@ -245,7 +245,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--version"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
 			else if ( 
@@ -254,24 +254,24 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--help"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
 				
 				std::vector< std::pair<std::string,std::string> > V;
 				
-				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "colhashbits=<["+::biobambam::Licensing::formatNumber(getDefaultColHashBits())+"]>", "log_2 of size of hash table used for collation" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "collistsize=<["+::biobambam::Licensing::formatNumber(getDefaultColListSize())+"]>", "output list size for collation" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "colhashbits=<["+::biobambam2::Licensing::formatNumber(getDefaultColHashBits())+"]>", "log_2 of size of hash table used for collation" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "collistsize=<["+::biobambam2::Licensing::formatNumber(getDefaultColListSize())+"]>", "output list size for collation" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "tmpfile=<filename>", "prefix for temporary files, default: create files in current directory" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
-				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
+				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam2::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "md5filename=<filename>", "file name for md5 check sum (default: extend output file name)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam2::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "indexfilename=<filename>", "file name for BAM index file (default: extend output file name)" ) );
 
-				::biobambam::Licensing::printMap(std::cerr,V);
+				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;

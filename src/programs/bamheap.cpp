@@ -16,16 +16,16 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include <libmaus/bambam/BamDecoder.hpp>
-#include <libmaus/bambam/BamMultiAlignmentDecoderFactory.hpp>
-#include <libmaus/util/SimpleCountingHash.hpp>
-#include <libmaus/util/ArgInfo.hpp>
-#include <libmaus/util/MemUsage.hpp>
-#include <libmaus/fastx/Phred.hpp>
-#include <libmaus/math/binom.hpp>
+#include <libmaus2/bambam/BamDecoder.hpp>
+#include <libmaus2/bambam/BamMultiAlignmentDecoderFactory.hpp>
+#include <libmaus2/util/SimpleCountingHash.hpp>
+#include <libmaus2/util/ArgInfo.hpp>
+#include <libmaus2/util/MemUsage.hpp>
+#include <libmaus2/fastx/Phred.hpp>
+#include <libmaus2/math/binom.hpp>
 
-#include <biobambam/BamBamConfig.hpp>
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/BamBamConfig.hpp>
+#include <biobambam2/Licensing.hpp>
 
 static int getDefaultVerbose() { return 1; }
 static std::string getDefaultInputFormat() { return "bam"; }
@@ -69,8 +69,8 @@ uint64_t strlen(std::pair<uint8_t,uint8_t> const * const rp)
 struct BamHeapEntry
 {
 	typedef BamHeapEntry this_type;
-	typedef libmaus::util::unique_ptr<this_type>::type unique_ptr_type;
-	typedef libmaus::util::shared_ptr<this_type>::type shared_ptr_type;
+	typedef libmaus2::util::unique_ptr<this_type>::type unique_ptr_type;
+	typedef libmaus2::util::shared_ptr<this_type>::type shared_ptr_type;
 
 	uint64_t refpos;
 	std::vector< std::pair<bam_heap_entry_base,uint8_t> > baseheap;
@@ -96,11 +96,11 @@ struct EntriesContainer
 	uint64_t entryptr;
 
 	#if 0
-	std::vector<std::vector<libmaus::autoarray::AutoArray<uint8_t>::shared_ptr_type > > stringpool;
+	std::vector<std::vector<libmaus2::autoarray::AutoArray<uint8_t>::shared_ptr_type > > stringpool;
 	std::vector<std::vector<uint8_t *> > stringfreelist;
 	#endif
 	
-	std::vector<std::vector<libmaus::autoarray::AutoArray<std::pair<uint8_t,uint8_t> >::shared_ptr_type > > pairstringpool;
+	std::vector<std::vector<libmaus2::autoarray::AutoArray<std::pair<uint8_t,uint8_t> >::shared_ptr_type > > pairstringpool;
 	std::vector<std::vector<std::pair<uint8_t,uint8_t> *> > pairstringfreelist;
 	
 	EntriesContainer()
@@ -115,7 +115,7 @@ struct EntriesContainer
 		
 		while ( ! ( ind < stringpool.size() ) )
 		{
-			stringpool.push_back(std::vector<libmaus::autoarray::AutoArray<uint8_t>::shared_ptr_type >());
+			stringpool.push_back(std::vector<libmaus2::autoarray::AutoArray<uint8_t>::shared_ptr_type >());
 			stringfreelist.push_back(std::vector<uint8_t *>());
 		}
 		
@@ -124,8 +124,8 @@ struct EntriesContainer
 	
 		if ( ! stringfreelist[ind].size() )
 		{
-			libmaus::autoarray::AutoArray<uint8_t>::shared_ptr_type tptr(
-				new libmaus::autoarray::AutoArray<uint8_t>(ind,false)
+			libmaus2::autoarray::AutoArray<uint8_t>::shared_ptr_type tptr(
+				new libmaus2::autoarray::AutoArray<uint8_t>(ind,false)
 			);
 			stringpool[ind].push_back(tptr);
 			stringfreelist[ind].push_back(stringpool[ind].back()->get());
@@ -145,7 +145,7 @@ struct EntriesContainer
 		
 		while ( ! ( ind < pairstringpool.size() ) )
 		{
-			pairstringpool.push_back(std::vector<libmaus::autoarray::AutoArray< std::pair<uint8_t,uint8_t> >::shared_ptr_type >());
+			pairstringpool.push_back(std::vector<libmaus2::autoarray::AutoArray< std::pair<uint8_t,uint8_t> >::shared_ptr_type >());
 			pairstringfreelist.push_back(std::vector<std::pair<uint8_t,uint8_t> *>());
 		}
 		
@@ -154,8 +154,8 @@ struct EntriesContainer
 	
 		if ( ! pairstringfreelist[ind].size() )
 		{
-			libmaus::autoarray::AutoArray<std::pair<uint8_t,uint8_t> >::shared_ptr_type tptr(
-				new libmaus::autoarray::AutoArray< std::pair<uint8_t,uint8_t> >(ind,false)
+			libmaus2::autoarray::AutoArray<std::pair<uint8_t,uint8_t> >::shared_ptr_type tptr(
+				new libmaus2::autoarray::AutoArray< std::pair<uint8_t,uint8_t> >(ind,false)
 			);
 			pairstringpool[ind].push_back(tptr);
 			pairstringfreelist[ind].push_back(pairstringpool[ind].back()->get());
@@ -235,7 +235,7 @@ struct EntriesContainer
 	}
 	
 	void handleFinished(
-		libmaus::bambam::BamHeader const & header,
+		libmaus2::bambam::BamHeader const & header,
 		uint64_t refid, 
 		uint64_t refpos
 	)
@@ -307,7 +307,7 @@ struct EntriesContainer
 				std::cerr << header.getRefIDName(refid) << "," << entry->refpos << ",0 ";
 				for ( uint64_t i = 0; i < entry->baseheap.size(); ++i )
 				{
-					double const p = libmaus::fastx::Phred::probCorrect(entry->baseheap[i].second);
+					double const p = libmaus2::fastx::Phred::probCorrect(entry->baseheap[i].second);
 					double const q = (1.0-p)/5.0;
 				
 					switch ( entry->baseheap[i].first )
@@ -438,26 +438,26 @@ struct EntriesContainer
 	}
 };
 
-int bamheap(libmaus::util::ArgInfo const & arginfo)
+int bamheap(libmaus2::util::ArgInfo const & arginfo)
 {
 	bool const verbose = arginfo.getValue<unsigned int>("verbose",getDefaultVerbose());
 	// input decoder wrapper
-	libmaus::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
-		libmaus::bambam::BamMultiAlignmentDecoderFactory::construct(
+	libmaus2::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
+		libmaus2::bambam::BamMultiAlignmentDecoderFactory::construct(
 			arginfo,false // put rank
 		)
 	);
-	::libmaus::bambam::BamAlignmentDecoder * ppdec = &(decwrapper->getDecoder());
-	::libmaus::bambam::BamAlignmentDecoder & dec = *ppdec;
-	::libmaus::bambam::BamHeader const & header = dec.getHeader();	
-	::libmaus::bambam::BamAlignment const & algn = dec.getAlignment();
+	::libmaus2::bambam::BamAlignmentDecoder * ppdec = &(decwrapper->getDecoder());
+	::libmaus2::bambam::BamAlignmentDecoder & dec = *ppdec;
+	::libmaus2::bambam::BamHeader const & header = dec.getHeader();	
+	::libmaus2::bambam::BamAlignment const & algn = dec.getAlignment();
 
-	std::vector< ::libmaus::bambam::BamAlignment::shared_ptr_type > algnpool;
-	std::vector< ::libmaus::bambam::BamAlignment * > algnfreelist;
+	std::vector< ::libmaus2::bambam::BamAlignment::shared_ptr_type > algnpool;
+	std::vector< ::libmaus2::bambam::BamAlignment * > algnfreelist;
 	
 	
-	libmaus::autoarray::AutoArray<libmaus::bambam::cigar_operation> cigop;
-	libmaus::autoarray::AutoArray<char> bases;
+	libmaus2::autoarray::AutoArray<libmaus2::bambam::cigar_operation> cigop;
+	libmaus2::autoarray::AutoArray<char> bases;
 	
 	EntriesContainer entcnt;
 
@@ -476,7 +476,7 @@ int bamheap(libmaus::util::ArgInfo const & arginfo)
 			uint64_t readpos = 0;
 			uint64_t refpos = algn.getPos();
 			uint64_t const seqlen = algn.decodeRead(bases);
-			uint8_t const * qual = libmaus::bambam::BamAlignmentDecoderBase::getQual(algn.D.begin());
+			uint8_t const * qual = libmaus2::bambam::BamAlignmentDecoderBase::getQual(algn.D.begin());
 			
 			if ( algn.getRefID() != prevrefid )
 			{
@@ -496,9 +496,9 @@ int bamheap(libmaus::util::ArgInfo const & arginfo)
 				
 				switch ( cigop[ci].first )
 				{
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CMATCH:
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CEQUAL:
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CDIFF:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CMATCH:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CEQUAL:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CDIFF:
 					{
 						entcnt.processPendingInsert(refpos,pendinginserts);
 						
@@ -530,7 +530,7 @@ int bamheap(libmaus::util::ArgInfo const & arginfo)
 						}
 						break;
 					}
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CINS:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CINS:
 					{
 						std::pair<uint8_t,uint8_t> * p = entcnt.getPairString(ciglen);
 						for ( uint64_t i = 0; i < ciglen; ++i )
@@ -542,7 +542,7 @@ int bamheap(libmaus::util::ArgInfo const & arginfo)
 						readpos += ciglen;
 						break;
 					}
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CDEL:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CDEL:
 						// deleting bases from the reference
 						for ( uint64_t i = 0; i < ciglen; ++i )
 						{
@@ -556,23 +556,23 @@ int bamheap(libmaus::util::ArgInfo const & arginfo)
 							refpos++;
 						}
 						break;
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CREF_SKIP:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CREF_SKIP:
 						// skip bases on reference
 						for ( uint64_t i = 0; i < ciglen; ++i )
 						{
 							refpos++;
 						}
 						break;
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CSOFT_CLIP:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CSOFT_CLIP:
 						// skip bases on read
 						for ( uint64_t i = 0; i < ciglen; ++i )
 						{
 							readpos++;
 						}
 						break;
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CHARD_CLIP:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CHARD_CLIP:
 						break;
-					case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CPAD:
+					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CPAD:
 					{
 						std::pair<uint8_t,uint8_t> * p = entcnt.getPairString(ciglen);
 						std::fill(p,p+ciglen,std::pair<uint8_t,uint8_t>('*',0));
@@ -612,7 +612,7 @@ int main(int argc, char * argv[])
 {
 	try
 	{
-		libmaus::util::ArgInfo const arginfo(argc,argv);
+		libmaus2::util::ArgInfo const arginfo(argc,argv);
 	
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
 			if ( 
@@ -621,7 +621,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--version"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
 			else if ( 
@@ -630,20 +630,20 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--help"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
 				
 				std::vector< std::pair<std::string,std::string> > V;
 			
-				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
-				V.push_back ( std::pair<std::string,std::string> ( std::string("inputformat=<[")+getDefaultInputFormat()+"]>", std::string("input format (") + libmaus::bambam::BamMultiAlignmentDecoderFactory::getValidInputFormats() + ")" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("inputformat=<[")+getDefaultInputFormat()+"]>", std::string("input format (") + libmaus2::bambam::BamMultiAlignmentDecoderFactory::getValidInputFormats() + ")" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "I=<[stdin]>", "input filename (standard input if unset)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "inputthreads=<[1]>", "input helper threads (for inputformat=bam only, default: 1)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "range=<>", "coordinate range to be processed (for coordinate sorted indexed BAM input only)" ) );
 
-				::biobambam::Licensing::printMap(std::cerr,V);
+				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;

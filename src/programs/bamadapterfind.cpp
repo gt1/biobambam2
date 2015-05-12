@@ -21,22 +21,22 @@
 #include <iostream>
 #include <queue>
 
-#include <libmaus/aio/CheckedOutputStream.hpp>
+#include <libmaus2/aio/CheckedOutputStream.hpp>
 
-#include <libmaus/bambam/AdapterFilter.hpp>
-#include <libmaus/bambam/BamAlignment.hpp>
-#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
-#include <libmaus/bambam/BamDecoder.hpp>
-#include <libmaus/bambam/BamWriter.hpp>
-#include <libmaus/bambam/ProgramHeaderLineSet.hpp>
-#include <libmaus/fastx/acgtnMap.hpp>
-#include <libmaus/rank/popcnt.hpp>
-#include <libmaus/util/ArgInfo.hpp>
-#include <libmaus/util/Histogram.hpp>
+#include <libmaus2/bambam/AdapterFilter.hpp>
+#include <libmaus2/bambam/BamAlignment.hpp>
+#include <libmaus2/bambam/BamBlockWriterBaseFactory.hpp>
+#include <libmaus2/bambam/BamDecoder.hpp>
+#include <libmaus2/bambam/BamWriter.hpp>
+#include <libmaus2/bambam/ProgramHeaderLineSet.hpp>
+#include <libmaus2/fastx/acgtnMap.hpp>
+#include <libmaus2/rank/popcnt.hpp>
+#include <libmaus2/util/ArgInfo.hpp>
+#include <libmaus2/util/Histogram.hpp>
 
-#include <biobambam/Licensing.hpp>
-#include <biobambam/ClipAdapters.hpp>
-#include <biobambam/KmerPoisson.hpp>
+#include <biobambam2/Licensing.hpp>
+#include <biobambam2/ClipAdapters.hpp>
+#include <biobambam2/KmerPoisson.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; }
@@ -55,16 +55,16 @@ static double getDefaultpC() { return 0.25; }
 static double getDefaultpG() { return 0.25; }
 static double getDefaultpT() { return 0.25; }
 
-#include <libmaus/lz/BgzfDeflateOutputCallbackMD5.hpp>
-#include <libmaus/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
+#include <libmaus2/lz/BgzfDeflateOutputCallbackMD5.hpp>
+#include <libmaus2/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
 static int getDefaultMD5() { return 0; }
 static int getDefaultIndex() { return 0; }
 
 void adapterListMatch(
-	libmaus::autoarray::AutoArray<char> & Aread,
-	libmaus::util::PushBuffer<libmaus::bambam::AdapterOffsetStrand> & AOSPB,
-	libmaus::bambam::BamAlignment & algn,
-	libmaus::bambam::AdapterFilter & AF,
+	libmaus2::autoarray::AutoArray<char> & Aread,
+	libmaus2::util::PushBuffer<libmaus2::bambam::AdapterOffsetStrand> & AOSPB,
+	libmaus2::bambam::BamAlignment & algn,
+	libmaus2::bambam::AdapterFilter & AF,
 	int const verbose,
 	uint64_t const adpmatchminscore, // = getDefaultMatchMinScore(),
 	double const adpmatchminfrac, // = getDefaultMatchMinFrac(),
@@ -100,7 +100,7 @@ void adapterListMatch(
 			
 	if ( matched )
 	{
-		std::sort(AOSPB.begin(),AOSPB.end(),libmaus::bambam::AdapterOffsetStrandMatchStartComparator());
+		std::sort(AOSPB.begin(),AOSPB.end(),libmaus2::bambam::AdapterOffsetStrandMatchStartComparator());
 		uint64_t const clip = len - AOSPB.begin()[0].getMatchStart();
 
 		uint64_t fA, fC, fG, fT;
@@ -115,7 +115,7 @@ void adapterListMatch(
 		
 			std::cerr << "read length " << len << " clip " << clip << " randconfig=" << randconfid << " fA=" << fA << " fC=" << fC << " fG=" << fG << " fT=" << fT << std::endl;
 				
-			for ( libmaus::bambam::AdapterOffsetStrand const * it = AOSPB.begin(); it != AOSPB.end(); ++it )
+			for ( libmaus2::bambam::AdapterOffsetStrand const * it = AOSPB.begin(); it != AOSPB.end(); ++it )
 				AF.printAdapterMatch(ua,len,*it);
 		}
 		
@@ -126,11 +126,11 @@ void adapterListMatch(
 	}
 }
 
-int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
+int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 {
 	if ( isatty(STDIN_FILENO) )
 	{
-		::libmaus::exception::LibMausException se;
+		::libmaus2::exception::LibMausException se;
 		se.getStream() << "Refusing to read binary data from terminal, please redirect standard input to pipe or file." << std::endl;
 		se.finish();
 		throw se;
@@ -138,7 +138,7 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 
 	if ( isatty(STDOUT_FILENO) )
 	{
-		::libmaus::exception::LibMausException se;
+		::libmaus2::exception::LibMausException se;
 		se.getStream() << "Refusing write binary data to terminal, please redirect standard output to pipe or file." << std::endl;
 		se.finish();
 		throw se;
@@ -153,7 +153,7 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 	double   const pG = arginfo.getValue<double>("pG",getDefaultpG());
 	double   const pT = arginfo.getValue<double>("pT",getDefaultpT());
 
-	int const level = libmaus::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
+	int const level = libmaus2::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
 	int const clip = arginfo.getValue<int>("clip",getDefaultClip());
 	uint64_t const mod = arginfo.getValue<int>("mod",getDefaultMod());
@@ -171,58 +171,58 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 	// maximum number of adapter bases to be compared
 	uint64_t const almax = arginfo.getValue<uint64_t>("ADAPTER_MATCH",getDefaultADAPTER_MATCH());
 
-	libmaus::bambam::AdapterFilter::unique_ptr_type AF;
+	libmaus2::bambam::AdapterFilter::unique_ptr_type AF;
 	
 	if ( arginfo.hasArg("adaptersbam") )
 	{
-		libmaus::aio::CheckedInputStream adapterCIS(arginfo.getUnparsedValue("adaptersbam","adapters.bam"));
-		libmaus::bambam::AdapterFilter::unique_ptr_type tAF(
-                                new libmaus::bambam::AdapterFilter(adapterCIS,12 /* seed length */)
+		libmaus2::aio::CheckedInputStream adapterCIS(arginfo.getUnparsedValue("adaptersbam","adapters.bam"));
+		libmaus2::bambam::AdapterFilter::unique_ptr_type tAF(
+                                new libmaus2::bambam::AdapterFilter(adapterCIS,12 /* seed length */)
                         );
 		AF = UNIQUE_PTR_MOVE(tAF);
 	}
 	else
 	{
-		std::string const builtinAdapters = libmaus::bambam::BamDefaultAdapters::getDefaultAdapters();
+		std::string const builtinAdapters = libmaus2::bambam::BamDefaultAdapters::getDefaultAdapters();
 		std::istringstream builtinAdaptersStr(builtinAdapters);
-		libmaus::bambam::AdapterFilter::unique_ptr_type tAF(
-                                new libmaus::bambam::AdapterFilter(builtinAdaptersStr,12 /* seed length */)
+		libmaus2::bambam::AdapterFilter::unique_ptr_type tAF(
+                                new libmaus2::bambam::AdapterFilter(builtinAdaptersStr,12 /* seed length */)
                         );
 		AF = UNIQUE_PTR_MOVE(tAF);
 	}
 
-	libmaus::autoarray::AutoArray<char> Aread;
-	libmaus::util::PushBuffer<libmaus::bambam::AdapterOffsetStrand> AOSPB;
+	libmaus2::autoarray::AutoArray<char> Aread;
+	libmaus2::util::PushBuffer<libmaus2::bambam::AdapterOffsetStrand> AOSPB;
 
-	::libmaus::bambam::BamDecoder bamdec(std::cin,false);
-	::libmaus::bambam::BamHeader const & header = bamdec.getHeader();
+	::libmaus2::bambam::BamDecoder bamdec(std::cin,false);
+	::libmaus2::bambam::BamHeader const & header = bamdec.getHeader();
 
 	std::string const headertext(header.text);
 
 	// add PG line to header
-	std::string const upheadtext = ::libmaus::bambam::ProgramHeaderLineSet::addProgramLine(
+	std::string const upheadtext = ::libmaus2::bambam::ProgramHeaderLineSet::addProgramLine(
 		headertext,
 		"bamadapterfind", // ID
 		"bamadapterfind", // PN
 		arginfo.commandline, // CL
-		::libmaus::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
+		::libmaus2::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
 		std::string(PACKAGE_VERSION) // VN			
 	);
 	// construct new header
-	::libmaus::bambam::BamHeader uphead(upheadtext);
+	::libmaus2::bambam::BamHeader uphead(upheadtext);
 
 	/*
 	 * start index/md5 callbacks
 	 */
 	std::string const tmpfilenamebase = arginfo.getValue<std::string>("tmpfile",arginfo.getDefaultTmpFileName());
 	std::string const tmpfileindex = tmpfilenamebase + "_index";
-	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
+	::libmaus2::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
 
 	std::string md5filename;
 	std::string indexfilename;
 
-	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > cbs;
-	::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
+	std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > cbs;
+	::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
 	if ( arginfo.getValue<unsigned int>("md5",getDefaultMD5()) )
 	{
 		if ( arginfo.hasArg("md5filename") &&  arginfo.getUnparsedValue("md5filename","") != "" )
@@ -232,12 +232,12 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 
 		if ( md5filename.size() )
 		{
-			::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5cb(new ::libmaus::lz::BgzfDeflateOutputCallbackMD5);
+			::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5cb(new ::libmaus2::lz::BgzfDeflateOutputCallbackMD5);
 			Pmd5cb = UNIQUE_PTR_MOVE(Tmd5cb);
 			cbs.push_back(Pmd5cb.get());
 		}
 	}
-	libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Pindex;
+	libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Pindex;
 	if ( arginfo.getValue<unsigned int>("index",getDefaultIndex()) )
 	{
 		if ( arginfo.hasArg("indexfilename") &&  arginfo.getUnparsedValue("indexfilename","") != "" )
@@ -247,33 +247,33 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 
 		if ( indexfilename.size() )
 		{
-			libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Tindex(new libmaus::bambam::BgzfDeflateOutputCallbackBamIndex(tmpfileindex));
+			libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Tindex(new libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex(tmpfileindex));
 			Pindex = UNIQUE_PTR_MOVE(Tindex);
 			cbs.push_back(Pindex.get());
 		}
 	}
-	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
+	std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
 	if ( cbs.size() )
 		Pcbs = &cbs;
 	/*
 	 * end md5/index callbacks
 	 */
 
-	::libmaus::bambam::BamWriter::unique_ptr_type writer(new ::libmaus::bambam::BamWriter(std::cout,uphead,level,Pcbs));
+	::libmaus2::bambam::BamWriter::unique_ptr_type writer(new ::libmaus2::bambam::BamWriter(std::cout,uphead,level,Pcbs));
 	
 	bool running = true;
-	libmaus::bambam::BamAlignment algns[2];
-	libmaus::bambam::BamAlignment & inputalgn = bamdec.getAlignment();
-	libmaus::autoarray::AutoArray<char> seqs[2];
+	libmaus2::bambam::BamAlignment algns[2];
+	libmaus2::bambam::BamAlignment & inputalgn = bamdec.getAlignment();
+	libmaus2::autoarray::AutoArray<char> seqs[2];
 	
-	libmaus::autoarray::AutoArray<uint8_t> S(256,false);
+	libmaus2::autoarray::AutoArray<uint8_t> S(256,false);
 	std::fill(S.begin(),S.end(),4);
 	S['a'] = S['A'] = 0;
 	S['c'] = S['C'] = 1;
 	S['g'] = S['G'] = 2;
 	S['t'] = S['T'] = 3;
 
-	libmaus::autoarray::AutoArray<uint8_t> R(256,false);
+	libmaus2::autoarray::AutoArray<uint8_t> R(256,false);
 	std::fill(R.begin(),R.end(),5);
 	R['a'] = R['A'] = 0;
 	R['c'] = R['C'] = 1;
@@ -304,7 +304,7 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 		(1ull << 60) |
 		(1ull << 63);
 
-	libmaus::bambam::BamAuxFilterVector auxfilter;
+	libmaus2::bambam::BamAuxFilterVector auxfilter;
 	auxfilter.set("a3");
 	auxfilter.set("ah");
 	
@@ -314,18 +314,18 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 	uint64_t paircnt = 0;
 	uint64_t orphcnt = 0;
 
-	uint64_t const bmod = libmaus::math::nextTwoPow(mod);
+	uint64_t const bmod = libmaus2::math::nextTwoPow(mod);
 	// uint64_t const bmask = bmod-1;
-	uint64_t const bshift = libmaus::math::ilog(bmod);
+	uint64_t const bshift = libmaus2::math::ilog(bmod);
 	
-	libmaus::util::Histogram overlaphist;
-	libmaus::util::Histogram adapterhist;
+	libmaus2::util::Histogram overlaphist;
+	libmaus2::util::Histogram adapterhist;
 
-	libmaus::autoarray::AutoArray<char> CR;
-	libmaus::autoarray::AutoArray<char> CQ;
-	libmaus::bambam::BamSeqEncodeTable const seqenc;
-	libmaus::autoarray::AutoArray<libmaus::bambam::cigar_operation> cigop;
-	libmaus::bambam::BamAlignment::D_array_type T;
+	libmaus2::autoarray::AutoArray<char> CR;
+	libmaus2::autoarray::AutoArray<char> CQ;
+	libmaus2::bambam::BamSeqEncodeTable const seqenc;
+	libmaus2::autoarray::AutoArray<libmaus2::bambam::cigar_operation> cigop;
+	libmaus2::bambam::BamAlignment::D_array_type T;
 	
 	// std::cerr << "bmask=" << bmask << std::endl;
 	
@@ -473,7 +473,7 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 		 * is shorter than the seed length
 		 */
 		uint64_t const lseedlength = std::min(seedlength,lm);
-		uint64_t const lseedmask = libmaus::math::lowbits(3*lseedlength);
+		uint64_t const lseedmask = libmaus2::math::lowbits(3*lseedlength);
 
 		// compute seed from last lseedlength bases of second read
 		uint64_t seed = 0;
@@ -507,7 +507,7 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 			// compute number of mismatches			
 			uint64_t dif = (query ^ seed);
 			dif = (dif | (dif >> 1) | (dif >> 2)) & mmask;
-			unsigned int const difcnt = libmaus::rank::PopCnt8<sizeof(unsigned long)>::popcnt8(dif);
+			unsigned int const difcnt = libmaus2::rank::PopCnt8<sizeof(unsigned long)>::popcnt8(dif);
 			
 			#if defined(DIFCNTDEBUG)
 			unsigned int debdifcnt = 0;
@@ -572,7 +572,7 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 						
 						// calculate mismatches in adapter
 						while ( ap0 != ap0e )
-							if ( S[*(ap0++)] != R[libmaus::fastx::invertUnmapped(*(--ap1))] )
+							if ( S[*(ap0++)] != R[libmaus2::fastx::invertUnmapped(*(--ap1))] )
 								aldif++;
 
 						// if number of mismatches is within the tolerated range (0 at this time)
@@ -604,7 +604,7 @@ int bamadapterfind(::libmaus::util::ArgInfo const & arginfo)
 									) << std::endl;
 								
 								std::cerr << "[V2] assumed adapter on read 2 ["<<al1<<"]: "
-									<< libmaus::fastx::reverseComplementUnmapped(std::string(
+									<< libmaus2::fastx::reverseComplementUnmapped(std::string(
 										seqs[1].begin(),
 										seqs[1].begin()+al1)) << std::endl;
 							}
@@ -698,7 +698,7 @@ int main(int argc, char * argv[])
 {
 	try
 	{
-		::libmaus::util::ArgInfo const arginfo(argc,argv);
+		::libmaus2::util::ArgInfo const arginfo(argc,argv);
 		
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
 			if ( 
@@ -707,7 +707,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--version"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
 			else if ( 
@@ -716,38 +716,38 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--help"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
 				
 				std::vector< std::pair<std::string,std::string> > V;
 			
-				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
-				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "mod=<["+::biobambam::Licensing::formatNumber(getDefaultMod())+"]>", "print progress every mod'th line (if verbose>0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
+				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "mod=<["+::biobambam2::Licensing::formatNumber(getDefaultMod())+"]>", "print progress every mod'th line (if verbose>0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "adaptersbam=<[]>", "list of adapters/primers stored in a BAM file (use internal list if not given)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "clip=<["+::biobambam::Licensing::formatNumber(getDefaultClip())+"]>", "clip off adapters (see bamadapterclip program)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "SEED_LENGTH=<["+::biobambam::Licensing::formatNumber(getDefaultSEED_LENGTH())+"]>", "length of seed for matching" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "PCT_MISMATCH=<["+::biobambam::Licensing::formatNumber(getDefaultPCT_MISMATCH())+"]>", "maximum percentage of mismatches in matching" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "clip=<["+::biobambam2::Licensing::formatNumber(getDefaultClip())+"]>", "clip off adapters (see bamadapterclip program)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "SEED_LENGTH=<["+::biobambam2::Licensing::formatNumber(getDefaultSEED_LENGTH())+"]>", "length of seed for matching" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "PCT_MISMATCH=<["+::biobambam2::Licensing::formatNumber(getDefaultPCT_MISMATCH())+"]>", "maximum percentage of mismatches in matching" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "MAX_SEED_MISMATCHES=<[SEED_LENGTH*PCT_MISMATCH]>", "maximum number of mismatches in seed (up to 2)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "MIN_OVERLAP=<["+::biobambam::Licensing::formatNumber(getDefaultMIN_OVERLAP())+"]>", "minimum overlap between mates" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "ADAPTER_MATCH=<["+::biobambam::Licensing::formatNumber(getDefaultADAPTER_MATCH())+"]>", "maximum adapter match check" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "adpmatchminscore=<["+::biobambam::Licensing::formatNumber(getDefaultMatchMinScore())+"]>", "minimum score for adapter list matching" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "adpmatchminfrac=<["+::biobambam::Licensing::formatFloatingPoint(getDefaultMatchMinFrac())+"]>", "minimum fraction for adapter list matching" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "adpmatchminpfrac=<["+::biobambam::Licensing::formatFloatingPoint(getDefaultMatchMinPFrac())+"]>", "minimum fraction of overlap for adapter list matching" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "reflen=<["+::biobambam::Licensing::formatNumber(getDefaultRefLen())+"]>", "length of reference sequence/genome" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "pA=<["+::biobambam::Licensing::formatFloatingPoint(getDefaultpA())+"]>", "relative frequency of base A in reference sequence/genome" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "pC=<["+::biobambam::Licensing::formatFloatingPoint(getDefaultpC())+"]>", "relative frequency of base C in reference sequence/genome" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "pG=<["+::biobambam::Licensing::formatFloatingPoint(getDefaultpG())+"]>", "relative frequency of base G in reference sequence/genome" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "pT=<["+::biobambam::Licensing::formatFloatingPoint(getDefaultpT())+"]>", "relative frequency of base T in reference sequence/genome" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "MIN_OVERLAP=<["+::biobambam2::Licensing::formatNumber(getDefaultMIN_OVERLAP())+"]>", "minimum overlap between mates" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "ADAPTER_MATCH=<["+::biobambam2::Licensing::formatNumber(getDefaultADAPTER_MATCH())+"]>", "maximum adapter match check" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "adpmatchminscore=<["+::biobambam2::Licensing::formatNumber(getDefaultMatchMinScore())+"]>", "minimum score for adapter list matching" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "adpmatchminfrac=<["+::biobambam2::Licensing::formatFloatingPoint(getDefaultMatchMinFrac())+"]>", "minimum fraction for adapter list matching" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "adpmatchminpfrac=<["+::biobambam2::Licensing::formatFloatingPoint(getDefaultMatchMinPFrac())+"]>", "minimum fraction of overlap for adapter list matching" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "reflen=<["+::biobambam2::Licensing::formatNumber(getDefaultRefLen())+"]>", "length of reference sequence/genome" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "pA=<["+::biobambam2::Licensing::formatFloatingPoint(getDefaultpA())+"]>", "relative frequency of base A in reference sequence/genome" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "pC=<["+::biobambam2::Licensing::formatFloatingPoint(getDefaultpC())+"]>", "relative frequency of base C in reference sequence/genome" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "pG=<["+::biobambam2::Licensing::formatFloatingPoint(getDefaultpG())+"]>", "relative frequency of base G in reference sequence/genome" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "pT=<["+::biobambam2::Licensing::formatFloatingPoint(getDefaultpT())+"]>", "relative frequency of base T in reference sequence/genome" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam2::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "md5filename=<filename>", "file name for md5 check sum (default: extend output file name)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam2::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "indexfilename=<filename>", "file name for BAM index file (default: extend output file name)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "tmpfile=<filename>", "prefix for temporary files, default: create files in current directory" ) );
 
-				::biobambam::Licensing::printMap(std::cerr,V);
+				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;

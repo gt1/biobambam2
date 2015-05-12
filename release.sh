@@ -1,8 +1,6 @@
 #! /bin/bash
 
 # update branches
-git checkout bamparallel
-git pull
 git checkout experimental
 git pull
 git checkout experimental-debian

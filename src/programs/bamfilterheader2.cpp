@@ -16,15 +16,15 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include <libmaus/aio/PosixFdInputStream.hpp>
-#include <libmaus/bambam/BamAlignmentDecoder.hpp>
-#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
-#include <libmaus/bambam/BamHeaderLowMem.hpp>
-#include <libmaus/lz/BgzfDeflate.hpp>
-#include <libmaus/lz/BgzfDeflateOutputCallbackMD5.hpp>
-#include <libmaus/lz/BgzfInflateStream.hpp>
+#include <libmaus2/aio/PosixFdInputStream.hpp>
+#include <libmaus2/bambam/BamAlignmentDecoder.hpp>
+#include <libmaus2/bambam/BamBlockWriterBaseFactory.hpp>
+#include <libmaus2/bambam/BamHeaderLowMem.hpp>
+#include <libmaus2/lz/BgzfDeflate.hpp>
+#include <libmaus2/lz/BgzfDeflateOutputCallbackMD5.hpp>
+#include <libmaus2/lz/BgzfInflateStream.hpp>
 
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/Licensing.hpp>
 
 #include <config.h>
 
@@ -35,19 +35,19 @@ int getDefaultMD5() { return 0; }
 /*
  * compute bit vector of used sequences
  */
-static ::libmaus::bitio::IndexedBitVector::unique_ptr_type getUsedSeqVector(libmaus::util::ArgInfo const & arginfo, std::istream & in)
+static ::libmaus2::bitio::IndexedBitVector::unique_ptr_type getUsedSeqVector(libmaus2::util::ArgInfo const & arginfo, std::istream & in)
 {
 	bool const verbose = arginfo.getValue<unsigned int>("verbose",getDefaultVerbose());
-	libmaus::lz::BgzfInflateStream bgzfin(in);
+	libmaus2::lz::BgzfInflateStream bgzfin(in);
 
-	libmaus::bambam::BamHeaderLowMem::unique_ptr_type PBHLM ( libmaus::bambam::BamHeaderLowMem::constructFromBAM(bgzfin));
+	libmaus2::bambam::BamHeaderLowMem::unique_ptr_type PBHLM ( libmaus2::bambam::BamHeaderLowMem::constructFromBAM(bgzfin));
 
-	::libmaus::bambam::BamAlignment algn;
-	::libmaus::bitio::IndexedBitVector::unique_ptr_type Psqused(new ::libmaus::bitio::IndexedBitVector(PBHLM->getNumRef()));
-	::libmaus::bitio::IndexedBitVector & sqused = *Psqused;
+	::libmaus2::bambam::BamAlignment algn;
+	::libmaus2::bitio::IndexedBitVector::unique_ptr_type Psqused(new ::libmaus2::bitio::IndexedBitVector(PBHLM->getNumRef()));
+	::libmaus2::bitio::IndexedBitVector & sqused = *Psqused;
 	uint64_t c = 0;
 	while ( 
-		libmaus::bambam::BamAlignmentDecoder::readAlignmentGz(bgzfin,algn)
+		libmaus2::bambam::BamAlignmentDecoder::readAlignmentGz(bgzfin,algn)
 	)
 	{
 		if ( algn.isMapped() )
@@ -73,18 +73,18 @@ static ::libmaus::bitio::IndexedBitVector::unique_ptr_type getUsedSeqVector(libm
 }
 
 static void filterBamUsedSequences(
-	libmaus::util::ArgInfo const & arginfo,
+	libmaus2::util::ArgInfo const & arginfo,
 	std::istream & in,
-	::libmaus::bitio::IndexedBitVector const & IBV,
+	::libmaus2::bitio::IndexedBitVector const & IBV,
 	std::ostream & out
 )
 {
-	libmaus::lz::BgzfInflateStream bgzfin(in);
-	libmaus::bambam::BamHeaderLowMem::unique_ptr_type PBHLM ( libmaus::bambam::BamHeaderLowMem::constructFromBAM(bgzfin));
+	libmaus2::lz::BgzfInflateStream bgzfin(in);
+	libmaus2::bambam::BamHeaderLowMem::unique_ptr_type PBHLM ( libmaus2::bambam::BamHeaderLowMem::constructFromBAM(bgzfin));
 
 	bool const verbose = arginfo.getValue<unsigned int>("verbose",getDefaultVerbose());
-	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > cbs;
-	::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
+	std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > cbs;
+	::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
 	std::string md5filename;
 	if ( arginfo.getValue<unsigned int>("md5",getDefaultMD5()) )
 	{
@@ -95,19 +95,19 @@ static void filterBamUsedSequences(
 
 		if ( md5filename.size() )
 		{
-			::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5cb(new ::libmaus::lz::BgzfDeflateOutputCallbackMD5);
+			::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5cb(new ::libmaus2::lz::BgzfDeflateOutputCallbackMD5);
 			Pmd5cb = UNIQUE_PTR_MOVE(Tmd5cb);
 			cbs.push_back(Pmd5cb.get());
 		}
 	}
 
-	int const level = libmaus::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
-	libmaus::lz::BgzfDeflate<std::ostream>::unique_ptr_type Pbgzfout(
-		new libmaus::lz::BgzfDeflate<std::ostream>(
+	int const level = libmaus2::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
+	libmaus2::lz::BgzfDeflate<std::ostream>::unique_ptr_type Pbgzfout(
+		new libmaus2::lz::BgzfDeflate<std::ostream>(
 			out,level
 		)
 	);
-	libmaus::lz::BgzfDeflate<std::ostream> & bgzfout = *Pbgzfout;
+	libmaus2::lz::BgzfDeflate<std::ostream> & bgzfout = *Pbgzfout;
 	
 	if ( verbose )
 		std::cerr << "[V] writing filtered header...";
@@ -117,9 +117,9 @@ static void filterBamUsedSequences(
 	if ( verbose )
 		std::cerr << "done." << std::endl;
 
-	::libmaus::bambam::BamAlignment algn;
+	::libmaus2::bambam::BamAlignment algn;
 	uint64_t c = 0;
-	while ( libmaus::bambam::BamAlignmentDecoder::readAlignmentGz(bgzfin,algn) )
+	while ( libmaus2::bambam::BamAlignmentDecoder::readAlignmentGz(bgzfin,algn) )
 	{
 		if ( algn.isMapped() )
 		{
@@ -160,22 +160,22 @@ static void filterBamUsedSequences(
 		Pmd5cb->saveDigestAsFile(md5filename);
 }
 
-int bamfilterheader2(libmaus::util::ArgInfo const & arginfo)
+int bamfilterheader2(libmaus2::util::ArgInfo const & arginfo)
 {
 	std::string const fn = arginfo.getUnparsedRestArg(0);
 	
-	::libmaus::bitio::IndexedBitVector::unique_ptr_type PIBV;
+	::libmaus2::bitio::IndexedBitVector::unique_ptr_type PIBV;
 
 	// compute vector of used sequences
 	{
-		libmaus::aio::PosixFdInputStream in(fn);
-		::libmaus::bitio::IndexedBitVector::unique_ptr_type TIBV(getUsedSeqVector(arginfo,in));
+		libmaus2::aio::PosixFdInputStream in(fn);
+		::libmaus2::bitio::IndexedBitVector::unique_ptr_type TIBV(getUsedSeqVector(arginfo,in));
 		PIBV = UNIQUE_PTR_MOVE(TIBV);
 	}
 	
 	// filter file and remove all unused sequences from header
 	{
-		libmaus::aio::PosixFdInputStream in(fn);
+		libmaus2::aio::PosixFdInputStream in(fn);
 		filterBamUsedSequences(arginfo,in,*PIBV,std::cout);
 	}
 	
@@ -186,7 +186,7 @@ int main(int argc, char * argv[])
 {
 	try
 	{
-		libmaus::util::ArgInfo const arginfo(argc,argv);
+		libmaus2::util::ArgInfo const arginfo(argc,argv);
 		
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
 			if ( 
@@ -195,7 +195,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--version"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
 			else if ( 
@@ -204,20 +204,20 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--help"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
 				
 				std::vector< std::pair<std::string,std::string> > V;
 			
-				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
-				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
+				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "I=<[input filename]>", "name of the input file (mandatory)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam2::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "md5filename=<filename>", "file name for md5 check sum (default: extend output file name)" ) );
 
-				::biobambam::Licensing::printMap(std::cerr,V);
+				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;

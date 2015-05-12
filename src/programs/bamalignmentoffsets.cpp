@@ -19,35 +19,35 @@
 #include <config.h>
 #include <cstdlib>
 #include <iostream>
-#include <libmaus/aio/PosixFdInputStream.hpp>
-#include <libmaus/aio/PosixFdOutputStream.hpp>
-#include <libmaus/fastx/FastAReader.hpp>
-#include <libmaus/fastx/FastABgzfIndex.hpp>
-#include <libmaus/fastx/FastAIndex.hpp>
-#include <libmaus/fastx/StreamFastAReader.hpp>
-#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
-#include <libmaus/bambam/BamDecoder.hpp>
-#include <libmaus/bambam/BamWriter.hpp>
-#include <libmaus/bambam/BamHeaderUpdate.hpp>
-#include <libmaus/bambam/BamMultiAlignmentDecoderFactory.hpp>
-#include <libmaus/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
-#include <libmaus/bambam/MdNmRecalculation.hpp>
-#include <libmaus/lcs/SuffixPrefix.hpp>
-#include <libmaus/lz/BgzfDeflateOutputCallbackMD5.hpp>
-#include <libmaus/lz/RAZFIndex.hpp>
-#include <libmaus/lz/RAZFDecoder.hpp>
-#include <libmaus/timing/RealTimeClock.hpp>
-#include <libmaus/util/ArgInfo.hpp>
-#include <libmaus/util/GetFileSize.hpp>
-#include <libmaus/util/OutputFileNameTools.hpp>
-#include <libmaus/util/TempFileRemovalContainer.hpp>
+#include <libmaus2/aio/PosixFdInputStream.hpp>
+#include <libmaus2/aio/PosixFdOutputStream.hpp>
+#include <libmaus2/fastx/FastAReader.hpp>
+#include <libmaus2/fastx/FastABgzfIndex.hpp>
+#include <libmaus2/fastx/FastAIndex.hpp>
+#include <libmaus2/fastx/StreamFastAReader.hpp>
+#include <libmaus2/bambam/BamBlockWriterBaseFactory.hpp>
+#include <libmaus2/bambam/BamDecoder.hpp>
+#include <libmaus2/bambam/BamWriter.hpp>
+#include <libmaus2/bambam/BamHeaderUpdate.hpp>
+#include <libmaus2/bambam/BamMultiAlignmentDecoderFactory.hpp>
+#include <libmaus2/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
+#include <libmaus2/bambam/MdNmRecalculation.hpp>
+#include <libmaus2/lcs/SuffixPrefix.hpp>
+#include <libmaus2/lz/BgzfDeflateOutputCallbackMD5.hpp>
+#include <libmaus2/lz/RAZFIndex.hpp>
+#include <libmaus2/lz/RAZFDecoder.hpp>
+#include <libmaus2/timing/RealTimeClock.hpp>
+#include <libmaus2/util/ArgInfo.hpp>
+#include <libmaus2/util/GetFileSize.hpp>
+#include <libmaus2/util/OutputFileNameTools.hpp>
+#include <libmaus2/util/TempFileRemovalContainer.hpp>
 
-#include <biobambam/BamBamConfig.hpp>
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/BamBamConfig.hpp>
+#include <biobambam2/Licensing.hpp>
 
 static uint64_t getDefaultIOBlockSize() { return 128*1024; }
 
-std::string getClippedRead(libmaus::bambam::BamAlignment const & algn)
+std::string getClippedRead(libmaus2::bambam::BamAlignment const & algn)
 {
 	uint64_t const f = algn.getFrontSoftClipping();
 	uint64_t const b = algn.getBackSoftClipping();
@@ -59,18 +59,18 @@ std::string getClippedRead(libmaus::bambam::BamAlignment const & algn)
 	return r;
 }
 
-std::vector<libmaus::bambam::BamFlagBase::bam_cigar_ops> getCigarOperations(
-	libmaus::bambam::BamAlignment const & algn,
+std::vector<libmaus2::bambam::BamFlagBase::bam_cigar_ops> getCigarOperations(
+	libmaus2::bambam::BamAlignment const & algn,
 	bool removeFrontSoftClip = false,
 	bool removeBackSoftClip = false
 )
 {
-	libmaus::autoarray::AutoArray<libmaus::bambam::cigar_operation> cigop;
+	libmaus2::autoarray::AutoArray<libmaus2::bambam::cigar_operation> cigop;
 	algn.getCigarOperations(cigop);
-	std::vector<libmaus::bambam::BamFlagBase::bam_cigar_ops> V;
+	std::vector<libmaus2::bambam::BamFlagBase::bam_cigar_ops> V;
 	for ( uint64_t i = 0; i < cigop.size(); ++i )
 		for ( int64_t j = 0; j < cigop[i].second; ++j )
-			V.push_back(static_cast<libmaus::bambam::BamFlagBase::bam_cigar_ops>(cigop[i].first));
+			V.push_back(static_cast<libmaus2::bambam::BamFlagBase::bam_cigar_ops>(cigop[i].first));
 			
 	if ( removeFrontSoftClip )
 	{
@@ -91,7 +91,7 @@ std::vector<libmaus::bambam::BamFlagBase::bam_cigar_ops> getCigarOperations(
 	return V;
 }
 
-std::string encodeCigarString(std::vector<libmaus::bambam::BamFlagBase::bam_cigar_ops> const & V)
+std::string encodeCigarString(std::vector<libmaus2::bambam::BamFlagBase::bam_cigar_ops> const & V)
 {
 	uint64_t low = 0;
 	std::ostringstream ostr;
@@ -104,31 +104,31 @@ std::string encodeCigarString(std::vector<libmaus::bambam::BamFlagBase::bam_ciga
 		ostr << (high-low);
 		switch ( V[low] )
 		{
-			case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CMATCH:
+			case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CMATCH:
 				ostr.put('M');
 				break;
-			case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CINS:
+			case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CINS:
 				ostr.put('I');
 				break;
-			case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CDEL:
+			case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CDEL:
 				ostr.put('D');
 				break;
-			case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CREF_SKIP:
+			case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CREF_SKIP:
 				ostr.put('N');
 				break;
-			case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CSOFT_CLIP:
+			case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CSOFT_CLIP:
 				ostr.put('S');
 				break;
-			case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CHARD_CLIP:
+			case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CHARD_CLIP:
 				ostr.put('H');
 				break;
-			case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CPAD:
+			case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CPAD:
 				ostr.put('P');
 				break;
-			case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CEQUAL:
+			case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CEQUAL:
 				ostr.put('=');
 				break;
-			case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CDIFF:
+			case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CDIFF:
 				ostr.put('X');
 				break;
 		}
@@ -139,16 +139,16 @@ std::string encodeCigarString(std::vector<libmaus::bambam::BamFlagBase::bam_ciga
 	return ostr.str();
 }
 
-std::vector<libmaus::bambam::BamAlignment::shared_ptr_type> handleChain(std::vector<libmaus::bambam::BamAlignment::shared_ptr_type> const & chain)
+std::vector<libmaus2::bambam::BamAlignment::shared_ptr_type> handleChain(std::vector<libmaus2::bambam::BamAlignment::shared_ptr_type> const & chain)
 {
 	int64_t previd = -1;
 	int64_t prevend = -1;
 	
-	std::vector<libmaus::bambam::BamAlignment::shared_ptr_type> outchain;
+	std::vector<libmaus2::bambam::BamAlignment::shared_ptr_type> outchain;
 
 	for ( uint64_t i = 0; i < chain.size(); ++i )
 	{
-		libmaus::bambam::BamAlignment const & algn = *(chain[i]);
+		libmaus2::bambam::BamAlignment const & algn = *(chain[i]);
 
 		int64_t const thisid = algn.getRefID();
 		int64_t const thispos = algn.getPos();
@@ -177,8 +177,8 @@ std::vector<libmaus::bambam::BamAlignment::shared_ptr_type> handleChain(std::vec
 				static_cast<uint64_t>(thisread.size()),static_cast<uint64_t>(5*-offset)
 			);
 			thisread = thisread.substr(0,thisreadkeep);
-				::libmaus::lcs::SuffixPrefix SP(prevread.size(),thisread.size());
-			::libmaus::lcs::SuffixPrefixResult SSPR = SP.process(prevread.begin(),thisread.begin());
+				::libmaus2::lcs::SuffixPrefix SP(prevread.size(),thisread.size());
+			::libmaus2::lcs::SuffixPrefixResult SSPR = SP.process(prevread.begin(),thisread.begin());
 
 			//if ( !ok && !SP.startsWithDeletion() && !SP.endsWithInsertion() && SSPR.nummat >= 50 )
 			std::cerr << SSPR << std::endl;
@@ -192,18 +192,18 @@ std::vector<libmaus::bambam::BamAlignment::shared_ptr_type> handleChain(std::vec
 			{
 				uint64_t soft = 0, hard = 0;
 				
-				std::vector<libmaus::bambam::BamFlagBase::bam_cigar_ops> cigops = getCigarOperations(
+				std::vector<libmaus2::bambam::BamFlagBase::bam_cigar_ops> cigops = getCigarOperations(
 					*(outchain.back()),false,false);
 				
 				while ( cigops.size() && 
-					cigops.back() == libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CHARD_CLIP
+					cigops.back() == libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CHARD_CLIP
 				)
 				{
 					hard++;
 					cigops.pop_back();
 				}
 				while ( cigops.size() && 
-					cigops.back() == libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CSOFT_CLIP
+					cigops.back() == libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CSOFT_CLIP
 				)
 				{
 					soft++;
@@ -217,10 +217,10 @@ std::vector<libmaus::bambam::BamAlignment::shared_ptr_type> handleChain(std::vec
 					
 					switch ( cigops.back() )
 					{
-						case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CMATCH:
-						case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CINS:
-						case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CEQUAL:
-						case libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CDIFF:
+						case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CMATCH:
+						case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CINS:
+						case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CEQUAL:
+						case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CDIFF:
 							tbackclipa -= 1;
 							break;
 						default:
@@ -232,11 +232,11 @@ std::vector<libmaus::bambam::BamAlignment::shared_ptr_type> handleChain(std::vec
 				
 				while ( cigops.size() && 
 					(
-						cigops.back() == libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CDEL 
+						cigops.back() == libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CDEL 
 						||
-						cigops.back() == libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CREF_SKIP
+						cigops.back() == libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CREF_SKIP
 						||
-						cigops.back() == libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CPAD
+						cigops.back() == libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CPAD
 					)
 				)
 				{
@@ -244,9 +244,9 @@ std::vector<libmaus::bambam::BamAlignment::shared_ptr_type> handleChain(std::vec
 				}
 				
 				for ( uint64_t i = 0; i < backclipa+soft; ++i )
-					cigops.push_back(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CSOFT_CLIP);
+					cigops.push_back(libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CSOFT_CLIP);
 				for ( uint64_t i = 0; i < hard; ++i )
-					cigops.push_back(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CHARD_CLIP);
+					cigops.push_back(libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CHARD_CLIP);
 					
 				std::string const newcig = encodeCigarString(cigops);
 
@@ -267,14 +267,14 @@ std::vector<libmaus::bambam::BamAlignment::shared_ptr_type> handleChain(std::vec
 	return outchain;
 }
 
-void printChain(std::vector<libmaus::bambam::BamAlignment::shared_ptr_type> const & chain)
+void printChain(std::vector<libmaus2::bambam::BamAlignment::shared_ptr_type> const & chain)
 {
 	int64_t previd = -1;
 	int64_t prevend = -1;
 	
 	for ( uint64_t i = 0; i < chain.size(); ++i )
 	{
-		libmaus::bambam::BamAlignment const & algn = *(chain[i]);
+		libmaus2::bambam::BamAlignment const & algn = *(chain[i]);
 
 		int64_t const thisid = algn.getRefID();
 		int64_t const thispos = algn.getPos();
@@ -299,7 +299,7 @@ void printChain(std::vector<libmaus::bambam::BamAlignment::shared_ptr_type> cons
 	}
 }
 
-std::pair<bool,std::string> chainToContig(std::vector<libmaus::bambam::BamAlignment::shared_ptr_type> const & chain)
+std::pair<bool,std::string> chainToContig(std::vector<libmaus2::bambam::BamAlignment::shared_ptr_type> const & chain)
 {
 	int64_t previd = -1;
 	int64_t prevend = -1;
@@ -309,7 +309,7 @@ std::pair<bool,std::string> chainToContig(std::vector<libmaus::bambam::BamAlignm
 	
 	for ( uint64_t i = 0; i < chain.size(); ++i )
 	{
-		libmaus::bambam::BamAlignment const & algn = *(chain[i]);
+		libmaus2::bambam::BamAlignment const & algn = *(chain[i]);
 
 		int64_t const thisid = algn.getRefID();
 		int64_t const thispos = algn.getPos();
@@ -336,18 +336,18 @@ std::pair<bool,std::string> chainToContig(std::vector<libmaus::bambam::BamAlignm
 	return std::pair<bool,std::string>(ok,ostr.str());
 }
 
-static int bamalignmentoffsets(libmaus::util::ArgInfo const & arginfo)
+static int bamalignmentoffsets(libmaus2::util::ArgInfo const & arginfo)
 {
 	uint64_t const ioblocksize = arginfo.getValueUnsignedNumeric<uint64_t>("ioblocksize",getDefaultIOBlockSize());
 	int64_t const contigsplit = arginfo.getValueUnsignedNumeric<uint64_t>("contigsplit",20000);
 	bool const modify = arginfo.getValue<unsigned int>("modify",0);
 	std::string const fn = arginfo.restargs.at(0);
-	::libmaus::aio::PosixFdInputStream PFIS(fn,ioblocksize);
-	libmaus::bambam::BamDecoder bamdec(PFIS);
-	libmaus::bambam::BamHeader const & header = bamdec.getHeader();
-	libmaus::bambam::BamAlignment & algn = bamdec.getAlignment();
+	::libmaus2::aio::PosixFdInputStream PFIS(fn,ioblocksize);
+	libmaus2::bambam::BamDecoder bamdec(PFIS);
+	libmaus2::bambam::BamHeader const & header = bamdec.getHeader();
+	libmaus2::bambam::BamAlignment & algn = bamdec.getAlignment();
 	
-	std::vector< std::vector<libmaus::bambam::BamAlignment::shared_ptr_type> > chains;
+	std::vector< std::vector<libmaus2::bambam::BamAlignment::shared_ptr_type> > chains;
 	
 	int64_t previd = -1;
 	int64_t prevend = -1;
@@ -367,7 +367,7 @@ static int bamalignmentoffsets(libmaus::util::ArgInfo const & arginfo)
 				std::cerr << "\t" << offset;
 				
 			if ( offset == std::numeric_limits<int64_t>::min() || offset >= contigsplit )
-				chains.push_back(std::vector<libmaus::bambam::BamAlignment::shared_ptr_type>());
+				chains.push_back(std::vector<libmaus2::bambam::BamAlignment::shared_ptr_type>());
 				
 			chains.back().push_back(algn.sclone());
 			
@@ -397,10 +397,10 @@ static int bamalignmentoffsets(libmaus::util::ArgInfo const & arginfo)
 	
 	if ( modify )
 	{
-		libmaus::bambam::BamWriter bw(std::cout,header);
+		libmaus2::bambam::BamWriter bw(std::cout,header);
 		
 		uint64_t contigid = 0;
-		libmaus::aio::CheckedOutputStream faout(fn+".fa");
+		libmaus2::aio::CheckedOutputStream faout(fn+".fa");
 		
 		if ( maxchainid >= 0 )
 		{
@@ -482,7 +482,7 @@ int main(int argc, char * argv[])
 {
 	try
 	{
-		::libmaus::util::ArgInfo const arginfo(argc,argv);
+		::libmaus2::util::ArgInfo const arginfo(argc,argv);
 
 		
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
@@ -492,7 +492,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--version"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
 			else if ( 
@@ -501,16 +501,16 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--help"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
 				
 				std::vector< std::pair<std::string,std::string> > V;
 			
-				V.push_back ( std::pair<std::string,std::string> ( "ioblocksize=<["+::biobambam::Licensing::formatNumber(getDefaultIOBlockSize())+"]>", "block size for I/O operations" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "ioblocksize=<["+::biobambam2::Licensing::formatNumber(getDefaultIOBlockSize())+"]>", "block size for I/O operations" ) );
 
-				::biobambam::Licensing::printMap(std::cerr,V);
+				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;

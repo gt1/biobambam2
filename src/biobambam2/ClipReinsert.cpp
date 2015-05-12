@@ -16,16 +16,16 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
-#include <biobambam/ClipReinsert.hpp>
+#include <biobambam2/ClipReinsert.hpp>
 
 bool clipReinsert(
-	libmaus::bambam::BamAlignment & algn,
-	libmaus::autoarray::AutoArray < std::pair<uint8_t,uint8_t> > & auxtags,
- 	libmaus::bambam::BamAuxFilterVector & bafv,
-	libmaus::autoarray::AutoArray<libmaus::bambam::cigar_operation> & cigop,
-	libmaus::bambam::BamAlignment::D_array_type & Tcigar,
-	std::stack < libmaus::bambam::cigar_operation > & hardstack,
- 	libmaus::bambam::BamAuxFilterVector const & auxfilterout
+	libmaus2::bambam::BamAlignment & algn,
+	libmaus2::autoarray::AutoArray < std::pair<uint8_t,uint8_t> > & auxtags,
+ 	libmaus2::bambam::BamAuxFilterVector & bafv,
+	libmaus2::autoarray::AutoArray<libmaus2::bambam::cigar_operation> & cigop,
+	libmaus2::bambam::BamAlignment::D_array_type & Tcigar,
+	std::stack < libmaus2::bambam::cigar_operation > & hardstack,
+ 	libmaus2::bambam::BamAuxFilterVector const & auxfilterout
 )
 {
 	uint64_t const numaux = algn.enumerateAuxTags(auxtags);
@@ -56,16 +56,16 @@ bool clipReinsert(
 				std::reverse(cigop.begin(),cigop.begin()+numcigop);
 		
 			// move hard clip operations to stack	
-			while ( numcigop && cigop[numcigop-1].first == libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CHARD_CLIP )
+			while ( numcigop && cigop[numcigop-1].first == libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CHARD_CLIP )
 				hardstack.push(cigop[--numcigop]);
 				
 			// if last operation is soft clip, then add number of bases
-			if ( numcigop && cigop[numcigop-1].first == libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CSOFT_CLIP )
+			if ( numcigop && cigop[numcigop-1].first == libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CSOFT_CLIP )
 				cigop[numcigop-1].second += qs.size();
 			// otherwise add new operation
 			else
-				cigop[numcigop++] = libmaus::bambam::cigar_operation(
-					libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_CSOFT_CLIP,qs.size()
+				cigop[numcigop++] = libmaus2::bambam::cigar_operation(
+					libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CSOFT_CLIP,qs.size()
 				);
 				
 			// reinsert hardclip operations
@@ -86,7 +86,7 @@ bool clipReinsert(
 		if ( ! algn.isReverse () )
 			algn.replaceSequence(read + qs, qual + qq);
 		else
-			algn.replaceSequence( libmaus::fastx::reverseComplementUnmapped(qs) + read, std::string(qq.rbegin(),qq.rend()) + qual);
+			algn.replaceSequence( libmaus2::fastx::reverseComplementUnmapped(qs) + read, std::string(qq.rbegin(),qq.rend()) + qual);
 			
 		algn.filterOutAux(auxfilterout);
 	}

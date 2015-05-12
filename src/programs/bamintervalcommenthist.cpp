@@ -21,23 +21,23 @@
 #include <iostream>
 #include <queue>
 
-#include <libmaus/aio/CheckedOutputStream.hpp>
+#include <libmaus2/aio/CheckedOutputStream.hpp>
 
-#include <libmaus/bambam/BamAlignment.hpp>
-#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
-#include <libmaus/bambam/BamHeaderUpdate.hpp>
-#include <libmaus/bambam/BamMultiAlignmentDecoderFactory.hpp>
-#include <libmaus/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
-#include <libmaus/bambam/MdNmRecalculation.hpp>
+#include <libmaus2/bambam/BamAlignment.hpp>
+#include <libmaus2/bambam/BamBlockWriterBaseFactory.hpp>
+#include <libmaus2/bambam/BamHeaderUpdate.hpp>
+#include <libmaus2/bambam/BamMultiAlignmentDecoderFactory.hpp>
+#include <libmaus2/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
+#include <libmaus2/bambam/MdNmRecalculation.hpp>
 
-#include <libmaus/lz/BgzfDeflateOutputCallbackMD5.hpp>
-#include <libmaus/lz/BufferedGzipStream.hpp>
+#include <libmaus2/lz/BgzfDeflateOutputCallbackMD5.hpp>
+#include <libmaus2/lz/BufferedGzipStream.hpp>
 
-#include <libmaus/util/ArgInfo.hpp>
-#include <libmaus/util/TempFileRemovalContainer.hpp>
+#include <libmaus2/util/ArgInfo.hpp>
+#include <libmaus2/util/TempFileRemovalContainer.hpp>
 
-#include <biobambam/BamBamConfig.hpp>
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/BamBamConfig.hpp>
+#include <biobambam2/Licensing.hpp>
 
 static int getDefaultVerbose() { return 1; }
 static bool getDefaultDisableValidation() { return false; }
@@ -67,7 +67,7 @@ struct IntervalPairHistogram
 		return nameids.find(name)->second;
 	}
 		
-	static std::vector< std::string > getComments(libmaus::bambam::BamAlignment * algn)
+	static std::vector< std::string > getComments(libmaus2::bambam::BamAlignment * algn)
 	{
 		std::vector< std::string > V;
 		
@@ -76,7 +76,7 @@ struct IntervalPairHistogram
 			char const * co = algn->getAuxString("CO");
 			assert ( co );
 			
-			std::deque<std::string> tokens = libmaus::util::stringFunctions::tokenize<std::string>(std::string(co),std::string(";"));
+			std::deque<std::string> tokens = libmaus2::util::stringFunctions::tokenize<std::string>(std::string(co),std::string(";"));
 			
 			V = std::vector< std::string >(tokens.begin(),tokens.end());
 		}
@@ -134,10 +134,10 @@ struct IntervalPairHistogram
 		return out;
 	}
 	
-	void evaluateList(std::vector<libmaus::bambam::BamAlignment *> & curlist)
+	void evaluateList(std::vector<libmaus2::bambam::BamAlignment *> & curlist)
 	{
-		std::vector<libmaus::bambam::BamAlignment *> R1;
-		std::vector<libmaus::bambam::BamAlignment *> R2;
+		std::vector<libmaus2::bambam::BamAlignment *> R1;
+		std::vector<libmaus2::bambam::BamAlignment *> R2;
 		
 		for ( uint64_t i = 0; i < curlist.size(); ++i )
 		{
@@ -150,8 +150,8 @@ struct IntervalPairHistogram
 		for ( uint64_t i = 0; i < R1.size(); ++i )
 			for ( uint64_t j = 0; j < R2.size(); ++j )
 			{
-				libmaus::bambam::BamAlignment * A1 = R1[i];
-				libmaus::bambam::BamAlignment * A2 = R2[j];
+				libmaus2::bambam::BamAlignment * A1 = R1[i];
+				libmaus2::bambam::BamAlignment * A2 = R2[j];
 				
 				char const * rname1 = A1->getName();
 				char const * rname2 = A2->getName();
@@ -190,15 +190,15 @@ struct IntervalPairHistogram
 	}
 };
 
-int bamintervalcommenthist(::libmaus::util::ArgInfo const & arginfo)
+int bamintervalcommenthist(::libmaus2::util::ArgInfo const & arginfo)
 {
-	::libmaus::util::TempFileRemovalContainer::setup();
+	::libmaus2::util::TempFileRemovalContainer::setup();
 	
 	bool const inputisstdin = (!arginfo.hasArg("I")) || (arginfo.getUnparsedValue("I","-") == "-");
 
 	if ( isatty(STDIN_FILENO) && inputisstdin && (arginfo.getValue<std::string>("inputformat","bam") != "sam") )
 	{
-		::libmaus::exception::LibMausException se;
+		::libmaus2::exception::LibMausException se;
 		se.getStream() << "Refusing to read binary data from terminal, please redirect standard input to pipe or file." << std::endl;
 		se.finish();
 		throw se;
@@ -208,23 +208,23 @@ int bamintervalcommenthist(::libmaus::util::ArgInfo const & arginfo)
 	bool const disablevalidation = arginfo.getValue<int>("disablevalidation",getDefaultDisableValidation());
 
 	// input decoder wrapper
-	libmaus::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
-		libmaus::bambam::BamMultiAlignmentDecoderFactory::construct(
+	libmaus2::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
+		libmaus2::bambam::BamMultiAlignmentDecoderFactory::construct(
 			arginfo,false // put rank
 		)
 	);
-	::libmaus::bambam::BamAlignmentDecoder * ppdec = &(decwrapper->getDecoder());
-	::libmaus::bambam::BamAlignmentDecoder & dec = *ppdec;
+	::libmaus2::bambam::BamAlignmentDecoder * ppdec = &(decwrapper->getDecoder());
+	::libmaus2::bambam::BamAlignmentDecoder & dec = *ppdec;
 	if ( disablevalidation )
 		dec.disableValidation();
-	// ::libmaus::bambam::BamHeader const & header = dec.getHeader();
+	// ::libmaus2::bambam::BamHeader const & header = dec.getHeader();
 	
-	libmaus::bambam::BamAlignment & curalgn = dec.getAlignment();
+	libmaus2::bambam::BamAlignment & curalgn = dec.getAlignment();
 	uint64_t c = 0;
 	
-	std::vector<libmaus::bambam::BamAlignment::shared_ptr_type> algnpool;
-	std::vector<libmaus::bambam::BamAlignment *> algnfreelist;
-	std::vector<libmaus::bambam::BamAlignment *> curlist;
+	std::vector<libmaus2::bambam::BamAlignment::shared_ptr_type> algnpool;
+	std::vector<libmaus2::bambam::BamAlignment *> algnfreelist;
+	std::vector<libmaus2::bambam::BamAlignment *> curlist;
 	IntervalPairHistogram hist;
 	
 	while ( dec.readAlignment() )
@@ -250,13 +250,13 @@ int bamintervalcommenthist(::libmaus::util::ArgInfo const & arginfo)
 		
 		if ( ! algnfreelist.size() )
 		{
-			libmaus::bambam::BamAlignment::shared_ptr_type ptr(new libmaus::bambam::BamAlignment);
+			libmaus2::bambam::BamAlignment::shared_ptr_type ptr(new libmaus2::bambam::BamAlignment);
 			algnpool.push_back(ptr);
 			algnfreelist.push_back(algnpool.back().get());
 		}
 		
 		assert ( algnfreelist.size() );
-		libmaus::bambam::BamAlignment * addalgn = algnfreelist.back();
+		libmaus2::bambam::BamAlignment * addalgn = algnfreelist.back();
 		algnfreelist.pop_back();
 		
 		curalgn.swap(*addalgn);
@@ -290,7 +290,7 @@ int main(int argc, char * argv[])
 {
 	try
 	{
-		::libmaus::util::ArgInfo const arginfo(argc,argv);
+		::libmaus2::util::ArgInfo const arginfo(argc,argv);
 		
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
 			if ( 
@@ -299,7 +299,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--version"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
 			else if ( 
@@ -308,17 +308,17 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--help"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
 				
 				std::vector< std::pair<std::string,std::string> > V;
 			
-				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "disablevalidation=<["+::biobambam::Licensing::formatNumber(getDefaultDisableValidation())+"]>", "disable input validation (default is 0)" ) );				
+				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "disablevalidation=<["+::biobambam2::Licensing::formatNumber(getDefaultDisableValidation())+"]>", "disable input validation (default is 0)" ) );				
 
-				V.push_back ( std::pair<std::string,std::string> ( std::string("inputformat=<[")+getDefaultInputFormat()+"]>", std::string("input format (") + libmaus::bambam::BamMultiAlignmentDecoderFactory::getValidInputFormats() + ")" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("inputformat=<[")+getDefaultInputFormat()+"]>", std::string("input format (") + libmaus2::bambam::BamMultiAlignmentDecoderFactory::getValidInputFormats() + ")" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "I=<[stdin]>", "input filename (standard input if unset)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "inputthreads=<[1]>", "input helper threads (for inputformat=bam only, default: 1)" ) );
 
@@ -326,7 +326,7 @@ int main(int argc, char * argv[])
 
 				V.push_back ( std::pair<std::string,std::string> ( "reference=<>", "reference FastA (.fai file required, for cram i/o only)" ) );
 				
-				::biobambam::Licensing::printMap(std::cerr,V);
+				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;

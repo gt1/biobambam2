@@ -19,7 +19,7 @@
 #if ! defined(BIOBAMBAM_ZZTONAME_HPP)
 #define BIOBAMBAM_ZZTONAME_HPP
 
-#include <libmaus/bambam/BamAlignment.hpp>
+#include <libmaus2/bambam/BamAlignment.hpp>
 
-bool zzToRank(libmaus::bambam::BamAlignment & algn, libmaus::bambam::BamAuxFilterVector const & zzbafv);
+bool zzToRank(libmaus2::bambam::BamAlignment & algn, libmaus2::bambam::BamAuxFilterVector const & zzbafv);
 #endif

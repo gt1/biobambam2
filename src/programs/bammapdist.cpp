@@ -16,40 +16,40 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include <libmaus/bambam/BamDecoder.hpp>
-#include <libmaus/bambam/BamMultiAlignmentDecoderFactory.hpp>
-#include <libmaus/util/SimpleCountingHash.hpp>
-#include <libmaus/util/ArgInfo.hpp>
-#include <libmaus/util/MemUsage.hpp>
+#include <libmaus2/bambam/BamDecoder.hpp>
+#include <libmaus2/bambam/BamMultiAlignmentDecoderFactory.hpp>
+#include <libmaus2/util/SimpleCountingHash.hpp>
+#include <libmaus2/util/ArgInfo.hpp>
+#include <libmaus2/util/MemUsage.hpp>
 
-#include <biobambam/BamBamConfig.hpp>
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/BamBamConfig.hpp>
+#include <biobambam2/Licensing.hpp>
 
 static int getDefaultVerbose() { return 1; }
 static std::string getDefaultInputFormat() { return "bam"; }
 
-int bammapdist(libmaus::util::ArgInfo const & arginfo)
+int bammapdist(libmaus2::util::ArgInfo const & arginfo)
 {
 	bool const verbose = arginfo.getValue<unsigned int>("verbose",getDefaultVerbose());
 	// input decoder wrapper
-	libmaus::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
-		libmaus::bambam::BamMultiAlignmentDecoderFactory::construct(
+	libmaus2::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
+		libmaus2::bambam::BamMultiAlignmentDecoderFactory::construct(
 			arginfo,false // put rank
 		)
 	);
-	::libmaus::bambam::BamAlignmentDecoder * ppdec = &(decwrapper->getDecoder());
-	::libmaus::bambam::BamAlignmentDecoder & dec = *ppdec;
-	::libmaus::bambam::BamHeader const & header = dec.getHeader();
+	::libmaus2::bambam::BamAlignmentDecoder * ppdec = &(decwrapper->getDecoder());
+	::libmaus2::bambam::BamAlignmentDecoder & dec = *ppdec;
+	::libmaus2::bambam::BamHeader const & header = dec.getHeader();
 	
 	// getNumRef();
-	::libmaus::bambam::BamAlignment const & algn = dec.getAlignment();
+	::libmaus2::bambam::BamAlignment const & algn = dec.getAlignment();
 
-	::libmaus::util::SimpleCountingHash<uint64_t,uint64_t> pairmap(8);
-	::libmaus::util::SimpleCountingHash<uint64_t,uint64_t> pairmap5(8);
-	::libmaus::util::SimpleCountingHash<uint64_t,uint64_t> properpairmap(8);
-	::libmaus::util::SimpleCountingHash<uint64_t,uint64_t> singlemap(8);
-	::libmaus::util::SimpleCountingHash<uint64_t,uint64_t> partial1map(8);
-	::libmaus::util::SimpleCountingHash<uint64_t,uint64_t> partial2map(8);
+	::libmaus2::util::SimpleCountingHash<uint64_t,uint64_t> pairmap(8);
+	::libmaus2::util::SimpleCountingHash<uint64_t,uint64_t> pairmap5(8);
+	::libmaus2::util::SimpleCountingHash<uint64_t,uint64_t> properpairmap(8);
+	::libmaus2::util::SimpleCountingHash<uint64_t,uint64_t> singlemap(8);
+	::libmaus2::util::SimpleCountingHash<uint64_t,uint64_t> partial1map(8);
+	::libmaus2::util::SimpleCountingHash<uint64_t,uint64_t> partial2map(8);
 	double const loadthres = 0.9;
 	uint64_t pairsunmapped = 0;
 	uint64_t singleunmapped = 0;
@@ -174,7 +174,7 @@ int bammapdist(libmaus::util::ArgInfo const & arginfo)
 				<< " "
 				<< numsingle
 				<< " "
-				<< libmaus::util::MemUsage()
+				<< libmaus2::util::MemUsage()
 				<< std::endl;	
 		}
 	}
@@ -190,10 +190,10 @@ int bammapdist(libmaus::util::ArgInfo const & arginfo)
 	uint64_t split = 0;
 	uint64_t split5 = 0;
 	uint64_t mappedpairs = 0;
-	::libmaus::util::SimpleCountingHash<uint64_t,uint64_t> splitfirst(8);
-	::libmaus::util::SimpleCountingHash<uint64_t,uint64_t> splitsecond(8);
-	::libmaus::util::SimpleCountingHash<uint64_t,uint64_t> splitfirst5(8);
-	::libmaus::util::SimpleCountingHash<uint64_t,uint64_t> splitsecond5(8);
+	::libmaus2::util::SimpleCountingHash<uint64_t,uint64_t> splitfirst(8);
+	::libmaus2::util::SimpleCountingHash<uint64_t,uint64_t> splitsecond(8);
+	::libmaus2::util::SimpleCountingHash<uint64_t,uint64_t> splitfirst5(8);
+	::libmaus2::util::SimpleCountingHash<uint64_t,uint64_t> splitsecond5(8);
 	for ( uint64_t const * k = pairmap.begin(); k != pairmap.end(); ++k )
 		if ( *k != pairmap.unused() )
 		{
@@ -296,7 +296,7 @@ int main(int argc, char * argv[])
 {
 	try
 	{
-		libmaus::util::ArgInfo const arginfo(argc,argv);
+		libmaus2::util::ArgInfo const arginfo(argc,argv);
 	
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
 			if ( 
@@ -305,7 +305,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--version"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
 			else if ( 
@@ -314,20 +314,20 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--help"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
 				
 				std::vector< std::pair<std::string,std::string> > V;
 			
-				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
-				V.push_back ( std::pair<std::string,std::string> ( std::string("inputformat=<[")+getDefaultInputFormat()+"]>", std::string("input format (") + libmaus::bambam::BamMultiAlignmentDecoderFactory::getValidInputFormats() + ")" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("inputformat=<[")+getDefaultInputFormat()+"]>", std::string("input format (") + libmaus2::bambam::BamMultiAlignmentDecoderFactory::getValidInputFormats() + ")" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "I=<[stdin]>", "input filename (standard input if unset)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "inputthreads=<[1]>", "input helper threads (for inputformat=bam only, default: 1)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "range=<>", "coordinate range to be processed (for coordinate sorted indexed BAM input only)" ) );
 
-				::biobambam::Licensing::printMap(std::cerr,V);
+				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;

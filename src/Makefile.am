@@ -1,10 +1,10 @@
 ACLOCAL_AMFLAGS=-I m4
 
-noinst_HEADERS=biobambam/BamBamConfig.hpp biobambam/Licensing.hpp \
-	biobambam/ClipAdapters.hpp biobambam/AttachRank.hpp biobambam/ResetAlignment.hpp \
-	biobambam/Split12.hpp biobambam/Strip12.hpp \
-	biobambam/ClipReinsert.hpp biobambam/zzToName.hpp \
-	biobambam/KmerPoisson.hpp
+noinst_HEADERS=biobambam2/BamBamConfig.hpp biobambam2/Licensing.hpp \
+	biobambam2/ClipAdapters.hpp biobambam2/AttachRank.hpp biobambam2/ResetAlignment.hpp \
+	biobambam2/Split12.hpp biobambam2/Strip12.hpp \
+	biobambam2/ClipReinsert.hpp biobambam2/zzToName.hpp \
+	biobambam2/KmerPoisson.hpp
 
 MANPAGES = programs/bamtofastq.1 programs/bamsort.1 programs/bammarkduplicates.1 programs/bamcollate.1 \
 	programs/bammaskflags.1 programs/bamrecompress.1 programs/bamadapterfind.1 \
@@ -23,7 +23,8 @@ MANPAGES = programs/bamtofastq.1 programs/bamsort.1 programs/bammarkduplicates.1
 	programs/bammdnm.1 \
 	programs/bamseqchksum.1 programs/bamvalidate.1 \
 	programs/bamflagsplit.1 programs/bamintervalcomment.1 \
-	programs/bamstreamingmarkduplicates.1
+	programs/bamstreamingmarkduplicates.1 \
+	programs/bamsormadup.1
 
 man_MANS = ${MANPAGES}
 
@@ -70,8 +71,11 @@ bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamr
 	bamalignfrac \
 	bamlastfilter \
 	bamfilternames \
+	bamsormadup \
 	bamexplode \
+    	fastqtobampar \
 	bamranksort \
+	fastqtobampar \
 	@BAMALIGNMENTOFFSETSINSTEXP@ @BLASTXMLTOBAMINSTEXP@
 
 noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments bamtoname \
@@ -81,327 +85,337 @@ noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorte
 	
 EXTRA_PROGRAMS = bamrefdepthpeaks bamparsort blastnxmltobam bamalignmentoffsets
 
-bamcollate_SOURCES = programs/bamcollate.cpp biobambam/Licensing.cpp
-bamcollate_LDADD = ${LIBMAUSLIBS}
-bamcollate_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamcollate_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamcollate_SOURCES = programs/bamcollate.cpp biobambam2/Licensing.cpp
+bamcollate_LDADD = ${LIBMAUS2LIBS}
+bamcollate_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamcollate_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamfilter_SOURCES = programs/bamfilter.cpp biobambam/Licensing.cpp
-bamfilter_LDADD = ${LIBMAUSLIBS}
-bamfilter_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamfilter_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamfilter_SOURCES = programs/bamfilter.cpp biobambam2/Licensing.cpp
+bamfilter_LDADD = ${LIBMAUS2LIBS}
+bamfilter_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamfilter_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamfixmatecoordinates_SOURCES = programs/bamfixmatecoordinates.cpp biobambam/Licensing.cpp
-bamfixmatecoordinates_LDADD = ${LIBMAUSLIBS}
-bamfixmatecoordinates_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamfixmatecoordinates_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamfixmatecoordinates_SOURCES = programs/bamfixmatecoordinates.cpp biobambam2/Licensing.cpp
+bamfixmatecoordinates_LDADD = ${LIBMAUS2LIBS}
+bamfixmatecoordinates_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamfixmatecoordinates_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamfixmatecoordinatesnamesorted_SOURCES = programs/bamfixmatecoordinatesnamesorted.cpp biobambam/Licensing.cpp
-bamfixmatecoordinatesnamesorted_LDADD = ${LIBMAUSLIBS}
-bamfixmatecoordinatesnamesorted_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamfixmatecoordinatesnamesorted_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamfixmatecoordinatesnamesorted_SOURCES = programs/bamfixmatecoordinatesnamesorted.cpp biobambam2/Licensing.cpp
+bamfixmatecoordinatesnamesorted_LDADD = ${LIBMAUS2LIBS}
+bamfixmatecoordinatesnamesorted_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamfixmatecoordinatesnamesorted_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bammarkduplicates_SOURCES = programs/bammarkduplicates.cpp biobambam/Licensing.cpp
-bammarkduplicates_LDADD = ${LIBMAUSLIBS}
-bammarkduplicates_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bammarkduplicates_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bammarkduplicates_SOURCES = programs/bammarkduplicates.cpp biobambam2/Licensing.cpp
+bammarkduplicates_LDADD = ${LIBMAUS2LIBS}
+bammarkduplicates_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bammarkduplicates_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamstreamingmarkduplicates_SOURCES = programs/bamstreamingmarkduplicates.cpp biobambam/Licensing.cpp
-bamstreamingmarkduplicates_LDADD = ${LIBMAUSLIBS}
-bamstreamingmarkduplicates_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamstreamingmarkduplicates_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamstreamingmarkduplicates_SOURCES = programs/bamstreamingmarkduplicates.cpp biobambam2/Licensing.cpp
+bamstreamingmarkduplicates_LDADD = ${LIBMAUS2LIBS}
+bamstreamingmarkduplicates_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamstreamingmarkduplicates_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bammarkduplicates2_SOURCES = programs/bammarkduplicates2.cpp biobambam/Licensing.cpp
-bammarkduplicates2_LDADD = ${LIBMAUSLIBS}
-bammarkduplicates2_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bammarkduplicates2_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bammarkduplicates2_SOURCES = programs/bammarkduplicates2.cpp biobambam2/Licensing.cpp
+bammarkduplicates2_LDADD = ${LIBMAUS2LIBS}
+bammarkduplicates2_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bammarkduplicates2_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bammaskflags_SOURCES = programs/bammaskflags.cpp biobambam/Licensing.cpp
-bammaskflags_LDADD = ${LIBMAUSLIBS}
-bammaskflags_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bammaskflags_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bammaskflags_SOURCES = programs/bammaskflags.cpp biobambam2/Licensing.cpp
+bammaskflags_LDADD = ${LIBMAUS2LIBS}
+bammaskflags_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bammaskflags_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamsort_SOURCES = programs/bamsort.cpp biobambam/Licensing.cpp
-bamsort_LDADD = ${LIBMAUSLIBS}
-bamsort_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamsort_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamsort_SOURCES = programs/bamsort.cpp biobambam2/Licensing.cpp
+bamsort_LDADD = ${LIBMAUS2LIBS}
+bamsort_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamsort_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamtofastq_SOURCES = programs/bamtofastq.cpp biobambam/Licensing.cpp
-bamtofastq_LDADD = ${LIBMAUSLIBS}
-bamtofastq_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS}
-bamtofastq_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamtofastq_SOURCES = programs/bamtofastq.cpp biobambam2/Licensing.cpp
+bamtofastq_LDADD = ${LIBMAUS2LIBS}
+bamtofastq_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS}
+bamtofastq_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamcheckalignments_SOURCES = programs/bamcheckalignments.cpp biobambam/Licensing.cpp
-bamcheckalignments_LDADD = ${LIBMAUSLIBS}
-bamcheckalignments_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamcheckalignments_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamcheckalignments_SOURCES = programs/bamcheckalignments.cpp biobambam2/Licensing.cpp
+bamcheckalignments_LDADD = ${LIBMAUS2LIBS}
+bamcheckalignments_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamcheckalignments_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamtoname_SOURCES = programs/bamtoname.cpp biobambam/Licensing.cpp
-bamtoname_LDADD = ${LIBMAUSLIBS}
-bamtoname_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS}
-bamtoname_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamtoname_SOURCES = programs/bamtoname.cpp biobambam2/Licensing.cpp
+bamtoname_LDADD = ${LIBMAUS2LIBS}
+bamtoname_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS}
+bamtoname_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamdisthist_SOURCES = programs/bamdisthist.cpp biobambam/Licensing.cpp
-bamdisthist_LDADD = ${LIBMAUSLIBS}
-bamdisthist_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS}
-bamdisthist_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamdisthist_SOURCES = programs/bamdisthist.cpp biobambam2/Licensing.cpp
+bamdisthist_LDADD = ${LIBMAUS2LIBS}
+bamdisthist_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS}
+bamdisthist_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamrecompress_SOURCES = programs/bamrecompress.cpp biobambam/Licensing.cpp
-bamrecompress_LDADD = ${LIBMAUSLIBS}
-bamrecompress_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamrecompress_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamrecompress_SOURCES = programs/bamrecompress.cpp biobambam2/Licensing.cpp
+bamrecompress_LDADD = ${LIBMAUS2LIBS}
+bamrecompress_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamrecompress_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamadapterfind_SOURCES = programs/bamadapterfind.cpp biobambam/Licensing.cpp \
-	biobambam/ClipAdapters.cpp biobambam/KmerPoisson.cpp
-bamadapterfind_LDADD = ${LIBMAUSLIBS}
-bamadapterfind_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamadapterfind_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamadapterfind_SOURCES = programs/bamadapterfind.cpp biobambam2/Licensing.cpp \
+	biobambam2/ClipAdapters.cpp biobambam2/KmerPoisson.cpp
+bamadapterfind_LDADD = ${LIBMAUS2LIBS}
+bamadapterfind_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamadapterfind_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamfilteraux_SOURCES = programs/bamfilteraux.cpp biobambam/Licensing.cpp
-bamfilteraux_LDADD = ${LIBMAUSLIBS}
-bamfilteraux_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamfilteraux_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamfilteraux_SOURCES = programs/bamfilteraux.cpp biobambam2/Licensing.cpp
+bamfilteraux_LDADD = ${LIBMAUS2LIBS}
+bamfilteraux_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamfilteraux_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamauxsort_SOURCES = programs/bamauxsort.cpp biobambam/Licensing.cpp
-bamauxsort_LDADD = ${LIBMAUSLIBS}
-bamauxsort_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamauxsort_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamauxsort_SOURCES = programs/bamauxsort.cpp biobambam2/Licensing.cpp
+bamauxsort_LDADD = ${LIBMAUS2LIBS}
+bamauxsort_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamauxsort_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamadapterclip_SOURCES = programs/bamadapterclip.cpp biobambam/Licensing.cpp \
-	biobambam/ClipAdapters.cpp
-bamadapterclip_LDADD = ${LIBMAUSLIBS}
-bamadapterclip_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamadapterclip_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamadapterclip_SOURCES = programs/bamadapterclip.cpp biobambam2/Licensing.cpp \
+	biobambam2/ClipAdapters.cpp
+bamadapterclip_LDADD = ${LIBMAUS2LIBS}
+bamadapterclip_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamadapterclip_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamcollate2_SOURCES = programs/bamcollate2.cpp biobambam/Licensing.cpp biobambam/AttachRank.cpp \
-	biobambam/ResetAlignment.cpp
-bamcollate2_LDADD = ${LIBMAUSLIBS}
-bamcollate2_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamcollate2_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamcollate2_SOURCES = programs/bamcollate2.cpp biobambam2/Licensing.cpp biobambam2/AttachRank.cpp \
+	biobambam2/ResetAlignment.cpp
+bamcollate2_LDADD = ${LIBMAUS2LIBS}
+bamcollate2_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamcollate2_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bam12auxmerge_SOURCES = programs/bam12auxmerge.cpp biobambam/Licensing.cpp biobambam/Split12.cpp \
-	biobambam/Strip12.cpp biobambam/ClipReinsert.cpp biobambam/zzToName.cpp
-bam12auxmerge_LDADD = ${LIBMAUSLIBS}
-bam12auxmerge_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bam12auxmerge_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bam12auxmerge_SOURCES = programs/bam12auxmerge.cpp biobambam2/Licensing.cpp biobambam2/Split12.cpp \
+	biobambam2/Strip12.cpp biobambam2/ClipReinsert.cpp biobambam2/zzToName.cpp
+bam12auxmerge_LDADD = ${LIBMAUS2LIBS}
+bam12auxmerge_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bam12auxmerge_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bam12split_SOURCES = programs/bam12split.cpp biobambam/Licensing.cpp biobambam/Split12.cpp
-bam12split_LDADD = ${LIBMAUSLIBS}
-bam12split_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bam12split_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bam12split_SOURCES = programs/bam12split.cpp biobambam2/Licensing.cpp biobambam2/Split12.cpp
+bam12split_LDADD = ${LIBMAUS2LIBS}
+bam12split_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bam12split_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bam12strip_SOURCES = programs/bam12strip.cpp biobambam/Licensing.cpp biobambam/Strip12.cpp
-bam12strip_LDADD = ${LIBMAUSLIBS}
-bam12strip_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bam12strip_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bam12strip_SOURCES = programs/bam12strip.cpp biobambam2/Licensing.cpp biobambam2/Strip12.cpp
+bam12strip_LDADD = ${LIBMAUS2LIBS}
+bam12strip_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bam12strip_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamreset_SOURCES = programs/bamreset.cpp biobambam/Licensing.cpp biobambam/ResetAlignment.cpp
-bamreset_LDADD = ${LIBMAUSLIBS}
-bamreset_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamreset_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamreset_SOURCES = programs/bamreset.cpp biobambam2/Licensing.cpp biobambam2/ResetAlignment.cpp
+bamreset_LDADD = ${LIBMAUS2LIBS}
+bamreset_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamreset_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamrank_SOURCES = programs/bamrank.cpp biobambam/Licensing.cpp biobambam/AttachRank.cpp
-bamrank_LDADD = ${LIBMAUSLIBS}
-bamrank_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamrank_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamrank_SOURCES = programs/bamrank.cpp biobambam2/Licensing.cpp biobambam2/AttachRank.cpp
+bamrank_LDADD = ${LIBMAUS2LIBS}
+bamrank_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamrank_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamclipreinsert_SOURCES = programs/bamclipreinsert.cpp biobambam/Licensing.cpp \
-	biobambam/ClipReinsert.cpp
-bamclipreinsert_LDADD = ${LIBMAUSLIBS}
-bamclipreinsert_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamclipreinsert_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamclipreinsert_SOURCES = programs/bamclipreinsert.cpp biobambam2/Licensing.cpp \
+	biobambam2/ClipReinsert.cpp
+bamclipreinsert_LDADD = ${LIBMAUS2LIBS}
+bamclipreinsert_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamclipreinsert_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamzztoname_SOURCES = programs/bamzztoname.cpp biobambam/Licensing.cpp biobambam/zzToName.cpp
-bamzztoname_LDADD = ${LIBMAUSLIBS}
-bamzztoname_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamzztoname_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamzztoname_SOURCES = programs/bamzztoname.cpp biobambam2/Licensing.cpp biobambam2/zzToName.cpp
+bamzztoname_LDADD = ${LIBMAUS2LIBS}
+bamzztoname_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamzztoname_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-kmerprob_SOURCES = programs/kmerprob.cpp biobambam/Licensing.cpp biobambam/KmerPoisson.cpp
-kmerprob_LDADD = ${LIBMAUSLIBS}
-kmerprob_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-kmerprob_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+kmerprob_SOURCES = programs/kmerprob.cpp biobambam2/Licensing.cpp biobambam2/KmerPoisson.cpp
+kmerprob_LDADD = ${LIBMAUS2LIBS}
+kmerprob_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+kmerprob_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamindex_SOURCES = programs/bamindex.cpp biobambam/Licensing.cpp
-bamindex_LDADD = ${LIBMAUSLIBS}
-bamindex_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamindex_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamindex_SOURCES = programs/bamindex.cpp biobambam2/Licensing.cpp
+bamindex_LDADD = ${LIBMAUS2LIBS}
+bamindex_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamindex_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamfilterflags_SOURCES = programs/bamfilterflags.cpp biobambam/Licensing.cpp
-bamfilterflags_LDADD = ${LIBMAUSLIBS}
-bamfilterflags_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamfilterflags_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamfilterflags_SOURCES = programs/bamfilterflags.cpp biobambam2/Licensing.cpp
+bamfilterflags_LDADD = ${LIBMAUS2LIBS}
+bamfilterflags_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamfilterflags_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamfilterrg_SOURCES = programs/bamfilterrg.cpp biobambam/Licensing.cpp
-bamfilterrg_LDADD = ${LIBMAUSLIBS}
-bamfilterrg_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamfilterrg_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamfilterrg_SOURCES = programs/bamfilterrg.cpp biobambam2/Licensing.cpp
+bamfilterrg_LDADD = ${LIBMAUS2LIBS}
+bamfilterrg_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamfilterrg_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamdownsamplerandom_SOURCES = programs/bamdownsamplerandom.cpp biobambam/Licensing.cpp
-bamdownsamplerandom_LDADD = ${LIBMAUSLIBS}
-bamdownsamplerandom_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamdownsamplerandom_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamdownsamplerandom_SOURCES = programs/bamdownsamplerandom.cpp biobambam2/Licensing.cpp
+bamdownsamplerandom_LDADD = ${LIBMAUS2LIBS}
+bamdownsamplerandom_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamdownsamplerandom_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamcat_SOURCES = programs/bamcat.cpp biobambam/Licensing.cpp
-bamcat_LDADD = ${LIBMAUSLIBS}
-bamcat_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamcat_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamcat_SOURCES = programs/bamcat.cpp biobambam2/Licensing.cpp
+bamcat_LDADD = ${LIBMAUS2LIBS}
+bamcat_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamcat_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bammerge_SOURCES = programs/bammerge.cpp biobambam/Licensing.cpp
-bammerge_LDADD = ${LIBMAUSLIBS}
-bammerge_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bammerge_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bammerge_SOURCES = programs/bammerge.cpp biobambam2/Licensing.cpp
+bammerge_LDADD = ${LIBMAUS2LIBS}
+bammerge_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bammerge_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamsplit_SOURCES = programs/bamsplit.cpp biobambam/Licensing.cpp
-bamsplit_LDADD = ${LIBMAUSLIBS}
-bamsplit_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamsplit_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamsplit_SOURCES = programs/bamsplit.cpp biobambam2/Licensing.cpp
+bamsplit_LDADD = ${LIBMAUS2LIBS}
+bamsplit_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamsplit_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamsplitdiv_SOURCES = programs/bamsplitdiv.cpp biobambam/Licensing.cpp
-bamsplitdiv_LDADD = ${LIBMAUSLIBS}
-bamsplitdiv_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamsplitdiv_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamsplitdiv_SOURCES = programs/bamsplitdiv.cpp biobambam2/Licensing.cpp
+bamsplitdiv_LDADD = ${LIBMAUS2LIBS}
+bamsplitdiv_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamsplitdiv_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamchecksort_SOURCES = programs/bamchecksort.cpp biobambam/Licensing.cpp
-bamchecksort_LDADD = ${LIBMAUSLIBS}
-bamchecksort_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamchecksort_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamchecksort_SOURCES = programs/bamchecksort.cpp biobambam2/Licensing.cpp
+bamchecksort_LDADD = ${LIBMAUS2LIBS}
+bamchecksort_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamchecksort_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamrefdepth_SOURCES = programs/bamrefdepth.cpp biobambam/Licensing.cpp
-bamrefdepth_LDADD = ${LIBMAUSLIBS}
-bamrefdepth_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamrefdepth_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamrefdepth_SOURCES = programs/bamrefdepth.cpp biobambam2/Licensing.cpp
+bamrefdepth_LDADD = ${LIBMAUS2LIBS}
+bamrefdepth_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamrefdepth_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamrefdepthpeaks_SOURCES = programs/bamrefdepthpeaks.cpp biobambam/Licensing.cpp
-bamrefdepthpeaks_LDADD = ${LIBMAUSLIBS}
-bamrefdepthpeaks_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamrefdepthpeaks_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamrefdepthpeaks_SOURCES = programs/bamrefdepthpeaks.cpp biobambam2/Licensing.cpp
+bamrefdepthpeaks_LDADD = ${LIBMAUS2LIBS}
+bamrefdepthpeaks_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamrefdepthpeaks_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-fastqtobam_SOURCES = programs/fastqtobam.cpp biobambam/Licensing.cpp
-fastqtobam_LDADD = ${LIBMAUSLIBS}
-fastqtobam_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-fastqtobam_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+fastqtobam_SOURCES = programs/fastqtobam.cpp biobambam2/Licensing.cpp
+fastqtobam_LDADD = ${LIBMAUS2LIBS}
+fastqtobam_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+fastqtobam_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamfixmateinformation_SOURCES = programs/bamfixmateinformation.cpp biobambam/Licensing.cpp
-bamfixmateinformation_LDADD = ${LIBMAUSLIBS}
-bamfixmateinformation_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamfixmateinformation_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamfixmateinformation_SOURCES = programs/bamfixmateinformation.cpp biobambam2/Licensing.cpp
+bamfixmateinformation_LDADD = ${LIBMAUS2LIBS}
+bamfixmateinformation_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamfixmateinformation_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamseqchksum_SOURCES = programs/bamseqchksum.cpp biobambam/Licensing.cpp
-bamseqchksum_LDADD = ${LIBMAUSLIBS} @GMPLIBS@
-bamseqchksum_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} @GMPLDFLAGS@ ${AM_LDFLAGS}
-bamseqchksum_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} @GMPCPPFLAGS@
+bamseqchksum_SOURCES = programs/bamseqchksum.cpp biobambam2/Licensing.cpp
+bamseqchksum_LDADD = ${LIBMAUS2LIBS} @GMPLIBS@
+bamseqchksum_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} @GMPLDFLAGS@ ${AM_LDFLAGS}
+bamseqchksum_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} @GMPCPPFLAGS@
 
-normalisefasta_SOURCES = programs/normalisefasta.cpp biobambam/Licensing.cpp
-normalisefasta_LDADD = ${LIBMAUSLIBS}
-normalisefasta_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-normalisefasta_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+normalisefasta_SOURCES = programs/normalisefasta.cpp biobambam2/Licensing.cpp
+normalisefasta_LDADD = ${LIBMAUS2LIBS}
+normalisefasta_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+normalisefasta_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamfilterheader_SOURCES = programs/bamfilterheader.cpp biobambam/Licensing.cpp
-bamfilterheader_LDADD = ${LIBMAUSLIBS}
-bamfilterheader_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamfilterheader_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamfilterheader_SOURCES = programs/bamfilterheader.cpp biobambam2/Licensing.cpp
+bamfilterheader_LDADD = ${LIBMAUS2LIBS}
+bamfilterheader_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamfilterheader_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamfilterheader2_SOURCES = programs/bamfilterheader2.cpp biobambam/Licensing.cpp
-bamfilterheader2_LDADD = ${LIBMAUSLIBS}
-bamfilterheader2_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamfilterheader2_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamfilterheader2_SOURCES = programs/bamfilterheader2.cpp biobambam2/Licensing.cpp
+bamfilterheader2_LDADD = ${LIBMAUS2LIBS}
+bamfilterheader2_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamfilterheader2_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bammdnm_SOURCES = programs/bammdnm.cpp biobambam/Licensing.cpp
-bammdnm_LDADD = ${LIBMAUSLIBS}
-bammdnm_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bammdnm_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bammdnm_SOURCES = programs/bammdnm.cpp biobambam2/Licensing.cpp
+bammdnm_LDADD = ${LIBMAUS2LIBS}
+bammdnm_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bammdnm_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-fastabgzfextract_SOURCES = programs/fastabgzfextract.cpp biobambam/Licensing.cpp
-fastabgzfextract_LDADD = ${LIBMAUSLIBS}
-fastabgzfextract_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-fastabgzfextract_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+fastabgzfextract_SOURCES = programs/fastabgzfextract.cpp biobambam2/Licensing.cpp
+fastabgzfextract_LDADD = ${LIBMAUS2LIBS}
+fastabgzfextract_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+fastabgzfextract_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamfilternames_SOURCES = programs/bamfilternames.cpp biobambam/Licensing.cpp
-bamfilternames_LDADD = ${LIBMAUSLIBS}
-bamfilternames_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamfilternames_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamfilternames_SOURCES = programs/bamfilternames.cpp biobambam2/Licensing.cpp
+bamfilternames_LDADD = ${LIBMAUS2LIBS}
+bamfilternames_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamfilternames_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamparsort_SOURCES = programs/bamparsort.cpp biobambam/Licensing.cpp
-bamparsort_LDADD = ${LIBMAUSLIBS}
-bamparsort_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamparsort_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamparsort_SOURCES = programs/bamparsort.cpp biobambam2/Licensing.cpp
+bamparsort_LDADD = ${LIBMAUS2LIBS}
+bamparsort_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamparsort_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bammapdist_SOURCES = programs/bammapdist.cpp biobambam/Licensing.cpp
-bammapdist_LDADD = ${LIBMAUSLIBS}
-bammapdist_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bammapdist_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bammapdist_SOURCES = programs/bammapdist.cpp biobambam2/Licensing.cpp
+bammapdist_LDADD = ${LIBMAUS2LIBS}
+bammapdist_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bammapdist_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamheap_SOURCES = programs/bamheap.cpp biobambam/Licensing.cpp
-bamheap_LDADD = ${LIBMAUSLIBS}
-bamheap_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamheap_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamheap_SOURCES = programs/bamheap.cpp biobambam2/Licensing.cpp
+bamheap_LDADD = ${LIBMAUS2LIBS}
+bamheap_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamheap_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamfrontback_SOURCES = programs/bamfrontback.cpp biobambam/Licensing.cpp biobambam/ResetAlignment.cpp
-bamfrontback_LDADD = ${LIBMAUSLIBS}
-bamfrontback_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamfrontback_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamfrontback_SOURCES = programs/bamfrontback.cpp biobambam2/Licensing.cpp biobambam2/ResetAlignment.cpp
+bamfrontback_LDADD = ${LIBMAUS2LIBS}
+bamfrontback_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamfrontback_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamclipextract_SOURCES = programs/bamclipextract.cpp biobambam/Licensing.cpp biobambam/ResetAlignment.cpp
-bamclipextract_LDADD = ${LIBMAUSLIBS}
-bamclipextract_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamclipextract_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamclipextract_SOURCES = programs/bamclipextract.cpp biobambam2/Licensing.cpp biobambam2/ResetAlignment.cpp
+bamclipextract_LDADD = ${LIBMAUS2LIBS}
+bamclipextract_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamclipextract_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-blastnxmltobam_SOURCES = programs/blastnxmltobam.cpp biobambam/Licensing.cpp
-blastnxmltobam_LDADD = ${LIBMAUSLIBS} @xerces_c_LIBS@
-blastnxmltobam_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-blastnxmltobam_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} @xerces_c_CFLAGS@
+blastnxmltobam_SOURCES = programs/blastnxmltobam.cpp biobambam2/Licensing.cpp
+blastnxmltobam_LDADD = ${LIBMAUS2LIBS} @xerces_c_LIBS@
+blastnxmltobam_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+blastnxmltobam_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} @xerces_c_CFLAGS@
 
-bamalignmentoffsets_SOURCES = programs/bamalignmentoffsets.cpp biobambam/Licensing.cpp
-bamalignmentoffsets_LDADD = ${LIBMAUSLIBS}
-bamalignmentoffsets_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamalignmentoffsets_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamalignmentoffsets_SOURCES = programs/bamalignmentoffsets.cpp biobambam2/Licensing.cpp
+bamalignmentoffsets_LDADD = ${LIBMAUS2LIBS}
+bamalignmentoffsets_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamalignmentoffsets_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamvalidate_SOURCES = programs/bamvalidate.cpp biobambam/Licensing.cpp
-bamvalidate_LDADD = ${LIBMAUSLIBS}
-bamvalidate_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamvalidate_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamvalidate_SOURCES = programs/bamvalidate.cpp biobambam2/Licensing.cpp
+bamvalidate_LDADD = ${LIBMAUS2LIBS}
+bamvalidate_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamvalidate_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamflagsplit_SOURCES = programs/bamflagsplit.cpp biobambam/Licensing.cpp
-bamflagsplit_LDADD = ${LIBMAUSLIBS}
-bamflagsplit_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamflagsplit_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamflagsplit_SOURCES = programs/bamflagsplit.cpp biobambam2/Licensing.cpp
+bamflagsplit_LDADD = ${LIBMAUS2LIBS}
+bamflagsplit_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamflagsplit_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamintervalcomment_SOURCES = programs/bamintervalcomment.cpp biobambam/Licensing.cpp
-bamintervalcomment_LDADD = ${LIBMAUSLIBS}
-bamintervalcomment_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamintervalcomment_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamintervalcomment_SOURCES = programs/bamintervalcomment.cpp biobambam2/Licensing.cpp
+bamintervalcomment_LDADD = ${LIBMAUS2LIBS}
+bamintervalcomment_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamintervalcomment_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamintervalcommenthist_SOURCES = programs/bamintervalcommenthist.cpp biobambam/Licensing.cpp
-bamintervalcommenthist_LDADD = ${LIBMAUSLIBS}
-bamintervalcommenthist_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamintervalcommenthist_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamintervalcommenthist_SOURCES = programs/bamintervalcommenthist.cpp biobambam2/Licensing.cpp
+bamintervalcommenthist_LDADD = ${LIBMAUS2LIBS}
+bamintervalcommenthist_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamintervalcommenthist_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamrandomtag_SOURCES = programs/bamrandomtag.cpp biobambam/Licensing.cpp
-bamrandomtag_LDADD = ${LIBMAUSLIBS}
-bamrandomtag_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamrandomtag_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamrandomtag_SOURCES = programs/bamrandomtag.cpp biobambam2/Licensing.cpp
+bamrandomtag_LDADD = ${LIBMAUS2LIBS}
+bamrandomtag_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamrandomtag_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamheap2_SOURCES = programs/bamheap2.cpp biobambam/Licensing.cpp
-bamheap2_LDADD = ${LIBMAUSLIBS}
-bamheap2_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamheap2_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamheap2_SOURCES = programs/bamheap2.cpp biobambam2/Licensing.cpp
+bamheap2_LDADD = ${LIBMAUS2LIBS}
+bamheap2_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamheap2_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamalignfrac_SOURCES = programs/bamalignfrac.cpp biobambam/Licensing.cpp
-bamalignfrac_LDADD = ${LIBMAUSLIBS}
-bamalignfrac_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamalignfrac_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamalignfrac_SOURCES = programs/bamalignfrac.cpp biobambam2/Licensing.cpp
+bamalignfrac_LDADD = ${LIBMAUS2LIBS}
+bamalignfrac_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamalignfrac_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamlastfilter_SOURCES = programs/bamlastfilter.cpp biobambam/Licensing.cpp
-bamlastfilter_LDADD = ${LIBMAUSLIBS}
-bamlastfilter_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamlastfilter_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamlastfilter_SOURCES = programs/bamlastfilter.cpp biobambam2/Licensing.cpp
+bamlastfilter_LDADD = ${LIBMAUS2LIBS}
+bamlastfilter_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamlastfilter_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamexplode_SOURCES = programs/bamexplode.cpp biobambam/Licensing.cpp
-bamexplode_LDADD = ${LIBMAUSLIBS}
-bamexplode_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamexplode_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamsormadup_SOURCES = programs/bamsormadup.cpp biobambam2/Licensing.cpp
+bamsormadup_LDADD = ${LIBMAUS2LIBS}
+bamsormadup_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamsormadup_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
-bamranksort_SOURCES = programs/bamranksort.cpp biobambam/Licensing.cpp
-bamranksort_LDADD = ${LIBMAUSLIBS}
-bamranksort_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS} ${LIBMAUSLDFLAGS} ${AM_LDFLAGS}
-bamranksort_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUSCPPFLAGS}
+bamexplode_SOURCES = programs/bamexplode.cpp biobambam2/Licensing.cpp
+bamexplode_LDADD = ${LIBMAUS2LIBS}
+bamexplode_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamexplode_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
+
+fastqtobampar_SOURCES = programs/fastqtobampar.cpp biobambam2/Licensing.cpp
+fastqtobampar_LDADD = ${LIBMAUS2LIBS}
+fastqtobampar_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+fastqtobampar_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
+
+bamranksort_SOURCES = programs/bamranksort.cpp biobambam2/Licensing.cpp
+bamranksort_LDADD = ${LIBMAUS2LIBS}
+bamranksort_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamranksort_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}

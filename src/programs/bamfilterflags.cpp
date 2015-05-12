@@ -16,75 +16,75 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
-#include <biobambam/BamBamConfig.hpp>
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/BamBamConfig.hpp>
+#include <biobambam2/Licensing.hpp>
 
 #include <iomanip>
 
 #include <config.h>
 
-#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
-#include <libmaus/bambam/BamHeaderUpdate.hpp>
-#include <libmaus/bambam/BamDecoder.hpp>
-#include <libmaus/bambam/BamWriter.hpp>
-#include <libmaus/bambam/BamParallelRewrite.hpp>
-#include <libmaus/bambam/ProgramHeaderLineSet.hpp>
-#include <libmaus/util/ArgInfo.hpp>
-#include <libmaus/util/MemUsage.hpp>
+#include <libmaus2/bambam/BamBlockWriterBaseFactory.hpp>
+#include <libmaus2/bambam/BamHeaderUpdate.hpp>
+#include <libmaus2/bambam/BamDecoder.hpp>
+#include <libmaus2/bambam/BamWriter.hpp>
+#include <libmaus2/bambam/BamParallelRewrite.hpp>
+#include <libmaus2/bambam/ProgramHeaderLineSet.hpp>
+#include <libmaus2/util/ArgInfo.hpp>
+#include <libmaus2/util/MemUsage.hpp>
 
-#include <libmaus/lz/BgzfDeflateOutputCallbackMD5.hpp>
-#include <libmaus/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
+#include <libmaus2/lz/BgzfDeflateOutputCallbackMD5.hpp>
+#include <libmaus2/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
 static int getDefaultMD5() { return 0; }
 static int getDefaultIndex() { return 0; }
 
 #if 0
-::libmaus::bambam::BamHeader::unique_ptr_type updateHeader(
-	::libmaus::util::ArgInfo const & arginfo,
-	::libmaus::bambam::BamHeader const & header
+::libmaus2::bambam::BamHeader::unique_ptr_type updateHeader(
+	::libmaus2::util::ArgInfo const & arginfo,
+	::libmaus2::bambam::BamHeader const & header
 )
 {
 	std::string const headertext(header.text);
 
 	// add PG line to header
-	std::string const upheadtext = ::libmaus::bambam::ProgramHeaderLineSet::addProgramLine(
+	std::string const upheadtext = ::libmaus2::bambam::ProgramHeaderLineSet::addProgramLine(
 		headertext,
 		"bamfilterflags", // ID
 		"bamfilterflags", // PN
 		arginfo.commandline, // CL
-		::libmaus::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
+		::libmaus2::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
 		std::string(PACKAGE_VERSION) // VN			
 	);
 	// construct new header
-	::libmaus::bambam::BamHeader::unique_ptr_type uphead(new ::libmaus::bambam::BamHeader(upheadtext));
+	::libmaus2::bambam::BamHeader::unique_ptr_type uphead(new ::libmaus2::bambam::BamHeader(upheadtext));
 	
 	return UNIQUE_PTR_MOVE(uphead);
 }
 
-struct UpdateHeader : public libmaus::bambam::BamHeaderRewriteCallback
+struct UpdateHeader : public libmaus2::bambam::BamHeaderRewriteCallback
 {
-	libmaus::util::ArgInfo const & arginfo;
+	libmaus2::util::ArgInfo const & arginfo;
 
-	UpdateHeader(libmaus::util::ArgInfo const & rarginfo)
+	UpdateHeader(libmaus2::util::ArgInfo const & rarginfo)
 	: arginfo(rarginfo)
 	{
 	
 	}
 
-	::libmaus::bambam::BamHeader::unique_ptr_type operator()(::libmaus::bambam::BamHeader const & header)  const
+	::libmaus2::bambam::BamHeader::unique_ptr_type operator()(::libmaus2::bambam::BamHeader const & header)  const
 	{
-		::libmaus::bambam::BamHeader::unique_ptr_type ptr(updateHeader(arginfo,header));
+		::libmaus2::bambam::BamHeader::unique_ptr_type ptr(updateHeader(arginfo,header));
 		return UNIQUE_PTR_MOVE(ptr);
 	}
 };
 #endif
 
-int bamfilterflags(::libmaus::util::ArgInfo const & arginfo)
+int bamfilterflags(::libmaus2::util::ArgInfo const & arginfo)
 {
-	uint32_t const excludeflags = libmaus::bambam::BamFlagBase::stringToFlags(arginfo.getValue<std::string>("exclude",""));
+	uint32_t const excludeflags = libmaus2::bambam::BamFlagBase::stringToFlags(arginfo.getValue<std::string>("exclude",""));
 
 	std::cerr << "[V] excluding " << excludeflags << std::endl;
 
-	int const level = libmaus::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",Z_DEFAULT_COMPRESSION));
+	int const level = libmaus2::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",Z_DEFAULT_COMPRESSION));
 	
 	uint64_t const numthreads = arginfo.getValue<uint64_t>("numthreads",1);
 	uint64_t cnt = 0;
@@ -95,13 +95,13 @@ int bamfilterflags(::libmaus::util::ArgInfo const & arginfo)
 	 */
 	std::string const tmpfilenamebase = arginfo.getValue<std::string>("tmpfile",arginfo.getDefaultTmpFileName());
 	std::string const tmpfileindex = tmpfilenamebase + "_index";
-	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
+	::libmaus2::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
 
 	std::string md5filename;
 	std::string indexfilename;
 
-	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > cbs;
-	::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
+	std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > cbs;
+	::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
 	if ( arginfo.getValue<unsigned int>("md5",getDefaultMD5()) )
 	{
 		if ( arginfo.hasArg("md5filename") &&  arginfo.getUnparsedValue("md5filename","") != "" )
@@ -111,12 +111,12 @@ int bamfilterflags(::libmaus::util::ArgInfo const & arginfo)
 
 		if ( md5filename.size() )
 		{
-			::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5cb(new ::libmaus::lz::BgzfDeflateOutputCallbackMD5);
+			::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5cb(new ::libmaus2::lz::BgzfDeflateOutputCallbackMD5);
 			Pmd5cb = UNIQUE_PTR_MOVE(Tmd5cb);
 			cbs.push_back(Pmd5cb.get());
 		}
 	}
-	libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Pindex;
+	libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Pindex;
 	if ( arginfo.getValue<unsigned int>("index",getDefaultIndex()) )
 	{
 		if ( arginfo.hasArg("indexfilename") &&  arginfo.getUnparsedValue("indexfilename","") != "" )
@@ -126,12 +126,12 @@ int bamfilterflags(::libmaus::util::ArgInfo const & arginfo)
 
 		if ( indexfilename.size() )
 		{
-			libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Tindex(new libmaus::bambam::BgzfDeflateOutputCallbackBamIndex(tmpfileindex));
+			libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Tindex(new libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex(tmpfileindex));
 			Pindex = UNIQUE_PTR_MOVE(Tindex);
 			cbs.push_back(Pindex.get());
 		}
 	}
-	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
+	std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
 	if ( cbs.size() )
 		Pcbs = &cbs;
 	/*
@@ -141,11 +141,11 @@ int bamfilterflags(::libmaus::util::ArgInfo const & arginfo)
 
 	if ( numthreads == 1 )
 	{
-		::libmaus::bambam::BamDecoder BD(std::cin);
-		::libmaus::bambam::BamHeader const & bamheader = BD.getHeader();
-		::libmaus::bambam::BamHeader::unique_ptr_type uphead(libmaus::bambam::BamHeaderUpdate::updateHeader(arginfo,bamheader,"bamfilterflags",std::string(PACKAGE_VERSION)));
-		::libmaus::bambam::BamAlignment & alignment = BD.getAlignment();
-		::libmaus::bambam::BamWriter::unique_ptr_type writer(new ::libmaus::bambam::BamWriter(std::cout,*uphead,level,Pcbs));
+		::libmaus2::bambam::BamDecoder BD(std::cin);
+		::libmaus2::bambam::BamHeader const & bamheader = BD.getHeader();
+		::libmaus2::bambam::BamHeader::unique_ptr_type uphead(libmaus2::bambam::BamHeaderUpdate::updateHeader(arginfo,bamheader,"bamfilterflags",std::string(PACKAGE_VERSION)));
+		::libmaus2::bambam::BamAlignment & alignment = BD.getAlignment();
+		::libmaus2::bambam::BamWriter::unique_ptr_type writer(new ::libmaus2::bambam::BamWriter(std::cout,*uphead,level,Pcbs));
 	
 		for ( ; BD.readAlignment(); ++cnt )
 		{
@@ -162,12 +162,12 @@ int bamfilterflags(::libmaus::util::ArgInfo const & arginfo)
 	}
 	else
 	{
-		::libmaus::bambam::BamHeaderUpdate UH(arginfo,"bamfilterflags",std::string(PACKAGE_VERSION));
-		libmaus::bambam::BamParallelRewrite BPR(std::cin,UH,std::cout,Z_DEFAULT_COMPRESSION,numthreads,4 /* blocks per thread */,Pcbs);
-		libmaus::bambam::BamAlignmentDecoder & dec = BPR.getDecoder();
-		libmaus::bambam::BamParallelRewrite::writer_type & writer = BPR.getWriter();
+		::libmaus2::bambam::BamHeaderUpdate UH(arginfo,"bamfilterflags",std::string(PACKAGE_VERSION));
+		libmaus2::bambam::BamParallelRewrite BPR(std::cin,UH,std::cout,Z_DEFAULT_COMPRESSION,numthreads,4 /* blocks per thread */,Pcbs);
+		libmaus2::bambam::BamAlignmentDecoder & dec = BPR.getDecoder();
+		libmaus2::bambam::BamParallelRewrite::writer_type & writer = BPR.getWriter();
 
-		libmaus::bambam::BamAlignment const & algn = dec.getAlignment();
+		libmaus2::bambam::BamAlignment const & algn = dec.getAlignment();
 		for ( ; dec.readAlignment(); ++cnt )
 		{
 			if ( cnt % (1024*1024) == 0 )
@@ -200,9 +200,9 @@ int main(int argc, char * argv[])
 {
 	try
 	{
-		libmaus::timing::RealTimeClock rtc; rtc.start();
+		libmaus2::timing::RealTimeClock rtc; rtc.start();
 		
-		::libmaus::util::ArgInfo const arginfo(argc,argv);
+		::libmaus2::util::ArgInfo const arginfo(argc,argv);
 		
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
 			if ( 
@@ -211,7 +211,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--version"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
 			else if ( 
@@ -220,22 +220,22 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--help"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license() << std::endl;
+				std::cerr << ::biobambam2::Licensing::license() << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
 				
 				std::vector< std::pair<std::string,std::string> > V;
 				
-				V.push_back ( std::pair<std::string,std::string> ( "level=<[-1]>", libmaus::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
+				V.push_back ( std::pair<std::string,std::string> ( "level=<[-1]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
 				V.push_back ( std::pair<std::string,std::string> ( "exclude=<[]>", "exclude alignments matching any of the given flags" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "numthreads=<[1]>", "number of recoding threads" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam2::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "md5filename=<filename>", "file name for md5 check sum (default: extend output file name)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam2::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "indexfilename=<filename>", "file name for BAM index file (default: extend output file name)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "tmpfile=<filename>", "prefix for temporary files, default: create files in current directory" ) );
 				
-				::biobambam::Licensing::printMap(std::cerr,V);
+				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 				std::cerr << "Alignment flags: PAIRED,PROPER_PAIR,UNMAP,MUNMAP,REVERSE,MREVERSE,READ1,READ2,SECONDARY,QCFAIL,DUP,SUPPLEMENTARY" << std::endl;
@@ -247,7 +247,7 @@ int main(int argc, char * argv[])
 			
 		bamfilterflags(arginfo);
 		
-		std::cerr << "[V] " << libmaus::util::MemUsage() << " wall clock time " << rtc.formatTime(rtc.getElapsedSeconds()) << std::endl;
+		std::cerr << "[V] " << libmaus2::util::MemUsage() << " wall clock time " << rtc.formatTime(rtc.getElapsedSeconds()) << std::endl;
 
 	}
 	catch(std::exception const & ex)

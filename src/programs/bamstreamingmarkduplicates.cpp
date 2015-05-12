@@ -25,20 +25,20 @@
 #include <iostream>
 #include <vector>
 
-// libmaus
-#include <libmaus/aio/PosixFdInputStream.hpp>
-#include <libmaus/bambam/BamDecoder.hpp>
-#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
-#include <libmaus/bambam/BamMultiAlignmentDecoderFactory.hpp>
-#include <libmaus/bambam/BamHeaderUpdate.hpp>
-#include <libmaus/bambam/BamStreamingMarkDuplicates.hpp>
-#include <libmaus/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
-#include <libmaus/lz/BgzfDeflateOutputCallbackMD5.hpp>
-#include <libmaus/util/ArgInfo.hpp>
-#include <libmaus/util/MemUsage.hpp>
+// libmaus2
+#include <libmaus2/aio/PosixFdInputStream.hpp>
+#include <libmaus2/bambam/BamDecoder.hpp>
+#include <libmaus2/bambam/BamBlockWriterBaseFactory.hpp>
+#include <libmaus2/bambam/BamMultiAlignmentDecoderFactory.hpp>
+#include <libmaus2/bambam/BamHeaderUpdate.hpp>
+#include <libmaus2/bambam/BamStreamingMarkDuplicates.hpp>
+#include <libmaus2/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
+#include <libmaus2/lz/BgzfDeflateOutputCallbackMD5.hpp>
+#include <libmaus2/util/ArgInfo.hpp>
+#include <libmaus2/util/MemUsage.hpp>
 
-#include <biobambam/BamBamConfig.hpp>
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/BamBamConfig.hpp>
+#include <biobambam2/Licensing.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return true; }
@@ -47,39 +47,39 @@ static int getDefaultIndex() { return 0; }
 static int getDefaultResetDupFlag() { return 0; }
 static int getDefaultFilterDupMarkTags() { return 0; }
 
-int bamstreamingmarkduplicates(libmaus::util::ArgInfo const & arginfo)
+int bamstreamingmarkduplicates(libmaus2::util::ArgInfo const & arginfo)
 {
 	bool const verbose = arginfo.getValue<uint64_t>("verbose",getDefaultVerbose());
 	bool const resetdupflag = arginfo.getValue<uint64_t>("resetdupflag",getDefaultResetDupFlag());
 	bool const filterdupmarktags = arginfo.getValue<uint64_t>("filterdupmarktags",getDefaultFilterDupMarkTags());
 	std::string const tmpfilenamebase = arginfo.getUnparsedValue("tmpfile",arginfo.getDefaultTmpFileName());	
 
-	libmaus::aio::PosixFdInputStream PFIS(STDIN_FILENO);
-	libmaus::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
-		libmaus::bambam::BamMultiAlignmentDecoderFactory::construct(
+	libmaus2::aio::PosixFdInputStream PFIS(STDIN_FILENO);
+	libmaus2::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
+		libmaus2::bambam::BamMultiAlignmentDecoderFactory::construct(
 			arginfo,true /* put rank */, 0 /* copy stream */, PFIS
 		)
 	);
-	libmaus::bambam::BamAlignmentDecoder & dec = decwrapper->getDecoder();
-	libmaus::bambam::BamAlignment & algn = dec.getAlignment();
+	libmaus2::bambam::BamAlignmentDecoder & dec = decwrapper->getDecoder();
+	libmaus2::bambam::BamAlignment & algn = dec.getAlignment();
 
-	libmaus::bambam::BamHeader const & header = dec.getHeader();
+	libmaus2::bambam::BamHeader const & header = dec.getHeader();
 
-	::libmaus::bambam::BamHeader::unique_ptr_type genuphead(
-		libmaus::bambam::BamHeaderUpdate::updateHeader(arginfo,dec.getHeader(),"bamstreamingmarkduplicates",std::string(PACKAGE_VERSION))
+	::libmaus2::bambam::BamHeader::unique_ptr_type genuphead(
+		libmaus2::bambam::BamHeaderUpdate::updateHeader(arginfo,dec.getHeader(),"bamstreamingmarkduplicates",std::string(PACKAGE_VERSION))
 	);
 
 	/*
 	 * start index/md5 callbacks
 	 */
 	std::string const tmpfileindex = tmpfilenamebase + "_index";
-	::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
+	::libmaus2::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
 
 	std::string md5filename;
 	std::string indexfilename;
 
-	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > cbs;
-	::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
+	std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > cbs;
+	::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
 	if ( arginfo.getValue<unsigned int>("md5",getDefaultMD5()) )
 	{
 		if ( arginfo.hasArg("md5filename") &&  arginfo.getUnparsedValue("md5filename","") != "" )
@@ -89,12 +89,12 @@ int bamstreamingmarkduplicates(libmaus::util::ArgInfo const & arginfo)
 
 		if ( md5filename.size() )
 		{
-			::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5cb(new ::libmaus::lz::BgzfDeflateOutputCallbackMD5);
+			::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5cb(new ::libmaus2::lz::BgzfDeflateOutputCallbackMD5);
 			Pmd5cb = UNIQUE_PTR_MOVE(Tmd5cb);
 			cbs.push_back(Pmd5cb.get());
 		}
 	}
-	libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Pindex;
+	libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Pindex;
 	if ( arginfo.getValue<unsigned int>("index",getDefaultIndex()) )
 	{
 		if ( arginfo.hasArg("indexfilename") &&  arginfo.getUnparsedValue("indexfilename","") != "" )
@@ -104,12 +104,12 @@ int bamstreamingmarkduplicates(libmaus::util::ArgInfo const & arginfo)
 
 		if ( indexfilename.size() )
 		{
-			libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Tindex(new libmaus::bambam::BgzfDeflateOutputCallbackBamIndex(tmpfileindex));
+			libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Tindex(new libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex(tmpfileindex));
 			Pindex = UNIQUE_PTR_MOVE(Tindex);
 			cbs.push_back(Pindex.get());
 		}
 	}
-	std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
+	std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
 	if ( cbs.size() )
 		Pcbs = &cbs;
 	/*
@@ -117,19 +117,19 @@ int bamstreamingmarkduplicates(libmaus::util::ArgInfo const & arginfo)
 	 */
 
 	// construct writer
-	libmaus::bambam::BamBlockWriterBase::unique_ptr_type Pwriter(libmaus::bambam::BamBlockWriterBaseFactory::construct(*genuphead,arginfo,Pcbs));
-	libmaus::bambam::BamBlockWriterBase & wr = *Pwriter;
+	libmaus2::bambam::BamBlockWriterBase::unique_ptr_type Pwriter(libmaus2::bambam::BamBlockWriterBaseFactory::construct(*genuphead,arginfo,Pcbs));
+	libmaus2::bambam::BamBlockWriterBase & wr = *Pwriter;
 
-	libmaus::bambam::BamStreamingMarkDuplicates BSMD(arginfo,header,wr,filterdupmarktags);
+	libmaus2::bambam::BamStreamingMarkDuplicates BSMD(arginfo,header,wr,filterdupmarktags);
 
 	uint64_t cnt = 0;
 
-	libmaus::timing::RealTimeClock globalrtc;
+	libmaus2::timing::RealTimeClock globalrtc;
 	globalrtc.start();
-	libmaus::timing::RealTimeClock batchrtc;
+	libmaus2::timing::RealTimeClock batchrtc;
 	batchrtc.start();
 
-	uint32_t const flagmask = ~static_cast<uint32_t>(libmaus::bambam::BamFlagBase::LIBMAUS_BAMBAM_FDUP);
+	uint32_t const flagmask = ~static_cast<uint32_t>(libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FDUP);
 				
 	while ( dec.readAlignment() )
 	{
@@ -147,7 +147,7 @@ int bamstreamingmarkduplicates(libmaus::util::ArgInfo const & arginfo)
 				<< "[V] " 
 				<< cnt << " " 
 				<< BSMD.OQ.nextout << " " 
-				<< libmaus::util::MemUsage() << " "
+				<< libmaus2::util::MemUsage() << " "
 				<< globalrtc.formatTime(globalrtc.getElapsedSeconds()) << " "
 				<< batchrtc.formatTime(batchrtc.getElapsedSeconds())
 				<< std::endl;
@@ -176,7 +176,7 @@ int main(int argc, char *argv[])
 {
 	try
 	{
-		libmaus::util::ArgInfo const arginfo(argc,argv);
+		libmaus2::util::ArgInfo const arginfo(argc,argv);
 
 		
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
@@ -186,7 +186,7 @@ int main(int argc, char *argv[])
 				arginfo.restargs[i] == "--version"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
 			else if ( 
@@ -195,22 +195,22 @@ int main(int argc, char *argv[])
 				arginfo.restargs[i] == "--help"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
 				
 				std::vector< std::pair<std::string,std::string> > V;
 			
-				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
-				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
+				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "tmpfile=<filename>", "prefix for temporary files, default: create files in current directory" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam2::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "md5filename=<filename>", "file name for md5 check sum" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam2::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "indexfilename=<filename>", "file name for BAM index file" ) );
-				V.push_back ( std::pair<std::string,std::string> ( std::string("inputformat=<[")+libmaus::bambam::BamAlignmentDecoderInfo::getDefaultInputFormat()+"]>", std::string("input format (") + libmaus::bambam::BamMultiAlignmentDecoderFactory::getValidInputFormats() + ")" ) );
-				V.push_back ( std::pair<std::string,std::string> ( std::string("outputformat=<[")+libmaus::bambam::BamBlockWriterBaseFactory::getDefaultOutputFormat()+"]>", std::string("output format (") + libmaus::bambam::BamBlockWriterBaseFactory::getValidOutputFormats() + ")" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("inputformat=<[")+libmaus2::bambam::BamAlignmentDecoderInfo::getDefaultInputFormat()+"]>", std::string("input format (") + libmaus2::bambam::BamMultiAlignmentDecoderFactory::getValidInputFormats() + ")" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("outputformat=<[")+libmaus2::bambam::BamBlockWriterBaseFactory::getDefaultOutputFormat()+"]>", std::string("output format (") + libmaus2::bambam::BamBlockWriterBaseFactory::getValidOutputFormats() + ")" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "I=<[stdin]>", "input filename (standard input if unset)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "inputthreads=<[1]>", "input helper threads (for inputformat=bam only, default: 1)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "reference=<>", "reference FastA (.fai file required, for cram i/o only)" ) );
@@ -222,30 +222,30 @@ int main(int argc, char *argv[])
 
 				V.push_back ( 
 					std::pair<std::string,std::string> ( 
-						std::string("maxreadlen=<[")+::biobambam::Licensing::formatNumber(libmaus::bambam::BamStreamingMarkDuplicates::getDefaultMaxReadLen())+"]>", 
-						std::string("maximum read length (default ") + ::biobambam::Licensing::formatNumber(libmaus::bambam::BamStreamingMarkDuplicates::getDefaultMaxReadLen()) + ")" 
+						std::string("maxreadlen=<[")+::biobambam2::Licensing::formatNumber(libmaus2::bambam::BamStreamingMarkDuplicates::getDefaultMaxReadLen())+"]>", 
+						std::string("maximum read length (default ") + ::biobambam2::Licensing::formatNumber(libmaus2::bambam::BamStreamingMarkDuplicates::getDefaultMaxReadLen()) + ")" 
 					)
 				);
 				V.push_back ( 
 					std::pair<std::string,std::string> ( 
-						std::string("optminpixeldif=<[")+::biobambam::Licensing::formatNumber(libmaus::bambam::BamStreamingMarkDuplicates::getDefaultOptMinPixelDif())+"]>", 
-						std::string("maximum distance for optical duplicates (default ") + ::biobambam::Licensing::formatNumber(libmaus::bambam::BamStreamingMarkDuplicates::getDefaultOptMinPixelDif()) + ")" 
+						std::string("optminpixeldif=<[")+::biobambam2::Licensing::formatNumber(libmaus2::bambam::BamStreamingMarkDuplicates::getDefaultOptMinPixelDif())+"]>", 
+						std::string("maximum distance for optical duplicates (default ") + ::biobambam2::Licensing::formatNumber(libmaus2::bambam::BamStreamingMarkDuplicates::getDefaultOptMinPixelDif()) + ")" 
 					)
 				);
 				V.push_back ( 
 					std::pair<std::string,std::string> ( 
-						std::string("resetdupflag=<[")+::biobambam::Licensing::formatNumber(getDefaultResetDupFlag())+"]>", 
-						std::string("reset dup flag before checking for duplicates (default ") + ::biobambam::Licensing::formatNumber(getDefaultResetDupFlag()) + ")" 
+						std::string("resetdupflag=<[")+::biobambam2::Licensing::formatNumber(getDefaultResetDupFlag())+"]>", 
+						std::string("reset dup flag before checking for duplicates (default ") + ::biobambam2::Licensing::formatNumber(getDefaultResetDupFlag()) + ")" 
 					)
 				);
 
 				V.push_back ( std::pair<std::string,std::string> ( "tag=<[a-zA-Z][a-zA-Z0-9]>", "aux field id for tag string extraction" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "nucltag=<[a-zA-Z][a-zA-Z0-9]>", "aux field id for nucleotide tag extraction" ) );
 				V.push_back ( std::pair<std::string,std::string> ( 
-					std::string("filterdupmarktags=<[") + ::biobambam::Licensing::formatNumber(getDefaultFilterDupMarkTags()) + std::string("]>"), 
-					std::string("remove aux fields MC, MQ, MS, and MT from output (default: ") + ::biobambam::Licensing::formatNumber(getDefaultFilterDupMarkTags()) + std::string(")") ) );
+					std::string("filterdupmarktags=<[") + ::biobambam2::Licensing::formatNumber(getDefaultFilterDupMarkTags()) + std::string("]>"), 
+					std::string("remove aux fields MC, MQ, MS, and MT from output (default: ") + ::biobambam2::Licensing::formatNumber(getDefaultFilterDupMarkTags()) + std::string(")") ) );
 
-				::biobambam::Licensing::printMap(std::cerr,V);
+				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;

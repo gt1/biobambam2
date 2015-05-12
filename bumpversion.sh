@@ -58,8 +58,8 @@ git push
 # back to experimental branch
 git checkout experimental
 
-TAG=biobambam_experimental_${FIRST}_${SECOND}_${NEXTTHIRD}
-git tag -a ${TAG} -m "biobambam experimental version ${FIRST}_${SECOND}_${NEXTTHIRD}"
+TAG=biobambam2_experimental_${FIRST}_${SECOND}_${NEXTTHIRD}
+git tag -a ${TAG} -m "biobambam2 experimental version ${FIRST}_${SECOND}_${NEXTTHIRD}"
 git push origin ${TAG}
 
 exit 0

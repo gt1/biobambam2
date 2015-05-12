@@ -16,23 +16,24 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
-#if ! defined(LICENSEMESSAGE_HPP)
-#define LICENSEMESSAGE_HPP
+#include <biobambam2/AttachRank.hpp>
 
-#include <string>
-#include <vector>
-#include <map>
-#include <ostream>
-
-namespace biobambam
+bool attachRank(libmaus2::bambam::BamAlignment & algn, uint64_t const c, libmaus2::bambam::BamAuxFilterVector const & zzbafv)
 {
-	struct Licensing
-	{
-		static std::string license();
-		static std::string printLeft(std::string const & s, uint64_t const w, char const fill = ' ');
-		static std::ostream & printMap(std::ostream & out, std::vector< std::pair<std::string,std::string> > const & M);
-		static std::string formatNumber(int64_t const n);
-		static std::string formatFloatingPoint(double const n);
+	algn.filterOutAux(zzbafv);
+
+	uint8_t const R[8] = {
+		static_cast<uint8_t>((c >> ((8-0-1)*8)) & 0xFF),
+		static_cast<uint8_t>((c >> ((8-1-1)*8)) & 0xFF),
+		static_cast<uint8_t>((c >> ((8-2-1)*8)) & 0xFF),
+		static_cast<uint8_t>((c >> ((8-3-1)*8)) & 0xFF),
+		static_cast<uint8_t>((c >> ((8-4-1)*8)) & 0xFF),
+		static_cast<uint8_t>((c >> ((8-5-1)*8)) & 0xFF),
+		static_cast<uint8_t>((c >> ((8-6-1)*8)) & 0xFF),
+		static_cast<uint8_t>((c >> ((8-7-1)*8)) & 0xFF)
 	};
+
+	algn.putAuxNumberArray("zz", &R[0], sizeof(R)/sizeof(R[0]));
+
+	return true;
 }
-#endif

@@ -16,18 +16,18 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
-#include <biobambam/BamBamConfig.hpp>
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/BamBamConfig.hpp>
+#include <biobambam2/Licensing.hpp>
 
 #include <config.h>
 
-#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
-#include <libmaus/fastx/BgzfFastAIndexEntry.hpp>
-#include <libmaus/fastx/FastABgzfIndex.hpp>
-#include <libmaus/fastx/StreamFastAReader.hpp>
-#include <libmaus/lz/BgzfDeflate.hpp>
-#include <libmaus/util/ArgInfo.hpp>
-#include <libmaus/util/MemUsage.hpp>
+#include <libmaus2/bambam/BamBlockWriterBaseFactory.hpp>
+#include <libmaus2/fastx/BgzfFastAIndexEntry.hpp>
+#include <libmaus2/fastx/FastABgzfIndex.hpp>
+#include <libmaus2/fastx/StreamFastAReader.hpp>
+#include <libmaus2/lz/BgzfDeflate.hpp>
+#include <libmaus2/util/ArgInfo.hpp>
+#include <libmaus2/util/MemUsage.hpp>
 
 
 static unsigned int getDefaultCols()
@@ -58,10 +58,10 @@ std::string stripName(std::string const & s)
 	return s.substr(j,i-j);
 }
 
-void normalisefastaUncompressed(libmaus::util::ArgInfo const & arginfo)
+void normalisefastaUncompressed(libmaus2::util::ArgInfo const & arginfo)
 {
-	libmaus::fastx::StreamFastAReaderWrapper in(std::cin);
-	libmaus::fastx::StreamFastAReaderWrapper::pattern_type pattern;
+	libmaus2::fastx::StreamFastAReaderWrapper in(std::cin);
+	libmaus2::fastx::StreamFastAReaderWrapper::pattern_type pattern;
 	unsigned int const cols = arginfo.getValue<unsigned int>("cols",getDefaultCols());
 	uint64_t offset = 0;
 	
@@ -79,23 +79,23 @@ void normalisefastaUncompressed(libmaus::util::ArgInfo const & arginfo)
 	std::cout << std::flush;
 }
 
-void normalisefastaBgzf(libmaus::util::ArgInfo const & arginfo, std::ostream & out)
+void normalisefastaBgzf(libmaus2::util::ArgInfo const & arginfo, std::ostream & out)
 {
-	libmaus::fastx::StreamFastAReaderWrapper in(std::cin);
-	libmaus::fastx::StreamFastAReaderWrapper::pattern_type pattern;
-	int const level = libmaus::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue("level",getDefaultLevel()));
+	libmaus2::fastx::StreamFastAReaderWrapper in(std::cin);
+	libmaus2::fastx::StreamFastAReaderWrapper::pattern_type pattern;
+	int const level = libmaus2::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue("level",getDefaultLevel()));
 	std::string const indexfn = arginfo.getUnparsedValue("index","");
 
-	::libmaus::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(level);
+	::libmaus2::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(level);
 
-	libmaus::lz::BgzfDeflate<std::ostream> defl(out,level,false /* full flush */);
+	libmaus2::lz::BgzfDeflate<std::ostream> defl(out,level,false /* full flush */);
 	uint64_t const inbufsize = defl.getInputBufferSize();
 	uint64_t zoffset = 0;
 	uint64_t ioffset = 0;
-	std::vector<libmaus::fastx::BgzfFastAIndexEntry> index;
+	std::vector<libmaus2::fastx::BgzfFastAIndexEntry> index;
 	std::ostringstream indexstr;
 	
-	ioffset += libmaus::util::NumberSerialisation::serialiseNumber(indexstr,inbufsize);
+	ioffset += libmaus2::util::NumberSerialisation::serialiseNumber(indexstr,inbufsize);
 	uint64_t patid = 0;
 	
 	while ( in.getNextPatternUnlocked(pattern) )
@@ -107,13 +107,13 @@ void normalisefastaBgzf(libmaus::util::ArgInfo const & arginfo, std::ostream & o
 		uint64_t const patlen = spat.size();
 		uint64_t const numblocks = (patlen + inbufsize - 1)/inbufsize;
 
-		index.push_back(libmaus::fastx::BgzfFastAIndexEntry(shortname,patid++,ioffset));
+		index.push_back(libmaus2::fastx::BgzfFastAIndexEntry(shortname,patid++,ioffset));
 		
-		ioffset += libmaus::util::StringSerialisation::serialiseString(indexstr,name);
-		ioffset += libmaus::util::StringSerialisation::serialiseString(indexstr,shortname);
-		ioffset += libmaus::util::NumberSerialisation::serialiseNumber(indexstr,patlen);
-		ioffset += libmaus::util::NumberSerialisation::serialiseNumber(indexstr,zoffset);
-		ioffset += libmaus::util::NumberSerialisation::serialiseNumber(indexstr,numblocks);
+		ioffset += libmaus2::util::StringSerialisation::serialiseString(indexstr,name);
+		ioffset += libmaus2::util::StringSerialisation::serialiseString(indexstr,shortname);
+		ioffset += libmaus2::util::NumberSerialisation::serialiseNumber(indexstr,patlen);
+		ioffset += libmaus2::util::NumberSerialisation::serialiseNumber(indexstr,zoffset);
+		ioffset += libmaus2::util::NumberSerialisation::serialiseNumber(indexstr,numblocks);
 		
 		std::ostringstream nameostr;
 		nameostr << '>' << name << '\n';
@@ -129,14 +129,14 @@ void normalisefastaBgzf(libmaus::util::ArgInfo const & arginfo, std::ostream & o
 			uint64_t const towrite = std::min(patlen-o,inbufsize);
 			std::pair<uint64_t,uint64_t> const P1 = defl.writeSyncedCount(cpat,towrite);
 			
-			ioffset += libmaus::util::NumberSerialisation::serialiseNumber(indexstr,zoffset);
+			ioffset += libmaus2::util::NumberSerialisation::serialiseNumber(indexstr,zoffset);
 
 			zoffset += P1.second;
 			o += towrite;
 			cpat += towrite;
 		}		
 
-		ioffset += libmaus::util::NumberSerialisation::serialiseNumber(indexstr,zoffset);
+		ioffset += libmaus2::util::NumberSerialisation::serialiseNumber(indexstr,zoffset);
 
 		std::pair<uint64_t,uint64_t> const Pn = defl.writeSyncedCount("\n",1);
 		zoffset += Pn.second;
@@ -147,23 +147,23 @@ void normalisefastaBgzf(libmaus::util::ArgInfo const & arginfo, std::ostream & o
 	
 	uint64_t const imetaoffset = ioffset;
 
-	ioffset += libmaus::util::NumberSerialisation::serialiseNumber(indexstr,index.size());
+	ioffset += libmaus2::util::NumberSerialisation::serialiseNumber(indexstr,index.size());
 	for ( uint64_t i = 0; i < index.size(); ++i )
-		ioffset += libmaus::util::NumberSerialisation::serialiseNumber(indexstr,index[i].ioffset);
+		ioffset += libmaus2::util::NumberSerialisation::serialiseNumber(indexstr,index[i].ioffset);
 	
-	libmaus::util::NumberSerialisation::serialiseNumber(indexstr,imetaoffset);
+	libmaus2::util::NumberSerialisation::serialiseNumber(indexstr,imetaoffset);
 
 	if ( indexfn.size() )
 	{
 		std::string const & sindex = indexstr.str();
-		libmaus::aio::CheckedOutputStream indexCOS(indexfn);
+		libmaus2::aio::CheckedOutputStream indexCOS(indexfn);
 		indexCOS.write(sindex.c_str(),sindex.size());
 		indexCOS.flush();
 		indexCOS.close();	
 	}
 }
 
-void normalisefasta(libmaus::util::ArgInfo const & arginfo)
+void normalisefasta(libmaus2::util::ArgInfo const & arginfo)
 {
 	if ( arginfo.getValue<unsigned int>("bgzf",getDefaultBgzf()) )
 		normalisefastaBgzf(arginfo,std::cout);
@@ -175,9 +175,9 @@ int main(int argc, char * argv[])
 {
 	try
 	{
-		libmaus::timing::RealTimeClock rtc; rtc.start();
+		libmaus2::timing::RealTimeClock rtc; rtc.start();
 		
-		::libmaus::util::ArgInfo const arginfo(argc,argv);
+		::libmaus2::util::ArgInfo const arginfo(argc,argv);
 		
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
 			if ( 
@@ -186,7 +186,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--version"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
 			else if ( 
@@ -195,18 +195,18 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--help"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license() << std::endl;
+				std::cerr << ::biobambam2::Licensing::license() << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
 				
 				std::vector< std::pair<std::string,std::string> > V;
 
-				V.push_back ( std::pair<std::string,std::string> ( std::string("cols=<[")+libmaus::util::NumberSerialisation::formatNumber(getDefaultCols(),0)+"]>", "column width" ) );
-				V.push_back ( std::pair<std::string,std::string> ( std::string("bgzf=<[")+libmaus::util::NumberSerialisation::formatNumber(getDefaultBgzf(),0)+"]>", "compress output" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("cols=<[")+libmaus2::util::NumberSerialisation::formatNumber(getDefaultCols(),0)+"]>", "column width" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("bgzf=<[")+libmaus2::util::NumberSerialisation::formatNumber(getDefaultBgzf(),0)+"]>", "compress output" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("index=<>"), "file name for index if bgzf=1 (no index is created if key is not given)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( std::string("level=<[")+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", std::string("compression level if bgzf=1 (") + libmaus::bambam::BamBlockWriterBaseFactory::getLevelHelpText() + std::string(")") ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("level=<[")+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", std::string("compression level if bgzf=1 (") + libmaus2::bambam::BamBlockWriterBaseFactory::getLevelHelpText() + std::string(")") ) );
 				
-				::biobambam::Licensing::printMap(std::cerr,V);
+				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;

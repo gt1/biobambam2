@@ -16,10 +16,19 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
-#if ! defined(BIOBAMBAM_SPLIT12_HPP)
-#define BIOBAMBAM_SPLIT12_HPP
+#if ! defined(BIOBAMBAM_RESETALIGNMENT_HPP)
+#define BIOBAMBAM_RESETALIGNMENT_HPP
 
-#include <libmaus/bambam/BamAlignment.hpp>
+#include <libmaus2/bambam/BamAlignment.hpp>
 
-bool split12(libmaus::bambam::BamAlignment & algn);
+uint64_t resetAlignment(
+	uint8_t * const D, uint64_t blocksize, bool const resetaux = true,
+	libmaus2::bambam::BamAuxFilterVector const * rgfilter = 0
+);
+bool resetAlignment(libmaus2::bambam::BamAlignment & algn, bool const resetaux = true, 
+	uint32_t const excludeflags = 
+		libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FSECONDARY |
+		libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FSUPPLEMENTARY,
+	libmaus2::bambam::BamAuxFilterVector const * rgfilter = 0
+);
 #endif

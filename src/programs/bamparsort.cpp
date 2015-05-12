@@ -17,38 +17,38 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#include <libmaus/aio/PosixFdInputStream.hpp>
-#include <libmaus/bambam/BamAlignment.hpp>
-#include <libmaus/bambam/BamAlignmentHeapComparator.hpp>
-#include <libmaus/bambam/BamAlignmentPosComparator.hpp>
-#include <libmaus/bambam/BamBlockWriterBaseFactory.hpp>
-#include <libmaus/bambam/BamDecoder.hpp>
-#include <libmaus/bambam/BamHeader.hpp>
-#include <libmaus/bambam/BamWriter.hpp>
-#include <libmaus/bambam/ProgramHeaderLineSet.hpp>
-#include <libmaus/lz/BgzfInflateBase.hpp>
-#include <libmaus/lz/SimpleCompressedConcatInputStream.hpp>
-#include <libmaus/lz/SimpleCompressedConcatInputStreamFragment.hpp>
-#include <libmaus/lz/SimpleCompressedInputBlockConcatBlock.hpp>
-#include <libmaus/lz/SimpleCompressedInputBlockConcat.hpp>
-#include <libmaus/lz/SimpleCompressedOutputStream.hpp>
-#include <libmaus/lz/SimpleCompressedStreamInterval.hpp>
-#include <libmaus/lz/SimpleCompressedStreamNamedInterval.hpp>
-#include <libmaus/lz/SnappyCompressorObjectFactory.hpp>
-#include <libmaus/lz/SnappyDecompressorObjectFactory.hpp>
-#include <libmaus/lz/ZlibCompressorObjectFactory.hpp>
-#include <libmaus/lz/ZlibDecompressorObjectFactory.hpp>
-#include <libmaus/parallel/LockedBool.hpp>
-#include <libmaus/parallel/LockedQueue.hpp>
-#include <libmaus/parallel/NumCpus.hpp>
-#include <libmaus/parallel/SimpleThreadPool.hpp>
-#include <libmaus/parallel/SimpleThreadPoolWorkPackageFreeList.hpp>
-#include <libmaus/sorting/ParallelStableSort.hpp>
-#include <libmaus/util/GetObject.hpp>
-#include <libmaus/util/TempFileRemovalContainer.hpp>
+#include <libmaus2/aio/PosixFdInputStream.hpp>
+#include <libmaus2/bambam/BamAlignment.hpp>
+#include <libmaus2/bambam/BamAlignmentHeapComparator.hpp>
+#include <libmaus2/bambam/BamAlignmentPosComparator.hpp>
+#include <libmaus2/bambam/BamBlockWriterBaseFactory.hpp>
+#include <libmaus2/bambam/BamDecoder.hpp>
+#include <libmaus2/bambam/BamHeader.hpp>
+#include <libmaus2/bambam/BamWriter.hpp>
+#include <libmaus2/bambam/ProgramHeaderLineSet.hpp>
+#include <libmaus2/lz/BgzfInflateBase.hpp>
+#include <libmaus2/lz/SimpleCompressedConcatInputStream.hpp>
+#include <libmaus2/lz/SimpleCompressedConcatInputStreamFragment.hpp>
+#include <libmaus2/lz/SimpleCompressedInputBlockConcatBlock.hpp>
+#include <libmaus2/lz/SimpleCompressedInputBlockConcat.hpp>
+#include <libmaus2/lz/SimpleCompressedOutputStream.hpp>
+#include <libmaus2/lz/SimpleCompressedStreamInterval.hpp>
+#include <libmaus2/lz/SimpleCompressedStreamNamedInterval.hpp>
+#include <libmaus2/lz/SnappyCompressorObjectFactory.hpp>
+#include <libmaus2/lz/SnappyDecompressorObjectFactory.hpp>
+#include <libmaus2/lz/ZlibCompressorObjectFactory.hpp>
+#include <libmaus2/lz/ZlibDecompressorObjectFactory.hpp>
+#include <libmaus2/parallel/LockedBool.hpp>
+#include <libmaus2/parallel/LockedQueue.hpp>
+#include <libmaus2/parallel/NumCpus.hpp>
+#include <libmaus2/parallel/SimpleThreadPool.hpp>
+#include <libmaus2/parallel/SimpleThreadPoolWorkPackageFreeList.hpp>
+#include <libmaus2/sorting/ParallelStableSort.hpp>
+#include <libmaus2/util/GetObject.hpp>
+#include <libmaus2/util/TempFileRemovalContainer.hpp>
 
-#include <biobambam/BamBamConfig.hpp>
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/BamBamConfig.hpp>
+#include <biobambam2/Licensing.hpp>
 
 #include <config.h>
 
@@ -136,12 +136,12 @@ struct BamThreadPoolDecodeBamProcessQueueInfo
 struct BamProcessBuffer
 {
 	typedef BamProcessBuffer this_type;
-	typedef libmaus::util::unique_ptr<this_type>::type unique_ptr_type;
-	typedef libmaus::util::shared_ptr<this_type>::type shared_ptr_type;
+	typedef libmaus2::util::unique_ptr<this_type>::type unique_ptr_type;
+	typedef libmaus2::util::shared_ptr<this_type>::type shared_ptr_type;
 	
 	typedef uint64_t pointer_type;
 
-	libmaus::autoarray::AutoArray<pointer_type> B8;
+	libmaus2::autoarray::AutoArray<pointer_type> B8;
 	uint64_t const bspace;
 
 	uint8_t * const ca;
@@ -224,12 +224,12 @@ struct BamThreadPoolDecodeContextBaseConstantsBase
 };
 
 template<typename _order_type>
-struct BamThreadPoolDecodeReadPackage : public ::libmaus::parallel::SimpleThreadWorkPackage
+struct BamThreadPoolDecodeReadPackage : public ::libmaus2::parallel::SimpleThreadWorkPackage
 {
 	typedef _order_type order_type;
 	typedef BamThreadPoolDecodeReadPackage<order_type> this_type;
-	typedef typename libmaus::util::unique_ptr<this_type>::type unique_ptr_type;
-	typedef typename libmaus::util::shared_ptr<this_type>::type shared_ptr_type;
+	typedef typename libmaus2::util::unique_ptr<this_type>::type unique_ptr_type;
+	typedef typename libmaus2::util::shared_ptr<this_type>::type shared_ptr_type;
 
 	BamThreadPoolDecodeContextBase<order_type> * contextbase;
 
@@ -238,7 +238,7 @@ struct BamThreadPoolDecodeReadPackage : public ::libmaus::parallel::SimpleThread
 		uint64_t const rpackageid,
 		BamThreadPoolDecodeContextBase<order_type> * rcontextbase
 	)
-	: ::libmaus::parallel::SimpleThreadWorkPackage(
+	: ::libmaus2::parallel::SimpleThreadWorkPackage(
 		BamThreadPoolDecodeContextBaseConstantsBase::bamthreadpooldecodecontextbase_dispatcher_priority_read,
 		BamThreadPoolDecodeContextBaseConstantsBase::bamthreadpooldecodecontextbase_dispatcher_id_read,
 		rpackageid
@@ -254,12 +254,12 @@ struct BamThreadPoolDecodeReadPackage : public ::libmaus::parallel::SimpleThread
 };
 
 template<typename _order_type>
-struct BamThreadPoolDecodeDecompressPackage : public ::libmaus::parallel::SimpleThreadWorkPackage
+struct BamThreadPoolDecodeDecompressPackage : public ::libmaus2::parallel::SimpleThreadWorkPackage
 {
 	typedef _order_type order_type;
 	typedef BamThreadPoolDecodeDecompressPackage<order_type> this_type;
-	typedef typename libmaus::util::unique_ptr<this_type>::type unique_ptr_type;
-	typedef typename libmaus::util::shared_ptr<this_type>::type shared_ptr_type;
+	typedef typename libmaus2::util::unique_ptr<this_type>::type unique_ptr_type;
+	typedef typename libmaus2::util::shared_ptr<this_type>::type shared_ptr_type;
 
 	BamThreadPoolDecodeContextBase<order_type> * contextbase;
 
@@ -276,7 +276,7 @@ struct BamThreadPoolDecodeDecompressPackage : public ::libmaus::parallel::Simple
 		uint64_t rblockid
 		
 	)
-	: ::libmaus::parallel::SimpleThreadWorkPackage(
+	: ::libmaus2::parallel::SimpleThreadWorkPackage(
 		BamThreadPoolDecodeContextBaseConstantsBase::bamthreadpooldecodecontextbase_dispatcher_priority_decompress,
 		BamThreadPoolDecodeContextBaseConstantsBase::bamthreadpooldecodecontextbase_dispatcher_id_decompress,
 		rpackageid
@@ -292,12 +292,12 @@ struct BamThreadPoolDecodeDecompressPackage : public ::libmaus::parallel::Simple
 };
 
 template<typename _order_type>
-struct BamThreadPoolDecodeBamParsePackage : public ::libmaus::parallel::SimpleThreadWorkPackage
+struct BamThreadPoolDecodeBamParsePackage : public ::libmaus2::parallel::SimpleThreadWorkPackage
 {
 	typedef _order_type order_type;
 	typedef BamThreadPoolDecodeBamParsePackage<order_type> this_type;
-	typedef typename libmaus::util::unique_ptr<this_type>::type unique_ptr_type;
-	typedef typename libmaus::util::shared_ptr<this_type>::type shared_ptr_type;
+	typedef typename libmaus2::util::unique_ptr<this_type>::type unique_ptr_type;
+	typedef typename libmaus2::util::shared_ptr<this_type>::type shared_ptr_type;
 
 	BamThreadPoolDecodeContextBase<order_type> * contextbase;
 
@@ -313,7 +313,7 @@ struct BamThreadPoolDecodeBamParsePackage : public ::libmaus::parallel::SimpleTh
 		uint64_t rbaseid,
 		uint64_t rblockid		
 	)
-	: ::libmaus::parallel::SimpleThreadWorkPackage(
+	: ::libmaus2::parallel::SimpleThreadWorkPackage(
 		BamThreadPoolDecodeContextBaseConstantsBase::bamthreadpooldecodecontextbase_dispatcher_priority_bamparse,
 		BamThreadPoolDecodeContextBaseConstantsBase::bamthreadpooldecodecontextbase_dispatcher_id_bamparse,
 		rpackageid
@@ -328,12 +328,12 @@ struct BamThreadPoolDecodeBamParsePackage : public ::libmaus::parallel::SimpleTh
 };
 
 template<typename _order_type>
-struct BamThreadPoolDecodeBamProcessPackage : public ::libmaus::parallel::SimpleThreadWorkPackage
+struct BamThreadPoolDecodeBamProcessPackage : public ::libmaus2::parallel::SimpleThreadWorkPackage
 {
 	typedef _order_type order_type;
 	typedef BamThreadPoolDecodeBamProcessPackage<order_type> this_type;
-	typedef typename libmaus::util::unique_ptr<this_type>::type unique_ptr_type;
-	typedef typename libmaus::util::shared_ptr<this_type>::type shared_ptr_type;
+	typedef typename libmaus2::util::unique_ptr<this_type>::type unique_ptr_type;
+	typedef typename libmaus2::util::shared_ptr<this_type>::type shared_ptr_type;
 
 	BamThreadPoolDecodeContextBase<order_type> * contextbase;
 	uint64_t baseid;
@@ -346,7 +346,7 @@ struct BamThreadPoolDecodeBamProcessPackage : public ::libmaus::parallel::Simple
 		uint64_t rbaseid,
 		uint64_t rblockid		
 	)
-	: ::libmaus::parallel::SimpleThreadWorkPackage(
+	: ::libmaus2::parallel::SimpleThreadWorkPackage(
 		BamThreadPoolDecodeContextBaseConstantsBase::bamthreadpooldecodecontextbase_dispatcher_priority_bamprocess,
 		BamThreadPoolDecodeContextBaseConstantsBase::bamthreadpooldecodecontextbase_dispatcher_id_bamprocess,
 		rpackageid
@@ -366,10 +366,10 @@ struct BamSortInfo
 {
 	typedef _order_type order_type;
 	typedef BamSortInfo this_type;
-	typedef typename libmaus::util::unique_ptr<this_type>::type unique_ptr_type;
-	typedef typename libmaus::util::shared_ptr<this_type>::type shared_ptr_type;
+	typedef typename libmaus2::util::unique_ptr<this_type>::type unique_ptr_type;
+	typedef typename libmaus2::util::shared_ptr<this_type>::type shared_ptr_type;
 	
-	typedef libmaus::sorting::ParallelStableSort::ParallelSortControl<
+	typedef libmaus2::sorting::ParallelStableSort::ParallelSortControl<
 		BamProcessBuffer::pointer_type *,order_type
 	> sort_type;
 	
@@ -396,19 +396,19 @@ struct BamSortInfo
 		for ( uint64_t * pc = processBuffer->pc; pc != processBuffer->pa; ++pc )
 		{
 			uint8_t const * cp = processBuffer->ca + *pc + 4;
-			std::cerr << libmaus::bambam::BamAlignmentDecoderBase::getReadName(cp) << std::endl;
+			std::cerr << libmaus2::bambam::BamAlignmentDecoderBase::getReadName(cp) << std::endl;
 		}
 		#endif
 	}
 };
 
 template<typename _order_type>
-struct BamThreadPoolDecodeBamSortPackage : public ::libmaus::parallel::SimpleThreadWorkPackage
+struct BamThreadPoolDecodeBamSortPackage : public ::libmaus2::parallel::SimpleThreadWorkPackage
 {
 	typedef _order_type order_type;
 	typedef BamThreadPoolDecodeBamSortPackage<order_type> this_type;
-	typedef typename libmaus::util::unique_ptr<this_type>::type unique_ptr_type;
-	typedef typename libmaus::util::shared_ptr<this_type>::type shared_ptr_type;
+	typedef typename libmaus2::util::unique_ptr<this_type>::type unique_ptr_type;
+	typedef typename libmaus2::util::shared_ptr<this_type>::type shared_ptr_type;
 
 	enum sort_package_type {
 		sort_package_type_base,
@@ -439,7 +439,7 @@ struct BamThreadPoolDecodeBamSortPackage : public ::libmaus::parallel::SimpleThr
 		uint64_t rsort_merge_id,
 		uint64_t rsort_submerge_id
 	)
-	: ::libmaus::parallel::SimpleThreadWorkPackage(
+	: ::libmaus2::parallel::SimpleThreadWorkPackage(
 		BamThreadPoolDecodeContextBaseConstantsBase::bamthreadpooldecodecontextbase_dispatcher_priority_bamsort,
 		BamThreadPoolDecodeContextBaseConstantsBase::bamthreadpooldecodecontextbase_dispatcher_id_bamsort,
 		rpackageid
@@ -461,12 +461,12 @@ struct BamThreadPoolDecodeBamSortPackage : public ::libmaus::parallel::SimpleThr
 struct BamBlockWriteInfo
 {
 	typedef BamBlockWriteInfo this_type;
-	typedef libmaus::util::unique_ptr<this_type>::type unique_ptr_type;
-	typedef libmaus::util::shared_ptr<this_type>::type shared_ptr_type;
+	typedef libmaus2::util::unique_ptr<this_type>::type unique_ptr_type;
+	typedef libmaus2::util::shared_ptr<this_type>::type shared_ptr_type;
 	
 	BamProcessBuffer * processBuffer;
 	std::vector < std::pair<BamProcessBuffer::pointer_type const *, BamProcessBuffer::pointer_type const *> > packets;
-	libmaus::parallel::SynchronousCounter<uint64_t> packetsWritten;
+	libmaus2::parallel::SynchronousCounter<uint64_t> packetsWritten;
 	
 	BamBlockWriteInfo() : processBuffer(0), packetsWritten(0) {}
 	BamBlockWriteInfo(
@@ -476,12 +476,12 @@ struct BamBlockWriteInfo
 };
 
 template<typename _order_type>
-struct BamThreadPoolDecodeBamWritePackage : public ::libmaus::parallel::SimpleThreadWorkPackage
+struct BamThreadPoolDecodeBamWritePackage : public ::libmaus2::parallel::SimpleThreadWorkPackage
 {
 	typedef _order_type order_type;
 	typedef BamThreadPoolDecodeBamWritePackage<order_type> this_type;
-	typedef typename libmaus::util::unique_ptr<this_type>::type unique_ptr_type;
-	typedef typename libmaus::util::shared_ptr<this_type>::type shared_ptr_type;
+	typedef typename libmaus2::util::unique_ptr<this_type>::type unique_ptr_type;
+	typedef typename libmaus2::util::shared_ptr<this_type>::type shared_ptr_type;
 
 	BamThreadPoolDecodeContextBase<order_type> * contextbase;
 	uint64_t baseid;
@@ -498,7 +498,7 @@ struct BamThreadPoolDecodeBamWritePackage : public ::libmaus::parallel::SimpleTh
 		BamBlockWriteInfo::shared_ptr_type rwriteinfo,
 		uint64_t rwrite_block_id
 	)
-	: ::libmaus::parallel::SimpleThreadWorkPackage(
+	: ::libmaus2::parallel::SimpleThreadWorkPackage(
 		BamThreadPoolDecodeContextBaseConstantsBase::bamthreadpooldecodecontextbase_dispatcher_priority_bamwrite,
 		BamThreadPoolDecodeContextBaseConstantsBase::bamthreadpooldecodecontextbase_dispatcher_id_bamwrite,
 		rpackageid
@@ -533,10 +533,10 @@ struct MergeInfo
 {
 	std::vector< std::vector<uint64_t> > tmpfileblockcnts;
 	std::vector< std::string > tmpfilenames;
-	std::vector< std::vector< libmaus::lz::SimpleCompressedStreamInterval > > tmpfileblocks;
-	std::vector< std::vector< libmaus::lz::SimpleCompressedStreamNamedInterval > > tmpfilenamedblocks;
+	std::vector< std::vector< libmaus2::lz::SimpleCompressedStreamInterval > > tmpfileblocks;
+	std::vector< std::vector< libmaus2::lz::SimpleCompressedStreamNamedInterval > > tmpfilenamedblocks;
 	std::vector< uint64_t > tmpfileblockcntsums;
-	libmaus::bambam::BamHeader::shared_ptr_type sheader;
+	libmaus2::bambam::BamHeader::shared_ptr_type sheader;
 	
 	bool empty() const
 	{
@@ -552,10 +552,10 @@ struct MergeInfo
 	MergeInfo(
 		std::vector< std::vector<uint64_t> > rtmpfileblockcnts,
 		std::vector< std::string > rtmpfilenames,
-		std::vector< std::vector< libmaus::lz::SimpleCompressedStreamInterval > > rtmpfileblocks,
-		std::vector< std::vector< libmaus::lz::SimpleCompressedStreamNamedInterval > > rtmpfilenamedblocks,
+		std::vector< std::vector< libmaus2::lz::SimpleCompressedStreamInterval > > rtmpfileblocks,
+		std::vector< std::vector< libmaus2::lz::SimpleCompressedStreamNamedInterval > > rtmpfilenamedblocks,
 		std::vector< uint64_t > rtmpfileblockcntsums,
-		libmaus::bambam::BamHeader const & header
+		libmaus2::bambam::BamHeader const & header
 	)
 	: tmpfileblockcnts(rtmpfileblockcnts),
 	  tmpfilenames(rtmpfilenames),
@@ -568,11 +568,11 @@ struct MergeInfo
 	}
 };
 
-#include <libmaus/aio/IsKnownLocalFileSystem.hpp>
+#include <libmaus2/aio/IsKnownLocalFileSystem.hpp>
 
 #if defined(__linux__)
-#include <libmaus/aio/LinuxStreamingPosixFdOutputStream.hpp>
-#include <libmaus/aio/PosixFdOutputStreamBuffer.hpp>
+#include <libmaus2/aio/LinuxStreamingPosixFdOutputStream.hpp>
+#include <libmaus2/aio/PosixFdOutputStreamBuffer.hpp>
 #endif
 
 
@@ -583,43 +583,43 @@ struct BamThreadPoolDecodeContextBase : public BamThreadPoolDecodeContextBaseCon
 
 	static uint64_t const alperpackalign = 1024;
 
-	libmaus::parallel::PosixSpinLock cerrlock;
+	libmaus2::parallel::PosixSpinLock cerrlock;
 
-	libmaus::parallel::SimpleThreadPoolWorkPackageFreeList<BamThreadPoolDecodeReadPackage<order_type> > readFreeList;
-	libmaus::parallel::SimpleThreadPoolWorkPackageFreeList<BamThreadPoolDecodeDecompressPackage<order_type> > decompressFreeList;
-	libmaus::parallel::SimpleThreadPoolWorkPackageFreeList<BamThreadPoolDecodeBamParsePackage<order_type> > bamParseFreeList;
-	libmaus::parallel::SimpleThreadPoolWorkPackageFreeList<BamThreadPoolDecodeBamProcessPackage<order_type> > bamProcessFreeList;
-	libmaus::parallel::SimpleThreadPoolWorkPackageFreeList<BamThreadPoolDecodeBamSortPackage<order_type> > bamSortFreeList;
-	libmaus::parallel::SimpleThreadPoolWorkPackageFreeList<BamThreadPoolDecodeBamWritePackage<order_type> > bamWriteFreeList;
+	libmaus2::parallel::SimpleThreadPoolWorkPackageFreeList<BamThreadPoolDecodeReadPackage<order_type> > readFreeList;
+	libmaus2::parallel::SimpleThreadPoolWorkPackageFreeList<BamThreadPoolDecodeDecompressPackage<order_type> > decompressFreeList;
+	libmaus2::parallel::SimpleThreadPoolWorkPackageFreeList<BamThreadPoolDecodeBamParsePackage<order_type> > bamParseFreeList;
+	libmaus2::parallel::SimpleThreadPoolWorkPackageFreeList<BamThreadPoolDecodeBamProcessPackage<order_type> > bamProcessFreeList;
+	libmaus2::parallel::SimpleThreadPoolWorkPackageFreeList<BamThreadPoolDecodeBamSortPackage<order_type> > bamSortFreeList;
+	libmaus2::parallel::SimpleThreadPoolWorkPackageFreeList<BamThreadPoolDecodeBamWritePackage<order_type> > bamWriteFreeList;
 	
-	libmaus::parallel::PosixSpinLock inputLock;
-	libmaus::timing::RealTimeClock inputRtc;
+	libmaus2::parallel::PosixSpinLock inputLock;
+	libmaus2::timing::RealTimeClock inputRtc;
 	std::istream & in;
-	libmaus::parallel::SynchronousCounter<uint64_t> readCnt;
-	libmaus::parallel::SynchronousCounter<uint64_t> readCompCnt;
-	libmaus::parallel::LockedBool readComplete;
-	libmaus::parallel::PosixSemaphore readSem;
-	libmaus::autoarray::AutoArray< libmaus::lz::BgzfInflateBase::unique_ptr_type > inflateBases;
-	libmaus::autoarray::AutoArray< char > inflateDecompressSpace;
-	libmaus::parallel::SynchronousQueue<uint64_t> inflateBasesFreeList;
-	libmaus::parallel::SynchronousCounter<uint64_t> nextInputBlockId;
+	libmaus2::parallel::SynchronousCounter<uint64_t> readCnt;
+	libmaus2::parallel::SynchronousCounter<uint64_t> readCompCnt;
+	libmaus2::parallel::LockedBool readComplete;
+	libmaus2::parallel::PosixSemaphore readSem;
+	libmaus2::autoarray::AutoArray< libmaus2::lz::BgzfInflateBase::unique_ptr_type > inflateBases;
+	libmaus2::autoarray::AutoArray< char > inflateDecompressSpace;
+	libmaus2::parallel::SynchronousQueue<uint64_t> inflateBasesFreeList;
+	libmaus2::parallel::SynchronousCounter<uint64_t> nextInputBlockId;
 	
-	libmaus::parallel::PosixSpinLock decompressLock;
+	libmaus2::parallel::PosixSpinLock decompressLock;
 	uint64_t decompressCnt;
-	libmaus::parallel::LockedBool decompressComplete;
+	libmaus2::parallel::LockedBool decompressComplete;
 	
-	libmaus::parallel::PosixSpinLock bamParseQueueLock;
+	libmaus2::parallel::PosixSpinLock bamParseQueueLock;
 	std::priority_queue<BamThreadPoolDecodeBamParseQueueInfo> bamparseQueue;
 	std::priority_queue<BamThreadPoolDecodeBamParseQueueInfo> bamparseStall;
 	uint64_t bamParseNextBlock;
 
-	libmaus::parallel::PosixSpinLock bamParseLock;
+	libmaus2::parallel::PosixSpinLock bamParseLock;
 	uint64_t bamParseCnt;
-	libmaus::parallel::LockedBool bamParseComplete;
+	libmaus2::parallel::LockedBool bamParseComplete;
 
-	libmaus::parallel::LockedBool haveheader;
-	::libmaus::bambam::BamHeader::BamHeaderParserState bamheaderparsestate;
-	libmaus::bambam::BamHeader header;
+	libmaus2::parallel::LockedBool haveheader;
+	::libmaus2::bambam::BamHeaderParserState bamheaderparsestate;
+	libmaus2::bambam::BamHeader header;
 	
 	enum bam_parser_state_type {
 		bam_parser_state_read_blocklength,
@@ -630,46 +630,46 @@ struct BamThreadPoolDecodeContextBase : public BamThreadPoolDecodeContextBaseCon
 	unsigned int bamBlockSizeRead;
 	uint32_t bamBlockSizeValue;
 	uint32_t bamBlockDataRead;
-	libmaus::bambam::BamAlignment bamGatherBuffer;
+	libmaus2::bambam::BamAlignment bamGatherBuffer;
 	
-	libmaus::autoarray::AutoArray<BamProcessBuffer::unique_ptr_type> processBuffers;
-	libmaus::parallel::LockedQueue<uint64_t> processBuffersFreeList;
+	libmaus2::autoarray::AutoArray<BamProcessBuffer::unique_ptr_type> processBuffers;
+	libmaus2::parallel::LockedQueue<uint64_t> processBuffersFreeList;
 	uint64_t nextProcessBufferIdIn;
-	libmaus::parallel::PosixSpinLock nextProcessBufferIdOutLock;
+	libmaus2::parallel::PosixSpinLock nextProcessBufferIdOutLock;
 	uint64_t nextProcessBufferIdOut;
 
-	libmaus::parallel::LockedBool bamProcessComplete;
+	libmaus2::parallel::LockedBool bamProcessComplete;
 
-	libmaus::parallel::PosixSpinLock buffersSortedLock;
+	libmaus2::parallel::PosixSpinLock buffersSortedLock;
 	uint64_t buffersSorted;
-	libmaus::parallel::LockedBool bamSortComplete;
+	libmaus2::parallel::LockedBool bamSortComplete;
 
 	std::vector<std::string> tmpfilenames;
-	libmaus::autoarray::AutoArray<libmaus::aio::CheckedOutputStream::unique_ptr_type> tmpfilesCOS;
+	libmaus2::autoarray::AutoArray<libmaus2::aio::CheckedOutputStream::unique_ptr_type> tmpfilesCOS;
 	#if defined(__linux__)
-	libmaus::autoarray::AutoArray<libmaus::aio::LinuxStreamingPosixFdOutputStream::unique_ptr_type> tmpfilesLSPFDOSB;
+	libmaus2::autoarray::AutoArray<libmaus2::aio::LinuxStreamingPosixFdOutputStream::unique_ptr_type> tmpfilesLSPFDOSB;
 	#endif
-	libmaus::lz::CompressorObjectFactory & compressorFactory;
-	libmaus::autoarray::AutoArray<libmaus::lz::SimpleCompressedOutputStream<std::ostream>::unique_ptr_type> compressedTmpFiles;
-	libmaus::parallel::PosixSpinLock tmpfileblockslock;
-	std::vector< std::vector< libmaus::lz::SimpleCompressedStreamInterval > > tmpfileblocks;
+	libmaus2::lz::CompressorObjectFactory & compressorFactory;
+	libmaus2::autoarray::AutoArray<libmaus2::lz::SimpleCompressedOutputStream<std::ostream>::unique_ptr_type> compressedTmpFiles;
+	libmaus2::parallel::PosixSpinLock tmpfileblockslock;
+	std::vector< std::vector< libmaus2::lz::SimpleCompressedStreamInterval > > tmpfileblocks;
 	std::vector< std::vector<uint64_t> > tmpfileblockcnts;
 	std::vector< uint64_t > tmpfileblockcntsums;
-	libmaus::parallel::PosixSpinLock tmpfileblockcntsumsacclock;
+	libmaus2::parallel::PosixSpinLock tmpfileblockcntsumsacclock;
 	uint64_t tmpfileblockcntsumsacc;
 
 	MergeInfo getMergeInfo() const
 	{
-		std::vector< std::vector< libmaus::lz::SimpleCompressedStreamNamedInterval > > tmpfilenamedblocks;
+		std::vector< std::vector< libmaus2::lz::SimpleCompressedStreamNamedInterval > > tmpfilenamedblocks;
 		
 		for ( uint64_t i = 0; i < tmpfileblocks.size(); ++i )
 		{
-			std::vector< libmaus::lz::SimpleCompressedStreamNamedInterval > subblocks(
+			std::vector< libmaus2::lz::SimpleCompressedStreamNamedInterval > subblocks(
 				tmpfileblocks[i].size()
 			);
 			for ( uint64_t j = 0; j < tmpfileblocks[i].size(); ++j )
 			{
-				subblocks[j] = libmaus::lz::SimpleCompressedStreamNamedInterval(
+				subblocks[j] = libmaus2::lz::SimpleCompressedStreamNamedInterval(
 					tmpfileblocks[i][j].start,
 					tmpfileblocks[i][j].end,
 					tmpfilenames[j]
@@ -682,7 +682,7 @@ struct BamThreadPoolDecodeContextBase : public BamThreadPoolDecodeContextBaseCon
 		return MergeInfo(tmpfileblockcnts,tmpfilenames,tmpfileblocks,tmpfilenamedblocks,tmpfileblockcntsums,header);
 	}
 
-	libmaus::parallel::PosixSpinLock writesPendingLock;
+	libmaus2::parallel::PosixSpinLock writesPendingLock;
 	std::vector< uint64_t > writesNext;
 	std::vector< 
 		std::priority_queue<
@@ -692,15 +692,15 @@ struct BamThreadPoolDecodeContextBase : public BamThreadPoolDecodeContextBaseCon
 		> 
 	> writesPending;
 
-	libmaus::parallel::PosixSpinLock buffersWrittenLock;
+	libmaus2::parallel::PosixSpinLock buffersWrittenLock;
 	uint64_t buffersWritten;
-	libmaus::parallel::LockedBool bamWriteComplete;
+	libmaus2::parallel::LockedBool bamWriteComplete;
 
-	libmaus::parallel::SimpleThreadPool & TP;
+	libmaus2::parallel::SimpleThreadPool & TP;
 	
 	bool const verbose;
 
-	typedef libmaus::lz::SimpleCompressedOutputStream<std::ostream> comp_stream_type;
+	typedef libmaus2::lz::SimpleCompressedOutputStream<std::ostream> comp_stream_type;
 	typedef comp_stream_type::unique_ptr_type comp_stream_ptr_type;
 	
 	BamThreadPoolDecodeContextBase(
@@ -710,9 +710,9 @@ struct BamThreadPoolDecodeContextBase : public BamThreadPoolDecodeContextBaseCon
 		uint64_t const processBufferSize,
 		std::string const & tmpfilenamebase,
 		uint64_t const numthreads,
-		libmaus::parallel::SimpleThreadPool & rTP,
+		libmaus2::parallel::SimpleThreadPool & rTP,
 		bool const rverbose,
-		libmaus::lz::CompressorObjectFactory & rcompressorFactory
+		libmaus2::lz::CompressorObjectFactory & rcompressorFactory
 	)
 	:
 	  inputLock(),
@@ -721,7 +721,7 @@ struct BamThreadPoolDecodeContextBase : public BamThreadPoolDecodeContextBaseCon
 	  readCompCnt(0),
 	  readComplete(false), 
 	  inflateBases(numInflateBases),
-	  inflateDecompressSpace(numInflateBases * libmaus::lz::BgzfConstants::getBgzfMaxBlockSize()),
+	  inflateDecompressSpace(numInflateBases * libmaus2::lz::BgzfConstants::getBgzfMaxBlockSize()),
 	  inflateBasesFreeList(),
 	  nextInputBlockId(0),
 	  decompressLock(),
@@ -765,7 +765,7 @@ struct BamThreadPoolDecodeContextBase : public BamThreadPoolDecodeContextBaseCon
 	{
 		for ( uint64_t i = 0; i < inflateBases.size(); ++i )
 		{
-			libmaus::lz::BgzfInflateBase::unique_ptr_type tptr(new libmaus::lz::BgzfInflateBase);
+			libmaus2::lz::BgzfInflateBase::unique_ptr_type tptr(new libmaus2::lz::BgzfInflateBase);
 			inflateBases[i] = UNIQUE_PTR_MOVE(tptr);
 			inflateBasesFreeList.enque(i);
 		}
@@ -783,17 +783,17 @@ struct BamThreadPoolDecodeContextBase : public BamThreadPoolDecodeContextBaseCon
 			ostr << tmpfilenamebase << "_" << std::setw(6) << std::setfill('0') << i << std::setw(0) << ".sorttmp";
 			std::string const fn = ostr.str();
 			tmpfilenames[i] = fn;
-			libmaus::util::TempFileRemovalContainer::addTempFile(fn);
+			libmaus2::util::TempFileRemovalContainer::addTempFile(fn);
 			
-			bool const local = libmaus::aio::IsKnownLocalFileSystem::isKnownLocalFileSystemCreate(fn);
+			bool const local = libmaus2::aio::IsKnownLocalFileSystem::isKnownLocalFileSystemCreate(fn);
 			std::ostream * out = 0;
 
 			#if defined(__linux__)
 			if ( local )
 			{
-				libmaus::aio::LinuxStreamingPosixFdOutputStream::unique_ptr_type tptr
+				libmaus2::aio::LinuxStreamingPosixFdOutputStream::unique_ptr_type tptr
 				(
-					new libmaus::aio::LinuxStreamingPosixFdOutputStream(fn,8*1024*1024)
+					new libmaus2::aio::LinuxStreamingPosixFdOutputStream(fn,8*1024*1024)
 				);
 				tmpfilesLSPFDOSB[i] = UNIQUE_PTR_MOVE(tptr);
 				out = tmpfilesLSPFDOSB[i].get();
@@ -801,7 +801,7 @@ struct BamThreadPoolDecodeContextBase : public BamThreadPoolDecodeContextBaseCon
 			else
 			#endif
 			{
-				libmaus::aio::CheckedOutputStream::unique_ptr_type tptr(new libmaus::aio::CheckedOutputStream(fn));
+				libmaus2::aio::CheckedOutputStream::unique_ptr_type tptr(new libmaus2::aio::CheckedOutputStream(fn));
 				tmpfilesCOS[i] = UNIQUE_PTR_MOVE(tptr);
 				out = tmpfilesCOS[i].get();
 			}
@@ -813,19 +813,19 @@ struct BamThreadPoolDecodeContextBase : public BamThreadPoolDecodeContextBaseCon
 	
 	char * getDecompressSpace(uint64_t const rbaseid)
 	{
-		return inflateDecompressSpace.begin() + rbaseid * libmaus::lz::BgzfConstants::getBgzfMaxBlockSize();
+		return inflateDecompressSpace.begin() + rbaseid * libmaus2::lz::BgzfConstants::getBgzfMaxBlockSize();
 	}
 };
 
 template<typename _order_type>
-struct BamThreadPoolDecodeReadPackageDispatcher : public libmaus::parallel::SimpleThreadWorkPackageDispatcher
+struct BamThreadPoolDecodeReadPackageDispatcher : public libmaus2::parallel::SimpleThreadWorkPackageDispatcher
 {
 	typedef _order_type order_type;
 
 	virtual ~BamThreadPoolDecodeReadPackageDispatcher() {}
 	virtual void dispatch(
-		libmaus::parallel::SimpleThreadWorkPackage * P, 
-		libmaus::parallel::SimpleThreadPoolInterfaceEnqueTermInterface & tpi
+		libmaus2::parallel::SimpleThreadWorkPackage * P, 
+		libmaus2::parallel::SimpleThreadPoolInterfaceEnqueTermInterface & tpi
 	)
 	{
 		assert ( dynamic_cast<BamThreadPoolDecodeReadPackage<order_type> *>(P) != 0 );
@@ -836,7 +836,7 @@ struct BamThreadPoolDecodeReadPackageDispatcher : public libmaus::parallel::Simp
 		// handle empty input file
 		if ( contextbase.readCnt.get() == 0 )
 		{
-			libmaus::parallel::ScopePosixSpinLock slock(contextbase.inputLock);
+			libmaus2::parallel::ScopePosixSpinLock slock(contextbase.inputLock);
 			
 			if ( contextbase.in.peek() == std::istream::traits_type::eof() )
 			{
@@ -870,7 +870,7 @@ struct BamThreadPoolDecodeReadPackageDispatcher : public libmaus::parallel::Simp
 				std::pair<uint64_t,uint64_t> blockmeta;
 				
 				{			
-					libmaus::parallel::ScopePosixSpinLock slock(contextbase.inputLock);
+					libmaus2::parallel::ScopePosixSpinLock slock(contextbase.inputLock);
 					if ( contextbase.readComplete.get() )
 						break;
 					blockmeta = contextbase.inflateBases[baseid]->readBlock(contextbase.in);
@@ -921,14 +921,14 @@ struct BamThreadPoolDecodeReadPackageDispatcher : public libmaus::parallel::Simp
 };
 
 template<typename _order_type>
-struct BamThreadPoolDecodeDecompressPackageDispatcher : public libmaus::parallel::SimpleThreadWorkPackageDispatcher
+struct BamThreadPoolDecodeDecompressPackageDispatcher : public libmaus2::parallel::SimpleThreadWorkPackageDispatcher
 {
 	typedef _order_type order_type;
 
 	virtual ~BamThreadPoolDecodeDecompressPackageDispatcher() {}
 	virtual void dispatch(
-		libmaus::parallel::SimpleThreadWorkPackage * P, 
-		libmaus::parallel::SimpleThreadPoolInterfaceEnqueTermInterface & tpi
+		libmaus2::parallel::SimpleThreadWorkPackage * P, 
+		libmaus2::parallel::SimpleThreadPoolInterfaceEnqueTermInterface & tpi
 	)
 	{
 		assert ( dynamic_cast<BamThreadPoolDecodeDecompressPackage<order_type> *>(P) != 0 );
@@ -939,7 +939,7 @@ struct BamThreadPoolDecodeDecompressPackageDispatcher : public libmaus::parallel
 		char * const decompressSpace = contextbase.getDecompressSpace(RP.baseid);
 		contextbase.inflateBases[RP.baseid]->decompressBlock(decompressSpace,RP.blockmeta);
 
-		libmaus::parallel::ScopePosixSpinLock ldecompressLock(contextbase.decompressLock);
+		libmaus2::parallel::ScopePosixSpinLock ldecompressLock(contextbase.decompressLock);
 		contextbase.decompressCnt += 1;
 		if ( contextbase.readComplete.get() && (contextbase.decompressCnt == contextbase.readCnt) )
 		{
@@ -957,7 +957,7 @@ struct BamThreadPoolDecodeDecompressPackageDispatcher : public libmaus::parallel
 			BamThreadPoolDecodeBamParseQueueInfo qinfo(0,RP.blockmeta,RP.baseid,RP.blockid);
 
 			// enque the parse info object
-			libmaus::parallel::ScopePosixSpinLock lbamParseQueueLock(contextbase.bamParseQueueLock);
+			libmaus2::parallel::ScopePosixSpinLock lbamParseQueueLock(contextbase.bamParseQueueLock);
 			contextbase.bamparseQueue.push(qinfo);
 			
 			// check whether this is the next block for parsing
@@ -985,14 +985,14 @@ struct BamThreadPoolDecodeDecompressPackageDispatcher : public libmaus::parallel
 };
 
 template<typename _order_type>
-struct BamThreadPoolDecodeBamParsePackageDispatcher : public libmaus::parallel::SimpleThreadWorkPackageDispatcher
+struct BamThreadPoolDecodeBamParsePackageDispatcher : public libmaus2::parallel::SimpleThreadWorkPackageDispatcher
 {
 	typedef _order_type order_type;
 
 	template<unsigned int len>
 	static uint64_t decodeLittleEndianInteger(uint8_t const * pa)
 	{
-		#if defined(LIBMAUS_HAVE_i386)
+		#if defined(LIBMAUS2_HAVE_i386)
 		if ( len == 4 )
 		{
 			return *reinterpret_cast<uint32_t const *>(pa);
@@ -1007,8 +1007,8 @@ struct BamThreadPoolDecodeBamParsePackageDispatcher : public libmaus::parallel::
 
 	virtual ~BamThreadPoolDecodeBamParsePackageDispatcher() {}
 	virtual void dispatch(
-		libmaus::parallel::SimpleThreadWorkPackage * P, 
-		libmaus::parallel::SimpleThreadPoolInterfaceEnqueTermInterface & tpi
+		libmaus2::parallel::SimpleThreadWorkPackage * P, 
+		libmaus2::parallel::SimpleThreadPoolInterfaceEnqueTermInterface & tpi
 	)
 	{
 		assert ( dynamic_cast<BamThreadPoolDecodeBamParsePackage<order_type> *>(P) != 0 );
@@ -1023,8 +1023,8 @@ struct BamThreadPoolDecodeBamParsePackageDispatcher : public libmaus::parallel::
 
 		if ( (! contextbase.haveheader.get()) && (pa != pc) )
 		{			
-			::libmaus::util::GetObject<uint8_t const *> G(pa);
-			std::pair<bool,uint64_t> const P = ::libmaus::bambam::BamHeader::parseHeader(G,contextbase.bamheaderparsestate,pc-pa);
+			::libmaus2::util::GetObject<uint8_t const *> G(pa);
+			std::pair<bool,uint64_t> const P = contextbase.bamheaderparsestate.parseHeader(G,pc-pa);
 
 			// header complete?
 			if ( P.first )
@@ -1100,7 +1100,7 @@ struct BamThreadPoolDecodeBamParsePackageDispatcher : public libmaus::parallel::
 						contextbase.bamBlockDataRead = 0;
 
 						if ( contextbase.bamBlockSizeValue > contextbase.bamGatherBuffer.D.size() )
-							contextbase.bamGatherBuffer.D = libmaus::bambam::BamAlignment::D_array_type(contextbase.bamBlockSizeValue);
+							contextbase.bamGatherBuffer.D = libmaus2::bambam::BamAlignment::D_array_type(contextbase.bamBlockSizeValue);
 					}
 					break;
 				}
@@ -1179,7 +1179,7 @@ struct BamThreadPoolDecodeBamParsePackageDispatcher : public libmaus::parallel::
 		if ( ! stall )
 		{
 			
-			libmaus::parallel::ScopePosixSpinLock lbamParseLock(contextbase.bamParseLock);
+			libmaus2::parallel::ScopePosixSpinLock lbamParseLock(contextbase.bamParseLock);
 			contextbase.bamParseCnt += 1;
 			if ( contextbase.decompressComplete.get() && (contextbase.bamParseCnt == contextbase.decompressCnt) )
 			{
@@ -1222,7 +1222,7 @@ struct BamThreadPoolDecodeBamParsePackageDispatcher : public libmaus::parallel::
 			);
 
 			// enque the parse info object in the stall queue
-			libmaus::parallel::ScopePosixSpinLock lbamParseQueueLock(contextbase.bamParseQueueLock);
+			libmaus2::parallel::ScopePosixSpinLock lbamParseQueueLock(contextbase.bamParseQueueLock);
 			contextbase.bamparseStall.push(qinfo);
 		}
 
@@ -1259,7 +1259,7 @@ struct BamThreadPoolDecodeBamParsePackageDispatcher : public libmaus::parallel::
 		{
 			// process next bam parse object if any is available
 			{
-				libmaus::parallel::ScopePosixSpinLock lbamParseQueueLock(contextbase.bamParseQueueLock);
+				libmaus2::parallel::ScopePosixSpinLock lbamParseQueueLock(contextbase.bamParseQueueLock);
 				contextbase.bamParseNextBlock += 1;
 
 				if ( contextbase.bamParseNextBlock == contextbase.bamparseQueue.top().blockid )
@@ -1286,14 +1286,14 @@ struct BamThreadPoolDecodeBamParsePackageDispatcher : public libmaus::parallel::
 };
 
 template<typename _order_type>
-struct BamThreadPoolDecodeBamProcessPackageDispatcher : public libmaus::parallel::SimpleThreadWorkPackageDispatcher
+struct BamThreadPoolDecodeBamProcessPackageDispatcher : public libmaus2::parallel::SimpleThreadWorkPackageDispatcher
 {
 	typedef _order_type order_type;
 
 	virtual ~BamThreadPoolDecodeBamProcessPackageDispatcher() {}
 	virtual void dispatch(
-		libmaus::parallel::SimpleThreadWorkPackage * P, 
-		libmaus::parallel::SimpleThreadPoolInterfaceEnqueTermInterface & tpi
+		libmaus2::parallel::SimpleThreadWorkPackage * P, 
+		libmaus2::parallel::SimpleThreadPoolInterfaceEnqueTermInterface & tpi
 	)
 	{
 		assert ( dynamic_cast<BamThreadPoolDecodeBamProcessPackage<order_type> *>(P) != 0 );
@@ -1320,13 +1320,13 @@ struct BamThreadPoolDecodeBamProcessPackageDispatcher : public libmaus::parallel
 
 		// increment number of processed buffers
 		{
-		libmaus::parallel::ScopePosixSpinLock lnextProcessBufferIdOutLock(contextbase.nextProcessBufferIdOutLock);
+		libmaus2::parallel::ScopePosixSpinLock lnextProcessBufferIdOutLock(contextbase.nextProcessBufferIdOutLock);
 		contextbase.nextProcessBufferIdOut += 1;
 		}
 
 		// check whether processing of package type is complete
 		{
-			libmaus::parallel::ScopePosixSpinLock lnextProcessBufferIdOutLock(contextbase.nextProcessBufferIdOutLock);
+			libmaus2::parallel::ScopePosixSpinLock lnextProcessBufferIdOutLock(contextbase.nextProcessBufferIdOutLock);
 			if ( 
 				contextbase.bamParseComplete.get() && (contextbase.nextProcessBufferIdOut == contextbase.nextProcessBufferIdIn) 
 			)
@@ -1344,14 +1344,14 @@ struct BamThreadPoolDecodeBamProcessPackageDispatcher : public libmaus::parallel
 };
 
 template<typename _order_type>
-struct BamThreadPoolDecodeBamSortPackageDispatcher : public libmaus::parallel::SimpleThreadWorkPackageDispatcher
+struct BamThreadPoolDecodeBamSortPackageDispatcher : public libmaus2::parallel::SimpleThreadWorkPackageDispatcher
 {
 	typedef _order_type order_type;
 
 	virtual ~BamThreadPoolDecodeBamSortPackageDispatcher() {}
 	virtual void dispatch(
-		libmaus::parallel::SimpleThreadWorkPackage * P, 
-		libmaus::parallel::SimpleThreadPoolInterfaceEnqueTermInterface & tpi
+		libmaus2::parallel::SimpleThreadWorkPackage * P, 
+		libmaus2::parallel::SimpleThreadPoolInterfaceEnqueTermInterface & tpi
 	)
 	{
 		assert ( dynamic_cast<BamThreadPoolDecodeBamSortPackage<order_type> *>(P) != 0 );
@@ -1375,12 +1375,12 @@ struct BamThreadPoolDecodeBamSortPackageDispatcher : public libmaus::parallel::S
 		{
 			case BamThreadPoolDecodeBamSortPackage<order_type>::sort_package_type_base:
 			{
-				libmaus::sorting::ParallelStableSort::BaseSortRequestSet<uint64_t *,typename BamSortInfo<order_type>::order_type> & baseSortRequests =
+				libmaus2::sorting::ParallelStableSort::BaseSortRequestSet<uint64_t *,typename BamSortInfo<order_type>::order_type> & baseSortRequests =
 					sortControl.baseSortRequests;
 
 				baseSortRequests.baseSortRequests[RP.sort_base_id].dispatch();
 
-				uint64_t const finished = ++(baseSortRequests.requestsFinished);
+				uint64_t const finished = (baseSortRequests.requestsFinished).increment();
 
 				if ( finished == baseSortRequests.baseSortRequests.size() )
 				{
@@ -1446,12 +1446,12 @@ struct BamThreadPoolDecodeBamSortPackageDispatcher : public libmaus::parallel::S
 					BamBlockWriteInfo::shared_ptr_type blockWriteInfo(new BamBlockWriteInfo(processBuffer,writepackets));
 
 					{
-						libmaus::parallel::ScopePosixSpinLock ltmpfileblockslock(contextbase.tmpfileblockslock);
+						libmaus2::parallel::ScopePosixSpinLock ltmpfileblockslock(contextbase.tmpfileblockslock);
 
 						while ( ! (RP.blockid < contextbase.tmpfileblocks.size() ) )
 							contextbase.tmpfileblocks.push_back(
 								std::vector< 
-									libmaus::lz::SimpleCompressedStreamInterval
+									libmaus2::lz::SimpleCompressedStreamInterval
 								>(
 									numthreads
 								)
@@ -1470,7 +1470,7 @@ struct BamThreadPoolDecodeBamSortPackageDispatcher : public libmaus::parallel::S
 						}
 					}
 
-					libmaus::parallel::ScopePosixSpinLock lwritesPendingLock(contextbase.writesPendingLock);
+					libmaus2::parallel::ScopePosixSpinLock lwritesPendingLock(contextbase.writesPendingLock);
 					for ( uint64_t i = 0; i < numthreads; ++i )
 					{
 						BamThreadPoolDecodeBamWritePackage<order_type> * pBTPDBPP = RP.contextbase->bamWriteFreeList.getPackage();
@@ -1523,11 +1523,11 @@ struct BamThreadPoolDecodeBamSortPackageDispatcher : public libmaus::parallel::S
 						uint8_t const * c = processBuffer->ca + (*pc)+4;
 						#if 0
 						std::cerr 
-							<< libmaus::bambam::BamAlignmentDecoderBase::getReadName(c) 
+							<< libmaus2::bambam::BamAlignmentDecoderBase::getReadName(c) 
 							<< "\t"
-							<< libmaus::bambam::BamAlignmentDecoderBase::getRefID(c)
+							<< libmaus2::bambam::BamAlignmentDecoderBase::getRefID(c)
 							<< "\t"
-							<< libmaus::bambam::BamAlignmentDecoderBase::getPos(c)
+							<< libmaus2::bambam::BamAlignmentDecoderBase::getPos(c)
 							<< std::endl;
 						#endif
 							
@@ -1551,7 +1551,7 @@ struct BamThreadPoolDecodeBamSortPackageDispatcher : public libmaus::parallel::S
 					
 					// reinsert stalled parse package
 					{
-						libmaus::parallel::ScopePosixSpinLock lbamParseQueueLock(contextbase.bamParseQueueLock);
+						libmaus2::parallel::ScopePosixSpinLock lbamParseQueueLock(contextbase.bamParseQueueLock);
 						
 						if ( contextbase.bamparseStall.size() )
 						{
@@ -1578,8 +1578,8 @@ struct BamThreadPoolDecodeBamSortPackageDispatcher : public libmaus::parallel::S
 					}
 					#endif
 
-					libmaus::parallel::ScopePosixSpinLock lnextProcessBufferIdOutLock(contextbase.nextProcessBufferIdOutLock);
-					libmaus::parallel::ScopePosixSpinLock lbuffersSortedLock(contextbase.buffersSortedLock);					
+					libmaus2::parallel::ScopePosixSpinLock lnextProcessBufferIdOutLock(contextbase.nextProcessBufferIdOutLock);
+					libmaus2::parallel::ScopePosixSpinLock lbuffersSortedLock(contextbase.buffersSortedLock);					
 					contextbase.buffersSorted += 1;
 					if ( 
 						contextbase.bamProcessComplete.get()
@@ -1619,7 +1619,7 @@ struct BamThreadPoolDecodeBamSortPackageDispatcher : public libmaus::parallel::S
 			{
 				sortControl.mergeLevels.levels[RP.sort_merge_id].mergeRequests[RP.sort_submerge_id].dispatch();
 
-				uint64_t const finished = ++(sortControl.mergeLevels.levels[RP.sort_merge_id].requestsFinished);
+				uint64_t const finished = (sortControl.mergeLevels.levels[RP.sort_merge_id].requestsFinished).increment();
 				
 				if ( finished == sortControl.mergeLevels.levels[RP.sort_merge_id].mergeRequests.size() )
 				{
@@ -1644,14 +1644,14 @@ struct BamThreadPoolDecodeBamSortPackageDispatcher : public libmaus::parallel::S
 };
 
 template<typename _order_type>
-struct BamThreadPoolDecodeBamWritePackageDispatcher : public libmaus::parallel::SimpleThreadWorkPackageDispatcher
+struct BamThreadPoolDecodeBamWritePackageDispatcher : public libmaus2::parallel::SimpleThreadWorkPackageDispatcher
 {
 	typedef _order_type order_type;
 
 	virtual ~BamThreadPoolDecodeBamWritePackageDispatcher() {}
 	virtual void dispatch(
-		libmaus::parallel::SimpleThreadWorkPackage * P, 
-		libmaus::parallel::SimpleThreadPoolInterfaceEnqueTermInterface & tpi
+		libmaus2::parallel::SimpleThreadWorkPackage * P, 
+		libmaus2::parallel::SimpleThreadPoolInterfaceEnqueTermInterface & tpi
 	)
 	{
 		assert ( dynamic_cast<BamThreadPoolDecodeBamWritePackage<order_type> *>(P) != 0 );
@@ -1664,7 +1664,7 @@ struct BamThreadPoolDecodeBamWritePackageDispatcher : public libmaus::parallel::
 		uint8_t const * ca = buffer->ca;
 		BamProcessBuffer::pointer_type const * pa = writeinfo->packets[RP.write_block_id].first;
 		BamProcessBuffer::pointer_type const * pe = writeinfo->packets[RP.write_block_id].second;
-		libmaus::lz::SimpleCompressedOutputStream<std::ostream> * compout =
+		libmaus2::lz::SimpleCompressedOutputStream<std::ostream> * compout =
 			contextbase.compressedTmpFiles[RP.write_block_id].get();
 	
 		#if 0
@@ -1676,12 +1676,12 @@ struct BamThreadPoolDecodeBamWritePackageDispatcher : public libmaus::parallel::
 		#if 0
 		if ( pa != pe )
 		{
-			::libmaus::bambam::BamFormatAuxiliary aux;
+			::libmaus2::bambam::BamFormatAuxiliary aux;
 			
 			contextbase.cerrlock.lock();
 			std::cerr << "first " 
 				<< 
-					libmaus::bambam::BamAlignmentDecoderBase::formatAlignment(
+					libmaus2::bambam::BamAlignmentDecoderBase::formatAlignment(
 						ca + *pa + 4,
 						(static_cast<uint32_t>((ca + *pa)[0]) << 0) |
 						(static_cast<uint32_t>((ca + *pa)[1]) << 8) |
@@ -1751,16 +1751,16 @@ struct BamThreadPoolDecodeBamWritePackageDispatcher : public libmaus::parallel::
 		#endif
 
 		{
-			libmaus::parallel::ScopePosixSpinLock ltmpfileblockslock(contextbase.tmpfileblockslock);
+			libmaus2::parallel::ScopePosixSpinLock ltmpfileblockslock(contextbase.tmpfileblockslock);
 			contextbase.tmpfileblocks[RP.blockid][RP.write_block_id] =
-				libmaus::lz::SimpleCompressedStreamInterval(preoff,postoff);
+				libmaus2::lz::SimpleCompressedStreamInterval(preoff,postoff);
 			contextbase.tmpfileblockcnts[RP.blockid][RP.write_block_id] = (pe-pa);
 			contextbase.tmpfileblockcntsums[RP.blockid] += (pe-pa);
 		}
 
 		// enque next block for stream writing (if any is present)
 		{
-			libmaus::parallel::ScopePosixSpinLock lwritesPendingLock(contextbase.writesPendingLock);
+			libmaus2::parallel::ScopePosixSpinLock lwritesPendingLock(contextbase.writesPendingLock);
 			contextbase.writesNext[RP.write_block_id]++;
 
 			if ( 
@@ -1783,7 +1783,7 @@ struct BamThreadPoolDecodeBamWritePackageDispatcher : public libmaus::parallel::
 		if ( packetsWritten == writeinfo->packets.size() )
 		{
 			{
-				libmaus::parallel::ScopePosixSpinLock ltmpfileblockcntsumsacclock(contextbase.tmpfileblockcntsumsacclock);
+				libmaus2::parallel::ScopePosixSpinLock ltmpfileblockcntsumsacclock(contextbase.tmpfileblockcntsumsacclock);
 				contextbase.tmpfileblockcntsumsacc += contextbase.tmpfileblockcntsums[RP.blockid];
 				
 				if ( contextbase.verbose )
@@ -1800,7 +1800,7 @@ struct BamThreadPoolDecodeBamWritePackageDispatcher : public libmaus::parallel::
 					
 			// reinsert stalled parse package
 			{
-				libmaus::parallel::ScopePosixSpinLock lbamParseQueueLock(contextbase.bamParseQueueLock);
+				libmaus2::parallel::ScopePosixSpinLock lbamParseQueueLock(contextbase.bamParseQueueLock);
 				
 				if ( contextbase.bamparseStall.size() )
 				{
@@ -1826,8 +1826,8 @@ struct BamThreadPoolDecodeBamWritePackageDispatcher : public libmaus::parallel::
 				}
 			}			
 
-			libmaus::parallel::ScopePosixSpinLock lbuffersWrittenLock(contextbase.buffersWrittenLock);
-			libmaus::parallel::ScopePosixSpinLock lbuffersSortedLock(contextbase.buffersSortedLock);
+			libmaus2::parallel::ScopePosixSpinLock lbuffersWrittenLock(contextbase.buffersWrittenLock);
+			libmaus2::parallel::ScopePosixSpinLock lbuffersSortedLock(contextbase.buffersSortedLock);
 			contextbase.buffersWritten += 1;
 			
 			if ( 
@@ -1875,7 +1875,7 @@ struct BamThreadPoolDecodeContext : public BamThreadPoolDecodeContextBase<_order
 {
 	typedef _order_type order_type;
 
-	libmaus::parallel::SimpleThreadPool & TP;
+	libmaus2::parallel::SimpleThreadPool & TP;
 
 	BamThreadPoolDecodeContext(
 		std::istream & rin, 
@@ -1884,9 +1884,9 @@ struct BamThreadPoolDecodeContext : public BamThreadPoolDecodeContextBase<_order
 		uint64_t const processBufferSize,
 		std::string const & tmpfilenamebase,
 		uint64_t const numthreads,
-		libmaus::parallel::SimpleThreadPool & rTP,
+		libmaus2::parallel::SimpleThreadPool & rTP,
 		bool const verbose,
-		libmaus::lz::CompressorObjectFactory & rcompressorFactory
+		libmaus2::lz::CompressorObjectFactory & rcompressorFactory
 	)
 	: BamThreadPoolDecodeContextBase<order_type>(
 		rin,numInflateBases,numProcessBuffers,
@@ -1912,8 +1912,8 @@ struct BamThreadPoolDecodeContext : public BamThreadPoolDecodeContextBase<_order
 
 template<typename _order_type>
 MergeInfo produceSortedBlocks(
-	libmaus::util::ArgInfo const & arginfo,
-	libmaus::lz::CompressorObjectFactory & rcompressorFactory
+	libmaus2::util::ArgInfo const & arginfo,
+	libmaus2::lz::CompressorObjectFactory & rcompressorFactory
 )
 {
 	typedef _order_type order_type;
@@ -1923,10 +1923,10 @@ MergeInfo produceSortedBlocks(
 		
 	bool const verbose = arginfo.getValue<unsigned int>("verbose",getDefaultVerbose());
 
-	uint64_t const numthreads = arginfo.getValue<unsigned int>("numthreads", libmaus::parallel::NumCpus::getNumLogicalProcessors());
+	uint64_t const numthreads = arginfo.getValue<unsigned int>("numthreads", libmaus2::parallel::NumCpus::getNumLogicalProcessors());
 
 	// thread pool	
-	libmaus::parallel::SimpleThreadPool TP(numthreads);
+	libmaus2::parallel::SimpleThreadPool TP(numthreads);
 
 	// package dispatchers
 	BamThreadPoolDecodeReadPackageDispatcher<order_type> readdispatcher;
@@ -1947,7 +1947,7 @@ MergeInfo produceSortedBlocks(
 	uint64_t processBufferSize = (processBufferMemory + numProcessBuffers-1)/numProcessBuffers;
 	assert ( processBufferSize <= std::numeric_limits<BamProcessBuffer::pointer_type>::max() );
 
-	libmaus::aio::PosixFdInputStream PFIS(STDIN_FILENO,64*1024);
+	libmaus2::aio::PosixFdInputStream PFIS(STDIN_FILENO,64*1024);
 	BamThreadPoolDecodeContext<order_type> context(PFIS,16*numthreads /* inflate bases */,numProcessBuffers,processBufferSize,tmpfilenamebase,numthreads,TP,verbose,rcompressorFactory);
 	context.startup();
 	
@@ -1967,53 +1967,53 @@ MergeInfo produceSortedBlocks(
 
 template<typename _order_type>
 void mergeSortedBlocksNoThreadPool(
-	libmaus::util::ArgInfo const & arginfo, MergeInfo const & mergeinfo, std::string const & neworder,
-	libmaus::lz::DecompressorObjectFactory & decfact
+	libmaus2::util::ArgInfo const & arginfo, MergeInfo const & mergeinfo, std::string const & neworder,
+	libmaus2::lz::DecompressorObjectFactory & decfact
 )
 {
 	typedef _order_type order_type;
 
-	uint64_t const numthreads = arginfo.getValue<unsigned int>("numthreads", libmaus::parallel::NumCpus::getNumLogicalProcessors());
+	uint64_t const numthreads = arginfo.getValue<unsigned int>("numthreads", libmaus2::parallel::NumCpus::getNumLogicalProcessors());
 
-	libmaus::autoarray::AutoArray<libmaus::aio::CheckedInputStream::unique_ptr_type> inputfiles(mergeinfo.tmpfilenames.size());
+	libmaus2::autoarray::AutoArray<libmaus2::aio::CheckedInputStream::unique_ptr_type> inputfiles(mergeinfo.tmpfilenames.size());
 	for ( uint64_t i = 0; i < inputfiles.size(); ++i )
 	{
-		libmaus::aio::CheckedInputStream::unique_ptr_type tptr(new libmaus::aio::CheckedInputStream(mergeinfo.tmpfilenames[i]));
+		libmaus2::aio::CheckedInputStream::unique_ptr_type tptr(new libmaus2::aio::CheckedInputStream(mergeinfo.tmpfilenames[i]));
 		inputfiles[i] = UNIQUE_PTR_MOVE(tptr);
 	}
 	
-	libmaus::autoarray::AutoArray<libmaus::lz::SimpleCompressedConcatInputStream<std::istream>::unique_ptr_type> concfiles(mergeinfo.tmpfileblocks.size());
+	libmaus2::autoarray::AutoArray<libmaus2::lz::SimpleCompressedConcatInputStream<std::istream>::unique_ptr_type> concfiles(mergeinfo.tmpfileblocks.size());
 	for ( uint64_t i = 0; i < mergeinfo.tmpfileblocks.size(); ++i )
 	{
-		std::vector<libmaus::lz::SimpleCompressedConcatInputStreamFragment<std::istream> > fragments;
+		std::vector<libmaus2::lz::SimpleCompressedConcatInputStreamFragment<std::istream> > fragments;
 		
 		for ( uint64_t j = 0; j < mergeinfo.tmpfileblocks[i].size(); ++j )
 			fragments.push_back(
-				libmaus::lz::SimpleCompressedConcatInputStreamFragment<std::istream>(
+				libmaus2::lz::SimpleCompressedConcatInputStreamFragment<std::istream>(
 					mergeinfo.tmpfileblocks[i][j],
 					inputfiles[j].get()
 				)
 			);
 			
-		libmaus::lz::SimpleCompressedConcatInputStream<std::istream>::unique_ptr_type tptr(
-			new libmaus::lz::SimpleCompressedConcatInputStream<std::istream>(fragments,decfact)
+		libmaus2::lz::SimpleCompressedConcatInputStream<std::istream>::unique_ptr_type tptr(
+			new libmaus2::lz::SimpleCompressedConcatInputStream<std::istream>(fragments,decfact)
 		);
 		concfiles[i] = UNIQUE_PTR_MOVE(tptr);
 	}
 	
 	std::vector<uint64_t> tmpoutcnts = mergeinfo.tmpfileblockcntsums;
 	order_type BAPC(0);
-	::libmaus::autoarray::AutoArray< ::libmaus::bambam::BamAlignment > algns(mergeinfo.tmpfileblocks.size());
-	::libmaus::bambam::BamAlignmentHeapComparator<order_type> heapcmp(BAPC,algns.begin());
+	::libmaus2::autoarray::AutoArray< ::libmaus2::bambam::BamAlignment > algns(mergeinfo.tmpfileblocks.size());
+	::libmaus2::bambam::BamAlignmentHeapComparator<order_type> heapcmp(BAPC,algns.begin());
 
 	::std::priority_queue< 
 		uint64_t, 
 		std::vector<uint64_t>, 
-		::libmaus::bambam::BamAlignmentHeapComparator<order_type> > Q(heapcmp);
+		::libmaus2::bambam::BamAlignmentHeapComparator<order_type> > Q(heapcmp);
 	for ( uint64_t i = 0; i < tmpoutcnts.size(); ++i )
 		if ( tmpoutcnts[i]-- )
 		{
-			::libmaus::bambam::BamDecoder::readAlignmentGz(*concfiles[i],algns[i],0 /* no header for validation */,false /* no validation */);
+			::libmaus2::bambam::BamDecoder::readAlignmentGz(*concfiles[i],algns[i],0 /* no header for validation */,false /* no validation */);
 			Q.push(i);
 		}
 		
@@ -2021,7 +2021,7 @@ void mergeSortedBlocksNoThreadPool(
 	bool const verbose = true;
 	mergeinfo.sheader->changeSortOrder(neworder);
 	int const level = arginfo.getValue<int>("level",getDefaultLevel());;
-	libmaus::bambam::BamParallelWriter writer(std::cout,std::max(1,static_cast<int>(numthreads-1)),*(mergeinfo.sheader),level);
+	libmaus2::bambam::BamParallelWriter writer(std::cout,std::max(1,static_cast<int>(numthreads-1)),*(mergeinfo.sheader),level);
 					
 	while ( Q.size() )
 	{
@@ -2034,7 +2034,7 @@ void mergeSortedBlocksNoThreadPool(
 
 		if ( tmpoutcnts[t]-- )
 		{
-			::libmaus::bambam::BamDecoder::readAlignmentGz(*concfiles[t],algns[t],0 /* bamheader */, false /* do not validate */);
+			::libmaus2::bambam::BamDecoder::readAlignmentGz(*concfiles[t],algns[t],0 /* bamheader */, false /* do not validate */);
 			Q.push(t);
 		}
 	}	
@@ -2064,12 +2064,12 @@ template<typename _order_type>
 struct BamThreadPoolMergeContextBase;
 
 template<typename _order_type>
-struct BamThreadPoolMergeReadPackage : public ::libmaus::parallel::SimpleThreadWorkPackage
+struct BamThreadPoolMergeReadPackage : public ::libmaus2::parallel::SimpleThreadWorkPackage
 {
 	typedef _order_type order_type;
 	typedef BamThreadPoolMergeReadPackage<order_type> this_type;
-	typedef typename libmaus::util::unique_ptr<this_type>::type unique_ptr_type;
-	typedef typename libmaus::util::shared_ptr<this_type>::type shared_ptr_type;
+	typedef typename libmaus2::util::unique_ptr<this_type>::type unique_ptr_type;
+	typedef typename libmaus2::util::shared_ptr<this_type>::type shared_ptr_type;
 
 	BamThreadPoolMergeContextBase<order_type> * contextbase;
 	uint64_t blockid;
@@ -2079,7 +2079,7 @@ struct BamThreadPoolMergeReadPackage : public ::libmaus::parallel::SimpleThreadW
 		BamThreadPoolMergeContextBase<order_type> * rcontextbase,
 		uint64_t rblockid
 	)
-	: ::libmaus::parallel::SimpleThreadWorkPackage(
+	: ::libmaus2::parallel::SimpleThreadWorkPackage(
 		BamThreadPoolMergeContextBaseConstantsBase::bamthreadpooldecodecontextbase_dispatcher_priority_read,
 		BamThreadPoolMergeContextBaseConstantsBase::bamthreadpooldecodecontextbase_dispatcher_id_read,
 		0 /* package id */
@@ -2093,12 +2093,12 @@ struct BamThreadPoolMergeReadPackage : public ::libmaus::parallel::SimpleThreadW
 };
 
 template<typename _order_type>
-struct BamThreadPoolMergeDecompressPackage : public ::libmaus::parallel::SimpleThreadWorkPackage
+struct BamThreadPoolMergeDecompressPackage : public ::libmaus2::parallel::SimpleThreadWorkPackage
 {
 	typedef _order_type order_type;
 	typedef BamThreadPoolMergeDecompressPackage<order_type> this_type;
-	typedef typename libmaus::util::unique_ptr<this_type>::type unique_ptr_type;
-	typedef typename libmaus::util::shared_ptr<this_type>::type shared_ptr_type;
+	typedef typename libmaus2::util::unique_ptr<this_type>::type unique_ptr_type;
+	typedef typename libmaus2::util::shared_ptr<this_type>::type shared_ptr_type;
 
 	BamThreadPoolMergeContextBase<order_type> * contextbase;
 	uint64_t blockid;
@@ -2112,7 +2112,7 @@ struct BamThreadPoolMergeDecompressPackage : public ::libmaus::parallel::SimpleT
 		uint64_t rbaseid,
 		uint64_t rseqid
 	)
-	: ::libmaus::parallel::SimpleThreadWorkPackage(
+	: ::libmaus2::parallel::SimpleThreadWorkPackage(
 		BamThreadPoolMergeContextBaseConstantsBase::bamthreadpooldecodecontextbase_dispatcher_priority_decompress,
 		BamThreadPoolMergeContextBaseConstantsBase::bamthreadpooldecodecontextbase_dispatcher_id_decompress,
 		0 /* package id */
@@ -2126,12 +2126,12 @@ struct BamThreadPoolMergeDecompressPackage : public ::libmaus::parallel::SimpleT
 };
 
 template<typename _order_type>
-struct BamThreadPoolMergeProcessPackage : public ::libmaus::parallel::SimpleThreadWorkPackage
+struct BamThreadPoolMergeProcessPackage : public ::libmaus2::parallel::SimpleThreadWorkPackage
 {
 	typedef _order_type order_type;
 	typedef BamThreadPoolMergeProcessPackage<order_type> this_type;
-	typedef typename libmaus::util::unique_ptr<this_type>::type unique_ptr_type;
-	typedef typename libmaus::util::shared_ptr<this_type>::type shared_ptr_type;
+	typedef typename libmaus2::util::unique_ptr<this_type>::type unique_ptr_type;
+	typedef typename libmaus2::util::shared_ptr<this_type>::type shared_ptr_type;
 
 	BamThreadPoolMergeContextBase<order_type> * contextbase;
 	uint64_t blockid;
@@ -2145,7 +2145,7 @@ struct BamThreadPoolMergeProcessPackage : public ::libmaus::parallel::SimpleThre
 		uint64_t rbaseid,
 		uint64_t rseqid
 	)
-	: ::libmaus::parallel::SimpleThreadWorkPackage(
+	: ::libmaus2::parallel::SimpleThreadWorkPackage(
 		BamThreadPoolMergeContextBaseConstantsBase::bamthreadpooldecodecontextbase_dispatcher_priority_process,
 		BamThreadPoolMergeContextBaseConstantsBase::bamthreadpooldecodecontextbase_dispatcher_id_process,
 		0 /* package id */
@@ -2159,18 +2159,18 @@ struct BamThreadPoolMergeProcessPackage : public ::libmaus::parallel::SimpleThre
 };
 
 template<typename _order_type>
-struct BamThreadPoolMergeMergePackage : public ::libmaus::parallel::SimpleThreadWorkPackage
+struct BamThreadPoolMergeMergePackage : public ::libmaus2::parallel::SimpleThreadWorkPackage
 {
 	typedef _order_type order_type;
 	typedef BamThreadPoolMergeMergePackage<order_type> this_type;
-	typedef typename libmaus::util::unique_ptr<this_type>::type unique_ptr_type;
-	typedef typename libmaus::util::shared_ptr<this_type>::type shared_ptr_type;
+	typedef typename libmaus2::util::unique_ptr<this_type>::type unique_ptr_type;
+	typedef typename libmaus2::util::shared_ptr<this_type>::type shared_ptr_type;
 
 	BamThreadPoolMergeContextBase<order_type> * contextbase;
 
 	BamThreadPoolMergeMergePackage() : contextbase(0) {}
 	BamThreadPoolMergeMergePackage(BamThreadPoolMergeContextBase<order_type> * rcontextbase)
-	: ::libmaus::parallel::SimpleThreadWorkPackage(
+	: ::libmaus2::parallel::SimpleThreadWorkPackage(
 		BamThreadPoolMergeContextBaseConstantsBase::bamthreadpooldecodecontextbase_dispatcher_priority_merge,
 		BamThreadPoolMergeContextBaseConstantsBase::bamthreadpooldecodecontextbase_dispatcher_id_merge,
 		0 /* package id */
@@ -2184,12 +2184,12 @@ struct BamThreadPoolMergeMergePackage : public ::libmaus::parallel::SimpleThread
 };
 
 template<typename _order_type>
-struct BamThreadPoolMergeCompressPackage : public ::libmaus::parallel::SimpleThreadWorkPackage
+struct BamThreadPoolMergeCompressPackage : public ::libmaus2::parallel::SimpleThreadWorkPackage
 {
 	typedef _order_type order_type;
 	typedef BamThreadPoolMergeCompressPackage<order_type> this_type;
-	typedef typename libmaus::util::unique_ptr<this_type>::type unique_ptr_type;
-	typedef typename libmaus::util::shared_ptr<this_type>::type shared_ptr_type;
+	typedef typename libmaus2::util::unique_ptr<this_type>::type unique_ptr_type;
+	typedef typename libmaus2::util::shared_ptr<this_type>::type shared_ptr_type;
 
 	BamThreadPoolMergeContextBase<order_type> * contextbase;
 	uint64_t baseid;
@@ -2201,7 +2201,7 @@ struct BamThreadPoolMergeCompressPackage : public ::libmaus::parallel::SimpleThr
 		uint64_t const rbaseid,
 		uint64_t const rseqid
 	)
-	: ::libmaus::parallel::SimpleThreadWorkPackage(
+	: ::libmaus2::parallel::SimpleThreadWorkPackage(
 		BamThreadPoolMergeContextBaseConstantsBase::bamthreadpooldecodecontextbase_dispatcher_priority_compress,
 		BamThreadPoolMergeContextBaseConstantsBase::bamthreadpooldecodecontextbase_dispatcher_id_compress,
 		0 /* package id */
@@ -2218,13 +2218,13 @@ struct BamThreadPoolMergeWritePendingInfo
 {
 	uint64_t baseid;
 	uint64_t seqid;
-	libmaus::lz::BgzfDeflateZStreamBaseFlushInfo flushinfo;
+	libmaus2::lz::BgzfDeflateZStreamBaseFlushInfo flushinfo;
 	
 	BamThreadPoolMergeWritePendingInfo() : baseid(0), seqid(0), flushinfo() {}
 	BamThreadPoolMergeWritePendingInfo(
 		uint64_t const rbaseid,
 		uint64_t const rseqid,
-		libmaus::lz::BgzfDeflateZStreamBaseFlushInfo const & rflushinfo)
+		libmaus2::lz::BgzfDeflateZStreamBaseFlushInfo const & rflushinfo)
 	: baseid(rbaseid), seqid(rseqid), flushinfo(rflushinfo) {}
 };
 
@@ -2240,12 +2240,12 @@ struct BamThreadPoolMergeWritePendingInfoHeapComparator
 };
 
 template<typename _order_type>
-struct BamThreadPoolMergeWritePackage : public ::libmaus::parallel::SimpleThreadWorkPackage
+struct BamThreadPoolMergeWritePackage : public ::libmaus2::parallel::SimpleThreadWorkPackage
 {
 	typedef _order_type order_type;
 	typedef BamThreadPoolMergeWritePackage<order_type> this_type;
-	typedef typename libmaus::util::unique_ptr<this_type>::type unique_ptr_type;
-	typedef typename libmaus::util::shared_ptr<this_type>::type shared_ptr_type;
+	typedef typename libmaus2::util::unique_ptr<this_type>::type unique_ptr_type;
+	typedef typename libmaus2::util::shared_ptr<this_type>::type shared_ptr_type;
 
 	BamThreadPoolMergeContextBase<order_type> * contextbase;
 	BamThreadPoolMergeWritePendingInfo info;
@@ -2255,7 +2255,7 @@ struct BamThreadPoolMergeWritePackage : public ::libmaus::parallel::SimpleThread
 		BamThreadPoolMergeContextBase<order_type> * rcontextbase,
 		BamThreadPoolMergeWritePendingInfo const & rinfo
 	)
-	: ::libmaus::parallel::SimpleThreadWorkPackage(
+	: ::libmaus2::parallel::SimpleThreadWorkPackage(
 		BamThreadPoolMergeContextBaseConstantsBase::bamthreadpooldecodecontextbase_dispatcher_priority_write,
 		BamThreadPoolMergeContextBaseConstantsBase::bamthreadpooldecodecontextbase_dispatcher_id_write,
 		0 /* package id */
@@ -2271,8 +2271,8 @@ struct BamThreadPoolMergeWritePackage : public ::libmaus::parallel::SimpleThread
 struct BamThreadPoolMergeProcessBufferInfo
 {
 	typedef BamThreadPoolMergeProcessBufferInfo this_type;
-	typedef libmaus::util::unique_ptr<this_type>::type unique_ptr_type;
-	typedef libmaus::util::shared_ptr<this_type>::type shared_ptr_type;
+	typedef libmaus2::util::unique_ptr<this_type>::type unique_ptr_type;
+	typedef libmaus2::util::shared_ptr<this_type>::type shared_ptr_type;
 
 	uint64_t blockid;
 	uint64_t seqid;
@@ -2299,12 +2299,12 @@ struct BamThreadPoolMergeProcessBufferInfo
 	}
 	
 	template<typename _order_type>
-	bool checkOrder(libmaus::bambam::BamHeader const & header) const
+	bool checkOrder(libmaus2::bambam::BamHeader const & header) const
 	{
 		BamProcessBuffer::pointer_type * prev = 0;
 		bool ok = true;
 		
-		::libmaus::bambam::BamFormatAuxiliary aux;
+		::libmaus2::bambam::BamFormatAuxiliary aux;
 		
 		for ( BamProcessBuffer::pointer_type * tc = pc; tc != pe; ++tc )
 		{
@@ -2328,9 +2328,9 @@ struct BamThreadPoolMergeProcessBufferInfo
 				if ( r > 0 )
 				{
 					std::cerr << "*order broken* " << std::endl;
-					std::cerr << libmaus::bambam::BamAlignmentDecoderBase::formatAlignment(
+					std::cerr << libmaus2::bambam::BamAlignmentDecoderBase::formatAlignment(
 						ca,la,header,aux) << std::endl;
-					std::cerr << libmaus::bambam::BamAlignmentDecoderBase::formatAlignment(
+					std::cerr << libmaus2::bambam::BamAlignmentDecoderBase::formatAlignment(
 						cb,lb,header,aux) << std::endl;
 				}
 			}
@@ -2378,7 +2378,7 @@ struct BamThreadPoolMergeParserState
 	unsigned int blocklenred;
 	uint32_t blocklen;
 	uint32_t blockred;
-	libmaus::autoarray::AutoArray<uint8_t> gatherbuffer;
+	libmaus2::autoarray::AutoArray<uint8_t> gatherbuffer;
 	
 	BamThreadPoolMergeParserState()
 	: state(bam_thread_pool_merge_parser_state_reading_blocklen), blocklenred(0), blocklen(0), gatherbuffer()
@@ -2410,7 +2410,7 @@ struct BamThreadPoolMergeHeapComparator
 
 struct LockedBitVector
 {
-	libmaus::parallel::PosixSpinLock lock;
+	libmaus2::parallel::PosixSpinLock lock;
 	std::vector<bool> B;
 	
 	LockedBitVector(uint64_t const n) : lock(), B(n) {}
@@ -2421,7 +2421,7 @@ struct LockedBitVector
 		bool b;
 		
 		{
-			libmaus::parallel::ScopePosixSpinLock slock(lock);
+			libmaus2::parallel::ScopePosixSpinLock slock(lock);
 			b = B[i];
 		}
 		
@@ -2430,7 +2430,7 @@ struct LockedBitVector
 	
 	void set(uint64_t const i, bool const b)
 	{
-		libmaus::parallel::ScopePosixSpinLock slock(lock);
+		libmaus2::parallel::ScopePosixSpinLock slock(lock);
 		B[i] = b;
 	}
 };
@@ -2441,52 +2441,52 @@ struct BamThreadPoolMergeContextBase : public BamThreadPoolMergeContextBaseConst
 	typedef _order_type order_type;
 	typedef BamThreadPoolMergeContextBase<order_type> this_type;
 
-	libmaus::parallel::PosixSpinLock cerrlock;
+	libmaus2::parallel::PosixSpinLock cerrlock;
 
-	libmaus::parallel::SimpleThreadPool & TP;
+	libmaus2::parallel::SimpleThreadPool & TP;
 
 	MergeInfo const & mergeinfo;
 	uint64_t const numblocks;
 
-	libmaus::parallel::SimpleThreadPoolWorkPackageFreeList<BamThreadPoolMergeReadPackage<order_type> > readFreeList;
-	libmaus::parallel::SimpleThreadPoolWorkPackageFreeList<BamThreadPoolMergeDecompressPackage<order_type> > decompressFreeList;
-	libmaus::parallel::SimpleThreadPoolWorkPackageFreeList<BamThreadPoolMergeProcessPackage<order_type> > processFreeList;
-	libmaus::parallel::SimpleThreadPoolWorkPackageFreeList<BamThreadPoolMergeMergePackage<order_type> > mergeFreeList;
-	libmaus::parallel::SimpleThreadPoolWorkPackageFreeList<BamThreadPoolMergeCompressPackage<order_type> > compressFreeList;
-	libmaus::parallel::SimpleThreadPoolWorkPackageFreeList<BamThreadPoolMergeWritePackage<order_type> > writeFreeList;
+	libmaus2::parallel::SimpleThreadPoolWorkPackageFreeList<BamThreadPoolMergeReadPackage<order_type> > readFreeList;
+	libmaus2::parallel::SimpleThreadPoolWorkPackageFreeList<BamThreadPoolMergeDecompressPackage<order_type> > decompressFreeList;
+	libmaus2::parallel::SimpleThreadPoolWorkPackageFreeList<BamThreadPoolMergeProcessPackage<order_type> > processFreeList;
+	libmaus2::parallel::SimpleThreadPoolWorkPackageFreeList<BamThreadPoolMergeMergePackage<order_type> > mergeFreeList;
+	libmaus2::parallel::SimpleThreadPoolWorkPackageFreeList<BamThreadPoolMergeCompressPackage<order_type> > compressFreeList;
+	libmaus2::parallel::SimpleThreadPoolWorkPackageFreeList<BamThreadPoolMergeWritePackage<order_type> > writeFreeList;
 
-	typedef libmaus::lz::SimpleCompressedInputBlockConcatBlock read_block_type;
+	typedef libmaus2::lz::SimpleCompressedInputBlockConcatBlock read_block_type;
 	typedef read_block_type::unique_ptr_type read_block_ptr_type;
 	
-	libmaus::autoarray::AutoArray<libmaus::parallel::PosixSpinLock> readQueueLocks;
-	libmaus::autoarray::AutoArray<libmaus::parallel::PosixMutex> readLocks;
-	libmaus::autoarray::AutoArray<libmaus::parallel::SynchronousQueue<uint64_t>::unique_ptr_type> readBlocksFreeLists;
-	libmaus::autoarray::AutoArray<read_block_ptr_type> readBlocks;
-	libmaus::autoarray::AutoArray<uint64_t> readSeqIds;
-	libmaus::autoarray::AutoArray<libmaus::lz::SimpleCompressedInputBlockConcat::unique_ptr_type> blockReaders;
-	libmaus::parallel::SynchronousCounter<uint64_t> blockReadersFinished;
+	libmaus2::autoarray::AutoArray<libmaus2::parallel::PosixSpinLock> readQueueLocks;
+	libmaus2::autoarray::AutoArray<libmaus2::parallel::PosixMutex> readLocks;
+	libmaus2::autoarray::AutoArray<libmaus2::parallel::SynchronousQueue<uint64_t>::unique_ptr_type> readBlocksFreeLists;
+	libmaus2::autoarray::AutoArray<read_block_ptr_type> readBlocks;
+	libmaus2::autoarray::AutoArray<uint64_t> readSeqIds;
+	libmaus2::autoarray::AutoArray<libmaus2::lz::SimpleCompressedInputBlockConcat::unique_ptr_type> blockReaders;
+	libmaus2::parallel::SynchronousCounter<uint64_t> blockReadersFinished;
 	LockedBitVector blockReadersFinishedVector;
-	libmaus::parallel::LockedBool readFinished;
+	libmaus2::parallel::LockedBool readFinished;
 	
 	typedef std::priority_queue<
 		BamThreadPoolMergeProcessPackage<order_type> *,
 		std::vector< BamThreadPoolMergeProcessPackage<order_type> * >,
 		BamThreadPoolMergeProcessPackageHeapComparator<order_type>
 	> process_pending_type;
-	libmaus::parallel::PosixSpinLock processPendingLock;
-	libmaus::autoarray::AutoArray<process_pending_type> processPending;
-	libmaus::parallel::PosixSpinLock processPendingNextLock;
-	libmaus::autoarray::AutoArray<uint64_t> processPendingNext;
-	libmaus::autoarray::AutoArray<BamThreadPoolMergeParserState> parserStates;
-	libmaus::autoarray::AutoArray<BamProcessBuffer::unique_ptr_type> processBuffers;
-	libmaus::autoarray::AutoArray<libmaus::parallel::LockedQueue<uint64_t>::unique_ptr_type> processBuffersFreeLists;
-	libmaus::autoarray::AutoArray<
-		typename libmaus::parallel::SynchronousQueue < BamThreadPoolMergeProcessPackage<order_type> * >::unique_ptr_type 
+	libmaus2::parallel::PosixSpinLock processPendingLock;
+	libmaus2::autoarray::AutoArray<process_pending_type> processPending;
+	libmaus2::parallel::PosixSpinLock processPendingNextLock;
+	libmaus2::autoarray::AutoArray<uint64_t> processPendingNext;
+	libmaus2::autoarray::AutoArray<BamThreadPoolMergeParserState> parserStates;
+	libmaus2::autoarray::AutoArray<BamProcessBuffer::unique_ptr_type> processBuffers;
+	libmaus2::autoarray::AutoArray<libmaus2::parallel::LockedQueue<uint64_t>::unique_ptr_type> processBuffersFreeLists;
+	libmaus2::autoarray::AutoArray<
+		typename libmaus2::parallel::SynchronousQueue < BamThreadPoolMergeProcessPackage<order_type> * >::unique_ptr_type 
 	> processStallList;
-	libmaus::parallel::SynchronousCounter<uint64_t> blockParsersFinished;
-	libmaus::parallel::LockedBool parsingFinished;
+	libmaus2::parallel::SynchronousCounter<uint64_t> blockParsersFinished;
+	libmaus2::parallel::LockedBool parsingFinished;
 	
-	libmaus::parallel::PosixSpinLock bufferInfoLock;
+	libmaus2::parallel::PosixSpinLock bufferInfoLock;
 	std::vector<
 		std::priority_queue<
 			BamThreadPoolMergeProcessBufferInfo,
@@ -2496,13 +2496,13 @@ struct BamThreadPoolMergeContextBase : public BamThreadPoolMergeContextBaseConst
 	> bufferInfoPending;
 	std::vector<uint64_t> bufferInfoSeq;
 	std::vector<uint64_t> bufferInfoNext;
-	libmaus::parallel::SynchronousCounter<uint64_t> bufferInfoInitComplete;
+	libmaus2::parallel::SynchronousCounter<uint64_t> bufferInfoInitComplete;
 	
-	libmaus::parallel::PosixSpinLock missingLock;
-	libmaus::parallel::LockedBool missingSet;
+	libmaus2::parallel::PosixSpinLock missingLock;
+	libmaus2::parallel::LockedBool missingSet;
 	uint64_t missing;
 	
-	libmaus::parallel::PosixSpinLock alPerBlockLock;
+	libmaus2::parallel::PosixSpinLock alPerBlockLock;
 	std::vector< uint64_t > alPerBlockFinished;
 	uint64_t alFinished;
 	uint64_t alTotal;
@@ -2526,16 +2526,16 @@ struct BamThreadPoolMergeContextBase : public BamThreadPoolMergeContextBaseConst
 			(static_cast<uint32_t>(data[3]) << 24);
 		uint8_t const * aldat = data + 4;
 
-		if ( std::string(libmaus::bambam::BamAlignmentDecoderBase::getReadName(aldat)) == "MS6_12707:1:1101:1781:15425" )
+		if ( std::string(libmaus2::bambam::BamAlignmentDecoderBase::getReadName(aldat)) == "MS6_12707:1:1101:1781:15425" )
 		{
-			::libmaus::bambam::BamFormatAuxiliary aux;
-			std::cerr << "[D]*\t" << libmaus::bambam::BamAlignmentDecoderBase::formatAlignment(
+			::libmaus2::bambam::BamFormatAuxiliary aux;
+			std::cerr << "[D]*\t" << libmaus2::bambam::BamAlignmentDecoderBase::formatAlignment(
 				aldat,blocksize,
 				*(mergeinfo.sheader),
 				aux
 			) << std::endl;
 			
-			std::cerr << libmaus::util::StackTrace().toString();
+			std::cerr << libmaus2::util::StackTrace().toString();
 		}
 		#endif
 
@@ -2545,42 +2545,42 @@ struct BamThreadPoolMergeContextBase : public BamThreadPoolMergeContextBaseConst
 	uint64_t outputMerged;
 	
 	
-	libmaus::autoarray::AutoArray< libmaus::lz::BgzfDeflateBase::unique_ptr_type > deflateBuffers;
-	libmaus::parallel::LockedQueue<uint64_t> deflateBuffersFreeList;
+	libmaus2::autoarray::AutoArray< libmaus2::lz::BgzfDeflateBase::unique_ptr_type > deflateBuffers;
+	libmaus2::parallel::LockedQueue<uint64_t> deflateBuffersFreeList;
 	uint64_t deflateBufferSeq;
-	libmaus::parallel::PosixSpinLock deflateBufferNextLock;
+	libmaus2::parallel::PosixSpinLock deflateBufferNextLock;
 	uint64_t deflateBufferNext;
-	libmaus::parallel::PosixSpinLock writePendingLock;
+	libmaus2::parallel::PosixSpinLock writePendingLock;
 	std::priority_queue<
 		BamThreadPoolMergeWritePendingInfo,
 		std::vector< BamThreadPoolMergeWritePendingInfo >,
 		BamThreadPoolMergeWritePendingInfoHeapComparator
 	> writePending;
-	libmaus::parallel::SynchronousQueue< BamThreadPoolMergeMergePackage<order_type> * > mergeStallList;
-	libmaus::autoarray::AutoArray<uint8_t> mergeWritePending;
+	libmaus2::parallel::SynchronousQueue< BamThreadPoolMergeMergePackage<order_type> * > mergeStallList;
+	libmaus2::autoarray::AutoArray<uint8_t> mergeWritePending;
 	uint64_t mergeWritePendingFill;
 	
-	libmaus::parallel::LockedBool mergeFinished;
+	libmaus2::parallel::LockedBool mergeFinished;
 	
 	std::ostream & out;
 	
 	#if 0
-	libmaus::bambam::BamAlignment thisAlgn;
+	libmaus2::bambam::BamAlignment thisAlgn;
 	uint64_t thisAlgnBlock;
-	libmaus::bambam::BamAlignment prevAlgn;
+	libmaus2::bambam::BamAlignment prevAlgn;
 	uint64_t prevAlgnBlock;
 	#endif
 
-	libmaus::parallel::SynchronousCounter<uint64_t> mergeWriteIn;
+	libmaus2::parallel::SynchronousCounter<uint64_t> mergeWriteIn;
 	uint64_t mergeWriteOut;
-	libmaus::parallel::PosixSpinLock mergeWriteOutLock;
+	libmaus2::parallel::PosixSpinLock mergeWriteOutLock;
 	
 	bool const verbose;
 		
 	BamThreadPoolMergeContextBase(
-		libmaus::parallel::SimpleThreadPool & rTP,
+		libmaus2::parallel::SimpleThreadPool & rTP,
 		MergeInfo const & rmergeinfo,
-		libmaus::lz::DecompressorObjectFactory & decfact,
+		libmaus2::lz::DecompressorObjectFactory & decfact,
 		uint64_t const inputBlocksPerBlock,
 		uint64_t const processBuffersPerBlock,
 		uint64_t const processBuffersSize,
@@ -2647,8 +2647,8 @@ struct BamThreadPoolMergeContextBase : public BamThreadPoolMergeContextBaseConst
 	
 		for ( uint64_t i = 0; i < readBlocksFreeLists.size(); ++i )
 		{
-			libmaus::parallel::SynchronousQueue<uint64_t>::unique_ptr_type tptr(
-				new libmaus::parallel::SynchronousQueue<uint64_t>()
+			libmaus2::parallel::SynchronousQueue<uint64_t>::unique_ptr_type tptr(
+				new libmaus2::parallel::SynchronousQueue<uint64_t>()
 			);
 			readBlocksFreeLists[i] = UNIQUE_PTR_MOVE(tptr);
 		}
@@ -2660,8 +2660,8 @@ struct BamThreadPoolMergeContextBase : public BamThreadPoolMergeContextBaseConst
 		}
 		for ( uint64_t i = 0; i < blockReaders.size(); ++i )
 		{
-			libmaus::lz::SimpleCompressedInputBlockConcat::unique_ptr_type tptr(
-				new libmaus::lz::SimpleCompressedInputBlockConcat(mergeinfo.tmpfilenamedblocks[i])
+			libmaus2::lz::SimpleCompressedInputBlockConcat::unique_ptr_type tptr(
+				new libmaus2::lz::SimpleCompressedInputBlockConcat(mergeinfo.tmpfilenamedblocks[i])
 			);
 			blockReaders[i] = UNIQUE_PTR_MOVE(tptr);
 		}
@@ -2676,7 +2676,7 @@ struct BamThreadPoolMergeContextBase : public BamThreadPoolMergeContextBaseConst
 		}
 		for ( uint64_t i = 0; i < processBuffersFreeLists.size(); ++i )
 		{
-			libmaus::parallel::LockedQueue<uint64_t>::unique_ptr_type tptr(new libmaus::parallel::LockedQueue<uint64_t>);
+			libmaus2::parallel::LockedQueue<uint64_t>::unique_ptr_type tptr(new libmaus2::parallel::LockedQueue<uint64_t>);
 			processBuffersFreeLists[i] = UNIQUE_PTR_MOVE(tptr);
 		}
 		for ( uint64_t i = 0; i < processBuffers.size(); ++i )
@@ -2684,14 +2684,14 @@ struct BamThreadPoolMergeContextBase : public BamThreadPoolMergeContextBaseConst
 
 		for ( uint64_t i = 0; i < processStallList.size(); ++i )
 		{
-			typename libmaus::parallel::SynchronousQueue < BamThreadPoolMergeProcessPackage<order_type> * >::unique_ptr_type 	
-				tptr(new libmaus::parallel::SynchronousQueue < BamThreadPoolMergeProcessPackage<order_type> * >);
+			typename libmaus2::parallel::SynchronousQueue < BamThreadPoolMergeProcessPackage<order_type> * >::unique_ptr_type 	
+				tptr(new libmaus2::parallel::SynchronousQueue < BamThreadPoolMergeProcessPackage<order_type> * >);
 			processStallList[i] = UNIQUE_PTR_MOVE(tptr);
 		}
 		for ( uint64_t i = 0; i < deflateBuffers.size(); ++i )
 		{
-			libmaus::lz::BgzfDeflateBase::unique_ptr_type tptr(
-				new libmaus::lz::BgzfDeflateBase(level,true)
+			libmaus2::lz::BgzfDeflateBase::unique_ptr_type tptr(
+				new libmaus2::lz::BgzfDeflateBase(level,true)
 			);
 			deflateBuffers[i] = UNIQUE_PTR_MOVE(tptr);
 			deflateBuffersFreeList.push_back(i);
@@ -2703,14 +2703,14 @@ struct BamThreadPoolMergeContextBase : public BamThreadPoolMergeContextBaseConst
  * block reading
  */
 template<typename _order_type>
-struct BamThreadPoolMergeReadPackageDispatcher : public libmaus::parallel::SimpleThreadWorkPackageDispatcher
+struct BamThreadPoolMergeReadPackageDispatcher : public libmaus2::parallel::SimpleThreadWorkPackageDispatcher
 {
 	typedef _order_type order_type;
 
 	virtual ~BamThreadPoolMergeReadPackageDispatcher() {}
 	virtual void dispatch(
-		libmaus::parallel::SimpleThreadWorkPackage * P, 
-		libmaus::parallel::SimpleThreadPoolInterfaceEnqueTermInterface & tpi
+		libmaus2::parallel::SimpleThreadWorkPackage * P, 
+		libmaus2::parallel::SimpleThreadPoolInterfaceEnqueTermInterface & tpi
 	)
 	{
 		assert ( dynamic_cast<BamThreadPoolMergeReadPackage<order_type> *>(P) != 0 );
@@ -2729,7 +2729,7 @@ struct BamThreadPoolMergeReadPackageDispatcher : public libmaus::parallel::Simpl
 
 		bool finishedLoop = (contextbase.blockReadersFinishedVector.get(blockid));
 		
-		libmaus::parallel::ScopePosixMutex SPM(contextbase.readLocks[blockid]);
+		libmaus2::parallel::ScopePosixMutex SPM(contextbase.readLocks[blockid]);
 		
 		while ( !finishedLoop )
 		{
@@ -2737,7 +2737,7 @@ struct BamThreadPoolMergeReadPackageDispatcher : public libmaus::parallel::Simpl
 			uint64_t baseid = 0;
 			bool baseidok = false;
 			{
-				libmaus::parallel::ScopePosixSpinLock llock(contextbase.readQueueLocks[blockid]);
+				libmaus2::parallel::ScopePosixSpinLock llock(contextbase.readQueueLocks[blockid]);
 				baseidok = contextbase.readBlocksFreeLists[blockid]->peek(baseid);
 			}
 
@@ -2799,14 +2799,14 @@ struct BamThreadPoolMergeReadPackageDispatcher : public libmaus::parallel::Simpl
  * package decompression
  */
 template<typename _order_type>
-struct BamThreadPoolMergeDecompressPackageDispatcher : public libmaus::parallel::SimpleThreadWorkPackageDispatcher
+struct BamThreadPoolMergeDecompressPackageDispatcher : public libmaus2::parallel::SimpleThreadWorkPackageDispatcher
 {
 	typedef _order_type order_type;
 
 	virtual ~BamThreadPoolMergeDecompressPackageDispatcher() {}
 	virtual void dispatch(
-		libmaus::parallel::SimpleThreadWorkPackage * P, 
-		libmaus::parallel::SimpleThreadPoolInterfaceEnqueTermInterface & tpi
+		libmaus2::parallel::SimpleThreadWorkPackage * P, 
+		libmaus2::parallel::SimpleThreadPoolInterfaceEnqueTermInterface & tpi
 	)
 	{
 		assert ( dynamic_cast<BamThreadPoolMergeDecompressPackage<order_type> *>(P) != 0 );
@@ -2836,8 +2836,8 @@ struct BamThreadPoolMergeDecompressPackageDispatcher : public libmaus::parallel:
 		
 		{
 			// get locks
-			libmaus::parallel::ScopePosixSpinLock llprocessPendingLock(contextbase.processPendingLock);
-			libmaus::parallel::ScopePosixSpinLock llprocessPendingNextLock(contextbase.processPendingNextLock);
+			libmaus2::parallel::ScopePosixSpinLock llprocessPendingLock(contextbase.processPendingLock);
+			libmaus2::parallel::ScopePosixSpinLock llprocessPendingNextLock(contextbase.processPendingNextLock);
 			// put package in pending list
 			contextbase.processPending[blockid].push(procpack);
 			
@@ -2861,7 +2861,7 @@ struct BamThreadPoolMergeDecompressPackageDispatcher : public libmaus::parallel:
  * package processing (decompose byte stream into alignments)
  */
 template<typename _order_type>
-struct BamThreadPoolMergeProcessPackageDispatcher : public libmaus::parallel::SimpleThreadWorkPackageDispatcher
+struct BamThreadPoolMergeProcessPackageDispatcher : public libmaus2::parallel::SimpleThreadWorkPackageDispatcher
 {
 	typedef _order_type order_type;
 	
@@ -2876,8 +2876,8 @@ struct BamThreadPoolMergeProcessPackageDispatcher : public libmaus::parallel::Si
 
 	virtual ~BamThreadPoolMergeProcessPackageDispatcher() {}
 	virtual void dispatch(
-		libmaus::parallel::SimpleThreadWorkPackage * P, 
-		libmaus::parallel::SimpleThreadPoolInterfaceEnqueTermInterface & tpi
+		libmaus2::parallel::SimpleThreadWorkPackage * P, 
+		libmaus2::parallel::SimpleThreadPoolInterfaceEnqueTermInterface & tpi
 	)
 	{
 		assert ( dynamic_cast<BamThreadPoolMergeProcessPackage<order_type> *>(P) != 0 );
@@ -3020,7 +3020,7 @@ struct BamThreadPoolMergeProcessPackageDispatcher : public libmaus::parallel::Si
 							
 							// increase size of gather buffer if necessary
 							if ( parserState.gatherbuffer.size() < parserState.blocklen )
-								parserState.gatherbuffer = libmaus::autoarray::AutoArray<uint8_t>(parserState.blocklen,false);
+								parserState.gatherbuffer = libmaus2::autoarray::AutoArray<uint8_t>(parserState.blocklen,false);
 						}
 					}
 					break;
@@ -3124,7 +3124,7 @@ struct BamThreadPoolMergeProcessPackageDispatcher : public libmaus::parallel::Si
 		for ( uint64_t i = 0; i < finishedBuffers.size(); ++i )
 		{
 			// construct merge process buffer info object
-			libmaus::parallel::ScopePosixSpinLock lbufferInfoLock(contextbase.bufferInfoLock);
+			libmaus2::parallel::ScopePosixSpinLock lbufferInfoLock(contextbase.bufferInfoLock);
 			BamThreadPoolMergeProcessBufferInfo const info(
 				blockid,
 				contextbase.bufferInfoSeq[blockid]++,
@@ -3160,7 +3160,7 @@ struct BamThreadPoolMergeProcessPackageDispatcher : public libmaus::parallel::Si
 					#endif
 
 					// get lock
-					libmaus::parallel::ScopePosixSpinLock lalPerBlockLock(contextbase.alPerBlockLock);
+					libmaus2::parallel::ScopePosixSpinLock lalPerBlockLock(contextbase.alPerBlockLock);
 					
 					for ( uint64_t j = 0; j < contextbase.numblocks; ++j )
 					{
@@ -3189,7 +3189,7 @@ struct BamThreadPoolMergeProcessPackageDispatcher : public libmaus::parallel::Si
 								<< " " << info.blockid
 								<< " " << info.seqid
 								<< " " << info.bufferid
-								<< " " << libmaus::bambam::BamAlignmentDecoderBase::getReadName(info.buffer->ca + info.pc[-1] + 4)
+								<< " " << libmaus2::bambam::BamAlignmentDecoderBase::getReadName(info.buffer->ca + info.pc[-1] + 4)
 								<< std::endl;
 							contextbase.cerrlock.unlock();
 							#endif
@@ -3221,7 +3221,7 @@ struct BamThreadPoolMergeProcessPackageDispatcher : public libmaus::parallel::Si
 			
 			// return read buffer
 			{
-				libmaus::parallel::ScopePosixSpinLock llock(contextbase.readQueueLocks[blockid]);
+				libmaus2::parallel::ScopePosixSpinLock llock(contextbase.readQueueLocks[blockid]);
 				// check if list is empty
 				bool const listempty = contextbase.readBlocksFreeLists[blockid]->empty();
 
@@ -3243,8 +3243,8 @@ struct BamThreadPoolMergeProcessPackageDispatcher : public libmaus::parallel::Si
 				}
 			}
 			
-			libmaus::parallel::ScopePosixSpinLock llprocessPendingLock(contextbase.processPendingLock);
-			libmaus::parallel::ScopePosixSpinLock llprocessPendingNextLock(contextbase.processPendingNextLock);
+			libmaus2::parallel::ScopePosixSpinLock llprocessPendingLock(contextbase.processPendingLock);
+			libmaus2::parallel::ScopePosixSpinLock llprocessPendingNextLock(contextbase.processPendingNextLock);
 			
 			// ready for next block
 			contextbase.processPendingNext[blockid] += 1;
@@ -3285,8 +3285,8 @@ struct BamThreadPoolMergeProcessPackageDispatcher : public libmaus::parallel::Si
 		// check whether this block was missing to continue merging
 		{
 			// get locks
-			libmaus::parallel::ScopePosixSpinLock lbufferInfoLock(contextbase.bufferInfoLock);
-			libmaus::parallel::ScopePosixSpinLock lmissingLock(contextbase.missingLock);
+			libmaus2::parallel::ScopePosixSpinLock lbufferInfoLock(contextbase.bufferInfoLock);
+			libmaus2::parallel::ScopePosixSpinLock lmissingLock(contextbase.missingLock);
 			if ( contextbase.missingSet.get() )
 			{
 				// get id of missing block
@@ -3341,7 +3341,7 @@ struct BamThreadPoolMergeProcessPackageDispatcher : public libmaus::parallel::Si
 };
 
 template<typename _order_type>
-struct BamThreadPoolMergeMergePackageDispatcher : public libmaus::parallel::SimpleThreadWorkPackageDispatcher
+struct BamThreadPoolMergeMergePackageDispatcher : public libmaus2::parallel::SimpleThreadWorkPackageDispatcher
 {
 	typedef _order_type order_type;
 	
@@ -3359,7 +3359,7 @@ struct BamThreadPoolMergeMergePackageDispatcher : public libmaus::parallel::Simp
 	static void enqueCompress(
 		BamThreadPoolMergeMergePackage<order_type> & RP,
 		uint64_t const deflatebufferid,
-		libmaus::parallel::SimpleThreadPoolInterfaceEnqueTermInterface & tpi
+		libmaus2::parallel::SimpleThreadPoolInterfaceEnqueTermInterface & tpi
 	)
 	{
 		BamThreadPoolMergeCompressPackage<order_type> * ccpack =
@@ -3375,8 +3375,8 @@ struct BamThreadPoolMergeMergePackageDispatcher : public libmaus::parallel::Simp
 
 	virtual ~BamThreadPoolMergeMergePackageDispatcher() {}
 	virtual void dispatch(
-		libmaus::parallel::SimpleThreadWorkPackage * P, 
-		libmaus::parallel::SimpleThreadPoolInterfaceEnqueTermInterface & tpi
+		libmaus2::parallel::SimpleThreadWorkPackage * P, 
+		libmaus2::parallel::SimpleThreadPoolInterfaceEnqueTermInterface & tpi
 	)
 	{
 		assert ( dynamic_cast<BamThreadPoolMergeMergePackage<order_type> *>(P) != 0 );
@@ -3391,14 +3391,14 @@ struct BamThreadPoolMergeMergePackageDispatcher : public libmaus::parallel::Simp
 		#endif
 
 		// get the alignments per block lock
-		libmaus::parallel::ScopePosixSpinLock lalPerBlockLock(contextbase.alPerBlockLock);
+		libmaus2::parallel::ScopePosixSpinLock lalPerBlockLock(contextbase.alPerBlockLock);
 
 		// try to get a deflate buffer id
 		uint64_t deflatebufferid = 0;
 		// stall if there is no free buffer
 		bool stalled = !contextbase.deflateBuffersFreeList.tryDequeFront(deflatebufferid);
 		// get pointer to buffer
-		libmaus::lz::BgzfDeflateBase * deflateBuffer =
+		libmaus2::lz::BgzfDeflateBase * deflateBuffer =
 			stalled ? 0 : contextbase.deflateBuffers[deflatebufferid].get();
 		// either there is no buffer or the one we have is not yet full
 		assert ( deflateBuffer == 0 || deflateBuffer->pc != deflateBuffer->pe );
@@ -3469,15 +3469,15 @@ struct BamThreadPoolMergeMergePackageDispatcher : public libmaus::parallel::Simp
 			#if 0
 			{
 				uint8_t const * alp = pa + sizeof(uint32_t);
-				::libmaus::bambam::BamFormatAuxiliary aux;
-				libmaus::bambam::BamAlignmentDecoderBase::formatAlignment(
+				::libmaus2::bambam::BamFormatAuxiliary aux;
+				libmaus2::bambam::BamAlignmentDecoderBase::formatAlignment(
 					alp,blocklen,
 					*(contextbase.mergeinfo.sheader),
 					aux
 				);
 				
 				contextbase.cerrlock.lock();
-				std::cerr << "[D]\t" << libmaus::bambam::BamAlignmentDecoderBase::formatAlignment(
+				std::cerr << "[D]\t" << libmaus2::bambam::BamAlignmentDecoderBase::formatAlignment(
 						alp,blocklen,
 						*(contextbase.mergeinfo.sheader),
 						aux
@@ -3489,7 +3489,7 @@ struct BamThreadPoolMergeMergePackageDispatcher : public libmaus::parallel::Simp
 			
 			#if 0
 			if ( contextbase.thisAlgn.D.size() < blocklen )
-				contextbase.thisAlgn.D = libmaus::bambam::BamAlignment::D_array_type(blocklen,false);
+				contextbase.thisAlgn.D = libmaus2::bambam::BamAlignment::D_array_type(blocklen,false);
 			contextbase.thisAlgn.blocksize = blocklen;
 			contextbase.thisAlgnBlock = P.first;
 			std::copy(pa+4,pe,contextbase.thisAlgn.D.begin());
@@ -3552,7 +3552,7 @@ struct BamThreadPoolMergeMergePackageDispatcher : public libmaus::parallel::Simp
 						
 						// check buffer size
 						if ( contextbase.mergeWritePending.size() < writepending )
-							contextbase.mergeWritePending = libmaus::autoarray::AutoArray<uint8_t>(writepending,false);
+							contextbase.mergeWritePending = libmaus2::autoarray::AutoArray<uint8_t>(writepending,false);
 						
 						// copy data
 						std::copy(pc,pe,contextbase.mergeWritePending.begin());
@@ -3581,10 +3581,10 @@ struct BamThreadPoolMergeMergePackageDispatcher : public libmaus::parallel::Simp
 			
 			#if 0
 			contextbase.cerrlock.lock();
-			std::cerr << "NAME " << libmaus::bambam::BamAlignmentDecoderBase::getReadName(P.second+4) 
+			std::cerr << "NAME " << libmaus2::bambam::BamAlignmentDecoderBase::getReadName(P.second+4) 
 				<< " " << P.first
-				<< " " << libmaus::bambam::BamAlignmentDecoderBase::getRefID(P.second+4) 
-				<< " " << libmaus::bambam::BamAlignmentDecoderBase::getPos(P.second+4) 
+				<< " " << libmaus2::bambam::BamAlignmentDecoderBase::getRefID(P.second+4) 
+				<< " " << libmaus2::bambam::BamAlignmentDecoderBase::getPos(P.second+4) 
 				<< std::endl;
 			contextbase.cerrlock.unlock();
 			#endif
@@ -3621,8 +3621,8 @@ struct BamThreadPoolMergeMergePackageDispatcher : public libmaus::parallel::Simp
 					//
 					uint64_t const freebufferid = info.bufferid;
 
-					libmaus::parallel::ScopePosixSpinLock lbufferInfoLock(contextbase.bufferInfoLock);
-					libmaus::parallel::ScopePosixSpinLock lmissingLock(contextbase.missingLock);
+					libmaus2::parallel::ScopePosixSpinLock lbufferInfoLock(contextbase.bufferInfoLock);
+					libmaus2::parallel::ScopePosixSpinLock lmissingLock(contextbase.missingLock);
 
 					// switch to next
 					contextbase.bufferInfoNext[P.first]++;
@@ -3803,14 +3803,14 @@ struct BamThreadPoolMergeMergePackageDispatcher : public libmaus::parallel::Simp
 };
 
 template<typename _order_type>
-struct BamThreadPoolMergeCompressPackageDispatcher : public libmaus::parallel::SimpleThreadWorkPackageDispatcher
+struct BamThreadPoolMergeCompressPackageDispatcher : public libmaus2::parallel::SimpleThreadWorkPackageDispatcher
 {
 	typedef _order_type order_type;
 	
 	virtual ~BamThreadPoolMergeCompressPackageDispatcher() {}
 	virtual void dispatch(
-		libmaus::parallel::SimpleThreadWorkPackage * P, 
-		libmaus::parallel::SimpleThreadPoolInterfaceEnqueTermInterface & tpi
+		libmaus2::parallel::SimpleThreadWorkPackage * P, 
+		libmaus2::parallel::SimpleThreadPoolInterfaceEnqueTermInterface & tpi
 	)
 	{
 		assert ( dynamic_cast<BamThreadPoolMergeCompressPackage<order_type> *>(P) != 0 );
@@ -3819,7 +3819,7 @@ struct BamThreadPoolMergeCompressPackageDispatcher : public libmaus::parallel::S
 		BamThreadPoolMergeContextBase<order_type> & contextbase = *(RP.contextbase);
 
 		// compress
-		libmaus::lz::BgzfDeflateZStreamBaseFlushInfo const FI = 
+		libmaus2::lz::BgzfDeflateZStreamBaseFlushInfo const FI = 
 			contextbase.deflateBuffers[RP.baseid]->flush(true);
 
 		// pending info
@@ -3827,14 +3827,14 @@ struct BamThreadPoolMergeCompressPackageDispatcher : public libmaus::parallel::S
 		
 		// queue write
 		{
-		libmaus::parallel::ScopePosixSpinLock swritePendingLock(contextbase.writePendingLock);
+		libmaus2::parallel::ScopePosixSpinLock swritePendingLock(contextbase.writePendingLock);
 		contextbase.writePending.push(pendinf);
 		}
 		
 		// check if next write in line is available
 		{
-			libmaus::parallel::ScopePosixSpinLock ldeflateBufferNextLock(contextbase.deflateBufferNextLock);
-			libmaus::parallel::ScopePosixSpinLock swritePendingLock(contextbase.writePendingLock);
+			libmaus2::parallel::ScopePosixSpinLock ldeflateBufferNextLock(contextbase.deflateBufferNextLock);
+			libmaus2::parallel::ScopePosixSpinLock swritePendingLock(contextbase.writePendingLock);
 			if ( 
 				contextbase.writePending.size()
 				&&
@@ -3858,14 +3858,14 @@ struct BamThreadPoolMergeCompressPackageDispatcher : public libmaus::parallel::S
 };
 
 template<typename _order_type>
-struct BamThreadPoolMergeWritePackageDispatcher : public libmaus::parallel::SimpleThreadWorkPackageDispatcher
+struct BamThreadPoolMergeWritePackageDispatcher : public libmaus2::parallel::SimpleThreadWorkPackageDispatcher
 {
 	typedef _order_type order_type;
 	
 	virtual ~BamThreadPoolMergeWritePackageDispatcher() {}
 	virtual void dispatch(
-		libmaus::parallel::SimpleThreadWorkPackage * P, 
-		libmaus::parallel::SimpleThreadPoolInterfaceEnqueTermInterface & tpi
+		libmaus2::parallel::SimpleThreadWorkPackage * P, 
+		libmaus2::parallel::SimpleThreadPoolInterfaceEnqueTermInterface & tpi
 	)
 	{
 		assert ( dynamic_cast<BamThreadPoolMergeWritePackage<order_type> *>(P) != 0 );
@@ -3892,8 +3892,8 @@ struct BamThreadPoolMergeWritePackageDispatcher : public libmaus::parallel::Simp
 		contextbase.mergeWriteOutLock.unlock();
 		
 		{
-			libmaus::parallel::ScopePosixSpinLock ldeflateBufferNextLock(contextbase.deflateBufferNextLock);
-			libmaus::parallel::ScopePosixSpinLock swritePendingLock(contextbase.writePendingLock);
+			libmaus2::parallel::ScopePosixSpinLock ldeflateBufferNextLock(contextbase.deflateBufferNextLock);
+			libmaus2::parallel::ScopePosixSpinLock swritePendingLock(contextbase.writePendingLock);
 			
 			contextbase.deflateBufferNext += 1;
 
@@ -3932,7 +3932,7 @@ struct BamThreadPoolMergeWritePackageDispatcher : public libmaus::parallel::Simp
 			tpi.enque(mergepack);
 		
 		{
-			libmaus::parallel::ScopePosixSpinLock lmergeWriteOutLock(contextbase.mergeWriteOutLock);
+			libmaus2::parallel::ScopePosixSpinLock lmergeWriteOutLock(contextbase.mergeWriteOutLock);
 			
 			if (
 				contextbase.mergeFinished.get() &&
@@ -3960,9 +3960,9 @@ struct BamThreadPoolMergeContext : public BamThreadPoolMergeContextBase<_order_t
 	typedef _order_type order_type;
 
 	BamThreadPoolMergeContext(
-		libmaus::parallel::SimpleThreadPool & TP,
+		libmaus2::parallel::SimpleThreadPool & TP,
 		MergeInfo const & mergeinfo,
-		libmaus::lz::DecompressorObjectFactory	& decfact,
+		libmaus2::lz::DecompressorObjectFactory	& decfact,
 		uint64_t const inputBlocksPerBlock,
 		uint64_t const processBuffersPerBlock,
 		uint64_t const processBuffersSize,
@@ -3990,41 +3990,41 @@ struct BamThreadPoolMergeContext : public BamThreadPoolMergeContextBase<_order_t
 };
 
 template<typename _order_type>
-void checkSortedBlocks(MergeInfo const & mergeinfo, libmaus::lz::DecompressorObjectFactory & decfact)
+void checkSortedBlocks(MergeInfo const & mergeinfo, libmaus2::lz::DecompressorObjectFactory & decfact)
 {
-	libmaus::autoarray::AutoArray<libmaus::aio::CheckedInputStream::unique_ptr_type> inputfiles(mergeinfo.tmpfilenames.size());
+	libmaus2::autoarray::AutoArray<libmaus2::aio::CheckedInputStream::unique_ptr_type> inputfiles(mergeinfo.tmpfilenames.size());
 	for ( uint64_t i = 0; i < inputfiles.size(); ++i )
 	{
-		libmaus::aio::CheckedInputStream::unique_ptr_type tptr(new libmaus::aio::CheckedInputStream(mergeinfo.tmpfilenames[i]));
+		libmaus2::aio::CheckedInputStream::unique_ptr_type tptr(new libmaus2::aio::CheckedInputStream(mergeinfo.tmpfilenames[i]));
 		inputfiles[i] = UNIQUE_PTR_MOVE(tptr);
 	}
 	
-	libmaus::autoarray::AutoArray<libmaus::lz::SimpleCompressedConcatInputStream<std::istream>::unique_ptr_type> concfiles(mergeinfo.tmpfileblocks.size());
+	libmaus2::autoarray::AutoArray<libmaus2::lz::SimpleCompressedConcatInputStream<std::istream>::unique_ptr_type> concfiles(mergeinfo.tmpfileblocks.size());
 	for ( uint64_t i = 0; i < mergeinfo.tmpfileblocks.size(); ++i )
 	{
-		std::vector<libmaus::lz::SimpleCompressedConcatInputStreamFragment<std::istream> > fragments;
+		std::vector<libmaus2::lz::SimpleCompressedConcatInputStreamFragment<std::istream> > fragments;
 		
 		for ( uint64_t j = 0; j < mergeinfo.tmpfileblocks[i].size(); ++j )
 			fragments.push_back(
-				libmaus::lz::SimpleCompressedConcatInputStreamFragment<std::istream>(
+				libmaus2::lz::SimpleCompressedConcatInputStreamFragment<std::istream>(
 					mergeinfo.tmpfileblocks[i][j],
 					inputfiles[j].get()
 				)
 			);
 			
-		libmaus::lz::SimpleCompressedConcatInputStream<std::istream>::unique_ptr_type tptr(
-			new libmaus::lz::SimpleCompressedConcatInputStream<std::istream>(fragments,decfact)
+		libmaus2::lz::SimpleCompressedConcatInputStream<std::istream>::unique_ptr_type tptr(
+			new libmaus2::lz::SimpleCompressedConcatInputStream<std::istream>(fragments,decfact)
 		);
 		concfiles[i] = UNIQUE_PTR_MOVE(tptr);
 	}
 
 	for ( uint64_t i = 0; i < mergeinfo.tmpfileblocks.size(); ++i )
 	{
-		libmaus::bambam::BamAlignment prev, cur;
+		libmaus2::bambam::BamAlignment prev, cur;
 
 		for ( uint64_t j = 0; j < mergeinfo.tmpfileblockcntsums[i]; ++j )
 		{
-			::libmaus::bambam::BamDecoder::readAlignmentGz(*concfiles[i],cur,0 /* no header for validation */,false /* no validation */);
+			::libmaus2::bambam::BamDecoder::readAlignmentGz(*concfiles[i],cur,0 /* no header for validation */,false /* no validation */);
 
 			if ( prev.blocksize )
 			{
@@ -4045,14 +4045,14 @@ void checkSortedBlocks(MergeInfo const & mergeinfo, libmaus::lz::DecompressorObj
 }
 
 template<typename _order_type>
-void checkSortedBlocksByBlocks(MergeInfo const & mergeinfo, libmaus::lz::DecompressorObjectFactory & decfact)
+void checkSortedBlocksByBlocks(MergeInfo const & mergeinfo, libmaus2::lz::DecompressorObjectFactory & decfact)
 {
 	for ( uint64_t i = 0; i < mergeinfo.tmpfilenamedblocks.size(); ++i )
 	{
 		std::cerr << "block " << (i) << "/" << mergeinfo.tmpfilenamedblocks.size() << std::endl;
 		
-		libmaus::lz::SimpleCompressedInputBlockConcat conc(mergeinfo.tmpfilenamedblocks[i]);
-		libmaus::lz::SimpleCompressedInputBlockConcatBlock block(decfact);
+		libmaus2::lz::SimpleCompressedInputBlockConcat conc(mergeinfo.tmpfilenamedblocks[i]);
+		libmaus2::lz::SimpleCompressedInputBlockConcatBlock block(decfact);
 		std::ostringstream ostr;
 		
 		while ( conc.readBlock(block) )
@@ -4124,20 +4124,20 @@ static std::string getDefaultTempComp()
 }
 
 template<typename _order_type>
-int bamparsortTemplate(libmaus::util::ArgInfo const & arginfo, std::string const & neworder)
+int bamparsortTemplate(libmaus2::util::ArgInfo const & arginfo, std::string const & neworder)
 {
 	bool const verbose = arginfo.getValue<unsigned int>("verbose",getDefaultVerbose());
 	
-	libmaus::lz::CompressorObjectFactory::unique_ptr_type PcompressorFactory;
-	libmaus::lz::DecompressorObjectFactory::unique_ptr_type PdecompressorFactory;
+	libmaus2::lz::CompressorObjectFactory::unique_ptr_type PcompressorFactory;
+	libmaus2::lz::DecompressorObjectFactory::unique_ptr_type PdecompressorFactory;
 	
 	std::string const tempcomp = arginfo.getValue<std::string>("tempcomp",getDefaultTempComp());
 
 	if ( startsWith(tempcomp,"snappy") )
 	{
-		libmaus::lz::CompressorObjectFactory::unique_ptr_type TcompressorFactory(new libmaus::lz::SnappyCompressorObjectFactory());
+		libmaus2::lz::CompressorObjectFactory::unique_ptr_type TcompressorFactory(new libmaus2::lz::SnappyCompressorObjectFactory());
 		PcompressorFactory = UNIQUE_PTR_MOVE(TcompressorFactory);
-		libmaus::lz::DecompressorObjectFactory::unique_ptr_type TdecompressorFactory(new libmaus::lz::SnappyDecompressorObjectFactory);
+		libmaus2::lz::DecompressorObjectFactory::unique_ptr_type TdecompressorFactory(new libmaus2::lz::SnappyDecompressorObjectFactory);
 		PdecompressorFactory = UNIQUE_PTR_MOVE(TdecompressorFactory);
 	}
 	else if ( startsWith(tempcomp,"zlib:") )
@@ -4149,29 +4149,29 @@ int bamparsortTemplate(libmaus::util::ArgInfo const & arginfo, std::string const
 
 		if ( ! levelistr )
 		{
-			libmaus::exception::LibMausException lme;
+			libmaus2::exception::LibMausException lme;
 			lme.getStream() << "Cannot parse compression setting in " << tempcomp << std::endl;
 			lme.finish();
 			throw lme;
 		}
 		
-		templevel = libmaus::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(templevel);
+		templevel = libmaus2::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(templevel);
 	
-		libmaus::lz::CompressorObjectFactory::unique_ptr_type TcompressorFactory(new libmaus::lz::ZlibCompressorObjectFactory(templevel));
+		libmaus2::lz::CompressorObjectFactory::unique_ptr_type TcompressorFactory(new libmaus2::lz::ZlibCompressorObjectFactory(templevel));
 		PcompressorFactory = UNIQUE_PTR_MOVE(TcompressorFactory);
-		libmaus::lz::DecompressorObjectFactory::unique_ptr_type TdecompressorFactory(new libmaus::lz::ZlibDecompressorObjectFactory);
+		libmaus2::lz::DecompressorObjectFactory::unique_ptr_type TdecompressorFactory(new libmaus2::lz::ZlibDecompressorObjectFactory);
 		PdecompressorFactory = UNIQUE_PTR_MOVE(TdecompressorFactory);
 	}
 	else
 	{
-		libmaus::exception::LibMausException lme;
+		libmaus2::exception::LibMausException lme;
 		lme.getStream() << "Unsupported temp file compression scheme in " << tempcomp << std::endl;
 		lme.finish();
 		throw lme;	
 	}
 		
-	libmaus::lz::CompressorObjectFactory & compressorFactory = *PcompressorFactory;
-	libmaus::lz::DecompressorObjectFactory & decompressorFactory = *PdecompressorFactory;
+	libmaus2::lz::CompressorObjectFactory & compressorFactory = *PcompressorFactory;
+	libmaus2::lz::DecompressorObjectFactory & decompressorFactory = *PdecompressorFactory;
 
 	std::cerr << "[V] using " << compressorFactory.getDescription() << " to compress temporary files." << std::endl;
 	
@@ -4186,18 +4186,18 @@ int bamparsortTemplate(libmaus::util::ArgInfo const & arginfo, std::string const
 	// write bam header
 	{
 		std::ostringstream headerostr;
-		libmaus::lz::BgzfOutputStream writer(headerostr);
+		libmaus2::lz::BgzfOutputStream writer(headerostr);
 		mergeinfo.sheader->changeSortOrder(neworder);
 
-		std::string const upheadtext = ::libmaus::bambam::ProgramHeaderLineSet::addProgramLine(
+		std::string const upheadtext = ::libmaus2::bambam::ProgramHeaderLineSet::addProgramLine(
 			mergeinfo.sheader->text,
 			"bamparsort", // ID
 			"bamparsort", // PN
 			arginfo.commandline, // CL
-			::libmaus::bambam::ProgramHeaderLineSet(mergeinfo.sheader->text).getLastIdInChain(), // PP
+			::libmaus2::bambam::ProgramHeaderLineSet(mergeinfo.sheader->text).getLastIdInChain(), // PP
 			std::string(PACKAGE_VERSION) // VN			
 		);
-		libmaus::bambam::BamHeader const uphead(upheadtext);
+		libmaus2::bambam::BamHeader const uphead(upheadtext);
 
 		uphead.serialise(writer);
 
@@ -4212,10 +4212,10 @@ int bamparsortTemplate(libmaus::util::ArgInfo const & arginfo, std::string const
 		std::string const tmpfilenamebase = 
 			arginfo.getUnparsedValue("tmpfileprefix",arginfo.getDefaultTmpFileName());
 
-		uint64_t const numthreads = arginfo.getValue<unsigned int>("numthreads", libmaus::parallel::NumCpus::getNumLogicalProcessors());
+		uint64_t const numthreads = arginfo.getValue<unsigned int>("numthreads", libmaus2::parallel::NumCpus::getNumLogicalProcessors());
 
 		// thread pool	
-		libmaus::parallel::SimpleThreadPool TP(numthreads);
+		libmaus2::parallel::SimpleThreadPool TP(numthreads);
 
 		// package dispatchers
 		BamThreadPoolMergeReadPackageDispatcher<order_type> readdispatcher;
@@ -4233,7 +4233,7 @@ int bamparsortTemplate(libmaus::util::ArgInfo const & arginfo, std::string const
 
 		uint64_t const numblocks = mergeinfo.tmpfilenamedblocks.size();
 		uint64_t const mem = arginfo.getValueUnsignedNumeric<uint64_t>("mem",getDefaultMem());
-		int const level = libmaus::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));;
+		int const level = libmaus2::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));;
 		// input blocks, output blocks, process buffers
 		uint64_t const inputBlockMemory = 0.1 * mem;
 		uint64_t const inputMemoryPerBlock = std::max ( static_cast<uint64_t>(1), (inputBlockMemory + numblocks-1)/numblocks);
@@ -4270,7 +4270,7 @@ int bamparsortTemplate(libmaus::util::ArgInfo const & arginfo, std::string const
 	// write bam footer
 	{
 		std::ostringstream footerostr;
-		libmaus::lz::BgzfOutputStream writer(footerostr);
+		libmaus2::lz::BgzfOutputStream writer(footerostr);
 		writer.flush();
 		writer.addEOFBlock();
 		std::string const & sfooter = footerostr.str();
@@ -4284,18 +4284,18 @@ int bamparsortTemplate(libmaus::util::ArgInfo const & arginfo, std::string const
 	return EXIT_SUCCESS;
 }
 
-int bamparsort(libmaus::util::ArgInfo const & arginfo)
+int bamparsort(libmaus2::util::ArgInfo const & arginfo)
 {
-	libmaus::timing::RealTimeClock rtc;
+	libmaus2::timing::RealTimeClock rtc;
 	rtc.start();
 	
 	std::string const sortorder = arginfo.getValue<std::string>("SO",getDefaultSortOrder());
 	int r = EXIT_FAILURE;
 		
 	if ( sortorder == "coordinate" )
-		r = bamparsortTemplate<libmaus::bambam::BamAlignmentPosComparator>(arginfo,"coordinate");
+		r = bamparsortTemplate<libmaus2::bambam::BamAlignmentPosComparator>(arginfo,"coordinate");
 	else if ( sortorder == "queryname" )
-		r = bamparsortTemplate<libmaus::bambam::BamAlignmentNameComparator>(arginfo,"queryname");
+		r = bamparsortTemplate<libmaus2::bambam::BamAlignmentNameComparator>(arginfo,"queryname");
 	else
 	{
 		std::cerr << "[E] unknown sort order " << sortorder << std::endl;
@@ -4313,11 +4313,11 @@ int main(int argc, char * argv[])
 {
 	try
 	{
-		libmaus::util::ArgInfo arginfo(argc,argv);
+		libmaus2::util::ArgInfo arginfo(argc,argv);
 		
 		std::cerr << "\n[V] - THIS PROGRAM IS HIGHLY EXPERIMENTAL -\n" << std::endl;
 
-		uint64_t const numthreads = arginfo.getValue<unsigned int>("numthreads", libmaus::parallel::NumCpus::getNumLogicalProcessors());
+		uint64_t const numthreads = arginfo.getValue<unsigned int>("numthreads", libmaus2::parallel::NumCpus::getNumLogicalProcessors());
 		
 		if ( ! arginfo.hasArg("numthreads") )
 		{
@@ -4337,7 +4337,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--version"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
 			else if ( 
@@ -4346,22 +4346,22 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--help"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
 				
 				std::vector< std::pair<std::string,std::string> > V;
 			
-				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
+				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
 				V.push_back ( std::pair<std::string,std::string> ( "SO=<["+getDefaultSortOrder()+"]>", "sorting order (coordinate or queryname)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "mem=<["+libmaus::util::ArgInfo::numToUnitNum(getDefaultMem())+"]>", "memory size target" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "mem=<["+libmaus2::util::ArgInfo::numToUnitNum(getDefaultMem())+"]>", "memory size target" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "tmpfileprefix=<filename>", "prefix for temporary files, default: create files in current directory" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "numthreads=<["+::biobambam::Licensing::formatNumber(arginfo.getValue<unsigned int>("numthreads",1))+"]>", "number of threads" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "numthreads=<["+::biobambam2::Licensing::formatNumber(arginfo.getValue<unsigned int>("numthreads",1))+"]>", "number of threads" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("tempcomp=<[")+getDefaultTempComp()+"]>", "compression setting for temporary files (zlib:{-1,0,...,9,11},snappy)" ) );
 				
-				::biobambam::Licensing::printMap(std::cerr,V);
+				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;

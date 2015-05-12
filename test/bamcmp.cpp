@@ -17,29 +17,29 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
 
-#include <libmaus/util/ArgInfo.hpp>
-#include <libmaus/bambam/BamDecoder.hpp>
+#include <libmaus2/util/ArgInfo.hpp>
+#include <libmaus2/bambam/BamDecoder.hpp>
 
 int main(int argc, char * argv[])
 {
 	try
 	{
-		libmaus::util::ArgInfo const arginfo(argc,argv);
+		libmaus2::util::ArgInfo const arginfo(argc,argv);
 		std::string const fn1 = arginfo.stringRestArg(0);
 		std::string const fn2 = arginfo.stringRestArg(1);
-		libmaus::bambam::BamDecoder bamdec1(fn1);
-		libmaus::bambam::BamDecoder bamdec2(fn2);
-		libmaus::bambam::BamHeader const & header1(bamdec1.getHeader());
-		libmaus::bambam::BamHeader const & header2(bamdec2.getHeader());
-		libmaus::bambam::BamAlignment const &  al1 = bamdec1.getAlignment();
-		libmaus::bambam::BamAlignment const &  al2 = bamdec2.getAlignment();
+		libmaus2::bambam::BamDecoder bamdec1(fn1);
+		libmaus2::bambam::BamDecoder bamdec2(fn2);
+		libmaus2::bambam::BamHeader const & header1(bamdec1.getHeader());
+		libmaus2::bambam::BamHeader const & header2(bamdec2.getHeader());
+		libmaus2::bambam::BamAlignment const &  al1 = bamdec1.getAlignment();
+		libmaus2::bambam::BamAlignment const &  al2 = bamdec2.getAlignment();
 		
 		uint64_t lcnt = 0;
 		while ( bamdec1.readAlignment() )
 		{
 			if ( ! bamdec2.readAlignment() )
 			{
-				libmaus::exception::LibMausException lme;
+				libmaus2::exception::LibMausException lme;
 				lme.getStream() << "EOF on second file\n";
 				lme.finish();
 				throw lme;
@@ -50,7 +50,7 @@ int main(int argc, char * argv[])
 			
 			if ( s1 != s2 )
 			{
-				libmaus::exception::LibMausException lme;
+				libmaus2::exception::LibMausException lme;
 				lme.getStream() << "Difference in line " << lcnt << "\n" << s1 << "\n" << s2 << "\n";
 				lme.finish();
 				throw lme;			
@@ -61,7 +61,7 @@ int main(int argc, char * argv[])
 		
 		if ( bamdec2.readAlignment() )
 		{
-			libmaus::exception::LibMausException lme;
+			libmaus2::exception::LibMausException lme;
 			lme.getStream() << "EOF on first file\n";
 			lme.finish();
 			throw lme;		

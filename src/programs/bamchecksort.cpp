@@ -21,23 +21,23 @@
 #include <iostream>
 #include <queue>
 
-#include <libmaus/util/ArgInfo.hpp>
-#include <libmaus/bambam/BamDecoder.hpp>
-#include <libmaus/bambam/BamAlignmentNameComparator.hpp>
+#include <libmaus2/util/ArgInfo.hpp>
+#include <libmaus2/bambam/BamDecoder.hpp>
+#include <libmaus2/bambam/BamAlignmentNameComparator.hpp>
 
-#include <biobambam/Licensing.hpp>
+#include <biobambam2/Licensing.hpp>
 
 static int getDefaultVerbose() { return 1; }
 
-int bamchecksort(libmaus::util::ArgInfo const & arginfo)
+int bamchecksort(libmaus2::util::ArgInfo const & arginfo)
 {
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
 
-	libmaus::bambam::BamDecoder bamdec(std::cin);
-	libmaus::bambam::BamAlignment & algn = bamdec.getAlignment();
-	libmaus::bambam::BamHeader const & header = bamdec.getHeader();
-	std::string const sortorder = libmaus::bambam::BamHeader::getSortOrderStatic(header.text);
-	libmaus::bambam::BamAlignment prevalgn;
+	libmaus2::bambam::BamDecoder bamdec(std::cin);
+	libmaus2::bambam::BamAlignment & algn = bamdec.getAlignment();
+	libmaus2::bambam::BamHeader const & header = bamdec.getHeader();
+	std::string const sortorder = libmaus2::bambam::BamHeader::getSortOrderStatic(header.text);
+	libmaus2::bambam::BamAlignment prevalgn;
 	
 	if ( bamdec.readAlignment() )
 	{
@@ -66,7 +66,7 @@ int bamchecksort(libmaus::util::ArgInfo const & arginfo)
 					
 				if ( ! ok )
 				{
-					libmaus::exception::LibMausException se;
+					libmaus2::exception::LibMausException se;
 					se.getStream() << "Broken order:";
 					se.getStream() << prevalgn.formatAlignment(header) << std::endl;
 					se.getStream() <<     algn.formatAlignment(header) << std::endl;
@@ -91,17 +91,17 @@ int bamchecksort(libmaus::util::ArgInfo const & arginfo)
 			
 			while ( bamdec.readAlignment() )
 			{
-				// bool const ok = libmaus::bambam::BamAlignmentNameComparator::compareInt(prevalgn,algn) <= 0;
+				// bool const ok = libmaus2::bambam::BamAlignmentNameComparator::compareInt(prevalgn,algn) <= 0;
 				bool const ok = 
-					!libmaus::bambam::BamAlignmentNameComparator::compare(algn,prevalgn);
+					!libmaus2::bambam::BamAlignmentNameComparator::compare(algn,prevalgn);
 
 				if ( ! ok )
 				{
-					libmaus::exception::LibMausException se;
+					libmaus2::exception::LibMausException se;
 					se.getStream() << "Broken order:";
 					se.getStream() << prevalgn.formatAlignment(header) << std::endl;
 					se.getStream() <<     algn.formatAlignment(header) << std::endl;
-					se.getStream() << libmaus::bambam::BamAlignmentNameComparator::compareInt(prevalgn,algn) << std::endl;
+					se.getStream() << libmaus2::bambam::BamAlignmentNameComparator::compareInt(prevalgn,algn) << std::endl;
 					se.finish();
 					throw se;
 				}
@@ -131,7 +131,7 @@ int main(int argc, char * argv[])
 {
 	try
 	{
-		::libmaus::util::ArgInfo const arginfo(argc,argv);
+		::libmaus2::util::ArgInfo const arginfo(argc,argv);
 		
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
 			if ( 
@@ -140,7 +140,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--version"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
 			else if ( 
@@ -149,16 +149,16 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--help"
 			)
 			{
-				std::cerr << ::biobambam::Licensing::license();
+				std::cerr << ::biobambam2::Licensing::license();
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
 				
 				std::vector< std::pair<std::string,std::string> > V;
 			
-				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
 
-				::biobambam::Licensing::printMap(std::cerr,V);
+				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;

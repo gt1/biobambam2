@@ -19,24 +19,24 @@
 #include <config.h>
 #include <iostream>
 #include <cstdlib>
-#include <libmaus/util/ArgInfo.hpp>
-#include <libmaus/util/OutputFileNameTools.hpp>
-#include <libmaus/util/GetFileSize.hpp>
-#include <libmaus/fastx/FastAReader.hpp>
-#include <libmaus/util/TempFileRemovalContainer.hpp>
-#include <libmaus/bambam/BamDecoder.hpp>
-#include <libmaus/bambam/BamWriter.hpp>
-#include <libmaus/bambam/BamHeaderUpdate.hpp>
+#include <libmaus2/util/ArgInfo.hpp>
+#include <libmaus2/util/OutputFileNameTools.hpp>
+#include <libmaus2/util/GetFileSize.hpp>
+#include <libmaus2/fastx/FastAReader.hpp>
+#include <libmaus2/util/TempFileRemovalContainer.hpp>
+#include <libmaus2/bambam/BamDecoder.hpp>
+#include <libmaus2/bambam/BamWriter.hpp>
+#include <libmaus2/bambam/BamHeaderUpdate.hpp>
 
-#include <libmaus/lz/BgzfDeflateOutputCallbackMD5.hpp>
-#include <libmaus/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
+#include <libmaus2/lz/BgzfDeflateOutputCallbackMD5.hpp>
+#include <libmaus2/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
 static int getDefaultMD5() { return 0; }
 static int getDefaultIndex() { return 0; }
 
 bool checkCigarValid(
-	::libmaus::bambam::BamAlignment const & alignment,
-	::libmaus::bambam::BamHeader const & bamheader,
-	::libmaus::autoarray::AutoArray < ::libmaus::autoarray::AutoArray<uint8_t>::unique_ptr_type > const & text
+	::libmaus2::bambam::BamAlignment const & alignment,
+	::libmaus2::bambam::BamHeader const & bamheader,
+	::libmaus2::autoarray::AutoArray < ::libmaus2::autoarray::AutoArray<uint8_t>::unique_ptr_type > const & text
 )
 {
 	if ( alignment.isUnmap() )
@@ -54,7 +54,7 @@ bool checkCigarValid(
 		return false;
 	}
 	
-	::libmaus::autoarray::AutoArray<uint8_t> const & ctext = *(text[alignment.getRefID()]);
+	::libmaus2::autoarray::AutoArray<uint8_t> const & ctext = *(text[alignment.getRefID()]);
 	int64_t refpos = alignment.getPos();
 	int64_t seqpos = 0;
 	bool alok = true;
@@ -165,23 +165,23 @@ int main(int argc, char * argv[])
 {
 	try
 	{
-		::libmaus::util::ArgInfo const arginfo(argc,argv);
-		::libmaus::util::TempFileRemovalContainer::setup();
+		::libmaus2::util::ArgInfo const arginfo(argc,argv);
+		::libmaus2::util::TempFileRemovalContainer::setup();
 		
 		::std::vector<std::string> const & inputfilenames = arginfo.restargs;
 		char const * fasuffixes[] = { ".fa", ".fasta", 0 };
-		std::string defoutname = libmaus::util::OutputFileNameTools::endClipLcp(inputfilenames,&fasuffixes[0]) + ".fa";
-		while ( ::libmaus::util::GetFileSize::fileExists(defoutname) )
+		std::string defoutname = libmaus2::util::OutputFileNameTools::endClipLcp(inputfilenames,&fasuffixes[0]) + ".fa";
+		while ( ::libmaus2::util::GetFileSize::fileExists(defoutname) )
 			defoutname += "_";
 		std::string const fatempfilename = arginfo.getValue<std::string>("fatempfilename",defoutname);
-		::libmaus::util::TempFileRemovalContainer::addTempFile(fatempfilename);
+		::libmaus2::util::TempFileRemovalContainer::addTempFile(fatempfilename);
 		
 		// std::cerr << "output file name " << defoutname << std::endl;
 		
-		::std::vector< ::libmaus::fastx::FastAReader::RewriteInfo > const info = ::libmaus::fastx::FastAReader::rewriteFiles(inputfilenames,fatempfilename);
+		::std::vector< ::libmaus2::fastx::FastAReader::RewriteInfo > const info = ::libmaus2::fastx::FastAReader::rewriteFiles(inputfilenames,fatempfilename);
 		
 		std::map < std::string, uint64_t > fachr;
-		::libmaus::autoarray::AutoArray < uint64_t > fapref(info.size()+1);
+		::libmaus2::autoarray::AutoArray < uint64_t > fapref(info.size()+1);
 		for ( uint64_t i = 0; i < info.size(); ++i )
 		{
 			// std::cerr << info[i].valid << "\t" << info[i].idlen << "\t" << info[i].seqlen << "\t" << info[i].getIdPrefix() << std::endl;
@@ -192,20 +192,20 @@ int main(int argc, char * argv[])
 		for ( uint64_t i = 0; i < info.size(); ++i )
 			fapref [ i ] += info[i].idlen + 2; // > + newline
 
-		::libmaus::bambam::BamDecoder decoder(std::cin);
-		::libmaus::bambam::BamHeader const & bamheader = decoder.getHeader();
+		::libmaus2::bambam::BamDecoder decoder(std::cin);
+		::libmaus2::bambam::BamHeader const & bamheader = decoder.getHeader();
 
-		::libmaus::autoarray::AutoArray<uint8_t> uptab(256,false);
+		::libmaus2::autoarray::AutoArray<uint8_t> uptab(256,false);
 		for ( uint64_t j = 0; j < uptab.size(); ++j )
 			uptab[j] = toupper(j);
 		
-		::libmaus::autoarray::AutoArray < ::libmaus::autoarray::AutoArray<uint8_t>::unique_ptr_type > text(bamheader.getNumRef());
+		::libmaus2::autoarray::AutoArray < ::libmaus2::autoarray::AutoArray<uint8_t>::unique_ptr_type > text(bamheader.getNumRef());
 		for ( uint64_t i = 0; i < bamheader.getNumRef(); ++i )
 		{
 			std::string const bamchrname = bamheader.getRefIDName(i);
 			if ( fachr.find(bamchrname) == fachr.end() )
 			{
-				::libmaus::exception::LibMausException se;
+				::libmaus2::exception::LibMausException se;
 				se.getStream() << "Unable to find reference sequence " << bamchrname << " in fa file." << std::endl;
 				se.finish();
 				throw se;
@@ -213,7 +213,7 @@ int main(int argc, char * argv[])
 			uint64_t const faid = fachr.find(bamchrname)->second;
 			if ( bamheader.getRefIDLength(i) != static_cast<int64_t>(info[faid].seqlen) )
 			{
-				::libmaus::exception::LibMausException se;
+				::libmaus2::exception::LibMausException se;
 				se.getStream() << "Reference sequence " << bamchrname << " has len " << bamheader.getRefIDLength(i) << " in bam file but " << info[faid].seqlen << " in fa file." << std::endl;
 				se.finish();
 				throw se;
@@ -221,9 +221,9 @@ int main(int argc, char * argv[])
 			
 			if ( bamheader.getNumRef() < 100 )
 				std::cerr << "Loading sequence " << bamchrname << " of length " << info[faid].seqlen << std::endl;
-			::libmaus::autoarray::AutoArray<uint8_t>::unique_ptr_type ttext(new ::libmaus::autoarray::AutoArray<uint8_t>(info[faid].seqlen,false));
+			::libmaus2::autoarray::AutoArray<uint8_t>::unique_ptr_type ttext(new ::libmaus2::autoarray::AutoArray<uint8_t>(info[faid].seqlen,false));
 			text [ i ] = UNIQUE_PTR_MOVE(ttext);
-			::libmaus::aio::CheckedInputStream CIS(fatempfilename);
+			::libmaus2::aio::CheckedInputStream CIS(fatempfilename);
 			CIS.seekg(fapref[faid]);
 			CIS.read(reinterpret_cast<char *>(text[i]->begin()),info[faid].seqlen);
 			// sanity check, next symbol in file should be a newline
@@ -248,13 +248,13 @@ int main(int argc, char * argv[])
 		 */
 		std::string const tmpfilenamebase = arginfo.getValue<std::string>("tmpfile",arginfo.getDefaultTmpFileName());
 		std::string const tmpfileindex = tmpfilenamebase + "_index";
-		::libmaus::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
+		::libmaus2::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
 
 		std::string md5filename;
 		std::string indexfilename;
 
-		std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > cbs;
-		::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
+		std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > cbs;
+		::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
 		if ( arginfo.getValue<unsigned int>("md5",getDefaultMD5()) )
 		{
 			if ( arginfo.hasArg("md5filename") &&  arginfo.getUnparsedValue("md5filename","") != "" )
@@ -264,12 +264,12 @@ int main(int argc, char * argv[])
 
 			if ( md5filename.size() )
 			{
-				::libmaus::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5cb(new ::libmaus::lz::BgzfDeflateOutputCallbackMD5);
+				::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5cb(new ::libmaus2::lz::BgzfDeflateOutputCallbackMD5);
 				Pmd5cb = UNIQUE_PTR_MOVE(Tmd5cb);
 				cbs.push_back(Pmd5cb.get());
 			}
 		}
-		libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Pindex;
+		libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Pindex;
 		if ( arginfo.getValue<unsigned int>("index",getDefaultIndex()) )
 		{
 			if ( arginfo.hasArg("indexfilename") &&  arginfo.getUnparsedValue("indexfilename","") != "" )
@@ -279,20 +279,20 @@ int main(int argc, char * argv[])
 
 			if ( indexfilename.size() )
 			{
-				libmaus::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Tindex(new libmaus::bambam::BgzfDeflateOutputCallbackBamIndex(tmpfileindex));
+				libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Tindex(new libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex(tmpfileindex));
 				Pindex = UNIQUE_PTR_MOVE(Tindex);
 				cbs.push_back(Pindex.get());
 			}
 		}
-		std::vector< ::libmaus::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
+		std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
 		if ( cbs.size() )
 			Pcbs = &cbs;
 		/*
 		 * end md5/index callbacks
 		 */
 		
-		::libmaus::bambam::BamHeader::unique_ptr_type uphead(libmaus::bambam::BamHeaderUpdate::updateHeader(arginfo,bamheader,"bamcheckalignments",std::string(PACKAGE_VERSION)));
-		::libmaus::bambam::BamWriter BW(std::cout,*uphead,Z_DEFAULT_COMPRESSION,Pcbs);
+		::libmaus2::bambam::BamHeader::unique_ptr_type uphead(libmaus2::bambam::BamHeaderUpdate::updateHeader(arginfo,bamheader,"bamcheckalignments",std::string(PACKAGE_VERSION)));
+		::libmaus2::bambam::BamWriter BW(std::cout,*uphead,Z_DEFAULT_COMPRESSION,Pcbs);
 		
 		while ( decoder.readAlignment() )
 		{
@@ -303,7 +303,7 @@ int main(int argc, char * argv[])
 				std::cerr << "[V] " << decoded << std::endl;
 			}
 			
-			::libmaus::bambam::BamAlignment & alignment = decoder.getAlignment();
+			::libmaus2::bambam::BamAlignment & alignment = decoder.getAlignment();
 
 			bool const cigok = checkCigarValid(alignment,bamheader,text);
 			
@@ -316,7 +316,7 @@ int main(int argc, char * argv[])
 					uint64_t refpos = alignment.getPos();
 					std::string const read = alignment.getRead();
 					std::string modseq = read;
-					::libmaus::autoarray::AutoArray<uint8_t> const & ctext = *(text[alignment.getRefID()]);
+					::libmaus2::autoarray::AutoArray<uint8_t> const & ctext = *(text[alignment.getRefID()]);
 					
 					std::ostringstream newcigarstream;
 
