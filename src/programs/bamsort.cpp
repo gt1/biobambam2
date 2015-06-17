@@ -66,6 +66,41 @@ static int getDefaultCalMdNmWarnChange() { return 0; }
 static int getDefaultAddDupMarkSupport() { return 0; }
 static int getDefaultMarkDuplicates() { return 0; }
 
+
+/*
+   biobambam used MC as a mate coordinate tag which now has a clash
+   with the official SAM format spec.  New biobambam version uses mc,
+   this function removes the older tag where necessary,
+*/
+
+void removeOldStyleMateCoordinate(
+	libmaus2::bambam::BamAlignment & rec1, 
+	libmaus2::bambam::BamAlignment & rec2
+	)
+{
+    	uint64_t num;
+
+    	bool r1 = rec1.getAuxAsNumber<uint64_t>("MC", num);
+    	bool r2 = rec2.getAuxAsNumber<uint64_t>("MC", num);
+	
+	// old MC is a number type, spec format is a string
+	
+	libmaus2::bambam::BamAuxFilterVector OldMCfilter;
+	OldMCfilter.set("MC");
+	
+	if (r1)
+	{
+    	    	rec1.filterOutAux(OldMCfilter);
+	}
+	
+	if (r2)
+	{
+	    	rec2.filterOutAux(OldMCfilter);
+	}
+}
+
+
+
 int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 {
 	::libmaus2::util::TempFileRemovalContainer::setup();
@@ -293,9 +328,14 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 			libmaus2::bambam::BamAuxFilterVector MSfilter;
 			libmaus2::bambam::BamAuxFilterVector MCfilter;
 			libmaus2::bambam::BamAuxFilterVector MTfilter;
+			
 			MQfilter.set("MQ");
+			MSfilter.set("ms");
+			MCfilter.set("mc");
+			MTfilter.set("mt");
+			
+			// remove the original style tags (MC handled separately)
 			MSfilter.set("MS");
-			MCfilter.set("MC");
 			MTfilter.set("MT");
 			
 			while ( dec.readAlignment() )
@@ -321,6 +361,7 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 						{
 							libmaus2::bambam::BamAlignment::addMateBaseScore(prevalgn,curalgn,MSfilter);
 							libmaus2::bambam::BamAlignment::addMateCoordinate(prevalgn,curalgn,MCfilter);
+							removeOldStyleMateCoordinate(prevalgn,curalgn);
 							
 							switch ( tag_type )
 							{
@@ -383,8 +424,12 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 			libmaus2::bambam::BamAuxFilterVector MCfilter;
 			libmaus2::bambam::BamAuxFilterVector MTfilter;
 			MQfilter.set("MQ");
+			MSfilter.set("ms");
+			MCfilter.set("mc");
+			MTfilter.set("mt");
+			
+			// remove the original style tags (MC handled separately)
 			MSfilter.set("MS");
-			MCfilter.set("MC");
 			MTfilter.set("MT");
 			
 			while ( dec.readAlignment() )
@@ -410,7 +455,8 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 						{
 							libmaus2::bambam::BamAlignment::addMateBaseScore(prevalgn,curalgn,MSfilter);
 							libmaus2::bambam::BamAlignment::addMateCoordinate(prevalgn,curalgn,MCfilter);
-
+    	    	    	    	    	    	    	removeOldStyleMateCoordinate(prevalgn,curalgn);
+							
 							switch ( tag_type )
 							{
 								case tag_type_string:
