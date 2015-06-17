@@ -32,7 +32,6 @@ m4/lt~obsolete.m4
 maccombined.sh
 src/.deps/
 stamp-h1
-src/biobambam/BamBamConfig.hpp
 src/bam[a-zA-Z1-9]*
 src/kmerprob
 src/fastqtobam
@@ -48,3 +47,6 @@ src/*/.dirstamp
 src/blastnxmltobam
 test/.deps
 test-driver
+src/biobambam2/BamBamConfig.hpp
+src/fastqtobampar
+src/lasToBAM
