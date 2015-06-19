@@ -1,3 +1,9 @@
+biobambam2 (2.0.9) unstable; urgency=medium
+
+  * add daligner las to SAM/BAM/CRAM conversion tool 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Fri, 19 Jun 2015 15:45:53 +0200
+
 biobambam2 (2.0.8) unstable; urgency=low
 
   * fix for random failures in bamsormadup due to missing/incomplete initialisation 
