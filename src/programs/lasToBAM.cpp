@@ -847,6 +847,7 @@ int lasToBAM(libmaus2::util::ArgInfo const & arginfo)
 	OverlapLoader OL(algn,*Palgnfile,32*1024);
 	OL.start();
 	bool reading = true;
+	libmaus2::bitio::BitVector BV(readsMeta2->size());
 	
 	while ( reading )
 	{
@@ -903,9 +904,19 @@ int lasToBAM(libmaus2::util::ArgInfo const & arginfo)
 				#endif
 
 				LASToBAMConverter & converter = *(Aconverters[tid]);
-				bool const primary = (i == 0) || (VOVL[i].bread != VOVL[i-1].bread);
+				bool const primary = 
+					(!BV.get(VOVL[i].bread))
+					&&
+					(
+						(i == 0) 
+						||
+						(VOVL[i].bread != VOVL[i-1].bread)
+					)
+				;
 				std::pair<uint64_t,uint64_t> const loff = converter(VOVL[i],converter.ubuffer,primary);	
 				off[i] = std::pair < uint64_t, std::pair<uint64_t,uint64_t> >(tid,loff);
+				if ( primary )
+					BV.setSync(VOVL[i].bread);
 			}
 
 			#if 0
