@@ -1,0 +1,66 @@
+.TH BAMTAGCONVERSION 1 "June 2015" BIOBAMBAM
+.SH NAME
+bamtagconversion - convert old tags to new ones
+.SH SYNOPSIS
+.PP
+.B bamtagconversion
+[options]
+.SH DESCRIPTION
+\fBbamtagconversion\fR converts the old MS, MT and MC tags into the corresponding
+ms, mt and mc tags.  As there is an official MC:Z tag in the SAM spec, \fBbamtagconversion\fR
+only converts MC:i tags.
+\fBbamtagconversion\fR takes a BAM file as an input and outputs a BAM file with
+the changes made.
+.PP
+The following key=value pairs can be given:
+.PP
+.B level=<-1|0|1|9|11>:
+set compression level of the output BAM file. Valid
+values are
+.IP -1:
+zlib/gzip default compression level.
+.IP 0:
+uncompressed.
+.IP 1:
+zlib/gzip level 1 (fast) compression.
+.IP 9:
+zlib/gzip level 9 (best) compression.
+.P
+If libmaus has been compiled with support for igzip (see
+https://software.intel.com/en-us/articles/igzip-a-high-performance-deflate-compressor-with-optimizations-for-genomic-data)
+then an additional valid value is
+.IP 11:
+igzip compression.
+.PP
+.B verbose=<0|1>:
+Valid values are
+.IP 0:
+do not print progress report (default).
+.IP 1:
+print progress report to standard error.
+.PP
+.B md5=<0|1>:
+md5 checksum creation for output file. This option can only be given if
+outputformat=bam. Then valid values are
+.IP 0:
+do not compute checksum. This is the default.
+.IP 1:
+compute checksum. If the md5filename key is set, then the checksum is
+written to the given file. If md5filename is unset, then no checksum will be computed.
+.PP
+.B md5filename
+file name for md5 checksum if md5=1.
+.PP
+.B outputthreads=<[1]>:
+output helper threads.
+.SH AUTHOR
+Written by Andrew Whitwham.
+.SH "REPORTING BUGS"
+Report bugs to <aw7@sanger.ac.uk>
+.SH COPYRIGHT
+Copyright \(co 2015 Genome Research Limited.
+License GPLv3+: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+

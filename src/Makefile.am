@@ -73,7 +73,11 @@ bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamr
 	bamfilternames \
 	bamsormadup \
 	bamexplode \
+    	fastqtobampar \
+	bamranksort \
 	fastqtobampar \
+	lasToBAM \
+	bamtagconversion \
 	lasToBAM \
 	@BAMALIGNMENTOFFSETSINSTEXP@ @BLASTXMLTOBAMINSTEXP@
 
@@ -418,3 +422,13 @@ lasToBAM_SOURCES = programs/lasToBAM.cpp biobambam2/Licensing.cpp
 lasToBAM_LDADD = ${LIBMAUS2LIBS}
 lasToBAM_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
 lasToBAM_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
+
+bamranksort_SOURCES = programs/bamranksort.cpp biobambam2/Licensing.cpp
+bamranksort_LDADD = ${LIBMAUS2LIBS}
+bamranksort_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamranksort_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
+
+bamtagconversion_SOURCES = programs/bamtagconversion.cpp biobambam2/Licensing.cpp
+bamtagconversion_LDADD = ${LIBMAUS2LIBS}
+bamtagconversion_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamtagconversion_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}

@@ -46,12 +46,14 @@ static int getDefaultMD5() { return 0; }
 static int getDefaultIndex() { return 0; }
 static int getDefaultResetDupFlag() { return 0; }
 static int getDefaultFilterDupMarkTags() { return 0; }
+static int getDefaultFilterOldDupMarkTags() { return 0; }
 
 int bamstreamingmarkduplicates(libmaus2::util::ArgInfo const & arginfo)
 {
 	bool const verbose = arginfo.getValue<uint64_t>("verbose",getDefaultVerbose());
 	bool const resetdupflag = arginfo.getValue<uint64_t>("resetdupflag",getDefaultResetDupFlag());
 	bool const filterdupmarktags = arginfo.getValue<uint64_t>("filterdupmarktags",getDefaultFilterDupMarkTags());
+	bool const filterolddupmarktags = arginfo.getValue<uint64_t>("filterolddupmarktags",getDefaultFilterOldDupMarkTags());
 	std::string const tmpfilenamebase = arginfo.getUnparsedValue("tmpfile",arginfo.getDefaultTmpFileName());	
 
 	libmaus2::aio::PosixFdInputStream PFIS(STDIN_FILENO);
@@ -120,7 +122,7 @@ int bamstreamingmarkduplicates(libmaus2::util::ArgInfo const & arginfo)
 	libmaus2::bambam::BamBlockWriterBase::unique_ptr_type Pwriter(libmaus2::bambam::BamBlockWriterBaseFactory::construct(*genuphead,arginfo,Pcbs));
 	libmaus2::bambam::BamBlockWriterBase & wr = *Pwriter;
 
-	libmaus2::bambam::BamStreamingMarkDuplicates BSMD(arginfo,header,wr,filterdupmarktags);
+	libmaus2::bambam::BamStreamingMarkDuplicates BSMD(arginfo,header,wr,filterdupmarktags, false, filterolddupmarktags);
 
 	uint64_t cnt = 0;
 
@@ -243,9 +245,12 @@ int main(int argc, char *argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "nucltag=<[a-zA-Z][a-zA-Z0-9]>", "aux field id for nucleotide tag extraction" ) );
 				V.push_back ( std::pair<std::string,std::string> ( 
 					std::string("filterdupmarktags=<[") + ::biobambam2::Licensing::formatNumber(getDefaultFilterDupMarkTags()) + std::string("]>"), 
-					std::string("remove aux fields MC, MQ, MS, and MT from output (default: ") + ::biobambam2::Licensing::formatNumber(getDefaultFilterDupMarkTags()) + std::string(")") ) );
+					std::string("remove aux fields mc, MQ, ms, and mt from output (default: ") + ::biobambam2::Licensing::formatNumber(getDefaultFilterDupMarkTags()) + std::string(")") ) );
 
 				::biobambam2::Licensing::printMap(std::cerr,V);
+				V.push_back ( std::pair<std::string,std::string> ( 
+					std::string("filterolddupmarktags=<[") + ::biobambam2::Licensing::formatNumber(getDefaultFilterOldDupMarkTags()) + std::string("]>"), 
+					std::string("remove former aux fields MC, MQ, MS, and MT from output (filterdupmarktags must also be set) (default: ") + ::biobambam2::Licensing::formatNumber(getDefaultFilterOldDupMarkTags()) + std::string(")") ) );
 
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;
