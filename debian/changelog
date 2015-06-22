@@ -1,3 +1,9 @@
+biobambam2 (2.0.10) unstable; urgency=medium
+
+  * include Andrew Whitwham's (streaming) duplicate marking tag changes
+
+ -- German Tischler <gt1@sanger.ac.uk>  Mon, 22 Jun 2015 11:22:34 +0200
+
 biobambam2 (2.0.9) unstable; urgency=medium
 
   * add daligner las to SAM/BAM/CRAM conversion tool 
