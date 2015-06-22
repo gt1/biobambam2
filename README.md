@@ -1,5 +1,4 @@
 biobambam2
-==========
 
 This package contains some tools for processing BAM files including
 
