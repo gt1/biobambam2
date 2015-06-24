@@ -598,7 +598,7 @@ struct BamThreadPoolDecodeContextBase : public BamThreadPoolDecodeContextBaseCon
 	libmaus2::parallel::SynchronousCounter<uint64_t> readCnt;
 	libmaus2::parallel::SynchronousCounter<uint64_t> readCompCnt;
 	libmaus2::parallel::LockedBool readComplete;
-	libmaus2::parallel::PosixSemaphore readSem;
+	libmaus2::parallel::PosixConditionSemaphore readSem;
 	libmaus2::autoarray::AutoArray< libmaus2::lz::BgzfInflateBase::unique_ptr_type > inflateBases;
 	libmaus2::autoarray::AutoArray< char > inflateDecompressSpace;
 	libmaus2::parallel::SynchronousQueue<uint64_t> inflateBasesFreeList;
