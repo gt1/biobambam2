@@ -63,21 +63,23 @@ AC_PROG_CXX
 CXXFLAGS="${CXXFLAGS_SAVE}"
 
 if test "${debug}" = "yes" ; then
-	CXXDEBUGFLAGS="-g -O0 -rdynamic"
-	CDEBUGFLAGS="-g -O0 -rdynamic"
+	CXXDEBUGFLAGS="-g -O0"
+	CDEBUGFLAGS="-g -O0"
         CXXFLAGS="${CXXFLAGS} ${CXXDEBUGFLAGS}"
         CFLAGS="${CFLAGS} ${CDEBUGFLAGS}"
+	LDFLAGS="${LDFLAGS} -rdynamic"
 	openmp="no"
 
 	AC_MSG_NOTICE([Adding debug options ${CDEBUGFLAGS} to C compiler ${CC} flags, full list now ${CFLAGS}])
 	AC_MSG_NOTICE([Adding debug options ${CXXDEBUGFLAGS} to C compiler ${CXX} flags, full list now ${CXXFLAGS}])
 else
 	if test "${profile}" = "yes" ; then
-	        CXXPROFFLAGS="-g -pg -rdynamic"
-	        CPROFFLAGS="-g -pg -rdynamic"
+	        CXXPROFFLAGS="-g -pg"
+	        CPROFFLAGS="-g -pg"
 
-	        CXXFLAGS="${CXXPROFFLAGS} -g -pg -rdynamic"
-	        CFLAGS="${CPROFFLAGS} -g -pg -rdynamic"
+	        CXXFLAGS="${CXXPROFFLAGS} -g -pg"
+	        CFLAGS="${CPROFFLAGS} -g -pg"
+		LDFLAGS="${LDFLAGS} -rdynamic"
 
 		AC_MSG_NOTICE([Adding profiling options ${CPROFFLAGS} to C compiler ${CC} flags, full list now ${CFLAGS}])
 		AC_MSG_NOTICE([Adding profiling options ${CXXPROFFLAGS} to C compiler ${CXX} flags, full list now ${CXXFLAGS}])
@@ -86,10 +88,10 @@ else
 			COPTFLAGS=
 			case ${CC} in
 				gcc)
-					COPTFLAGS="-O3 -rdynamic"
+					COPTFLAGS="-O3"
 					;;
 				*-mingw32msvc-gcc)
-					COPTFLAGS="-O3 -rdynamic"
+					COPTFLAGS="-O3"
 					;;
 				cl.exe)
 					COPTFLAGS="-O2 -Ob2 -Ot -Oy"
@@ -101,10 +103,12 @@ else
 			CXXOPTFLAGS=
 			case ${CXX} in
 				g++)
-					CXXOPTFLAGS="-O3 -rdynamic"
+					CXXOPTFLAGS="-O3"
+					LDFLAGS="${LDFLAGS} -rdynamic"
 					;;
 				*-mingw32msvc-g++)
-					CXXOPTFLAGS="-O3 -rdynamic"
+					CXXOPTFLAGS="-O3"
+					LDFLAGS="${LDFLAGS} -rdynamic"
 					;;
 				cl.exe)
 					CXXOPTFLAGS="-O2 -Ob2 -Ot -Oy"
