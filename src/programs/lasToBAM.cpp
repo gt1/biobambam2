@@ -36,6 +36,8 @@
 #include <libmaus2/parallel/SynchronousQueue.hpp>
 #include <libmaus2/parallel/TerminatableSynchronousQueue.hpp>
 
+#include <libmaus2/lcs/AlignerFactory.hpp>
+
 #include <config.h>
 
 int getDefaultLevel()
@@ -141,7 +143,8 @@ struct LASToBAMConverter
 	std::vector<libmaus2::dazzler::db::Read> const & readsMeta2;
 
 	libmaus2::lcs::EditDistanceTraceContainer ATC;		
-	libmaus2::lcs::ND ND;
+	libmaus2::lcs::Aligner::unique_ptr_type Pal;
+	libmaus2::lcs::Aligner & ND;
 	::libmaus2::fastx::UCharBuffer ubuffer;
 	::libmaus2::fastx::UCharBuffer wbuffer;
 	::libmaus2::fastx::UCharBuffer sbuffer;
@@ -178,6 +181,34 @@ struct LASToBAMConverter
 	};
 	
 	supplementary_seq_strategy_t const supplementary_seq_strategy;
+	
+	static libmaus2::lcs::Aligner::unique_ptr_type constructAligner()
+	{
+		std::set<libmaus2::lcs::AlignerFactory::aligner_type> const S = libmaus2::lcs::AlignerFactory::getSupportedAligners();
+		
+		if ( S.find(libmaus2::lcs::AlignerFactory::libmaus2_lcs_AlignerFactory_y256_8) != S.end() )
+		{
+			libmaus2::lcs::Aligner::unique_ptr_type T(libmaus2::lcs::AlignerFactory::construct(libmaus2::lcs::AlignerFactory::libmaus2_lcs_AlignerFactory_y256_8));
+			return UNIQUE_PTR_MOVE(T);
+		}
+		else if ( S.find(libmaus2::lcs::AlignerFactory::libmaus2_lcs_AlignerFactory_x128_8) != S.end() )
+		{
+			libmaus2::lcs::Aligner::unique_ptr_type T(libmaus2::lcs::AlignerFactory::construct(libmaus2::lcs::AlignerFactory::libmaus2_lcs_AlignerFactory_x128_8));
+			return UNIQUE_PTR_MOVE(T);
+		}
+		else if ( S.size() )
+		{
+			libmaus2::lcs::Aligner::unique_ptr_type T(libmaus2::lcs::AlignerFactory::construct(*(S.begin())));
+			return UNIQUE_PTR_MOVE(T);
+		}
+		else
+		{
+			libmaus2::exception::LibMausException lme;
+			lme.getStream() << "LASToBAMConverter::constructAligner: no aligners found" << std::endl;
+			lme.finish();
+			throw lme;		
+		}
+	}
 
 	LASToBAMConverter(
 		libmaus2::dazzler::db::DatabaseFile const & rDB2,
@@ -194,6 +225,9 @@ struct LASToBAMConverter
 	: 
 	  DB2(rDB2),
 	  readsMeta1(rreadsMeta1), readsMeta2(rreadsMeta2),
+	  ATC(),
+	  Pal(constructAligner()),
+	  ND(*Pal),
 	  aptr(NULL),
 	  PbaseStreamB(UNIQUE_PTR_MOVE(rPbaseStreamB)),
 	  loadallb(rloadallb),
@@ -311,8 +345,11 @@ struct LASToBAMConverter
 			char const * bsubsub_b = bptr + b_i;
 			char const * bsubsub_e = bsubsub_b + (b_i_1-b_i);
 
-			bool const ok = ND.process(asubsub_b,(asubsub_e-asubsub_b),bsubsub_b,bsubsub_e-bsubsub_b);
-			assert ( ok );
+			ND.align(
+				reinterpret_cast<uint8_t const *>(asubsub_b),
+				(asubsub_e-asubsub_b),
+				reinterpret_cast<uint8_t const *>(bsubsub_b),
+				bsubsub_e-bsubsub_b);
 
 			#if 0
 			ND.printAlignmentLines(std::cout,asubsub_b,asubsub_e-asubsub_b,bsubsub_b,bsubsub_e-bsubsub_b,cols);
@@ -324,7 +361,7 @@ struct LASToBAMConverter
 			#endif
 			
 			// add trace to full alignment
-			ATC.push(ND);
+			ATC.push(ND.getTraceContainer());
 			
 			// update start points
 			b_i = b_i_1;
