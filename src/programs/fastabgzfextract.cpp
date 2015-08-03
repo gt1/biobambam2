@@ -57,7 +57,7 @@ void fastabgzfextract(libmaus2::util::ArgInfo const & arginfo)
 	}
 	
 	libmaus2::aio::PosixFdInputStream PFIS(reference,128*1024);
-	libmaus2::aio::CheckedInputStream indexCIS(reference+".idx");
+	libmaus2::aio::InputStreamInstance indexCIS(reference+".idx");
 	libmaus2::fastx::FastABgzfIndex index(indexCIS);
 	libmaus2::autoarray::AutoArray<char> B;
 	

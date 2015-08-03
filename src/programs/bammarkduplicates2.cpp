@@ -19,7 +19,7 @@
 #include <config.h>
 
 #include <libmaus2/util/TempFileRemovalContainer.hpp>
-#include <libmaus2/aio/CheckedInputStream.hpp>
+#include <libmaus2/aio/InputStreamInstance.hpp>
 #include <libmaus2/aio/CheckedOutputStream.hpp>
 #include <libmaus2/aio/SynchronousGenericInput.hpp>
 #include <libmaus2/bambam/BamAlignmentFreeList.hpp>
@@ -1253,7 +1253,7 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 	libmaus2::bambam::BamAlignmentInputCallbackSnappy<BamAlignmentInputPositionCallbackDupMark>::unique_ptr_type SRC;
 	libmaus2::bambam::BamAlignmentInputCallbackBam<BamAlignmentInputPositionCallbackDupMark>::unique_ptr_type BWR;
 	BamAlignmentInputPositionCallbackDupMark * PTI = 0;
-	::libmaus2::aio::CheckedInputStream::unique_ptr_type CIS;
+	::libmaus2::aio::InputStreamInstance::unique_ptr_type CIS;
 	libmaus2::aio::PosixFdInputStream::unique_ptr_type PFIS;
 	libmaus2::aio::CheckedOutputStream::unique_ptr_type copybamstr;
 

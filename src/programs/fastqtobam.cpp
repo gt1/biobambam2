@@ -1004,7 +1004,7 @@ void fastqtobam(libmaus2::util::ArgInfo const & arginfo)
 		}
 		else if ( filenames.size() == 1 )
 		{
-			libmaus2::aio::CheckedInputStream CIS(filenames[0]);		
+			libmaus2::aio::InputStreamInstance CIS(filenames[0]);		
 			
 			if ( gz )
 			{
@@ -1021,8 +1021,8 @@ void fastqtobam(libmaus2::util::ArgInfo const & arginfo)
 			if ( filenames.size() > 2 )
 				std::cerr << "[D] warning, ignoring additional input files past first two" << std::endl;
 		
-			libmaus2::aio::CheckedInputStream CIS_1(filenames[0]);
-			libmaus2::aio::CheckedInputStream CIS_2(filenames[1]);
+			libmaus2::aio::InputStreamInstance CIS_1(filenames[0]);
+			libmaus2::aio::InputStreamInstance CIS_2(filenames[1]);
 
 			if ( gz )
 			{
@@ -1060,7 +1060,7 @@ void fastqtobam(libmaus2::util::ArgInfo const & arginfo)
 		}
 		else if ( filenames.size() == 1 )
 		{
-			libmaus2::aio::CheckedInputStream CIS(filenames[0]);		
+			libmaus2::aio::InputStreamInstance CIS(filenames[0]);		
 			
 			if ( gz )
 			{
@@ -1077,8 +1077,8 @@ void fastqtobam(libmaus2::util::ArgInfo const & arginfo)
 			if ( filenames.size() > 2 )
 				std::cerr << "[D] warning, ignoring additional input files past first two" << std::endl;
 		
-			libmaus2::aio::CheckedInputStream CIS_1(filenames[0]);
-			libmaus2::aio::CheckedInputStream CIS_2(filenames[1]);
+			libmaus2::aio::InputStreamInstance CIS_1(filenames[0]);
+			libmaus2::aio::InputStreamInstance CIS_2(filenames[1]);
 
 			if ( gz )
 			{

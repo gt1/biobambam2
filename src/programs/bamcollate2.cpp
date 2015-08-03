@@ -108,24 +108,24 @@ static uint32_t parseClassList(std::string s)
 struct BamToFastQInputFileStream
 {
 	std::string const fn;
-	libmaus2::aio::CheckedInputStream::unique_ptr_type CIS;
+	libmaus2::aio::InputStreamInstance::unique_ptr_type CIS;
 	std::istream & in;
 	
-	static libmaus2::aio::CheckedInputStream::unique_ptr_type openFile(std::string const & fn)
+	static libmaus2::aio::InputStreamInstance::unique_ptr_type openFile(std::string const & fn)
 	{
-		libmaus2::aio::CheckedInputStream::unique_ptr_type ptr(new libmaus2::aio::CheckedInputStream(fn));
+		libmaus2::aio::InputStreamInstance::unique_ptr_type ptr(new libmaus2::aio::InputStreamInstance(fn));
 		return UNIQUE_PTR_MOVE(ptr);
 	}
 	
 	BamToFastQInputFileStream(libmaus2::util::ArgInfo const & arginfo)
 	: fn(arginfo.getValue<std::string>("filename","-")),
 	  CIS(
-		(fn != "-") ? openFile(fn) : (libmaus2::aio::CheckedInputStream::unique_ptr_type())
+		(fn != "-") ? openFile(fn) : (libmaus2::aio::InputStreamInstance::unique_ptr_type())
 	), in((fn != "-") ? (*CIS) : std::cin) {}
 
 	BamToFastQInputFileStream(std::string const & rfn)
 	: fn(rfn), CIS(
-		(fn != "-") ? openFile(fn) : (libmaus2::aio::CheckedInputStream::unique_ptr_type())
+		(fn != "-") ? openFile(fn) : (libmaus2::aio::InputStreamInstance::unique_ptr_type())
 	), in((fn != "-") ? (*CIS) : std::cin) {}
 };
 
@@ -154,7 +154,7 @@ std::string getModifiedHeaderText(decoder_type const & bamdec, libmaus2::util::A
 	{
 		std::string const headerfilename = arginfo.getUnparsedValue("resetheadertext","");
 		uint64_t const headerlen = libmaus2::util::GetFileSize::getFileSize(headerfilename);
-		libmaus2::aio::CheckedInputStream CIS(headerfilename);
+		libmaus2::aio::InputStreamInstance CIS(headerfilename);
 		libmaus2::autoarray::AutoArray<char> ctext(headerlen,false);
 		CIS.read(ctext.begin(),headerlen);
 		headertext = std::string(ctext.begin(),ctext.end());		

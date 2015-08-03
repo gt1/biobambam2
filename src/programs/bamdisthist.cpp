@@ -104,24 +104,24 @@ struct DepthHist : public libmaus2::bambam::CollatingBamDecoderAlignmentInputCal
 struct BamDistHistInputFileStream
 {
 	std::string const fn;
-	libmaus2::aio::CheckedInputStream::unique_ptr_type CIS;
+	libmaus2::aio::InputStreamInstance::unique_ptr_type CIS;
 	std::istream & in;
 	
-	static libmaus2::aio::CheckedInputStream::unique_ptr_type openFile(std::string const & fn)
+	static libmaus2::aio::InputStreamInstance::unique_ptr_type openFile(std::string const & fn)
 	{
-		libmaus2::aio::CheckedInputStream::unique_ptr_type ptr(new libmaus2::aio::CheckedInputStream(fn));
+		libmaus2::aio::InputStreamInstance::unique_ptr_type ptr(new libmaus2::aio::InputStreamInstance(fn));
 		return UNIQUE_PTR_MOVE(ptr);
 	}
 	
 	BamDistHistInputFileStream(libmaus2::util::ArgInfo const & arginfo)
 	: fn(arginfo.getValue<std::string>("filename","-")),
 	  CIS(
-		(fn != "-") ? (openFile(fn)) : (libmaus2::aio::CheckedInputStream::unique_ptr_type())
+		(fn != "-") ? (openFile(fn)) : (libmaus2::aio::InputStreamInstance::unique_ptr_type())
 	), in((fn != "-") ? (*CIS) : std::cin) {}
 
 	BamDistHistInputFileStream(std::string const & rfn)
 	: fn(rfn), CIS(
-		(fn != "-") ? (openFile(fn)) : (libmaus2::aio::CheckedInputStream::unique_ptr_type())
+		(fn != "-") ? (openFile(fn)) : (libmaus2::aio::InputStreamInstance::unique_ptr_type())
 	), in((fn != "-") ? (*CIS) : std::cin) {}
 };
 
