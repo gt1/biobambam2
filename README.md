@@ -1,4 +1,5 @@
 biobambam2
+==========
 
 This package contains some tools for processing BAM files including
 
@@ -40,8 +41,8 @@ installed in ${HOME}/biobambam2 using
 		--prefix=${HOME}/biobambam2
 	- make install
 
-Using bamsormapdup
-------------------
+Using bamsormadup
+-----------------
 
 bamsormadup is a new tool in biobambam2. In has two modes of operation. 
 If SO=coordinate (as it is by default) then it expects a name collated (all reads for one name appear consecutively) input file.
