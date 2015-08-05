@@ -183,24 +183,27 @@ void bamdisthist(
 		<< "\t" << static_cast<double>(cnt)/rtc.getElapsedSeconds() 
 		<< std::endl;	
 	
-	libmaus2::aio::CheckedOutputStream disthiststr("disthist.gpl");
+	{
+	libmaus2::aio::OutputStreamInstance disthiststr("disthist.gpl");
 	hist.print(disthiststr);
 	disthiststr.flush();
-	disthiststr.close();
-	
+	}
+		
 	std::cerr << "[D] median of dist hist " << hist.median() << std::endl;
 
-	libmaus2::aio::CheckedOutputStream tlenhiststr("tlenhist.gpl");
+	{
+	libmaus2::aio::OutputStreamInstance tlenhiststr("tlenhist.gpl");
 	tlenhist.print(tlenhiststr);
 	tlenhiststr.flush();
-	tlenhiststr.close();
+	}
 
 	std::cerr << "[D] median of tlen hist " << tlenhist.median() << std::endl;
 
-	libmaus2::aio::CheckedOutputStream tlenhistproperstr("tlenhistproper.gpl");
+	{
+	libmaus2::aio::OutputStreamInstance tlenhistproperstr("tlenhistproper.gpl");
 	tlenproperhist.print(tlenhistproperstr);
 	tlenhistproperstr.flush();
-	tlenhistproperstr.close();
+	}
 
 	std::cerr << "[D] median of tlen hist proper " << tlenproperhist.median() << std::endl;
 }

@@ -200,13 +200,13 @@ int bamsormadupTemplate(
 	/**
 	 * set up metrics stream
 	 **/
-	::libmaus2::aio::CheckedOutputStream::unique_ptr_type pM;
+	::libmaus2::aio::OutputStreamInstance::unique_ptr_type pM;
 	std::ostream * pmetricstr = 0;
 	
 	if ( arginfo.hasArg("M") && (arginfo.getValue<std::string>("M","") != "") )
 	{
-		::libmaus2::aio::CheckedOutputStream::unique_ptr_type tpM(
-                                new ::libmaus2::aio::CheckedOutputStream(arginfo.getValue<std::string>("M",std::string("M")))
+		::libmaus2::aio::OutputStreamInstance::unique_ptr_type tpM(
+                                new ::libmaus2::aio::OutputStreamInstance(arginfo.getValue<std::string>("M",std::string("M")))
                         );
 		pM = UNIQUE_PTR_MOVE(tpM);
 		pmetricstr = pM.get();

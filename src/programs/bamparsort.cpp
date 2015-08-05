@@ -645,7 +645,7 @@ struct BamThreadPoolDecodeContextBase : public BamThreadPoolDecodeContextBaseCon
 	libmaus2::parallel::LockedBool bamSortComplete;
 
 	std::vector<std::string> tmpfilenames;
-	libmaus2::autoarray::AutoArray<libmaus2::aio::CheckedOutputStream::unique_ptr_type> tmpfilesCOS;
+	libmaus2::autoarray::AutoArray<libmaus2::aio::OutputStreamInstance::unique_ptr_type> tmpfilesCOS;
 	#if defined(__linux__)
 	libmaus2::autoarray::AutoArray<libmaus2::aio::LinuxStreamingPosixFdOutputStream::unique_ptr_type> tmpfilesLSPFDOSB;
 	#endif
@@ -801,7 +801,7 @@ struct BamThreadPoolDecodeContextBase : public BamThreadPoolDecodeContextBaseCon
 			else
 			#endif
 			{
-				libmaus2::aio::CheckedOutputStream::unique_ptr_type tptr(new libmaus2::aio::CheckedOutputStream(fn));
+				libmaus2::aio::OutputStreamInstance::unique_ptr_type tptr(new libmaus2::aio::OutputStreamInstance(fn));
 				tmpfilesCOS[i] = UNIQUE_PTR_MOVE(tptr);
 				out = tmpfilesCOS[i].get();
 			}
