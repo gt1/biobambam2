@@ -1,3 +1,9 @@
+biobambam2 (2.0.11) unstable; urgency=medium
+
+  * update to libmaus2 2.0.39 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Thu, 06 Aug 2015 18:23:03 +0200
+
 biobambam2 (2.0.10) unstable; urgency=medium
 
   * include Andrew Whitwham's (streaming) duplicate marking tag changes
