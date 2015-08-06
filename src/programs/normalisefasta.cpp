@@ -156,10 +156,9 @@ void normalisefastaBgzf(libmaus2::util::ArgInfo const & arginfo, std::ostream & 
 	if ( indexfn.size() )
 	{
 		std::string const & sindex = indexstr.str();
-		libmaus2::aio::CheckedOutputStream indexCOS(indexfn);
+		libmaus2::aio::OutputStreamInstance indexCOS(indexfn);
 		indexCOS.write(sindex.c_str(),sindex.size());
 		indexCOS.flush();
-		indexCOS.close();	
 	}
 }
 

@@ -83,7 +83,7 @@ int bamsplitmod(libmaus2::util::ArgInfo const & arginfo)
 	libmaus2::bambam::BamHeader const & header = bamdec.getHeader();
 	::libmaus2::bambam::BamHeader::unique_ptr_type uphead(updateHeader(arginfo,header));
 	
-	libmaus2::autoarray::AutoArray<libmaus2::aio::CheckedOutputStream::unique_ptr_type> COS(div);
+	libmaus2::autoarray::AutoArray<libmaus2::aio::OutputStreamInstance::unique_ptr_type> COS(div);
 	libmaus2::autoarray::AutoArray<libmaus2::bambam::BamWriter::unique_ptr_type> writers(div);
 	std::vector < std::string > filenames;
 	for ( uint64_t i = 0; i < div; ++i )
@@ -91,7 +91,7 @@ int bamsplitmod(libmaus2::util::ArgInfo const & arginfo)
 		std::ostringstream ostr;
 		ostr << prefix << "_" << std::setw(6) << std::setfill('0') << i << std::setw(0) << ".bam";
 	
-		libmaus2::aio::CheckedOutputStream::unique_ptr_type tCOS(new libmaus2::aio::CheckedOutputStream(ostr.str()));
+		libmaus2::aio::OutputStreamInstance::unique_ptr_type tCOS(new libmaus2::aio::OutputStreamInstance(ostr.str()));
 		COS[i] = UNIQUE_PTR_MOVE(tCOS);
 		libmaus2::bambam::BamWriter::unique_ptr_type twriter(new libmaus2::bambam::BamWriter(*COS[i],*uphead,level));
 		writers[i] = UNIQUE_PTR_MOVE(twriter);

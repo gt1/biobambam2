@@ -598,7 +598,7 @@ struct BamThreadPoolDecodeContextBase : public BamThreadPoolDecodeContextBaseCon
 	libmaus2::parallel::SynchronousCounter<uint64_t> readCnt;
 	libmaus2::parallel::SynchronousCounter<uint64_t> readCompCnt;
 	libmaus2::parallel::LockedBool readComplete;
-	libmaus2::parallel::PosixSemaphore readSem;
+	libmaus2::parallel::PosixConditionSemaphore readSem;
 	libmaus2::autoarray::AutoArray< libmaus2::lz::BgzfInflateBase::unique_ptr_type > inflateBases;
 	libmaus2::autoarray::AutoArray< char > inflateDecompressSpace;
 	libmaus2::parallel::SynchronousQueue<uint64_t> inflateBasesFreeList;
@@ -645,7 +645,7 @@ struct BamThreadPoolDecodeContextBase : public BamThreadPoolDecodeContextBaseCon
 	libmaus2::parallel::LockedBool bamSortComplete;
 
 	std::vector<std::string> tmpfilenames;
-	libmaus2::autoarray::AutoArray<libmaus2::aio::CheckedOutputStream::unique_ptr_type> tmpfilesCOS;
+	libmaus2::autoarray::AutoArray<libmaus2::aio::OutputStreamInstance::unique_ptr_type> tmpfilesCOS;
 	#if defined(__linux__)
 	libmaus2::autoarray::AutoArray<libmaus2::aio::LinuxStreamingPosixFdOutputStream::unique_ptr_type> tmpfilesLSPFDOSB;
 	#endif
@@ -801,7 +801,7 @@ struct BamThreadPoolDecodeContextBase : public BamThreadPoolDecodeContextBaseCon
 			else
 			#endif
 			{
-				libmaus2::aio::CheckedOutputStream::unique_ptr_type tptr(new libmaus2::aio::CheckedOutputStream(fn));
+				libmaus2::aio::OutputStreamInstance::unique_ptr_type tptr(new libmaus2::aio::OutputStreamInstance(fn));
 				tmpfilesCOS[i] = UNIQUE_PTR_MOVE(tptr);
 				out = tmpfilesCOS[i].get();
 			}
@@ -1975,10 +1975,10 @@ void mergeSortedBlocksNoThreadPool(
 
 	uint64_t const numthreads = arginfo.getValue<unsigned int>("numthreads", libmaus2::parallel::NumCpus::getNumLogicalProcessors());
 
-	libmaus2::autoarray::AutoArray<libmaus2::aio::CheckedInputStream::unique_ptr_type> inputfiles(mergeinfo.tmpfilenames.size());
+	libmaus2::autoarray::AutoArray<libmaus2::aio::InputStreamInstance::unique_ptr_type> inputfiles(mergeinfo.tmpfilenames.size());
 	for ( uint64_t i = 0; i < inputfiles.size(); ++i )
 	{
-		libmaus2::aio::CheckedInputStream::unique_ptr_type tptr(new libmaus2::aio::CheckedInputStream(mergeinfo.tmpfilenames[i]));
+		libmaus2::aio::InputStreamInstance::unique_ptr_type tptr(new libmaus2::aio::InputStreamInstance(mergeinfo.tmpfilenames[i]));
 		inputfiles[i] = UNIQUE_PTR_MOVE(tptr);
 	}
 	
@@ -3992,10 +3992,10 @@ struct BamThreadPoolMergeContext : public BamThreadPoolMergeContextBase<_order_t
 template<typename _order_type>
 void checkSortedBlocks(MergeInfo const & mergeinfo, libmaus2::lz::DecompressorObjectFactory & decfact)
 {
-	libmaus2::autoarray::AutoArray<libmaus2::aio::CheckedInputStream::unique_ptr_type> inputfiles(mergeinfo.tmpfilenames.size());
+	libmaus2::autoarray::AutoArray<libmaus2::aio::InputStreamInstance::unique_ptr_type> inputfiles(mergeinfo.tmpfilenames.size());
 	for ( uint64_t i = 0; i < inputfiles.size(); ++i )
 	{
-		libmaus2::aio::CheckedInputStream::unique_ptr_type tptr(new libmaus2::aio::CheckedInputStream(mergeinfo.tmpfilenames[i]));
+		libmaus2::aio::InputStreamInstance::unique_ptr_type tptr(new libmaus2::aio::InputStreamInstance(mergeinfo.tmpfilenames[i]));
 		inputfiles[i] = UNIQUE_PTR_MOVE(tptr);
 	}
 	

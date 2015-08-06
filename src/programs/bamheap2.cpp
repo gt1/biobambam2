@@ -321,7 +321,7 @@ int bamheap2(libmaus2::util::ArgInfo const & arginfo)
 	uint64_t const padmult = std::floor((dpadmult / maxmult) * (1ull<<16) + 0.5);
 	
 	libmaus2::fastx::FastAIndex::unique_ptr_type Pindex;
-	libmaus2::aio::CheckedInputStream::unique_ptr_type PCIS;
+	libmaus2::aio::InputStreamInstance::unique_ptr_type PCIS;
 	if ( reference.size() )
 	{
 		libmaus2::fastx::FastAIndex::unique_ptr_type Tindex(
@@ -329,7 +329,7 @@ int bamheap2(libmaus2::util::ArgInfo const & arginfo)
 		);
 		Pindex = UNIQUE_PTR_MOVE(Tindex);
 		
-		libmaus2::aio::CheckedInputStream::unique_ptr_type TCIS(new libmaus2::aio::CheckedInputStream(reference));
+		libmaus2::aio::InputStreamInstance::unique_ptr_type TCIS(new libmaus2::aio::InputStreamInstance(reference));
 		PCIS = UNIQUE_PTR_MOVE(TCIS);
 	}
 

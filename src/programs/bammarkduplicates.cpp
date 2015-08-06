@@ -19,7 +19,7 @@
 #include <config.h>
 
 #include <libmaus2/util/TempFileRemovalContainer.hpp>
-#include <libmaus2/aio/CheckedInputStream.hpp>
+#include <libmaus2/aio/InputStreamInstance.hpp>
 #include <libmaus2/aio/CheckedOutputStream.hpp>
 #include <libmaus2/bambam/BamAlignmentInputCallbackBam.hpp>
 #include <libmaus2/bambam/BamAlignmentInputCallbackSnappy.hpp>
@@ -279,7 +279,7 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 
 	libmaus2::bambam::BamAlignmentInputCallbackSnappy<libmaus2::bambam::BamAlignmentInputPositionCallbackNull>::unique_ptr_type SRC;
 	libmaus2::bambam::BamAlignmentInputCallbackBam<libmaus2::bambam::BamAlignmentInputPositionCallbackNull>::unique_ptr_type BWR;
-	::libmaus2::aio::CheckedInputStream::unique_ptr_type CIS;
+	::libmaus2::aio::InputStreamInstance::unique_ptr_type CIS;
 	libmaus2::aio::CheckedOutputStream::unique_ptr_type copybamstr;
 
 	typedef ::libmaus2::bambam::BamCircularHashCollatingBamDecoder col_type;
@@ -307,7 +307,7 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 	else if ( arginfo.hasArg("I") && (arginfo.getValue<std::string>("I","") != "") )
 	{
 		std::string const inputfilename = arginfo.getValue<std::string>("I","I");
-		::libmaus2::aio::CheckedInputStream::unique_ptr_type tCIS(new ::libmaus2::aio::CheckedInputStream(inputfilename));
+		::libmaus2::aio::InputStreamInstance::unique_ptr_type tCIS(new ::libmaus2::aio::InputStreamInstance(inputfilename));
 		CIS = UNIQUE_PTR_MOVE(tCIS);
 		
 		if ( markthreads > 1 )

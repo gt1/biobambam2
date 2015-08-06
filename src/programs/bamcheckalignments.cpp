@@ -223,7 +223,7 @@ int main(int argc, char * argv[])
 				std::cerr << "Loading sequence " << bamchrname << " of length " << info[faid].seqlen << std::endl;
 			::libmaus2::autoarray::AutoArray<uint8_t>::unique_ptr_type ttext(new ::libmaus2::autoarray::AutoArray<uint8_t>(info[faid].seqlen,false));
 			text [ i ] = UNIQUE_PTR_MOVE(ttext);
-			::libmaus2::aio::CheckedInputStream CIS(fatempfilename);
+			::libmaus2::aio::InputStreamInstance CIS(fatempfilename);
 			CIS.seekg(fapref[faid]);
 			CIS.read(reinterpret_cast<char *>(text[i]->begin()),info[faid].seqlen);
 			// sanity check, next symbol in file should be a newline

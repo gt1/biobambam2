@@ -139,7 +139,7 @@ int bamfilternames(::libmaus2::util::ArgInfo const & arginfo)
 	{
 		std::string const names = arginfo.getUnparsedValue("names",std::string());
 		
-		libmaus2::aio::CheckedInputStream namestr(names);
+		libmaus2::aio::InputStreamInstance namestr(names);
 		std::vector<std::string> vnames;
 		while ( namestr )
 		{

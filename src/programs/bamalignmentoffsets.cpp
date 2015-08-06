@@ -400,7 +400,7 @@ static int bamalignmentoffsets(libmaus2::util::ArgInfo const & arginfo)
 		libmaus2::bambam::BamWriter bw(std::cout,header);
 		
 		uint64_t contigid = 0;
-		libmaus2::aio::CheckedOutputStream faout(fn+".fa");
+		libmaus2::aio::OutputStreamInstance faout(fn+".fa");
 		
 		if ( maxchainid >= 0 )
 		{
@@ -439,7 +439,6 @@ static int bamalignmentoffsets(libmaus2::util::ArgInfo const & arginfo)
 		}
 		
 		faout.flush();
-		faout.close();
 		
 		if ( ! contigid )
 			remove((fn+".fa").c_str());

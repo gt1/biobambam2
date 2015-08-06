@@ -175,7 +175,7 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 	
 	if ( arginfo.hasArg("adaptersbam") )
 	{
-		libmaus2::aio::CheckedInputStream adapterCIS(arginfo.getUnparsedValue("adaptersbam","adapters.bam"));
+		libmaus2::aio::InputStreamInstance adapterCIS(arginfo.getUnparsedValue("adaptersbam","adapters.bam"));
 		libmaus2::bambam::AdapterFilter::unique_ptr_type tAF(
                                 new libmaus2::bambam::AdapterFilter(adapterCIS,12 /* seed length */)
                         );

@@ -366,7 +366,7 @@ struct NamedIntervalGeneSet
 		
 		std::istream * Pistr = 0;
 		libmaus2::util::unique_ptr<std::istringstream>::type Puistr;		
-		libmaus2::aio::CheckedInputStream CIS(fn);
+		libmaus2::aio::InputStreamInstance CIS(fn);
 		libmaus2::lz::BufferedGzipStream::unique_ptr_type PBGS;
 		std::string unif;
 

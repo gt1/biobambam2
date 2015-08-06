@@ -89,7 +89,7 @@ int bamclipextract(::libmaus2::util::ArgInfo const & arginfo)
 	{
 		std::string const headerfilename = arginfo.getUnparsedValue("resetheadertext","");
 		uint64_t const headerlen = libmaus2::util::GetFileSize::getFileSize(headerfilename);
-		libmaus2::aio::CheckedInputStream CIS(headerfilename);
+		libmaus2::aio::InputStreamInstance CIS(headerfilename);
 		libmaus2::autoarray::AutoArray<char> ctext(headerlen,false);
 		CIS.read(ctext.begin(),headerlen);
 		headertext = std::string(ctext.begin(),ctext.end());		

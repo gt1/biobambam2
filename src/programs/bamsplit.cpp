@@ -75,7 +75,7 @@ int bamsplit(libmaus2::util::ArgInfo const & arginfo)
 	libmaus2::bambam::BamHeader const & header = bamdec.getHeader();
 	::libmaus2::bambam::BamHeader::unique_ptr_type uphead(updateHeader(arginfo,header));
 
-	libmaus2::aio::CheckedOutputStream::unique_ptr_type COS;
+	libmaus2::aio::OutputStreamInstance::unique_ptr_type COS;
 	libmaus2::bambam::BamWriter::unique_ptr_type writer;
 	
 	uint64_t c = 0;
@@ -86,17 +86,14 @@ int bamsplit(libmaus2::util::ArgInfo const & arginfo)
 		{
 			writer.reset();
 			if ( COS )
-			{
 				COS->flush();
-				COS->close();
-			}
 			COS.reset();
 			
 			std::ostringstream fnostr;
 			fnostr << prefix << "_" << std::setw(6) << std::setfill('0') << f++ << std::setw(0) << ".bam";
 			std::string const fn = fnostr.str();
 			
-			libmaus2::aio::CheckedOutputStream::unique_ptr_type tCOS(new libmaus2::aio::CheckedOutputStream(fn));
+			libmaus2::aio::OutputStreamInstance::unique_ptr_type tCOS(new libmaus2::aio::OutputStreamInstance(fn));
 			COS = UNIQUE_PTR_MOVE(tCOS);
 			
 			libmaus2::bambam::BamWriter::unique_ptr_type twriter(new libmaus2::bambam::BamWriter(*COS,*uphead,level));
@@ -111,10 +108,7 @@ int bamsplit(libmaus2::util::ArgInfo const & arginfo)
 	
 	writer.reset();
 	if ( COS )
-	{
 		COS->flush();
-		COS->close();
-	}
 	COS.reset();
 
 	return EXIT_SUCCESS;
