@@ -16,7 +16,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **/
-#include <libmaus2/aio/PosixFdOutputStream.hpp>
+#include <libmaus2/aio/OutputStreamInstance.hpp>
 #include <libmaus2/bambam/BamBlockWriterBaseFactory.hpp>
 #include <libmaus2/bambam/BamMultiAlignmentDecoderFactory.hpp>
 #include <libmaus2/fastx/FastAIndex.hpp>

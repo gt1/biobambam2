@@ -25,7 +25,7 @@
 #include <config.h>
 
 #include <libmaus2/aio/PosixFdInputStream.hpp>
-#include <libmaus2/aio/PosixFdOutputStream.hpp>
+#include <libmaus2/aio/OutputStreamInstance.hpp>
 #include <libmaus2/bambam/BamBlockWriterBaseFactory.hpp>
 #include <libmaus2/bambam/BamMultiAlignmentDecoderFactory.hpp>
 #include <libmaus2/bambam/BamToFastqOutputFileSet.hpp>
@@ -415,8 +415,8 @@ void bamtofastqCollating(
 				outputfilenamevector.push_back(outputdir + readgroups[i].ID + *ita);
 				
 		assert ( outputfilenamevector.size() == numoutputfiles );
-		int64_t const posixoutbufsize = 256*1024;
-		libmaus2::autoarray::AutoArray< ::libmaus2::aio::PosixFdOutputStream::unique_ptr_type > APFOS(numoutputfiles);
+		// int64_t const posixoutbufsize = 256*1024;
+		libmaus2::autoarray::AutoArray< ::libmaus2::aio::OutputStreamInstance::unique_ptr_type > APFOS(numoutputfiles);
 		libmaus2::autoarray::AutoArray< libmaus2::lz::GzipOutputStream::unique_ptr_type > AGZOS(numoutputfiles);
 		
 		libmaus2::autoarray::AutoArray< ::libmaus2::aio::LineSplittingPosixFdOutputStream::unique_ptr_type > ALSPFDOS(numoutputfiles);
@@ -457,8 +457,8 @@ void bamtofastqCollating(
 		{
 			for ( uint64_t i = 0; i < numoutputfiles; ++i )
 			{
-				::libmaus2::aio::PosixFdOutputStream::unique_ptr_type tptr(
-					new ::libmaus2::aio::PosixFdOutputStream(outputfilenamevector[i],posixoutbufsize)
+				::libmaus2::aio::OutputStreamInstance::unique_ptr_type tptr(
+					new ::libmaus2::aio::OutputStreamInstance(outputfilenamevector[i])
 				);
 				APFOS[i] = UNIQUE_PTR_MOVE(tptr);
 				

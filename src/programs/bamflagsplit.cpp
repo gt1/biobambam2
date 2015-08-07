@@ -21,7 +21,7 @@
 #include <iostream>
 #include <queue>
 
-#include <libmaus2/aio/CheckedOutputStream.hpp>
+#include <libmaus2/aio/OutputStreamInstance.hpp>
 
 #include <libmaus2/bambam/BamAlignment.hpp>
 #include <libmaus2/bambam/BamAlignmentNameComparator.hpp>
@@ -33,7 +33,7 @@
 #include <libmaus2/bambam/BamWriter.hpp>
 #include <libmaus2/bambam/BamHeaderUpdate.hpp>
 #include <libmaus2/bambam/ProgramHeaderLineSet.hpp>
-#include <libmaus2/aio/PosixFdOutputStream.hpp>
+#include <libmaus2/aio/OutputStreamInstance.hpp>
 
 #include <libmaus2/util/ArgInfo.hpp>
 #include <libmaus2/util/GetObject.hpp>
@@ -489,14 +489,14 @@ int bamflagsplit(::libmaus2::util::ArgInfo const & arginfo)
 	remove(improperfn.c_str());
 	remove(properfn.c_str());
 	
-	libmaus2::aio::PosixFdOutputStream::unique_ptr_type splitfile(new libmaus2::aio::PosixFdOutputStream(splitfn));
-	libmaus2::aio::PosixFdOutputStream::unique_ptr_type singlefile(new libmaus2::aio::PosixFdOutputStream(singlefn));
-	libmaus2::aio::PosixFdOutputStream::unique_ptr_type orphanfile(new libmaus2::aio::PosixFdOutputStream(orphanfn));
-	libmaus2::aio::PosixFdOutputStream::unique_ptr_type unmappedfile(new libmaus2::aio::PosixFdOutputStream(unmappedfn));
-	libmaus2::aio::PosixFdOutputStream::unique_ptr_type supplementaryfile(new libmaus2::aio::PosixFdOutputStream(supplementaryfn));
-	libmaus2::aio::PosixFdOutputStream::unique_ptr_type samestrandfile(new libmaus2::aio::PosixFdOutputStream(samestrandfn));
-	libmaus2::aio::PosixFdOutputStream::unique_ptr_type improperfile(new libmaus2::aio::PosixFdOutputStream(improperfn));
-	libmaus2::aio::PosixFdOutputStream::unique_ptr_type properfile(new libmaus2::aio::PosixFdOutputStream(properfn));
+	libmaus2::aio::OutputStreamInstance::unique_ptr_type splitfile(new libmaus2::aio::OutputStreamInstance(splitfn));
+	libmaus2::aio::OutputStreamInstance::unique_ptr_type singlefile(new libmaus2::aio::OutputStreamInstance(singlefn));
+	libmaus2::aio::OutputStreamInstance::unique_ptr_type orphanfile(new libmaus2::aio::OutputStreamInstance(orphanfn));
+	libmaus2::aio::OutputStreamInstance::unique_ptr_type unmappedfile(new libmaus2::aio::OutputStreamInstance(unmappedfn));
+	libmaus2::aio::OutputStreamInstance::unique_ptr_type supplementaryfile(new libmaus2::aio::OutputStreamInstance(supplementaryfn));
+	libmaus2::aio::OutputStreamInstance::unique_ptr_type samestrandfile(new libmaus2::aio::OutputStreamInstance(samestrandfn));
+	libmaus2::aio::OutputStreamInstance::unique_ptr_type improperfile(new libmaus2::aio::OutputStreamInstance(improperfn));
+	libmaus2::aio::OutputStreamInstance::unique_ptr_type properfile(new libmaus2::aio::OutputStreamInstance(properfn));
 
 	::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Psplitmd5;
 	::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Psinglemd5;

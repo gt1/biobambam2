@@ -20,7 +20,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <libmaus2/aio/PosixFdInputStream.hpp>
-#include <libmaus2/aio/PosixFdOutputStream.hpp>
+#include <libmaus2/aio/OutputStreamInstance.hpp>
 #include <libmaus2/fastx/FastAReader.hpp>
 #include <libmaus2/fastx/FastABgzfIndex.hpp>
 #include <libmaus2/fastx/FastAIndex.hpp>

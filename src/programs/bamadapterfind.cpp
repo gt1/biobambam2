@@ -21,7 +21,7 @@
 #include <iostream>
 #include <queue>
 
-#include <libmaus2/aio/CheckedOutputStream.hpp>
+#include <libmaus2/aio/OutputStreamInstance.hpp>
 
 #include <libmaus2/bambam/AdapterFilter.hpp>
 #include <libmaus2/bambam/BamAlignment.hpp>
