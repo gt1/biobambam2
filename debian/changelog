@@ -1,3 +1,9 @@
+biobambam2 (2.0.13) unstable; urgency=medium
+
+  * allow in memory tmp files in bammarkduplicates, bammarkduplicates2 and bamtofastq 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Sat, 08 Aug 2015 15:03:19 +0200
+
 biobambam2 (2.0.12) unstable; urgency=medium
 
   * update to libmaus2 2.0.40
