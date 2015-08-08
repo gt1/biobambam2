@@ -20,7 +20,7 @@
 
 #include <libmaus2/util/TempFileRemovalContainer.hpp>
 #include <libmaus2/aio/InputStreamInstance.hpp>
-#include <libmaus2/aio/CheckedOutputStream.hpp>
+#include <libmaus2/aio/OutputStreamInstance.hpp>
 #include <libmaus2/bambam/BamAlignmentInputCallbackBam.hpp>
 #include <libmaus2/bambam/BamAlignmentInputCallbackSnappy.hpp>
 #include <libmaus2/bambam/BamBlockWriterBaseFactory.hpp>
@@ -280,7 +280,7 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 	libmaus2::bambam::BamAlignmentInputCallbackSnappy<libmaus2::bambam::BamAlignmentInputPositionCallbackNull>::unique_ptr_type SRC;
 	libmaus2::bambam::BamAlignmentInputCallbackBam<libmaus2::bambam::BamAlignmentInputPositionCallbackNull>::unique_ptr_type BWR;
 	::libmaus2::aio::InputStreamInstance::unique_ptr_type CIS;
-	libmaus2::aio::CheckedOutputStream::unique_ptr_type copybamstr;
+	libmaus2::aio::OutputStreamInstance::unique_ptr_type copybamstr;
 
 	typedef ::libmaus2::bambam::BamCircularHashCollatingBamDecoder col_type;
 	typedef ::libmaus2::bambam::BamParallelCircularHashCollatingBamDecoder par_col_type;
@@ -341,7 +341,7 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 		{
 			if ( rewritebam > 1 )
 			{
-				libmaus2::aio::CheckedOutputStream::unique_ptr_type tcopybamstr(new libmaus2::aio::CheckedOutputStream(tmpfilesnappyreads));
+				libmaus2::aio::OutputStreamInstance::unique_ptr_type tcopybamstr(new libmaus2::aio::OutputStreamInstance(tmpfilesnappyreads));
 				copybamstr = UNIQUE_PTR_MOVE(tcopybamstr);
 
 				if ( markthreads > 1 )
@@ -745,13 +745,13 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 	/**
 	 * write metrics
 	 **/
-	::libmaus2::aio::CheckedOutputStream::unique_ptr_type pM;
+	::libmaus2::aio::OutputStreamInstance::unique_ptr_type pM;
 	std::ostream * pmetricstr = 0;
 	
 	if ( arginfo.hasArg("M") && (arginfo.getValue<std::string>("M","") != "") )
 	{
-		::libmaus2::aio::CheckedOutputStream::unique_ptr_type tpM(
-                                new ::libmaus2::aio::CheckedOutputStream(arginfo.getValue<std::string>("M",std::string("M")))
+		::libmaus2::aio::OutputStreamInstance::unique_ptr_type tpM(
+                                new ::libmaus2::aio::OutputStreamInstance(arginfo.getValue<std::string>("M",std::string("M")))
                         );
 		pM = UNIQUE_PTR_MOVE(tpM);
 		pmetricstr = pM.get();

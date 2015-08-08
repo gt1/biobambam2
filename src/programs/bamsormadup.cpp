@@ -111,7 +111,7 @@ static int
 	std::string const digeststr = BMC.getFileDigest();
 	if ( digestfilename.size() )
 	{
-		libmaus2::aio::PosixFdOutputStream PFOS(digestfilename);
+		libmaus2::aio::OutputStreamInstance PFOS(digestfilename);
 		PFOS << digeststr << std::endl;
 		PFOS.flush();
 	}

@@ -18,7 +18,7 @@
 **/
 #include <libmaus2/bambam/BamMultiAlignmentDecoderFactory.hpp>
 #include <libmaus2/fastx/FastAIndex.hpp>
-#include <libmaus2/aio/PosixFdOutputStream.hpp>
+#include <libmaus2/aio/OutputStreamInstance.hpp>
 #include <libmaus2/util/Histogram.hpp>
 #include <biobambam2/BamBamConfig.hpp>
 #include <biobambam2/Licensing.hpp>
@@ -382,7 +382,7 @@ int bamheap2(libmaus2::util::ArgInfo const & arginfo)
 						{
 							std::ostringstream fnostr;
 							fnostr << outputprefix << "_" << header.getRefIDName(streamRefId);
-							libmaus2::aio::PosixFdOutputStream PFOS(fnostr.str());
+							libmaus2::aio::OutputStreamInstance PFOS(fnostr.str());
 							PFOS << ">" << header.getRefIDName(streamRefId) << '\n';
 							PFOS << Pstream->str() << '\n';
 							
@@ -425,7 +425,7 @@ int bamheap2(libmaus2::util::ArgInfo const & arginfo)
 						{
 							std::ostringstream fnostr;
 							fnostr << outputprefix << "_" << header.getRefIDName(streamRefId);
-							libmaus2::aio::PosixFdOutputStream PFOS(fnostr.str());
+							libmaus2::aio::OutputStreamInstance PFOS(fnostr.str());
 							PFOS << ">" << header.getRefIDName(streamRefId) << '\n';
 							PFOS << Pstream->str() << '\n';
 
@@ -552,7 +552,7 @@ int bamheap2(libmaus2::util::ArgInfo const & arginfo)
 			{
 				std::ostringstream fnostr;
 				fnostr << outputprefix << "_" << header.getRefIDName(streamRefId);
-				libmaus2::aio::PosixFdOutputStream PFOS(fnostr.str());
+				libmaus2::aio::OutputStreamInstance PFOS(fnostr.str());
 				PFOS << ">" << header.getRefIDName(streamRefId) << '\n';
 				PFOS << Pstream->str() << '\n';
 
@@ -584,7 +584,7 @@ int bamheap2(libmaus2::util::ArgInfo const & arginfo)
 	{
 		std::ostringstream fnostr;
 		fnostr << outputprefix << "_" << header.getRefIDName(streamRefId);
-		libmaus2::aio::PosixFdOutputStream PFOS(fnostr.str());
+		libmaus2::aio::OutputStreamInstance PFOS(fnostr.str());
 		PFOS << ">" << header.getRefIDName(streamRefId) << '\n';
 		PFOS << Pstream->str() << '\n';
 

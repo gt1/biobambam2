@@ -22,7 +22,7 @@
 #include <biobambam2/Licensing.hpp>
 
 #include <libmaus2/aio/PosixFdInputStream.hpp>
-#include <libmaus2/aio/PosixFdOutputStream.hpp>
+#include <libmaus2/aio/OutputStreamInstance.hpp>
 #include <libmaus2/bambam/RgInfo.hpp>
 #include <libmaus2/bambam/BamBlockWriterBaseFactory.hpp>
 #include <libmaus2/bambam/parallel/FastqToBamControl.hpp>

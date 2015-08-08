@@ -423,8 +423,8 @@ void generateGPL(std::deque<float> const & Q, std::vector< PeakInfo > const & pe
 	std::ostringstream depthpeakstr;
 	depthpeakstr << "plot_" << seqname << "_peaks.gpl";
 	
-	libmaus2::aio::CheckedOutputStream depthostr(depthstr.str());
-	libmaus2::aio::CheckedOutputStream depthpeakostr(depthpeakstr.str());
+	libmaus2::aio::OutputStreamInstance depthostr(depthstr.str());
+	libmaus2::aio::OutputStreamInstance depthpeakostr(depthpeakstr.str());
 	
 	for ( uint64_t i = 0; i < peaks.size(); ++i )
 	{
