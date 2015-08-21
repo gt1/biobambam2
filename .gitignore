@@ -50,3 +50,4 @@ test-driver
 src/biobambam2/BamBamConfig.hpp
 src/fastqtobampar
 src/lasToBAM
+pull.sh
