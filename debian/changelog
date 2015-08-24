@@ -1,3 +1,9 @@
+biobambam2 (2.0.16) unstable; urgency=medium
+
+  * merge Andrew Whitwham's patch for removing adapter clipping tags from secondary and supplementary alignments 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Mon, 24 Aug 2015 13:15:02 +0200
+
 biobambam2 (2.0.15) unstable; urgency=medium
 
   * update to libmaus2 2.0.45 
