@@ -241,6 +241,18 @@ int bam12auxmerge(::libmaus2::util::ArgInfo const & arginfo)
  	libmaus2::bambam::BamAuxFilterVector zzbafv;
  	zzbafv.set('z','z');
 
+    	// tag filters for secondary/supplementary reads
+	libmaus2::bambam::BamAuxFilterVector auxfiltersec;
+
+	auxfiltersec.set('q','s');
+	auxfiltersec.set('q','q');
+	auxfiltersec.set('a','s');
+	auxfiltersec.set('a','h');
+	auxfiltersec.set('a','a');
+	auxfiltersec.set('a','f');
+	auxfiltersec.set('a','r');
+	auxfiltersec.set('a','3');
+
 	// loop over aligned BAM file
 	while ( bamdec.readAlignment() )
 	{
@@ -376,7 +388,7 @@ int bam12auxmerge(::libmaus2::util::ArgInfo const & arginfo)
 		
 		for ( uint64_t i = 0; i < pretagnum; ++i )
 			auxfilter.set(auxpre[i].first,auxpre[i].second);
-		
+			
 		algn.copyAuxTags(prealgn, auxfilter);
 
 		for ( uint64_t i = 0; i < pretagnum; ++i )
@@ -387,6 +399,16 @@ int bam12auxmerge(::libmaus2::util::ArgInfo const & arginfo)
 			std::cerr << "pretagnum=" << pretagnum << " newtagnum=" << newtagnum << std::endl;	
 			std::cerr << "result: " << algn.formatAlignment(header) << std::endl;
 		}
+		
+		
+		if ( algn.isSecondary() || algn.isSupplementary() )
+		{
+		    	// adding adapter clip data to secondary/supplementary reads
+			// can lead to incorrect clip reinserts so remove these tags
+			
+			algn.filterOutAux(auxfiltersec);
+		}
+		
 
 		// copy QC fail flag from original file to aligner output		
 		if ( prealgn.isQCFail() )
