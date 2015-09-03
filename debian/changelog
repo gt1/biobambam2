@@ -1,3 +1,9 @@
+biobambam2 (2.0.17) unstable; urgency=medium
+
+  * allow building without requirement for SSE4 (change in libmaus2) 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Thu, 03 Sep 2015 10:39:07 +0200
+
 biobambam2 (2.0.16) unstable; urgency=medium
 
   * merge Andrew Whitwham's patch for removing adapter clipping tags from secondary and supplementary alignments 
