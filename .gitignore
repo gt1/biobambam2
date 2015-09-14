@@ -51,3 +51,5 @@ src/biobambam2/BamBamConfig.hpp
 src/fastqtobampar
 src/lasToBAM
 pull.sh
+test/bamcmp
+test/bamtosam
