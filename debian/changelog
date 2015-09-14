@@ -1,3 +1,9 @@
+biobambam2 (2.0.18) unstable; urgency=medium
+
+  * update to libmaus2 2.0.68 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Mon, 14 Sep 2015 14:03:00 +0200
+
 biobambam2 (2.0.17) unstable; urgency=medium
 
   * allow building without requirement for SSE4 (change in libmaus2) 
