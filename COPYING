@@ -1,4 +1,6 @@
-biobambam2 is distributed under version 3 of the GNU General Public License.
+The file  src/biobambam2/ClipAdapters.cpp is distributed under an MIT/Expat type license. Please see the file for the exact conditions.
+
+The rest of biobambam2 is distributed under version 3 of the GNU General Public License.
 
 Copyright (C) 2009-2015 German Tischler
 Copyright (C) 2011-2015 Genome Research Limited
