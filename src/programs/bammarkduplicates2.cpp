@@ -1607,35 +1607,8 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 			
 			// swap reads if necessary so P.first is left of P.second
 			// in terms of coordinates
-			if ( 
-				// second has higher ref id
-				(
-					P.second->getRefID() > P.first->getRefID()	
-				)
-				||
-				// same refid, second has higher position
-				(
-					P.second->getRefID() == P.first->getRefID() 
-					&&
-					P.second->getCoordinate() > P.first->getCoordinate()
-				)
-				||
-				// same refid, same position, first is read 1
-				(
-					P.second->getRefID() == P.first->getRefID() 
-					&&
-					P.second->getCoordinate() == P.first->getCoordinate()
-					&&
-					P.first->isRead1()
-				)
-			)
-			{
-			
-			}
-			else
-			{
+			if ( !libmaus2::bambam::ReadEndsBase::orderOK(*(P.first),*(P.second)) )
 				std::swap(P.first,P.second);
-			}
 			
 			// simple one, register it
 			if (  BamAlignmentInputPositionCallbackDupMark::isSimplePair(*(P.second)) )
