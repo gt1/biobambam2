@@ -590,23 +590,9 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 			assert ( ! P.second->isUnmap() );
 			
 			// if first appears after second one, then swap the reads, otherwise leave
-			if ( 
-				P.second->getRefID() > P.first->getRefID()	
-				||
-				(
-					P.second->getRefID() == P.first->getRefID() 
-					&&
-					P.second->getCoordinate() >= P.first->getCoordinate()
-				)
-			)
-			{
-			
-			}
-			else
-			{
+			if ( !libmaus2::bambam::ReadEndsBase::orderOK(*(P.first),*(P.second)) )
 				std::swap(P.first,P.second);
-			}
-		
+
 			pairREC->putPair(*(P.first),*(P.second),bamheader,tagid);
 			paircnt++;
 		}
@@ -708,6 +694,7 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 
 		lfrags.push_back(nextfrag);
 	}
+
 	dupcnt += libmaus2::bambam::DupMarkBase::markDuplicatePairsVector(lfrags,DSCV);
 	lfrags.resize(0);
 	pairDec.reset();
