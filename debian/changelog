@@ -1,3 +1,9 @@
+biobambam2 (2.0.20) unstable; urgency=medium
+
+  * fix marking of FF and RR type duplicate records in BAM files 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Fri, 23 Oct 2015 14:55:46 +0200
+
 biobambam2 (2.0.19) unstable; urgency=medium
 
   * include updates by Andrew Whitwham for improving the cigar handling of ClipAdapters
