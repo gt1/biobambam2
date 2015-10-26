@@ -1,3 +1,10 @@
+biobambam2 (2.0.21) unstable; urgency=medium
+
+  * fix FF and RR type alignments in streaming duplicate marking
+  * add MC tag (mate cigar string) when duplicate marking support is enabled in bamsort
+
+ -- German Tischler <gt1@sanger.ac.uk>  Mon, 26 Oct 2015 17:12:04 +0100
+
 biobambam2 (2.0.20) unstable; urgency=medium
 
   * fix marking of FF and RR type duplicate records in BAM files 
