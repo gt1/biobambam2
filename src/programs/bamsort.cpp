@@ -305,6 +305,7 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 	}
 	
 	libmaus2::bambam::BamBlockWriterBase & alout = *Pout;
+	libmaus2::autoarray::AutoArray<char> MCaux;
 
 	if ( fixmates )
 	{
@@ -328,11 +329,13 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 			libmaus2::bambam::BamAuxFilterVector MSfilter;
 			libmaus2::bambam::BamAuxFilterVector MCfilter;
 			libmaus2::bambam::BamAuxFilterVector MTfilter;
+			libmaus2::bambam::BamAuxFilterVector CMCfilter;
 			
 			MQfilter.set("MQ");
 			MSfilter.set("ms");
 			MCfilter.set("mc");
 			MTfilter.set("mt");
+			CMCfilter.set("MC");
 			
 			// remove the original style tags (MC handled separately)
 			MSfilter.set("MS");
@@ -361,6 +364,7 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 						{
 							libmaus2::bambam::BamAlignment::addMateBaseScore(prevalgn,curalgn,MSfilter);
 							libmaus2::bambam::BamAlignment::addMateCoordinate(prevalgn,curalgn,MCfilter);
+							libmaus2::bambam::BamAlignment::addMateCigarString(prevalgn,curalgn,MCaux,CMCfilter);
 							removeOldStyleMateCoordinate(prevalgn,curalgn);
 							
 							switch ( tag_type )
@@ -423,10 +427,12 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 			libmaus2::bambam::BamAuxFilterVector MSfilter;
 			libmaus2::bambam::BamAuxFilterVector MCfilter;
 			libmaus2::bambam::BamAuxFilterVector MTfilter;
+			libmaus2::bambam::BamAuxFilterVector CMCfilter;
 			MQfilter.set("MQ");
 			MSfilter.set("ms");
 			MCfilter.set("mc");
 			MTfilter.set("mt");
+			CMCfilter.set("MC");
 			
 			// remove the original style tags (MC handled separately)
 			MSfilter.set("MS");
@@ -455,6 +461,7 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 						{
 							libmaus2::bambam::BamAlignment::addMateBaseScore(prevalgn,curalgn,MSfilter);
 							libmaus2::bambam::BamAlignment::addMateCoordinate(prevalgn,curalgn,MCfilter);
+							libmaus2::bambam::BamAlignment::addMateCigarString(prevalgn,curalgn,MCaux,CMCfilter);
     	    	    	    	    	    	    	removeOldStyleMateCoordinate(prevalgn,curalgn);
 							
 							switch ( tag_type )
