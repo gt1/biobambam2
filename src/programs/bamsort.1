@@ -194,6 +194,16 @@ nucltag uses less memory for processing and can be expected to be faster.
 .PP
 .B M=<stderr>: 
 name of the metrics file for duplicate marking (metrics are written to standard error if not set)
+.PP
+.B streaming=<0|1>:
+do not open input file(s) multiple times if set to 1. When given multiple
+input files bamsort concatenates the files on the fly and computes a merged
+header before starting the data processing. Computing the header of the
+output file requires opening each input file. If each input file can only be
+opened once (as it may take the form of a pipe or socket connection), then
+bamsort will keep all the files open at the same time. Otherwise the files
+will be opened only as needed to keep the number of open file descriptors
+lower.
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"
