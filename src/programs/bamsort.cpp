@@ -65,7 +65,7 @@ static int getDefaultCalMdNmRecompIndetOnly() { return 0; }
 static int getDefaultCalMdNmWarnChange() { return 0; }
 static int getDefaultAddDupMarkSupport() { return 0; }
 static int getDefaultMarkDuplicates() { return 0; }
-
+static int getDefaultStreaming() { return 1; }
 
 /*
    biobambam used MC as a mate coordinate tag which now has a clash
@@ -137,11 +137,16 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 	uint64_t blockmem = arginfo.getValue<uint64_t>("blockmb",getDefaultBlockSize())*1024*1024;
 	std::string const sortorder = arginfo.getValue<std::string>("SO","coordinate");
 	uint64_t sortthreads = arginfo.getValue<uint64_t>("sortthreads",getDefaultSortThreads());
+	bool const streaming = arginfo.getValue<unsigned int>("streaming",getDefaultStreaming());
 
 	// input decoder wrapper
 	libmaus2::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
 		libmaus2::bambam::BamMultiAlignmentDecoderFactory::construct(
-			arginfo,false // do not put rank
+			arginfo,false, // do not put rank
+			0, /* copy stream */
+			std::cin, /* standard input */
+			true, /* concatenate instead of merging */
+			streaming /* streaming */
 		)
 	);
 	::libmaus2::bambam::BamAlignmentDecoder * ppdec = &(decwrapper->getDecoder());
@@ -652,6 +657,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "tag=<[a-zA-Z][a-zA-Z0-9]>", "aux field id for tag string extraction (adddupmarksupport=1 only)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "nucltag=<[a-zA-Z][a-zA-Z0-9]>", "aux field id for nucleotide tag extraction (adddupmarksupport=1 only)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("markduplicates=<[")+::biobambam2::Licensing::formatNumber(getDefaultMarkDuplicates())+"]>", "mark duplicates (only when input name collated and output coordinate sorted, disabled by default)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("streaming=<[")+::biobambam2::Licensing::formatNumber(getDefaultStreaming())+"]>", "do not open input files multiple times when set" ) );
 
 				::biobambam2::Licensing::printMap(std::cerr,V);
 
