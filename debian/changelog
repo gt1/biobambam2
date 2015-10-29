@@ -1,3 +1,9 @@
+biobambam2 (2.0.22) unstable; urgency=medium
+
+  * implicitly concatenate multiple input files as input for bamsort 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Thu, 29 Oct 2015 09:59:48 +0100
+
 biobambam2 (2.0.21) unstable; urgency=medium
 
   * fix FF and RR type alignments in streaming duplicate marking
