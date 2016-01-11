@@ -1057,6 +1057,13 @@ int main(int argc, char * argv[])
 		
 		::libmaus2::util::ArgInfo arginfo(argc,argv);
 		
+		#if defined(LIBMAUS2_HAVE_IRODS)
+		// set program name for iRODS identification
+		std::stringstream irods_id;
+		irods_id  << PACKAGE_NAME << ":" << arginfo.getProgFileName(arginfo.progname) << ":" << PACKAGE_VERSION;
+		setenv(SP_OPTION, irods_id.str().c_str(), 1);
+		#endif
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
 			if ( 
 				arginfo.restargs[i] == "-v"
