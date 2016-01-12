@@ -1,3 +1,10 @@
+biobambam2 (2.0.26) unstable; urgency=medium
+
+  * update to libmaus2 2.0.114
+  * Set variable to identify programs to iRODS. (by Andrew Whitwham)
+
+ -- German Tischler <gt1@sanger.ac.uk>  Tue, 12 Jan 2016 19:53:21 +0100
+
 biobambam2 (2.0.25) unstable; urgency=medium
 
   * update to libmaus2 2.0.102 
