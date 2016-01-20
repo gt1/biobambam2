@@ -1,0 +1,47 @@
+.TH FASTAEXPLODE 1 "January 2016" BIOBAMBAM2
+.SH NAME
+fastaexplode - split multi sequence FastA file into one file per sequence
+.SH SYNOPSIS
+.PP
+.B fastaexplode
+[options]
+.SH DESCRIPTION
+fastaexplode reads a FastA file from standard input and writes the contained sequences to a set
+of files. It writes one sequence per output file. The file names used are
+fasta_<id>.fasta where id is a git digit running decimal number. The prefix
+(fasta_ by default) can be set using the -p switch. The .fasta suffix is
+omitted if the data only switch is given (see below). The program writes a
+two column table to the standard output channel. The first column contains
+an output file name and the second the respective sequence id written to
+this file.
+.PP
+The following options can be given
+.PP
+.B -p<prefix>:
+file name prefix. The files will be called <prefix>000000<suffix>, <prefix>000000<suffix><suffix>, etc. where <suffix> is .fasta unless the data only flag is set
+.PP
+.B -d/--dataonly:
+write only the base data but no header/prolog line. This sets the file name suffix to the empty string.
+.PP
+.B -s/--singleline:
+write a single line of base data instead of breaking the base data into multiple lines
+.PP
+.B -l<num>:
+set the length of the base data lines (80 by default).
+.PP
+.B -v/--version:
+print the version number and quit
+.PP
+.B -h/--help:
+print a help message and quit
+.P
+.SH AUTHOR
+Written by German Tischler.
+.SH "REPORTING BUGS"
+Report bugs to <tischler@mpi-cbg.de>
+.SH COPYRIGHT
+Copyright \(co 2009-2016 German Tischler.
+License GPLv3+: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
