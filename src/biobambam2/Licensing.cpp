@@ -47,7 +47,7 @@ std::ostream & biobambam2::Licensing::printMap(std::ostream & out, std::vector< 
 
 	for ( std::vector< std::pair<std::string,std::string> >::const_iterator ita = M.begin(); ita != M.end(); ++ita )
 		out << printLeft(ita->first,maxfield) << " : " << ita->second << std::endl;
-	
+
 	return out;
 }
 

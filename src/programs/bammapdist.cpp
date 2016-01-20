@@ -40,7 +40,7 @@ int bammapdist(libmaus2::util::ArgInfo const & arginfo)
 	::libmaus2::bambam::BamAlignmentDecoder * ppdec = &(decwrapper->getDecoder());
 	::libmaus2::bambam::BamAlignmentDecoder & dec = *ppdec;
 	::libmaus2::bambam::BamHeader const & header = dec.getHeader();
-	
+
 	// getNumRef();
 	::libmaus2::bambam::BamAlignment const & algn = dec.getAlignment();
 
@@ -58,7 +58,7 @@ int bammapdist(libmaus2::util::ArgInfo const & arginfo)
 	uint64_t c = 0;
 	bool warningprinted = false;
 	uint64_t skipped = 0;
-	
+
 	while ( dec.readAlignment() )
 	{
 		if ( algn.isMapped() && algn.getRefID() < 0 )
@@ -75,7 +75,7 @@ int bammapdist(libmaus2::util::ArgInfo const & arginfo)
 			skipped += 1;
 			continue;
 		}
-		
+
 		if ( algn.isPaired() && (algn.isMateMapped() && algn.getNextRefID() < 0) )
 		{
 			if ( ! warningprinted )
@@ -93,8 +93,8 @@ int bammapdist(libmaus2::util::ArgInfo const & arginfo)
 
 		if ( algn.isPaired() )
 		{
-			if ( 
-				algn.isRead1() 
+			if (
+				algn.isRead1()
 				&&
 				(!algn.isSupplementary())
 				&&
@@ -110,7 +110,7 @@ int bammapdist(libmaus2::util::ArgInfo const & arginfo)
 						1,
 						loadthres
 					);
-					
+
 					if ( algn.getMapQ() >= 5 )
 					{
 						pairmap5.insertExtend(
@@ -121,7 +121,7 @@ int bammapdist(libmaus2::util::ArgInfo const & arginfo)
 							loadthres
 						);
 					}
-					
+
 					if ( algn.isProper() )
 						properpairmap.insertExtend(algn.getRefID(),1,loadthres);
 				}
@@ -131,13 +131,13 @@ int bammapdist(libmaus2::util::ArgInfo const & arginfo)
 				}
 				else if ( algn.isMateMapped() )
 				{
-					partial2map.insertExtend(algn.getNextRefID(),1,loadthres);				
+					partial2map.insertExtend(algn.getNextRefID(),1,loadthres);
 				}
 				else
 				{
 					pairsunmapped++;
 				}
-				
+
 				numpairs++;
 			}
 		}
@@ -145,14 +145,14 @@ int bammapdist(libmaus2::util::ArgInfo const & arginfo)
 		else
 		{
 
-			if ( 
+			if (
 				(!algn.isSupplementary())
 				&&
-				(!algn.isSecondary())			
+				(!algn.isSecondary())
 			)
 			{
-				if ( 
-					algn.isMapped() 
+				if (
+					algn.isMapped()
 				)
 				{
 					singlemap.insertExtend(algn.getRefID(),1,loadthres);
@@ -161,29 +161,29 @@ int bammapdist(libmaus2::util::ArgInfo const & arginfo)
 				{
 					singleunmapped++;
 				}
-				
+
 				numsingle++;
 			}
 		}
-		
+
 		if ( verbose && ((++c & (1024*1024-1)) == 0) )
 		{
-			std::cerr << "[V] " << c 
+			std::cerr << "[V] " << c
 				<< " "
 				<< numpairs
 				<< " "
 				<< numsingle
 				<< " "
 				<< libmaus2::util::MemUsage()
-				<< std::endl;	
+				<< std::endl;
 		}
 	}
-	
+
 	std::cout << "number of pairs\t" << numpairs << std::endl;
 	std::cout << "number of unmapped pairs\t" << pairsunmapped << std::endl;
 	std::cout << "number of single\t" << numsingle << std::endl;
 	std::cout << "number of unmapped single\t" << singleunmapped << std::endl;
-	
+
 	if ( skipped )
 		std::cout << "number of skipped broken alignments\t" << skipped << std::endl;
 
@@ -203,7 +203,7 @@ int bammapdist(libmaus2::util::ArgInfo const & arginfo)
 				splitfirst.insertExtend((*k >> 32),pairmap.getCount(*k),loadthres);
 				splitsecond.insertExtend((*k & 0xFFFFFFFFul),pairmap.getCount(*k),loadthres);
 			}
-			
+
 			mappedpairs += pairmap.getCount(*k);
 		}
 	for ( uint64_t const * k = pairmap5.begin(); k != pairmap5.end(); ++k )
@@ -249,7 +249,7 @@ int bammapdist(libmaus2::util::ArgInfo const & arginfo)
 			ostr << "\tpartial first\t" << partial1map.getCount(r) << std::endl;
 		if ( partial2map.contains(r) )
 			ostr << "\tpartial second\t" << partial2map.getCount(r) << std::endl;
-			
+
 		uint64_t splitref = 0;
 		if ( splitfirst.contains(r) )
 		{
@@ -285,11 +285,11 @@ int bammapdist(libmaus2::util::ArgInfo const & arginfo)
 		if ( ostr.str().size() )
 		{
 			std::cout << "reference sequence\t" << header.getRefIDName(r) << std::endl;
-			std::cout << ostr.str();	
+			std::cout << ostr.str();
 		}
 	}
-	
-	return skipped ? EXIT_FAILURE : EXIT_SUCCESS;	
+
+	return skipped ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
 int main(int argc, char * argv[])
@@ -297,9 +297,9 @@ int main(int argc, char * argv[])
 	try
 	{
 		libmaus2::util::ArgInfo const arginfo(argc,argv);
-	
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -308,7 +308,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -318,9 +318,9 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-			
+
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("inputformat=<[")+getDefaultInputFormat()+"]>", std::string("input format (") + libmaus2::bambam::BamMultiAlignmentDecoderFactory::getValidInputFormats() + ")" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "I=<[stdin]>", "input filename (standard input if unset)" ) );
@@ -332,12 +332,12 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;
 			}
-			
+
 		return bammapdist(arginfo);
 	}
 	catch(std::exception const & ex)
 	{
 		std::cerr << ex.what() << std::endl;
-		return EXIT_FAILURE;	
+		return EXIT_FAILURE;
 	}
 }

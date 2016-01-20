@@ -62,20 +62,20 @@ int bamfixmatecoordinates(::libmaus2::util::ArgInfo const & arginfo)
 {
 	::libmaus2::util::TempFileRemovalContainer::setup();
 	::libmaus2::timing::RealTimeClock rtc; rtc.start();
-	
+
 	bool const verbose = arginfo.getValue<unsigned int>("verbose",getDefaultVerbose());
 	unsigned int const colhashbits = arginfo.getValue<unsigned int>("colhashbits",getDefaultColHashBits());
 	unsigned int const collistsize = arginfo.getValue<unsigned int>("collistsize",getDefaultColListSize());
 	int const level = libmaus2::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
 	std::string const tmpfilenamebase = arginfo.getValue<std::string>("tmpfile",arginfo.getDefaultTmpFileName());
-	
+
 	std::string const tmpfilename = tmpfilenamebase + "_bamcollate";
 	::libmaus2::util::TempFileRemovalContainer::addTempFile(tmpfilename);
-	
+
 	::libmaus2::bambam::CollatingBamDecoder CBD(std::cin,tmpfilename,false /* put rank */,colhashbits/*hash bits*/,collistsize/*size of output list*/);
 	::libmaus2::bambam::BamFormatAuxiliary auxdata;
 	::libmaus2::bambam::BamHeader const & bamheader = CBD.getHeader();
-	
+
 	// add PG line to header
 	std::string const upheadtext = ::libmaus2::bambam::ProgramHeaderLineSet::addProgramLine(
 		bamheader.text,
@@ -83,11 +83,11 @@ int bamfixmatecoordinates(::libmaus2::util::ArgInfo const & arginfo)
 		"bamfixmatecoordinates", // PN
 		arginfo.commandline, // CL
 		::libmaus2::bambam::ProgramHeaderLineSet(bamheader.text).getLastIdInChain(), // PP
-		std::string(PACKAGE_VERSION) // VN			
+		std::string(PACKAGE_VERSION) // VN
 	);
 	// construct new header
 	::libmaus2::bambam::BamHeader uphead(upheadtext);
-	
+
 	if ( uphead.getSortOrder() != "queryname" )
 		uphead.changeSortOrder("unknown");
 
@@ -137,10 +137,10 @@ int bamfixmatecoordinates(::libmaus2::util::ArgInfo const & arginfo)
 	/*
 	 * end md5/index callbacks
 	 */
-	
+
 	// setup bam writer
 	::libmaus2::bambam::BamWriter::unique_ptr_type writer(new ::libmaus2::bambam::BamWriter(std::cout,uphead,level,Pcbs));
-	
+
 	#if 0
 	::libmaus2::bambam::ProgramHeaderLineSet PHLS(bamheader.text);
 	std::cerr << "Last id in PG chain: " << PHLS.getLastIdInChain() << std::endl;
@@ -154,16 +154,16 @@ int bamfixmatecoordinates(::libmaus2::util::ArgInfo const & arginfo)
 	uint64_t proc = 0;
 	uint64_t lastproc = 0;
 	uint64_t paircnt = 0;
-	
+
 	while ( CBD.tryPair(P) )
 	{
 		uint64_t const mapcnt = getMapCnt(P.first) + getMapCnt(P.second);
-		
+
 		if ( mapcnt == 1 )
 		{
 			int32_t refid = -1;
 			int32_t pos = -1;
-			
+
 			if ( P.first )
 			{
 				refid = P.first->getRefID();
@@ -176,7 +176,7 @@ int bamfixmatecoordinates(::libmaus2::util::ArgInfo const & arginfo)
 				refid = P.second->getRefID();
 				pos = P.second->getPos();
 			}
-			
+
 			P.first->putRefId(refid);
 			P.first->putPos(pos);
 			P.first->putNextRefId(refid);
@@ -186,7 +186,7 @@ int bamfixmatecoordinates(::libmaus2::util::ArgInfo const & arginfo)
 			P.second->putNextRefId(refid);
 			P.second->putNextPos(pos);
 		}
-		
+
 		if ( P.first )
 		{
 			P.first->serialise(writer->getStream());
@@ -201,20 +201,20 @@ int bamfixmatecoordinates(::libmaus2::util::ArgInfo const & arginfo)
 		{
 			paircnt++;
 		}
-		
+
 		if ( verbose && (proc/mod != lastproc/mod) )
 		{
-			std::cerr 
-				<< "Processed " << proc << " fragments, " << paircnt << " pairs, " 
+			std::cerr
+				<< "Processed " << proc << " fragments, " << paircnt << " pairs, "
 				<< proc/rtc.getElapsedSeconds() << " al/s"
 				<< std::endl;
 			lastproc = proc;
 		}
-	}		
+	}
 
 	if ( verbose )
-		std::cerr 	
-			<< "Processed " << proc << " fragments, " << paircnt << " pairs, " 
+		std::cerr
+			<< "Processed " << proc << " fragments, " << paircnt << " pairs, "
 			<< proc/rtc.getElapsedSeconds() << " al/s"
 			<< std::endl;
 
@@ -239,7 +239,7 @@ int main(int argc, char * argv[])
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
 
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -248,7 +248,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -258,9 +258,9 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-				
+
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "colhashbits=<["+::biobambam2::Licensing::formatNumber(getDefaultColHashBits())+"]>", "log_2 of size of hash table used for collation" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "collistsize=<["+::biobambam2::Licensing::formatNumber(getDefaultColListSize())+"]>", "output list size for collation" ) );
@@ -276,7 +276,7 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;
 			}
-		
+
 		return bamfixmatecoordinates(arginfo);
 	}
 	catch(std::exception const & ex)

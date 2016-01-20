@@ -36,7 +36,7 @@ int bamindex(libmaus2::util::ArgInfo const & arginfo, std::istream & in, std::os
 	std::string const tmpfileprefix = arginfo.getValue<std::string>("tmpfile",arginfo.getDefaultTmpFileName());
 
 	libmaus2::lz::BgzfInflate<std::istream> rec(in);
-	
+
 	libmaus2::bambam::BamIndexGenerator BIG(tmpfileprefix,verbose,validate,debug);
 
 	libmaus2::autoarray::AutoArray<uint8_t> B(libmaus2::lz::BgzfConstants::getBgzfMaxBlockSize());
@@ -45,7 +45,7 @@ int bamindex(libmaus2::util::ArgInfo const & arginfo, std::istream & in, std::os
 		BIG.addBlock(B.begin(),rinfo.compressed,rinfo.uncompressed);
 
 	BIG.flush(out);
-	
+
 	return EXIT_SUCCESS;
 }
 
@@ -54,9 +54,9 @@ int main(int argc, char * argv[])
 	try
 	{
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
-		
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -65,7 +65,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -75,7 +75,7 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
 
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report (default: 1)" ) );
@@ -87,7 +87,7 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;
 			}
-			
+
 		return bamindex(arginfo,std::cin,std::cout);
 	}
 	catch(std::exception const & ex)
@@ -96,4 +96,3 @@ int main(int argc, char * argv[])
 		return EXIT_FAILURE;
 	}
 }
-

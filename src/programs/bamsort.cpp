@@ -74,7 +74,7 @@ static int getDefaultStreaming() { return 1; }
 */
 
 void removeOldStyleMateCoordinate(
-	libmaus2::bambam::BamAlignment & rec1, 
+	libmaus2::bambam::BamAlignment & rec1,
 	libmaus2::bambam::BamAlignment & rec2
 	)
 {
@@ -82,17 +82,17 @@ void removeOldStyleMateCoordinate(
 
     	bool r1 = rec1.getAuxAsNumber<uint64_t>("MC", num);
     	bool r2 = rec2.getAuxAsNumber<uint64_t>("MC", num);
-	
+
 	// old MC is a number type, spec format is a string
-	
+
 	libmaus2::bambam::BamAuxFilterVector OldMCfilter;
 	OldMCfilter.set("MC");
-	
+
 	if (r1)
 	{
     	    	rec1.filterOutAux(OldMCfilter);
 	}
-	
+
 	if (r2)
 	{
 	    	rec2.filterOutAux(OldMCfilter);
@@ -104,7 +104,7 @@ void removeOldStyleMateCoordinate(
 int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 {
 	::libmaus2::util::TempFileRemovalContainer::setup();
-	
+
 	bool const inputisstdin = (!arginfo.hasArg("I")) || (arginfo.getUnparsedValue("I","-") == "-");
 	bool const outputisstdout = (!arginfo.hasArg("O")) || (arginfo.getUnparsedValue("O","-") == "-");
 
@@ -164,7 +164,7 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 		"bamsort", // PN
 		arginfo.commandline, // CL
 		::libmaus2::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
-		std::string(PACKAGE_VERSION) // VN			
+		std::string(PACKAGE_VERSION) // VN
 	);
 	// construct new header
 	::libmaus2::bambam::BamHeader uphead(upheadtext);
@@ -217,7 +217,7 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 	 */
 	enum sort_order_type { sort_order_coordinate, sort_order_queryname };
 	sort_order_type sort_order;
-	 
+
 	if ( sortorder != "queryname" )
 	{
 		uphead.changeSortOrder("coordinate");
@@ -237,9 +237,9 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 		::libmaus2::exception::LibMausException se;
 		se.getStream() << "tag " << tag << " is invalid" << std::endl;
 		se.finish();
-		throw se;			
+		throw se;
 	}
-	
+
 	// nucl tag field
 	bool const havenucltag = arginfo.hasArg("nucltag");
 	std::string const nucltag = arginfo.getUnparsedValue("nucltag","no tag");
@@ -249,17 +249,17 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 		::libmaus2::exception::LibMausException se;
 		se.getStream() << "nucltag " << tag << " is invalid" << std::endl;
 		se.finish();
-		throw se;			
+		throw se;
 	}
-	
+
 	if ( havetag && havenucltag )
 	{
 		::libmaus2::exception::LibMausException se;
 		se.getStream() << "tag and nucltag are mutually exclusive" << std::endl;
 		se.finish();
-		throw se;					
+		throw se;
 	}
-	
+
 	enum tag_type_enum
 	{
 		tag_type_none,
@@ -267,7 +267,7 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 		tag_type_nucleotide
 	};
 	tag_type_enum tag_type;
-	
+
 	if ( havetag )
 		tag_type = tag_type_string;
 	else if ( havenucltag )
@@ -277,19 +277,19 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 
 	bool addMSMC = arginfo.getValue<int>("adddupmarksupport",getDefaultAddDupMarkSupport());
 	bool fixmates = arginfo.getValue<int>("fixmates",getDefaultFixMates());
-	
+
 	if ( (havetag || havenucltag) && (!addMSMC) )
 	{
 		std::cerr << "[W] tag or nucltag is enabled, forcing adddupmarksupport=1" << std::endl;
 		addMSMC = true;
 	}
-	
+
 	if ( markduplicates && (!addMSMC) )
 	{
 		std::cerr << "[W] markduplicates is enabled, forcing adddupmarksupport=1" << std::endl;
-		addMSMC = true;		
+		addMSMC = true;
 	}
-	
+
 	if ( addMSMC && ! fixmates )
 	{
 		std::cerr << "[W] adddupmarksupport is enabled, forcing fixmates=1" << std::endl;
@@ -299,7 +299,7 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 	libmaus2::bambam::BamBlockWriterBase::unique_ptr_type Uout ( libmaus2::bambam::BamBlockWriterBaseFactory::construct(uphead, arginfo, Pcbs) );
 	libmaus2::bambam::BamBlockWriterBase * Pout = Uout.get();
 	libmaus2::bambam::BamStreamingMarkDuplicates::unique_ptr_type MaDuout;
-	
+
 	if ( markduplicates )
 	{
 		libmaus2::bambam::BamStreamingMarkDuplicates::unique_ptr_type TMaDuout(
@@ -308,7 +308,7 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 		MaDuout = UNIQUE_PTR_MOVE(TMaDuout);
 		Pout = MaDuout.get();
 	}
-	
+
 	libmaus2::bambam::BamBlockWriterBase & alout = *Pout;
 	libmaus2::autoarray::AutoArray<char> MCaux;
 
@@ -316,7 +316,7 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 	{
 		if ( sort_order == sort_order_coordinate )
 		{
-			::libmaus2::bambam::BamEntryContainer< ::libmaus2::bambam::BamAlignmentPosComparator > 
+			::libmaus2::bambam::BamEntryContainer< ::libmaus2::bambam::BamAlignmentPosComparator >
 				BEC(blockmem,tmpfilenameout,sortthreads);
 
 			if ( verbose )
@@ -335,17 +335,17 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 			libmaus2::bambam::BamAuxFilterVector MCfilter;
 			libmaus2::bambam::BamAuxFilterVector MTfilter;
 			libmaus2::bambam::BamAuxFilterVector CMCfilter;
-			
+
 			MQfilter.set("MQ");
 			MSfilter.set("ms");
 			MCfilter.set("mc");
 			MTfilter.set("mt");
 			CMCfilter.set("MC");
-			
+
 			// remove the original style tags (MC handled separately)
 			MSfilter.set("MS");
 			MTfilter.set("MT");
-			
+
 			while ( dec.readAlignment() )
 			{
 				if ( curalgn.isSecondary() || curalgn.isSupplementary() )
@@ -371,7 +371,7 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 							libmaus2::bambam::BamAlignment::addMateCoordinate(prevalgn,curalgn,MCfilter);
 							libmaus2::bambam::BamAlignment::addMateCigarString(prevalgn,curalgn,MCaux,CMCfilter);
 							removeOldStyleMateCoordinate(prevalgn,curalgn);
-							
+
 							switch ( tag_type )
 							{
 								case tag_type_string:
@@ -395,11 +395,11 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 					prevalgn.swap(curalgn);
 					prevalgnvalid = true;
 				}
-				
+
 				if ( verbose && ( ( ++incnt & ((1ull<<20)-1) ) == 0 ) )
 					std::cerr << "[V] " << incnt << std::endl;
 			}
-			
+
 			if ( prevalgnvalid )
 			{
 				BEC.putAlignment(prevalgn);
@@ -414,13 +414,13 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 		}
 		else
 		{
-			::libmaus2::bambam::BamEntryContainer< ::libmaus2::bambam::BamAlignmentNameComparator > 
+			::libmaus2::bambam::BamEntryContainer< ::libmaus2::bambam::BamAlignmentNameComparator >
 				BEC(blockmem,tmpfilenameout,sortthreads);
-			
+
 			if ( verbose )
 				std::cerr << "[V] Reading alignments from source." << std::endl;
 			uint64_t incnt = 0;
-			
+
 			// current alignment
 			libmaus2::bambam::BamAlignment & curalgn = dec.getAlignment();
 			// previous alignment
@@ -438,11 +438,11 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 			MCfilter.set("mc");
 			MTfilter.set("mt");
 			CMCfilter.set("MC");
-			
+
 			// remove the original style tags (MC handled separately)
 			MSfilter.set("MS");
 			MTfilter.set("MT");
-			
+
 			while ( dec.readAlignment() )
 			{
 				if ( curalgn.isSecondary() || curalgn.isSupplementary() )
@@ -468,7 +468,7 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 							libmaus2::bambam::BamAlignment::addMateCoordinate(prevalgn,curalgn,MCfilter);
 							libmaus2::bambam::BamAlignment::addMateCigarString(prevalgn,curalgn,MCaux,CMCfilter);
     	    	    	    	    	    	    	removeOldStyleMateCoordinate(prevalgn,curalgn);
-							
+
 							switch ( tag_type )
 							{
 								case tag_type_string:
@@ -492,17 +492,17 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 					prevalgn.swap(curalgn);
 					prevalgnvalid = true;
 				}
-				
+
 				if ( verbose && ( ( ++incnt & ((1ull<<20)-1) ) == 0 ) )
 					std::cerr << "[V] " << incnt << std::endl;
 			}
-			
+
 			if ( prevalgnvalid )
 			{
 				BEC.putAlignment(prevalgn);
 				prevalgnvalid = false;
 			}
-			
+
 			if ( verbose )
 				std::cerr << "[V] read " << incnt << " alignments" << std::endl;
 
@@ -514,7 +514,7 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 	{
 		if ( sort_order == sort_order_coordinate )
 		{
-			bool const calmdnm = arginfo.getValue<unsigned int>("calmdnm",getDefaultCalMdNm());			
+			bool const calmdnm = arginfo.getValue<unsigned int>("calmdnm",getDefaultCalMdNm());
 			if ( calmdnm && (! arginfo.hasArg("calmdnmreference")) )
 			{
 				libmaus2::exception::LibMausException lme;
@@ -525,13 +525,13 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 			std::string const calmdnmreference = arginfo.getUnparsedValue("calmdnmreference","");
 			bool const calmdnmrecompindetonly = arginfo.getValue<unsigned int>("calmdnmrecompindetonly",getDefaultCalMdNmRecompIndetOnly());
 			bool const calmdnmwarnchange = arginfo.getValue<unsigned int>("calmdnmwarnchange",getDefaultCalMdNmWarnChange());
-			
+
 			::libmaus2::bambam::BamEntryContainer< ::libmaus2::bambam::BamAlignmentPosComparator > BEC(blockmem,tmpfilenameout,sortthreads);
 
 			if ( verbose )
 				std::cerr << "[V] Reading alignments from source." << std::endl;
 			uint64_t incnt = 0;
-			
+
 			while ( dec.readAlignment() )
 			{
 				BEC.putAlignment(dec.getAlignment());
@@ -551,17 +551,17 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 			}
 			else
 			{
-				BEC.createOutput(alout, verbose, 0);			
+				BEC.createOutput(alout, verbose, 0);
 			}
 		}
 		else
 		{
 			::libmaus2::bambam::BamEntryContainer< ::libmaus2::bambam::BamAlignmentNameComparator > BEC(blockmem,tmpfilenameout,sortthreads);
-			
+
 			if ( verbose )
 				std::cerr << "[V] Reading alignments from source." << std::endl;
 			uint64_t incnt = 0;
-			
+
 			while ( dec.readAlignment() )
 			{
 				BEC.putAlignment(dec.getAlignment());
@@ -569,7 +569,7 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 				if ( verbose && (incnt % (1024*1024) == 0) )
 					std::cerr << "[V] " << incnt/(1024*1024) << "M" << std::endl;
 			}
-			
+
 			if ( verbose )
 				std::cerr << "[V] read " << incnt << " alignments" << std::endl;
 
@@ -577,7 +577,7 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 			BEC.createOutput(alout, verbose);
 		}
 	}
-	
+
 	// flush duplicate marking if active
 	if ( MaDuout )
 	{
@@ -606,9 +606,9 @@ int main(int argc, char * argv[])
 	try
 	{
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
-		
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -617,7 +617,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -627,9 +627,9 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-			
+
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
 				V.push_back ( std::pair<std::string,std::string> ( "SO=<["+getDefaultSortOrder()+"]>", "sorting order (coordinate or queryname)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
@@ -664,7 +664,7 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;
 			}
-			
+
 		return bamsort(arginfo);
 	}
 	catch(std::exception const & ex)
@@ -673,4 +673,3 @@ int main(int argc, char * argv[])
 		return EXIT_FAILURE;
 	}
 }
-

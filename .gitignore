@@ -37,6 +37,7 @@ src/kmerprob
 src/fastqtobam
 src/normalisefasta
 src/fastabgzfextract
+src/fastaexplode
 test/*.log
 test/*.trs
 src/*/.deps

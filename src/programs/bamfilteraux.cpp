@@ -66,13 +66,13 @@ int bamfilteraux(::libmaus2::util::ArgInfo const & arginfo)
 		se.finish();
 		throw se;
 	}
-	
+
 	if ( arginfo.hasArg("keep") && arginfo.hasArg("remove") )
 	{
 		::libmaus2::exception::LibMausException se;
 		se.getStream() << "The keep and remove keys are mutually exclusive." << std::endl;
 		se.finish();
-		throw se;		
+		throw se;
 	}
 
 	int const level = libmaus2::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
@@ -90,7 +90,7 @@ int bamfilteraux(::libmaus2::util::ArgInfo const & arginfo)
 		"bamfilteraux", // PN
 		arginfo.commandline, // CL
 		::libmaus2::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
-		std::string(PACKAGE_VERSION) // VN			
+		std::string(PACKAGE_VERSION) // VN
 	);
 	// construct new header
 	libmaus2::bambam::BamHeader const uphead(upheadtext);
@@ -145,10 +145,10 @@ int bamfilteraux(::libmaus2::util::ArgInfo const & arginfo)
 
 	::libmaus2::bambam::BamWriter::unique_ptr_type writer(new ::libmaus2::bambam::BamWriter(std::cout,uphead,level,Pcbs));
  	libmaus2::bambam::BamAuxFilterVector bafv;
- 	
+
  	std::string const filterlist = arginfo.hasArg("keep") ? arginfo.getUnparsedValue("keep","") : arginfo.getUnparsedValue("remove","");
 	std::deque<std::string> const tokens = libmaus2::util::stringFunctions::tokenize<std::string>(filterlist,std::string(","));
-	
+
 	for ( uint64_t i = 0; i < tokens.size(); ++i )
 		if ( tokens[i].size() == 2 )
 		{
@@ -159,27 +159,27 @@ int bamfilteraux(::libmaus2::util::ArgInfo const & arginfo)
 			libmaus2::exception::LibMausException se;
 			se.getStream() << "Invalid tag name " << tokens[i] << std::endl;
 			se.finish();
-			throw se; 			
+			throw se;
 		}
 
 	libmaus2::bambam::BamAlignment & algn = dec.getAlignment();
 	uint64_t c = 0;
 
- 	if ( 
- 		arginfo.hasArg("remove") 
- 		|| 
+ 	if (
+ 		arginfo.hasArg("remove")
+ 		||
  		(
  			(!arginfo.hasArg("remove"))
  			&&
  			(!arginfo.hasArg("keep"))
 		)
 	)
- 	{	
+ 	{
  		while ( dec.readAlignment() )
  		{
  			algn.filterOutAux(bafv);
  			algn.serialise(writer->getStream());
- 			
+
  			if ( verbose && (++c & (1024*1024-1)) == 0 )
  				std::cerr << "[V] " << c/(1024*1024) << std::endl;
  		}
@@ -193,9 +193,9 @@ int bamfilteraux(::libmaus2::util::ArgInfo const & arginfo)
 
  			if ( verbose && (++c & (1024*1024-1)) == 0 )
  				std::cerr << "[V] " << c/(1024*1024) << std::endl;
- 		} 		
+ 		}
  	}
- 	
+
  	writer.reset();
 
 	if ( Pmd5cb )
@@ -215,9 +215,9 @@ int main(int argc, char * argv[])
 	try
 	{
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
-		
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -226,7 +226,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -236,9 +236,9 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-			
+
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress information" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "keep=<[]>", "keep these tags (default: keep all)" ) );
@@ -252,12 +252,12 @@ int main(int argc, char * argv[])
 				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
-				
+
 				std::cerr << "The keep and remove keys are mutually exclusive. Tags are given by their two character ids. Multiple ids are separated by commas." << std::endl;
-				
+
 				return EXIT_SUCCESS;
 			}
-			
+
 		return bamfilteraux(arginfo);
 	}
 	catch(std::exception const & ex)
@@ -266,4 +266,3 @@ int main(int argc, char * argv[])
 		return EXIT_FAILURE;
 	}
 }
-

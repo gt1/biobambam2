@@ -78,26 +78,26 @@ void adapterListMatch(
 {
     	uint64_t len;
 
-    	if ( algn.isReverse() ) 
+    	if ( algn.isReverse() )
 	{
 	        len = algn.decodeReadRC(Aread);
-	} 
+	}
 	else
 	{
 	    	len = algn.decodeRead(Aread);
 	}
 
 	uint8_t const * const ua = reinterpret_cast<uint8_t const *>(Aread.begin());
-			
+
 	bool const matched = AF.searchAdapters(
-		ua, len, 
-		2 /* max mismatches */, 
+		ua, len,
+		2 /* max mismatches */,
 		AOSPB,
 		adpmatchminscore /* min score */,
 		adpmatchminfrac /* minfrac */,
 		adpmatchminpfrac /* minpfrac */
 	);
-			
+
 	if ( matched )
 	{
 		std::sort(AOSPB.begin(),AOSPB.end(),libmaus2::bambam::AdapterOffsetStrandMatchStartComparator());
@@ -108,17 +108,17 @@ void adapterListMatch(
 
 		// confidence that this is not a random event
 		double const randconfid = kmerPoisson(reflen,fA,fC,fG,fT,0/*n*/,pA,pC,pG,pT);
-		
+
 		if ( verbose > 1 )
 		{
 			std::cerr << "\n" << std::string(80,'-') << "\n\n";
-		
+
 			std::cerr << "read length " << len << " clip " << clip << " randconfig=" << randconfid << " fA=" << fA << " fC=" << fC << " fG=" << fG << " fT=" << fT << std::endl;
-				
+
 			for ( libmaus2::bambam::AdapterOffsetStrand const * it = AOSPB.begin(); it != AOSPB.end(); ++it )
 				AF.printAdapterMatch(ua,len,*it);
 		}
-		
+
 		algn.putAuxNumber("as",'i',clip);
 		algn.putAuxString("aa",AF.getAdapterName(AOSPB.begin()[0]));
 		algn.putAuxNumber("af",'f',AOSPB.begin()[0].pfrac);
@@ -158,7 +158,7 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 	int const clip = arginfo.getValue<int>("clip",getDefaultClip());
 	uint64_t const mod = arginfo.getValue<int>("mod",getDefaultMod());
 	// length of seed
-	uint64_t const seedlength = 
+	uint64_t const seedlength =
 		std::min(
 			static_cast<unsigned int>((8*sizeof(uint64_t))/3),
 			std::max(arginfo.getValue<unsigned int>("SEED_LENGTH",getDefaultSEED_LENGTH()),1u));
@@ -172,7 +172,7 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 	uint64_t const almax = arginfo.getValue<uint64_t>("ADAPTER_MATCH",getDefaultADAPTER_MATCH());
 
 	libmaus2::bambam::AdapterFilter::unique_ptr_type AF;
-	
+
 	if ( arginfo.hasArg("adaptersbam") )
 	{
 		libmaus2::aio::InputStreamInstance adapterCIS(arginfo.getUnparsedValue("adaptersbam","adapters.bam"));
@@ -206,7 +206,7 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 		"bamadapterfind", // PN
 		arginfo.commandline, // CL
 		::libmaus2::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
-		std::string(PACKAGE_VERSION) // VN			
+		std::string(PACKAGE_VERSION) // VN
 	);
 	// construct new header
 	::libmaus2::bambam::BamHeader uphead(upheadtext);
@@ -260,12 +260,12 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 	 */
 
 	::libmaus2::bambam::BamWriter::unique_ptr_type writer(new ::libmaus2::bambam::BamWriter(std::cout,uphead,level,Pcbs));
-	
+
 	bool running = true;
 	libmaus2::bambam::BamAlignment algns[2];
 	libmaus2::bambam::BamAlignment & inputalgn = bamdec.getAlignment();
 	libmaus2::autoarray::AutoArray<char> seqs[2];
-	
+
 	libmaus2::autoarray::AutoArray<uint8_t> S(256,false);
 	std::fill(S.begin(),S.end(),4);
 	S['a'] = S['A'] = 0;
@@ -279,7 +279,7 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 	R['c'] = R['C'] = 1;
 	R['g'] = R['G'] = 2;
 	R['t'] = R['T'] = 3;
-	
+
 	static uint64_t const mmask =
 		(1ull << 0) |
 		(1ull << 3) |
@@ -307,7 +307,7 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 	libmaus2::bambam::BamAuxFilterVector auxfilter;
 	auxfilter.set("a3");
 	auxfilter.set("ah");
-	
+
 	uint64_t alcnt = 0;
 	uint64_t adptcnt = 0;
 	uint64_t lastalcnt = std::numeric_limits<uint64_t>::max();
@@ -317,7 +317,7 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 	uint64_t const bmod = libmaus2::math::nextTwoPow(mod);
 	// uint64_t const bmask = bmod-1;
 	uint64_t const bshift = libmaus2::math::ilog(bmod);
-	
+
 	libmaus2::util::Histogram overlaphist;
 	libmaus2::util::Histogram adapterhist;
 
@@ -326,9 +326,9 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 	libmaus2::bambam::BamSeqEncodeTable const seqenc;
 	libmaus2::autoarray::AutoArray<libmaus2::bambam::cigar_operation> cigop;
 	libmaus2::bambam::BamAlignment::D_array_type T;
-	
+
 	// std::cerr << "bmask=" << bmask << std::endl;
-	
+
 	while ( (running = bamdec.readAlignment()) )
 	{
 		if ( verbose && ( (alcnt >> bshift) != (lastalcnt >> bshift) ) )
@@ -336,7 +336,7 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 			std::cerr << "[V]\t" << alcnt << "\t" << paircnt << "\t" << adptcnt << std::endl;
 			lastalcnt = alcnt;
 		}
-	
+
 		alcnt++;
 
 		// find adapters in given list
@@ -350,26 +350,26 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 			inputalgn.serialise(writer->getStream());
 			continue;
 		}
-	
+
 		// store alignment in algns[0]
 		algns[0].swap(inputalgn);
-		
+
 		// read next alignment
 		bool const okb = bamdec.readAlignment();
 		alcnt++;
-		
+
 		// no next alignment, algns[0] is an orphan
 		if ( ! okb )
 		{
 			if ( clip )
 				clipAdapters(algns[0],CR,CQ,seqenc,cigop,T);
-		
+
 			++orphcnt;
 			// std::cerr << "[D] warning: orphan alignment"  << std::endl;
 			algns[0].serialise(writer->getStream());
 			break;
 		}
-		
+
 		// if next is not paired or name does not match
 		if ( (! inputalgn.isPaired()) || strcmp(algns[0].getName(), inputalgn.getName()) )
 		{
@@ -382,7 +382,7 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 			alcnt--;
 			continue;
 		}
-		
+
 		// sanity checks
 		assert ( algns[0].isPaired() );
 		assert ( inputalgn.isPaired() );
@@ -393,18 +393,18 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 
 		// find adapters in given list
 		adapterListMatch(Aread,AOSPB,algns[1],*AF,verbose,adpmatchminscore,adpmatchminfrac,adpmatchminpfrac,reflen,pA,pC,pG,pT);
-		
+
 		// are the read in the correct order? if not, write them out without touching them
 		if ( !(algns[0].isRead1() && algns[1].isRead2()) )
 		{
 			std::cerr << "[D] warning: reads are not in the correct order" << std::endl;
-			
+
 			if ( clip )
 			{
 				clipAdapters(algns[0],CR,CQ,seqenc,cigop,T);
 				clipAdapters(algns[1],CR,CQ,seqenc,cigop,T);
 			}
-			
+
 			algns[0].serialise(writer->getStream());
 			algns[1].serialise(writer->getStream());
 			continue;
@@ -425,26 +425,26 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 			algns[1].serialise(writer->getStream());
 			continue;
 		}
-		
+
 		paircnt++;
-		
+
 		unsigned int const rev0 = algns[0].isReverse() ? 1 : 0;
 		unsigned int const rev1 = algns[1].isReverse() ? 1 : 0;
-		
-		/* 
+
+		/*
 		 * Whether a sequence needs to be reverse complemented for
 		 * adaptor detection depends on its strand and in what orientation
 		 * it is stored.
 		 */
-		 
-		if ( !rev0 ) 
+
+		if ( !rev0 )
 		{
     	    		algns[0].decodeRead(seqs[0]);
 
-			if ( !rev1 ) 
+			if ( !rev1 )
 			{
 			        algns[1].decodeReadRC(seqs[1]);
-			} 
+			}
 			else
 			{
 		    	        algns[1].decodeRead(seqs[1]);
@@ -454,7 +454,7 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 		{
 			algns[0].decodeReadRC(seqs[0]);
 
-			if ( !rev1 ) 
+			if ( !rev1 )
 			{
 			        algns[1].decodeReadRC(seqs[1]);
 			}
@@ -463,7 +463,7 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 		    	        algns[1].decodeRead(seqs[1]);
 			}
 		}
-		
+
 		uint64_t const l0 = algns[0].getLseq();
 		uint64_t const l1 = algns[1].getLseq();
 		uint64_t const lm = std::min(l0,l1);
@@ -489,26 +489,26 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 		uint8_t const * const qe = reinterpret_cast<uint8_t const *>(seqs[0].begin());
 		uint8_t const * q = qe + l0;
 		uint64_t matchpos = l0-lseedlength;
-		
+
 		for ( uint64_t i = 0; i < lseedlength-1; ++i )
 		{
 			query <<= 3;
 			query |= R[*(--q)];
 		}
-				
+
 		// try to find seed in first read
 		do
 		{
 			// add next base (step backward from end)
-			query <<= 3;			
+			query <<= 3;
 			query |= R[*(--q)];
 			query &= lseedmask;
 
-			// compute number of mismatches			
+			// compute number of mismatches
 			uint64_t dif = (query ^ seed);
 			dif = (dif | (dif >> 1) | (dif >> 2)) & mmask;
 			unsigned int const difcnt = libmaus2::rank::PopCnt8<sizeof(unsigned long)>::popcnt8(dif);
-			
+
 			#if defined(DIFCNTDEBUG)
 			unsigned int debdifcnt = 0;
 			for ( unsigned int i = 0; i < lseedlength; ++i )
@@ -539,22 +539,22 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 					uint8_t const * check0e = check0 + restoverlap;
 					// start iterator of non seed overlap on read 2
 					uint8_t const * check1  = reinterpret_cast<uint8_t const *>(seqs[1].begin()+seedp1-restoverlap);
-					
+
 					// maximum number of mismatches allowed
 					uint64_t const maxmis = (restoverlap+lseedlength) * mismatchrate;
-					
+
 					// compute number of mismatches
 					uint64_t nummis = difcnt;
 					while ( nummis <= maxmis && check0 != check0e  )
 						if ( S[*check0++] != R[*check1++] )
 							nummis++;
-					
+
 					// if match is within the maximal number of mismatches
 					if ( check0 == check0e && nummis <= maxmis )
 					{
 						// update overlap histogram
 						overlaphist(lseedlength + restoverlap);
-					
+
 						// adapter length for read 1
 						uint64_t const al0 = (l0-end0);
 						// adapter length for read 2
@@ -569,7 +569,7 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 						char const * ap1 = seqs[1].begin()+al1;
 						// number of mismatches on adapter (up to a length of almax)
 						unsigned int aldif = 0;
-						
+
 						// calculate mismatches in adapter
 						while ( ap0 != ap0e )
 							if ( S[*(ap0++)] != R[libmaus2::fastx::invertUnmapped(*(--ap1))] )
@@ -581,11 +581,11 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 							if ( verbose > 1 )
 							{
 								std::cerr
-									<< "[V2] overlap: " << algns[0].getName() 
-									<< " mismatchrate=" << 
+									<< "[V2] overlap: " << algns[0].getName()
+									<< " mismatchrate=" <<
 										nummis << "/" << (restoverlap+lseedlength) << "=" <<
 										static_cast<double>(nummis)/(restoverlap+lseedlength)
-									<< " al0=" << al0 
+									<< " al0=" << al0
 									<< " al1=" << al1
 									<< " aldif=" << aldif
 									<< " alcmp=" << alcmp
@@ -596,13 +596,13 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 									"[V2] " << std::string(
 										seqs[1].begin()+seedp1-restoverlap,
 										seqs[1].begin()+end1) << "\n";
-									
+
 								std::cerr << "[V2] assumed adapter on read 1 ["<<al0<<"]: "
 									<< std::string(
 										seqs[0].begin()+end0,
 										seqs[0].begin()+l0
 									) << std::endl;
-								
+
 								std::cerr << "[V2] assumed adapter on read 2 ["<<al1<<"]: "
 									<< libmaus2::fastx::reverseComplementUnmapped(std::string(
 										seqs[1].begin(),
@@ -611,34 +611,34 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 
 							algns[0].filterOutAux(auxfilter);
 							algns[1].filterOutAux(auxfilter);
-							
+
 							algns[0].putAuxNumber("ah",'i',1);
 							algns[1].putAuxNumber("ah",'i',1);
 							algns[0].putAuxNumber("a3",'i',al0);
 							algns[1].putAuxNumber("a3",'i',al1);
-							
+
 							adptcnt += 1;
 							adapterhist(lseedlength + restoverlap);
-							
+
 							break;
 						}
 					}
 				}
 			}
-			
+
 			--matchpos;
 		} while ( q != qe );
 
 		// std::cerr << "pair for " << algns[0].getName() << std::endl;
-		
+
 		if ( clip )
 		{
 			clipAdapters(algns[0],CR,CQ,seqenc,cigop,T);
 			clipAdapters(algns[1],CR,CQ,seqenc,cigop,T);
 		}
-		
-		algns[0].serialise(writer->getStream());		
-		algns[1].serialise(writer->getStream());		
+
+		algns[0].serialise(writer->getStream());
+		algns[1].serialise(writer->getStream());
 	}
 
 	if ( verbose )
@@ -646,13 +646,13 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 
 	if ( verbose )
 		std::cerr << "[V] paircnt=" << paircnt << " adptcnt=" << adptcnt << " alcnt=" << alcnt << " orphcnt=" << orphcnt << std::endl;
-		
+
 	std::map<uint64_t,uint64_t> const overlaphistmap = overlaphist.get();
 	std::map<uint64_t,uint64_t> const adapterhistmap = adapterhist.get();
-	
+
 	uint64_t totOverlaps = 0;
 	uint64_t totAdapters = 0;
-	
+
 	// print histogram
 	for ( std::map<uint64_t,uint64_t>::const_iterator ita = overlaphistmap.begin();
 		ita != overlaphistmap.end(); ++ita )
@@ -660,22 +660,22 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 		// number of adapters for overlap
 		uint64_t const ladpt = (adapterhistmap.find(ita->first) != adapterhistmap.end()) ?
 			adapterhistmap.find(ita->first)->second : 0;
-			
-		std::cerr 
+
+		std::cerr
 			<< std::setfill('0') << std::setw(3) << ita->first << std::setw(0)
 			<< " "
 			<< std::setfill('0') << std::setw(7) << ita->second << std::setw(0)
 			<< " "
 			<< std::setfill('0') << std::setw(7) << ladpt << std::setw(0)
 			<< std::endl;
-			
+
 		totOverlaps += ita->second;
 		totAdapters += ladpt;
 	}
 
 	double const pctOverlaps = (static_cast<double>(totOverlaps)/paircnt)*100.0;
 	double const pctAdapters = (static_cast<double>(totAdapters)/paircnt)*100.0;
-	
+
 	std::cerr << "Processed " << std::setw(7) << std::setfill('0') << paircnt << std::setw(0) << " read pairs." << std::endl;
 	std::cerr << "Found     " << std::setw(7) << std::setfill('0') << totOverlaps << std::setw(0) << " overlaps (" << pctOverlaps << ")" << std::endl;
 	std::cerr << "Found     " << std::setw(7) << std::setfill('0') << totAdapters << std::setw(0) << " adapters (" << pctAdapters << ")" << std::endl;
@@ -699,9 +699,9 @@ int main(int argc, char * argv[])
 	try
 	{
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
-		
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -710,7 +710,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -720,9 +720,9 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-			
+
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "mod=<["+::biobambam2::Licensing::formatNumber(getDefaultMod())+"]>", "print progress every mod'th line (if verbose>0)" ) );
@@ -752,7 +752,7 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;
 			}
-			
+
 		return bamadapterfind(arginfo);
 	}
 	catch(std::exception const & ex)
@@ -761,4 +761,3 @@ int main(int argc, char * argv[])
 		return EXIT_FAILURE;
 	}
 }
-

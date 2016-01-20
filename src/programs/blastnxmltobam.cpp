@@ -44,7 +44,7 @@ struct XercesUtf8Transcoder
 
 	xercesc::XMLTransService * ts;
 	xercesc::XMLTranscoder * utf8transcoder;
-	
+
 	XercesUtf8Transcoder()
 	: ts(0), utf8transcoder(0)
 	{
@@ -80,12 +80,12 @@ struct XercesUtf8Transcoder
 			unsigned int eaten = 0;
 			#endif
 
-			unsigned int produced = 
-				utf8transcoder->transcodeTo( 
-				text,len,&buffer[0], 
+			unsigned int produced =
+				utf8transcoder->transcodeTo(
+				text,len,&buffer[0],
 				sizeof(buffer),eaten,
 				xercesc::XMLTranscoder::UnRep_RepChar);
-				len -= eaten; 
+				len -= eaten;
 				text += eaten;
 			out.write ( reinterpret_cast<char const *>(buffer), produced );
 		}
@@ -120,7 +120,7 @@ class StdInputBinStream : public xercesc::BinInputStream
 	#if XERCES_VERSION_MAJOR >= 3
 	virtual XMLFilePos curPos() const { return pos; }
 	#else
-	virtual unsigned int curPos() const { return pos; }	
+	virtual unsigned int curPos() const { return pos; }
 	#endif
 	//! Read bytes from stream.
 	/**
@@ -141,7 +141,7 @@ class StdInputBinStream : public xercesc::BinInputStream
 		pos += in.gcount();
 		return in.gcount();
 	}
-	
+
 	#if XERCES_VERSION_MAJOR >= 3
 	virtual const XMLCh* getContentType() const
 	{
@@ -175,7 +175,7 @@ class StdISOInputSource : public xercesc::InputSource
 	 * Make a binary input stream. The current object does
 	 * not own the stream, it has to be deallocated by
 	 * the caller.
-	 * 
+	 *
 	 * @return Binary input stream.
 	 */
 	virtual xercesc::BinInputStream * makeStream() const {
@@ -188,12 +188,12 @@ class StdISOInputSource : public xercesc::InputSource
 struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::ErrorHandler
 {
 	libmaus2::util::ToUpperTable const toup;
-	
+
 	std::map<std::string,std::string> const & ref;
 	std::map<std::string,std::string> const & queries;
 
 	XercesUtf8Transcoder utf8transcoder;
-	
+
 	bool readNameGatheringActive;
 	std::string readName;
 	bool readNameObtained;
@@ -265,13 +265,13 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 	bool hspHSeqObtained;
 	bool hspHSeqGatheringActive;
 	std::string hspHSeq;
-	
+
 	uint64_t hspId;
 
 	std::map<std::string,uint64_t> refnametoid;
 	std::map<std::string,uint64_t> queriesnametoid;
 	libmaus2::bambam::BamWriter & bamwriter;
-	
+
 	double hitFirstScore;
 	double hitFrac;
 
@@ -280,23 +280,23 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
         <Hsp_positive>21727</Hsp_positive>
         <Hsp_gaps>17</Hsp_gaps>
         <Hsp_align-len>21778</Hsp_align-len>
-	#endif            
-	
+	#endif
+
 	std::vector<libmaus2::bambam::CramRange> const * ranges;
-	
+
 	bool inRange(std::string const & refname, int64_t const hitstart, int64_t const hitend)
 	{
 		if ( ! ranges )
 			return true;
-		
+
 		for ( uint64_t i = 0; i < ranges->size(); ++i )
-			if ( 
+			if (
 				!(((*ranges)[i]).intersect(libmaus2::bambam::CramRange(refname,hitstart,hitend)).empty())
 			)
 				return true;
-		
+
 		std::cerr << "[E] dropping " << refname << ":" << hitstart << "-" << hitend << std::endl;
-		
+
 		return false;
 	}
 
@@ -308,9 +308,9 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 		libmaus2::bambam::BamWriter & rbamwriter,
 		double const rhitFrac,
 		std::vector<libmaus2::bambam::CramRange> const * rranges
-	) : ref(rref), queries(rqueries), utf8transcoder(), readNameGatheringActive(false), readName(), readNameObtained(false), 
+	) : ref(rref), queries(rqueries), utf8transcoder(), readNameGatheringActive(false), readName(), readNameObtained(false),
 		hitDefObtained(false), hitDefGatheringActive(false), hitDef(),
-		hitLenObtained(false), hitLenGatheringActive(false), hitLen(),	
+		hitLenObtained(false), hitLenGatheringActive(false), hitLen(),
 		hspBitScoreObtained(false), hspBitScoreGatheringActive(false), hspBitScore(),
 		hspScoreObtained(false), hspScoreGatheringActive(false), hspScore(),
 		hspEvalueObtained(false), hspEvalueGatheringActive(false), hspEvalue(),
@@ -333,23 +333,23 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 		hitFrac(rhitFrac),
 		ranges(rranges)
 	{
-	
+
 	}
 	virtual ~BlastNDocumentHandler()
 	{
-	
+
 	}
 
 #if XERCES_VERSION_MAJOR < 3
 	virtual void characters
 	(
-		const   XMLCh* const    chars, 
+		const   XMLCh* const    chars,
 		const unsigned int    /* length */
 	)
 #else
 	virtual void characters
 	(
-		const   XMLCh* const    chars, 
+		const   XMLCh* const    chars,
 		XMLSize_t    /* length */
         )
 #endif
@@ -406,7 +406,7 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 	virtual void ignorableWhitespace    (const   XMLCh* const    /*chars*/, XMLSize_t    /*length*/)
 #endif
 	{
-	
+
 	}
 
 	virtual void processingInstruction
@@ -415,15 +415,15 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 		, const XMLCh* const    /* data */
 	)
 	{
-	
+
 	}
 	virtual void resetDocument()
 	{
-	
+
 	}
 	virtual void setDocumentLocator(const xercesc::Locator* const /*locator*/)
 	{
-	
+
 	}
 	virtual void startDocument()
 	{
@@ -440,7 +440,7 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 	)
 	{
 		std::string const tag = utf8transcoder.transcodeStringToUtf8(xname);
-		
+
 		if ( tag == "Iteration" )
 		{
 			// std::cerr << "new query" << std::endl;
@@ -450,12 +450,12 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 		}
 		if ( tag == "Iteration_query-def" )
 		{
-			readNameGatheringActive = true;	
+			readNameGatheringActive = true;
 			readName.clear();
 		}
 		if ( tag == "Hit" )
 		{
-			hitDefObtained = false;	
+			hitDefObtained = false;
 			hitDef.clear();
 			hitLenObtained = false;
 			hitLen.clear();
@@ -463,7 +463,7 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 		}
 		if ( tag == "Hit_num" )
 		{
-		
+
 		}
 		if ( tag == "Hit_def" )
 		{
@@ -592,18 +592,18 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 <Hsp_hit-from>161746186</Hsp_hit-from>
 <Hsp_hit-to>161736547</Hsp_hit-to>
 #endif
-                                                                        
+
 
 		// std::cerr << "start of element " << utf8transcoder.transcodeStringToUtf8(xname) << std::endl;
 	}
-	
+
 	template<typename number_type>
 	static number_type parseNumber(std::string const & s)
 	{
 		std::istringstream istr(s);
 		number_type i;
 		istr >>i;
-		
+
 		if ( ! istr )
 		{
 			libmaus2::exception::LibMausException lme;
@@ -611,14 +611,14 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 			lme.finish();
 			throw lme;
 		}
-		
+
 		return i;
 	}
-	
+
 	virtual void endElement(const XMLCh* const xname)
 	{
 		std::string const tag = utf8transcoder.transcodeStringToUtf8(xname);
-	
+
 		if ( tag == "Iteration_query-def" )
 		{
 			readNameGatheringActive = false;
@@ -639,7 +639,7 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 		}
 		if ( tag == "Hsp" )
 		{
-			bool ok = 
+			bool ok =
 				hspBitScoreObtained &&
 				hspScoreObtained &&
 				hspEvalueObtained &&
@@ -658,12 +658,12 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 				(queries.find(readName) != queries.end());
 
 			int64_t const thisHitScore = hspScoreObtained ?  parseNumber<int64_t>(hspScore) : -1;
-				
+
 			if ( hspId == 0 )
 				hitFirstScore = thisHitScore;
 
 			// reference
-			std::map<std::string,std::string>::const_iterator hita = 
+			std::map<std::string,std::string>::const_iterator hita =
 				ok ? ref.find(hitDef) : std::map<std::string,std::string>::const_iterator();
 			// hit coord
 			int64_t hitFrom = ok ? parseNumber<int64_t>(hspHitFrom) : -1;
@@ -673,9 +673,9 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 			int64_t hitStart = std::min(hitFrom,hitTo)-1;
 			int64_t hitEnd = std::max(hitFrom,hitTo)-1;
 			int64_t hitLen = hitEnd-hitStart+1;
-			
-			if ( ok && 
-				(hspId == 0 || (thisHitScore >= hitFrac * hitFirstScore)) && 
+
+			if ( ok &&
+				(hspId == 0 || (thisHitScore >= hitFrac * hitFirstScore)) &&
 				inRange(hita->first, hitStart, hitEnd)
 			)
 			{
@@ -687,8 +687,8 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 				// query coord
 				int64_t queryFrom = parseNumber<int64_t>(hspQueryFrom);
 				int64_t queryTo = parseNumber<int64_t>(hspQueryTo);
-				
-				
+
+
 				// query start and end
 				int64_t queryStart = std::min(queryFrom,queryTo)-1;
 				int64_t queryEnd = std::max(queryFrom,queryTo)-1;
@@ -697,13 +697,13 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 				std::map<std::string,std::string>::const_iterator qita = queries.find(readName);
 				assert ( qita != queries.end() );
 				int64_t queryBackClip = qita->second.size() - (queryFrontClip + queryLen);
-				
-				std::cerr 
-					<< readName << "[" << hspId << "]" << " queryFrame " << queryFrame << " hitFrame " << hitFrame 
+
+				std::cerr
+					<< readName << "[" << hspId << "]" << " queryFrame " << queryFrame << " hitFrame " << hitFrame
 					<< " query coord [" << hspQueryFrom << "," << hspQueryTo << "]"
 					<< " hit coord [" << hspHitFrom << "," << hspHitTo << "]"
 					<< std::endl;
-					
+
 				uint64_t qlen = 0;
 				for ( uint64_t i = 0; i < hspQSeq.size(); ++i )
 					qlen += hspQSeq[i] != '-';
@@ -711,16 +711,16 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 				uint64_t hlen = 0;
 				for ( uint64_t i = 0; i < hspHSeq.size(); ++i )
 					hlen += hspHSeq[i] != '-';
-						
-				
+
+
 				if ( qita != queries.end() && hita != ref.end() )
 				{
 					std::string const & H = hita->second;
 					std::string const & Q = qita->second;
-					
+
 					std::string hsub = H.substr(hitStart,hitLen);
 					std::string qsub = Q.substr(queryStart,queryLen);
-					
+
 					if ( hitFrame < 0 )
 					{
 						std::reverse(hsub.begin(),hsub.end());
@@ -749,9 +749,9 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 								break;
 							}
 					}
-					
+
 					std::vector<char> ops;
-					
+
 					for ( int64_t i = 0; i < queryFrontClip; ++i )
 						ops.push_back('S');
 
@@ -759,7 +759,7 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 					for ( uint64_t i = 0; i < hspQSeq.size(); ++i )
 					{
 						assert ( hspQSeq[i] != '-' || hspHSeq[i] != '-' );
-						
+
 						// symbol not in query sequence -> deleted from reference
 						if ( hspQSeq[i] == '-' )
 						{
@@ -779,34 +779,34 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 						{
 							ops.push_back('X');
 						}
-					
+
 						if ( hspQSeq[i] != '-' )
 						{
-							bool const ok = ( 
+							bool const ok = (
 								toup(static_cast<uint8_t>(hspQSeq[i]))
-								== 
+								==
 								toup(static_cast<uint8_t>(qsub[iq++]))
 							);
-							
+
 							if ( ! ok )
 								std::cerr << "[W] " << toup(static_cast<uint8_t>(hspQSeq[i])) << " != "
 									<< toup(static_cast<uint8_t>(qsub[iq-1])) << std::endl;
 						}
 						if ( hspHSeq[i] != '-' )
-							assert ( 
+							assert (
 								toup(static_cast<uint8_t>(hspHSeq[i]))
-								== 
+								==
 								toup(static_cast<uint8_t>(hsub[ih++]))
 							);
-														
+
 						#if 0
 						std::cerr << "(" << hspQSeq[i] << "," << hspHSeq[i] << ",";
-						
+
 						if ( hspQSeq[i] == '-' )
 							std::cerr << "-";
 						else
 							std::cerr << qsub[iq++];
-						
+
 						std::cerr << ",";
 
 						if ( hspHSeq[i] == '-' )
@@ -820,28 +820,28 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 
 					for ( int64_t i = 0; i < queryBackClip; ++i )
 						ops.push_back('S');
-						
+
 					if ( rc )
 						std::reverse(ops.begin(),ops.end());
 
 					std::string bamquery = qita->second;
 					if ( rc )
 						bamquery = libmaus2::fastx::reverseComplementUnmapped(bamquery);
-					
+
 					std::vector < std::pair<char,uint64_t> > opruns;
-					
+
 					uint64_t low = 0;
 					while ( low != ops.size() )
 					{
 						uint64_t high = low;
 						while ( high != ops.size() && ops[high] == ops[low] )
 							++high;
-							
+
 						opruns.push_back(std::pair<char,uint64_t>(ops[low],high-low));
-							
+
 						low = high;
 					}
-					
+
 					std::ostringstream cigarostr;
 					for ( uint64_t i = 0; i < opruns.size(); ++i )
 					{
@@ -882,24 +882,24 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 					bamwriter.putAuxNumber("ZL", 'i', parseNumber<int64_t>(hspGaps));
 					bamwriter.putAuxNumber("ZM", 'i', parseNumber<int64_t>(hspAlignLen));
 					bamwriter.commit();
-					
+
 					#if 0
 					std::cerr << std::endl;
 					#endif
 				}
-				
+
 				#if 0
 				if ( hitFrame < 0 )
 				{
 					hitFrame = -hitFrame;
 					queryFrame = -queryFrame;
-					
+
 					std::reverse(hspQSeq.begin(),hspQSeq.end());
 					std::reverse(hspHSeq.begin(),hspHSeq.end());
 				}
 				#endif
 			}
-			
+
 			hspId += 1;
 		}
 		if ( tag == "Hsp_bit-score" )
@@ -984,7 +984,7 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 		{
 			hspQSeqGatheringActive = false;
 			hspQSeqObtained = true;
-			
+
 			#if 0
 			std::cerr << "hspQSeq " << hspQSeq << " " << hspQSeq.size() << std::endl;
 
@@ -995,7 +995,7 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 				uint64_t const offset = atoi(hspQueryFrom.c_str());
 				std::string const & query = ita->second;
 				uint64_t j = 0;
-				
+
 				for ( uint64_t i = 0; i < hspQSeq.size(); ++i )
 				{
 					if ( hspQSeq[i] == '-' )
@@ -1013,7 +1013,7 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 		{
 			hspHSeqGatheringActive = false;
 			hspHSeqObtained = true;
-			
+
 			#if 0
 			std::cerr << "hspHSeq " << hspHSeq << " " << hspHSeq.size() << std::endl;
 
@@ -1024,7 +1024,7 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 				uint64_t const offset = atoi(hspHitFrom.c_str());
 				std::string const & refseq = ita->second;
 				uint64_t j = 0;
-				
+
 				for ( uint64_t i = 0; i < hspHSeq.size(); ++i )
 				{
 					if ( hspHSeq[i] == '-' )
@@ -1039,7 +1039,7 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 			#endif
 
 		}
-		// std::cerr << "end of element " << utf8transcoder.transcodeStringToUtf8(xname) << std::endl;	
+		// std::cerr << "end of element " << utf8transcoder.transcodeStringToUtf8(xname) << std::endl;
 	}
 
 	virtual void warning(const xercesc::SAXParseException& toCatch)
@@ -1063,12 +1063,12 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 		libmaus2::exception::LibMausException lme;
 		lme.getStream() << "[E] XML parsing error: " << msg << std::endl;
 		lme.finish();
-		throw lme;	
+		throw lme;
 	}
 
 	virtual void resetErrors()
 	{
-	
+
 	}
 };
 
@@ -1080,10 +1080,10 @@ void loadFastAFile(std::string const & filename, std::map<std::string,std::strin
 {
 	libmaus2::fastx::FastAReader fain(filename);
 	libmaus2::fastx::FastAReader::pattern_type pattern;
-	
+
 	while ( fain.getNextPatternUnlocked(pattern) )
 	{
-		M[pattern.sid] = pattern.spattern;	
+		M[pattern.sid] = pattern.spattern;
 		meta.push_back(std::pair<std::string,uint64_t>(pattern.sid,pattern.spattern.size()));
 		uint64_t const id = nametoid.size();
 		nametoid[pattern.sid] = id;
@@ -1093,14 +1093,14 @@ void loadFastAFile(std::string const & filename, std::map<std::string,std::strin
 std::string stripAfterSpace(std::string const & s)
 {
 	uint64_t firstspace = s.size();
-	
+
 	for ( uint64_t i = 0; i < s.size(); ++i )
 		if ( isspace(s[i]) )
 		{
 			firstspace = i;
 			break;
 		}
-		
+
 	return s.substr(0,firstspace);
 }
 
@@ -1108,7 +1108,7 @@ int main(int argc, char * argv[])
 {
 	int ret = EXIT_SUCCESS;
 	bool xercesInitComplete = false;
-	
+
 	if ( ret == EXIT_SUCCESS )
 		try
 		{
@@ -1128,26 +1128,26 @@ int main(int argc, char * argv[])
 			double const hitfrac = arginfo.getValue<double>("hitfrac",0.8);
 			std::string const reffn = arginfo.restargs.at(0);
 			std::string const queriesfn = arginfo.restargs.at(1);
-			
+
 			libmaus2::util::unique_ptr< std::vector<libmaus2::bambam::CramRange> >::type Pranges;
 			std::vector<libmaus2::bambam::CramRange> * ranges = 0;
-			
+
 			if ( arginfo.hasArg("range") )
 			{
 				libmaus2::util::unique_ptr< std::vector<libmaus2::bambam::CramRange> >::type Tranges(
 					new std::vector<libmaus2::bambam::CramRange>
 				);
 				Pranges = UNIQUE_PTR_MOVE(Tranges);
-				
+
 				Pranges->push_back(
 					libmaus2::bambam::CramRange(
 						arginfo.getUnparsedValue("range",std::string())
 					)
 				);
-				
+
 				ranges = Pranges.get();
 			}
-			
+
 			std::map<std::string,std::string> ref;
 			std::vector< std::pair<std::string,uint64_t> > refmeta;
 			std::map<std::string,uint64_t> refnametoid;
@@ -1162,9 +1162,9 @@ int main(int argc, char * argv[])
 			headerostr << "@HD\tVN:1.4\tSO:unknown\n";
 			for ( uint64_t i = 0; i < refmeta.size(); ++i )
 				headerostr << "@SQ\tSN:" << stripAfterSpace(refmeta[i].first) << "\tLN:" << refmeta[i].second << std::endl;
-			headerostr 
-				<< "@PG"<< "\t" 
-				<< "ID:" << "blastnxmltobam" << "\t" 
+			headerostr
+				<< "@PG"<< "\t"
+				<< "ID:" << "blastnxmltobam" << "\t"
 				<< "PN:" << "blastnxmltobam" << "\t"
 				<< "CL:" << arginfo.commandline << "\t"
 				<< "VN:" << std::string(PACKAGE_VERSION)
@@ -1184,7 +1184,7 @@ int main(int argc, char * argv[])
 			saxparser.setDocumentHandler(&blasthandler);
 			saxparser.setErrorHandler(&blasthandler);
 			saxparser.parse(in);
-			saxparser.setDocumentHandler(0);                      
+			saxparser.setDocumentHandler(0);
 		}
 		catch(std::exception const & ex)
 		{
@@ -1202,6 +1202,6 @@ int main(int argc, char * argv[])
 			std::cerr << ex.what() << std::endl;
 			ret = EXIT_FAILURE;
 		}
-		
+
 	return ret;
 }

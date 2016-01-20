@@ -36,9 +36,9 @@ int main(int argc, char * argv[])
 	try
 	{
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
-		
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -47,7 +47,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -57,9 +57,9 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-			
+
 				V.push_back ( std::pair<std::string,std::string> ( "L", "length of reference sequence" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "n", "number of occurences" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "KA", "number of A bases in the query sequence" ) );
@@ -70,14 +70,14 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "pC", "relative frequency of C base in reference" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "pG", "relative frequency of G base in reference" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "pT", "relative frequency of T base in reference" ) );
-				
+
 				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
-								
+
 				return EXIT_SUCCESS;
 			}
-			
+
 		if ( !arginfo.hasArg("L") )
 		{
 			libmaus2::exception::LibMausException se;
@@ -120,7 +120,7 @@ int main(int argc, char * argv[])
 			se.finish();
 			throw se;
 		}
-		
+
 		uint64_t const L = arginfo.getValue<uint64_t>("L",0);
 		uint64_t const KA = arginfo.getValue<uint64_t>("KA",0);
 		uint64_t const KC = arginfo.getValue<uint64_t>("KC",0);
@@ -134,17 +134,17 @@ int main(int argc, char * argv[])
 
 		double const p = pA + pC + pG + pT;
 		double const eps = 1e-4;
-		
+
 		if ( p < 1.0 - eps || p > 1.0 + eps )
 		{
 			libmaus2::exception::LibMausException se;
 			se.getStream() << "pA + pC + pG + pT = " << p << " which is not within eps=" << eps << " of 1" << std::endl;
 			se.finish();
-			throw se;			
+			throw se;
 		}
 
 		std::cout << kmerPoisson(L,KA,KC,KG,KT,n,pA,pC,pG,pT) << std::endl;
-			
+
 		return EXIT_SUCCESS;
 	}
 	catch(std::exception const & ex)
@@ -153,4 +153,3 @@ int main(int argc, char * argv[])
 		return EXIT_FAILURE;
 	}
 }
-

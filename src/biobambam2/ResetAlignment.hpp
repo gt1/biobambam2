@@ -25,8 +25,8 @@ uint64_t resetAlignment(
 	uint8_t * const D, uint64_t blocksize, bool const resetaux = true,
 	libmaus2::bambam::BamAuxFilterVector const * rgfilter = 0
 );
-bool resetAlignment(libmaus2::bambam::BamAlignment & algn, bool const resetaux = true, 
-	uint32_t const excludeflags = 
+bool resetAlignment(libmaus2::bambam::BamAlignment & algn, bool const resetaux = true,
+	uint32_t const excludeflags =
 		libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FSECONDARY |
 		libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FSUPPLEMENTARY,
 	libmaus2::bambam::BamAuxFilterVector const * rgfilter = 0

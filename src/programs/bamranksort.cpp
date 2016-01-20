@@ -13,8 +13,8 @@
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.    
-    
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
     Andrew Whitwham, April 2015
 **/
 #include "config.h"
@@ -49,10 +49,10 @@ static int getDefaultMD5() { return 0; }
 struct Grouped {
     uint64_t rank;
     libmaus2::bambam::BamAlignment *algn;
-    
+
     Grouped(uint64_t irank, libmaus2::bambam::BamAlignment *ialgn) : rank(irank), algn(ialgn) {
     }
-    
+
     ~Grouped() {
     	delete algn;
     }
@@ -62,10 +62,10 @@ struct Grouped {
 struct Unsorted {
     uint64_t rank;
     std::vector<Grouped *> group;
-    
+
     Unsorted(uint64_t irank, std::vector<Grouped *> igroup) : rank(irank), group(igroup) {
     }
-    
+
     ~Unsorted() {
     }
 };
@@ -106,16 +106,16 @@ uint64_t get_grouped_reads(libmaus2::bambam::BamAlignment &alg, libmaus2::bambam
     uint64_t found_rank = rank;
     bool first_found  = false;
     bool second_found = false;
-    
+
     while (found_rank == rank) {
 	// store read line
-	Grouped *tmp_group = new Grouped(rank, new libmaus2::bambam::BamAlignment); 
+	Grouped *tmp_group = new Grouped(rank, new libmaus2::bambam::BamAlignment);
 	tmp_group->algn->swap(alg);
 	group.push_back(tmp_group);
-	
+
 	if (tmp_group->algn->isRead1()) first_found  = true;
 	if (tmp_group->algn->isRead2()) second_found = true;
-	
+
 	if (decoder.readAlignment()) {
 	    found_rank = get_rank(alg);
 	} else {
@@ -124,28 +124,28 @@ uint64_t get_grouped_reads(libmaus2::bambam::BamAlignment &alg, libmaus2::bambam
 	    break;
 	}
     }
-    
+
     if (!(first_found && second_found)) {
 	::libmaus2::exception::LibMausException se;
 	se.getStream() << "Aborting, rank " << rank << "_" << (rank + 1) << " lacks first and second reads " << first_found << " " << second_found << std::endl;
 	se.finish();
 	throw se;
     }
-    
+
     return rank;
 }
 
-    
+
 void write_grouped_reads(std::vector<Grouped *> &group, libmaus2::bambam::BamBlockWriterBase::unique_ptr_type const &scribe, int const verbose) {
 
     for (std::vector<Grouped *>::iterator itr = group.begin(); itr != group.end(); ++itr) {
 	scribe->writeAlignment(*((*itr)->algn));
 	uint64_t rank = (*itr)->rank;
-	
+
 	if (verbose > 1) {
 	    std::cerr << "Write rank " << rank << std::endl;
 	}
-	
+
 	delete (*itr);
     }
 
@@ -154,14 +154,14 @@ void write_grouped_reads(std::vector<Grouped *> &group, libmaus2::bambam::BamBlo
 
 
 void store_group(std::vector<Grouped *> &group, std::vector<Unsorted *> &unsorted) {
-	Unsorted *tmp_unsorted = new Unsorted(group[0]->rank, group); 
+	Unsorted *tmp_unsorted = new Unsorted(group[0]->rank, group);
 	unsorted.push_back(tmp_unsorted);
 }
 
 
 bool check_ranks(std::vector<Unsorted *> const &unsorted, uint64_t &wanted, int const verbose, int const step) {
     wanted = unsorted[0]->rank;
-    
+
     if (verbose > 0) {
     	std::cerr << "check_ranks called on " << unsorted.size() << " reading groups" << std::endl;
     }
@@ -172,48 +172,48 @@ bool check_ranks(std::vector<Unsorted *> const &unsorted, uint64_t &wanted, int 
 	} else {
 	    if (verbose > 0) {
 	    	std::cerr << "Not found rank " << wanted << " continuing search." << std::endl;
-	    } 
+	    }
 
 	    return false;
 	}
     }
-    
+
     return true;
 }
 
- 	
+
 void search_for_missing_group(libmaus2::bambam::BamAlignment &alg, libmaus2::bambam::BamAlignmentDecoder &decoder,
-    	    	    	       std::vector<Grouped *> &group, libmaus2::bambam::BamBlockWriterBase::unique_ptr_type 
+    	    	    	       std::vector<Grouped *> &group, libmaus2::bambam::BamBlockWriterBase::unique_ptr_type
 			       const &scribe, bool &cont, uint64_t &expected, int const verbose,
 			       int const misordered, int const step) {
     std::vector<Unsorted *> unsorted;
-    
+
     // store current group
     store_group(group, unsorted);
     group.clear();
-    
+
     bool still_missing  = true;
     bool found          = false;
     int const interval  = 10;
     int count           = 0;
     int max_count       = 0;
-    
+
     while (still_missing) {
     	uint64_t const current_rank = get_grouped_reads(alg, decoder, group, cont);
     	store_group(group, unsorted);
     	group.clear();
-	
+
 	count++;
-	
+
 	if (current_rank == expected) found = true;
-	
-	if ((count >= interval || !cont) && found) { 
-	
+
+	if ((count >= interval || !cont) && found) {
+
 	    sort(unsorted.begin(), unsorted.end(), rank_cmp);
-	    
+
 	    if (check_ranks(unsorted, expected, verbose, step)) {
 	    	still_missing = false;
-		
+
 		for (std::vector<Unsorted *>::iterator itr = unsorted.begin(); itr != unsorted.end(); ++itr) {
 		    write_grouped_reads((*itr)->group, scribe, verbose);
 		    delete (*itr);
@@ -224,7 +224,7 @@ void search_for_missing_group(libmaus2::bambam::BamAlignment &alg, libmaus2::bam
 		found = false;
 	    }
 	}
-	
+
 	if (!cont && still_missing) {
 	    ::libmaus2::exception::LibMausException se;
 	    se.getStream() << "Aborting, rank " << expected << "_" << (expected + 1) << " not found, end of file" << std::endl;
@@ -237,8 +237,8 @@ void search_for_missing_group(libmaus2::bambam::BamAlignment &alg, libmaus2::bam
 	    throw se;
 	}
     }
-}    	
-    
+}
+
 
 int bamranksort(libmaus2::util::ArgInfo const &arginfo) {
 
@@ -272,7 +272,7 @@ int bamranksort(libmaus2::util::ArgInfo const &arginfo) {
 
     libmaus2::bambam::BamAlignment &algn = dec.getAlignment();
     libmaus2::bambam::BamHeader const &header = dec.getHeader();
-    
+
     if (verbose > 0) {
     	std::cerr << "Running bamranksort" << std::endl;
     }
@@ -286,11 +286,11 @@ int bamranksort(libmaus2::util::ArgInfo const &arginfo) {
 	    "bamranksort", // PN
 	    arginfo.commandline, // CL
 	    ::libmaus2::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
-	    std::string(PACKAGE_VERSION) // VN			
+	    std::string(PACKAGE_VERSION) // VN
     );
-    
+
     ::libmaus2::bambam::BamHeader uphead(upheadtext);
-    
+
     /*
      * start md5 callbacks
      */
@@ -328,8 +328,8 @@ int bamranksort(libmaus2::util::ArgInfo const &arginfo) {
 
     // major assumption is that all alignments are grouped by read name
     // containing forward and reverse reads plus any number of secondary and
-    // supplemental reads.  Isolated reads will be a cause of program termination.  
-    
+    // supplemental reads.  Isolated reads will be a cause of program termination.
+
     // get the first read
     if (!dec.readAlignment()) {
 	::libmaus2::exception::LibMausException se;
@@ -337,15 +337,15 @@ int bamranksort(libmaus2::util::ArgInfo const &arginfo) {
 	se.finish();
 	throw se;
     }
-    
+
     std::vector<Grouped *> grouped_reads;
-    
+
     uint64_t expected_rank = 0;
     bool keep_going = true;
-    
+
     while (keep_going) {
     	uint64_t const current_rank = get_grouped_reads(algn, dec, grouped_reads, keep_going);
-	
+
 	if (current_rank == expected_rank) {
 	    // we have what we came for
 	    write_grouped_reads(grouped_reads, writer, verbose);
@@ -353,14 +353,14 @@ int bamranksort(libmaus2::util::ArgInfo const &arginfo) {
 	} else {
 	    if (verbose > 0) {
 	    	std::cerr << "Found rank " << current_rank << " expecting " << expected_rank << ".  Starting search." << std::endl;
-	    } 
-	
+	    }
+
 	    search_for_missing_group(algn, dec, grouped_reads, writer, keep_going, expected_rank, verbose, misordered, step);
 	}
     }
 
     writer.reset();
-    
+
     if (Pmd5cb) {
     	Pmd5cb->saveDigestAsFile(md5filename);
     }
@@ -372,22 +372,22 @@ int bamranksort(libmaus2::util::ArgInfo const &arginfo) {
 int main(int argc, char* argv[]) {
     try {
     	::libmaus2::util::ArgInfo const arginfo(argc, argv);
-	
+
 	for (uint64_t i = 0; i < arginfo.restargs.size(); ++i) {
 	    if (arginfo.restargs[i] == "-v" ||
 	    	arginfo.restargs[i] == "--version") {
 	    	std::cerr << ::biobambam2::Licensing::license();
 		return EXIT_SUCCESS;
-		
+
 	    } else if (arginfo.restargs[i] == "-h" ||
 	    	    	arginfo.restargs[i] == "--help") {
 		std::cerr << ::biobambam2::Licensing::license();
 		std::cerr << std::endl;
 		std::cerr << "Key=Value pairs:" << std::endl;
 		std::cerr << std::endl;
-		
+
 		std::vector<std::pair<std::string,std::string>> V;
-			
+
 		V.push_back(std::pair<std::string,std::string> ("level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText()));
 		V.push_back(std::pair<std::string,std::string> ("verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report"));
 		V.push_back(std::pair<std::string,std::string> ("md5=<["+::biobambam2::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)"));
@@ -397,18 +397,17 @@ int main(int argc, char* argv[]) {
 		V.push_back(std::pair<std::string,std::string> ("outputthreads=<1>", "output helper threads (for outputformat=bam only, default: 1)"));
 
     	    	::biobambam2::Licensing::printMap(std::cerr,V);
-		
+
 		std::cerr << std::endl;
 		return EXIT_SUCCESS;
 	    }
 	}
-	
+
 	return bamranksort(arginfo);
-	
+
     } catch (std::exception const &ex) {
     	std::cerr << ex.what() << std::endl;
 	return EXIT_FAILURE;
     }
 
 }
-

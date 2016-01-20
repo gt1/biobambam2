@@ -59,7 +59,7 @@ static std::string getDefaultInputFormat() { return "bam"; }
 int bamfixmateinformation(::libmaus2::util::ArgInfo const & arginfo)
 {
 	::libmaus2::util::TempFileRemovalContainer::setup();
-	
+
 	bool const inputisstdin = (!arginfo.hasArg("I")) || (arginfo.getUnparsedValue("I","-") == "-");
 	bool const outputisstdout = (!arginfo.hasArg("O")) || (arginfo.getUnparsedValue("O","-") == "-");
 
@@ -100,13 +100,13 @@ int bamfixmateinformation(::libmaus2::util::ArgInfo const & arginfo)
 	if ( disablevalidation )
 		dec.disableValidation();
 	::libmaus2::bambam::BamHeader const & header = dec.getHeader();
-	
+
 	if ( ::libmaus2::bambam::BamHeader::getSortOrderStatic(header.text) != "queryname" )
 	{
 		::libmaus2::exception::LibMausException se;
 		se.getStream() << "bamfixmateinformation: file is not sorted by queryname" << std::endl;
 		se.finish();
-		throw se;	
+		throw se;
 	}
 
 	::libmaus2::bambam::BamHeader::unique_ptr_type uphead(
@@ -146,14 +146,14 @@ int bamfixmateinformation(::libmaus2::util::ArgInfo const & arginfo)
 	libmaus2::bambam::BamBlockWriterBase::unique_ptr_type Pwriter(
 		libmaus2::bambam::BamBlockWriterBaseFactory::construct(*uphead,arginfo,Pcbs)
 	);
-	
+
 	libmaus2::bambam::BamAlignment & curalgn = dec.getAlignment();
 	libmaus2::bambam::BamAlignment prevalgn;
 	bool prevalgnvalid = false;
 	libmaus2::bambam::BamAuxFilterVector MQfilter;
 	MQfilter.set("MQ");
 	uint64_t c = 0;
-	
+
 	while ( dec.readAlignment() )
 	{
 		if ( curalgn.isSecondary() || curalgn.isSupplementary() )
@@ -182,11 +182,11 @@ int bamfixmateinformation(::libmaus2::util::ArgInfo const & arginfo)
 			prevalgn.swap(curalgn);
 			prevalgnvalid = true;
 		}
-		
+
 		if ( verbose && ( ( ++c & ((1ull<<20)-1) ) == 0 ) )
 			std::cerr << "[V] " << c << std::endl;
 	}
-	
+
 	if ( prevalgnvalid )
 	{
 		Pwriter->writeAlignment(prevalgn);
@@ -200,9 +200,9 @@ int bamfixmateinformation(::libmaus2::util::ArgInfo const & arginfo)
 	{
 		Pmd5cb->saveDigestAsFile(md5filename);
 	}
-	
+
 	if ( verbose )
-		std::cerr << "[V] " << c << std::endl;	
+		std::cerr << "[V] " << c << std::endl;
 
 	return EXIT_SUCCESS;
 }
@@ -212,9 +212,9 @@ int main(int argc, char * argv[])
 	try
 	{
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
-		
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -223,7 +223,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -233,9 +233,9 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-			
+
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "disablevalidation=<["+::biobambam2::Licensing::formatNumber(getDefaultDisableValidation())+"]>", "disable input validation (default is 0)" ) );
@@ -254,7 +254,7 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;
 			}
-			
+
 		return bamfixmateinformation(arginfo);
 	}
 	catch(std::exception const & ex)

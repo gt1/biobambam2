@@ -24,7 +24,7 @@ MANPAGES = programs/bamtofastq.1 programs/bamsort.1 programs/bammarkduplicates.1
 	programs/bamseqchksum.1 programs/bamvalidate.1 \
 	programs/bamflagsplit.1 programs/bamintervalcomment.1 \
 	programs/bamstreamingmarkduplicates.1 \
-	programs/bamsormadup.1 programs/lasToBAM.1
+	programs/bamsormadup.1 programs/lasToBAM.1 programs/fastaexplode.1
 
 man_MANS = ${MANPAGES}
 
@@ -78,7 +78,7 @@ bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamr
 	fastqtobampar \
 	lasToBAM \
 	bamtagconversion \
-	lasToBAM \
+	fastaexplode \
 	@BAMALIGNMENTOFFSETSINSTEXP@ @BLASTXMLTOBAMINSTEXP@
 
 noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments bamtoname \
@@ -432,3 +432,8 @@ bamtagconversion_SOURCES = programs/bamtagconversion.cpp biobambam2/Licensing.cp
 bamtagconversion_LDADD = ${LIBMAUS2LIBS}
 bamtagconversion_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
 bamtagconversion_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
+
+fastaexplode_SOURCES = programs/fastaexplode.cpp biobambam2/Licensing.cpp
+fastaexplode_LDADD = ${LIBMAUS2LIBS}
+fastaexplode_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+fastaexplode_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}

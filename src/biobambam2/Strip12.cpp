@@ -21,14 +21,14 @@
 bool strip12(libmaus2::bambam::BamAlignment & algn)
 {
 	char const * name = algn.getName();
-	
+
 	// look for first underscore symbol
 	char const * u1 = name;
-	
+
 	while ( *u1 && *u1 != '_' )
 		++u1;
-	
-	// no underscore				
+
+	// no underscore
 	if ( ! *u1 )
 		return true;
 	else
@@ -38,7 +38,7 @@ bool strip12(libmaus2::bambam::BamAlignment & algn)
 		uint64_t ranka = 0;
 
 		for ( char const * t1 = name; t1 != u1; ++t1 )
-		{	
+		{
 			ranka *= 10;
 			ranka += ((*t1)-'0');
 			ok = ok && isdigit(*t1);
@@ -61,14 +61,14 @@ bool strip12(libmaus2::bambam::BamAlignment & algn)
 			upnamestr << (u1+1);
 
 			std::string const upname = upnamestr.str();
-				
+
 			algn.replaceName(upname.begin(),upname.size());
-			
-			return true;		
+
+			return true;
 		}
 		else
 		{
-			return true;		
+			return true;
 		}
 	}
 

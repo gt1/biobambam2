@@ -15,17 +15,17 @@
 
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
-    
+
     ----------------------------------------------------------------------
-    
+
     Cigar type code taken from htslib/sam.h under the MIT/Expat License
     as follows:
-    
+
      Copyright (C) 2008, 2009, 2013-2014 Genome Research Ltd.
      Copyright (C) 2010, 2012, 2013 Broad Institute.
 
      Author: Heng Li <lh3@sanger.ac.uk>
-    
+
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal
     in the Software without restriction, including without limitation the rights
@@ -42,7 +42,7 @@
     THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
     LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
     FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-    DEALINGS IN THE SOFTWARE    
+    DEALINGS IN THE SOFTWARE
 **/
 #include <biobambam2/ClipAdapters.hpp>
 
@@ -54,7 +54,7 @@
 /*
     The above is a useful bit of code taken from htslib.  Their
     explanation is below.
-    
+
     bam_cigar_type returns a bit flag with:
     bit 1 set if the cigar operation consumes the query
     bit 2 set if the cigar operation consumes the reference
@@ -73,10 +73,10 @@
     BAM_CDIFF       1      1
     BAM_CBACK       0      0
     --------------------------------
-    
+
     End of htslib code.
 */
-    
+
 
 bool clipAdapters(
 	libmaus2::bambam::BamAlignment & algn,
@@ -92,12 +92,12 @@ bool clipAdapters(
 	uint64_t const a3clip = algn.hasAux("a3") ? algn.getAuxAsNumber<int>("a3") : 0;
 	uint64_t const aclip = std::max(asclip,a3clip);
 	bool     const reverse = algn.isReverse();
-	
+
 	if ( aclip )
 	{
 		uint64_t const len = algn.decodeRead(R);
 		algn.decodeQual(Q);
-		
+
 		if ( len - aclip )
 		{
 			if ( algn.isMapped() )
@@ -106,28 +106,28 @@ bool clipAdapters(
 
 				if ( numcigop == cigop.size() )
 					cigop.resize(numcigop+1);
-					
+
 				if ( reverse )
 				{
 				    std::reverse(cigop.begin(),cigop.begin()+numcigop);
 				}
-				
-				
+
+
 				// can't just add a HC to the cigar
 				uint32_t index;
 				uint32_t hardclip = 0;
 				uint32_t cig_type;
 				int32_t  left     = aclip;
 				int32_t  repos    = 0;
-				
+
 				for ( index = numcigop - 1; index > 0; index-- )
 				{
 				    	cig_type = bam_cigar_type(cigop[index].first);
-				
+
 					if ( cig_type == 0 )
 					{
 				    	    	hardclip += cigop[index].second;
-					} 
+					}
 					else
 					{
 					    	if ( cig_type & 1 )
@@ -140,7 +140,7 @@ bool clipAdapters(
 							{
 							    	break;
 						    	}
-					    	}	
+					    	}
 
 				    	    	if ( cig_type & 2 )
 						{
@@ -149,39 +149,39 @@ bool clipAdapters(
 					    	}
 					}
 				}
-				
+
 				cig_type = bam_cigar_type(cigop[index].first);
-				
+
 				if ( cigop[index].second != left )
 				{
 				    	cigop[index++].second -= left;
 				}
-				
+
  				cigop[index] = libmaus2::bambam::cigar_operation(libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CHARD_CLIP, aclip + hardclip);
-				
-			    	if ( numcigop > index + 1 ) 
+
+			    	if ( numcigop > index + 1 )
 				    	cigop.resize(index + 1);
-				
+
 				if ( reverse )
 				{
 				    std::reverse(cigop.begin(),cigop.begin() + index + 1);
-				    
+
 				    // account for the last possible pos move
     	    	    	    	    if ( cig_type & 2 )
 				    	    repos += left;
-				    
+
 				    if ( repos )
 				    {
 				    	// clipping has moved the pos point
 					algn.putPos(algn.getPos() + repos);
-				    }				    
-				    
+				    }
+
 				}
-				
+
 				algn.replaceCigarString(cigop.begin(),index + 1,T);
 			}
-		
-    		
+
+
 		    	if ( !reverse )
 			{
 				algn.replaceSequence(seqenc,R.begin(),Q.begin(),len-aclip,T);

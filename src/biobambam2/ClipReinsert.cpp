@@ -41,24 +41,24 @@ bool clipReinsert(
 		std::string const read = algn.getRead();
 		std::string const qual = algn.getQual();
 
-		// modify cigar string if read is mapped			
+		// modify cigar string if read is mapped
 		if ( algn.isMapped() )
 		{
 			// get current cigar string
 			uint32_t numcigop = algn.getCigarOperations(cigop);
-		
+
 			// make space for one more
 			if ( cigop.size() == numcigop )
 				cigop.resize(cigop.size()+1);
-		
+
 			// reverse cigar operations vector if read is mapped to reverse strand
 			if ( algn.isReverse() )
 				std::reverse(cigop.begin(),cigop.begin()+numcigop);
-		
-			// move hard clip operations to stack	
+
+			// move hard clip operations to stack
 			while ( numcigop && cigop[numcigop-1].first == libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CHARD_CLIP )
 				hardstack.push(cigop[--numcigop]);
-				
+
 			// if last operation is soft clip, then add number of bases
 			if ( numcigop && cigop[numcigop-1].first == libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CSOFT_CLIP )
 				cigop[numcigop-1].second += qs.size();
@@ -67,7 +67,7 @@ bool clipReinsert(
 				cigop[numcigop++] = libmaus2::bambam::cigar_operation(
 					libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CSOFT_CLIP,qs.size()
 				);
-				
+
 			// reinsert hardclip operations
 			while ( hardstack.size() )
 			{
@@ -78,16 +78,16 @@ bool clipReinsert(
 			// reverse cigar operations vector if read is mapped to reverse strand
 			if ( algn.isReverse() )
 				std::reverse(cigop.begin(),cigop.begin()+numcigop);
-				
+
 			algn.replaceCigarString(cigop.begin(),numcigop,Tcigar);
-		}			
+		}
 
 		// straight
 		if ( ! algn.isReverse () )
 			algn.replaceSequence(read + qs, qual + qq);
 		else
 			algn.replaceSequence( libmaus2::fastx::reverseComplementUnmapped(qs) + read, std::string(qq.rbegin(),qq.rend()) + qual);
-			
+
 		algn.filterOutAux(auxfilterout);
 	}
 

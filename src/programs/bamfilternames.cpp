@@ -63,7 +63,7 @@ int bamfilternames(::libmaus2::util::ArgInfo const & arginfo)
 		se.finish();
 		throw se;
 	}
-	
+
 	int const level = libmaus2::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
 
@@ -79,7 +79,7 @@ int bamfilternames(::libmaus2::util::ArgInfo const & arginfo)
 		"bamfilternames", // PN
 		arginfo.commandline, // CL
 		::libmaus2::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
-		std::string(PACKAGE_VERSION) // VN			
+		std::string(PACKAGE_VERSION) // VN
 	);
 	// construct new header
 	libmaus2::bambam::BamHeader const uphead(upheadtext);
@@ -134,18 +134,18 @@ int bamfilternames(::libmaus2::util::ArgInfo const & arginfo)
 	::libmaus2::bambam::BamWriter::unique_ptr_type writer(new ::libmaus2::bambam::BamWriter(std::cout,uphead,level,Pcbs));
 
 	::libmaus2::trie::LinearHashTrie<char,uint32_t>::shared_ptr_type LHTsnofailure;
-	
+
 	if ( arginfo.hasArg("names") )
 	{
 		std::string const names = arginfo.getUnparsedValue("names",std::string());
-		
+
 		libmaus2::aio::InputStreamInstance namestr(names);
 		std::vector<std::string> vnames;
 		while ( namestr )
 		{
 			std::string line;
 			std::getline(namestr,line);
-			
+
 			if ( line.size() )
 				vnames.push_back(line);
 		}
@@ -155,10 +155,10 @@ int bamfilternames(::libmaus2::util::ArgInfo const & arginfo)
 		::libmaus2::trie::LinearHashTrie<char,uint32_t>::unique_ptr_type LHTnofailure(trienofailure.toLinearHashTrie<uint32_t>());
 		LHTsnofailure = ::libmaus2::trie::LinearHashTrie<char,uint32_t>::shared_ptr_type(LHTnofailure.release());
 	}
-	
+
 	libmaus2::bambam::BamAlignment & algn = dec.getAlignment();
 	uint64_t c = 0;
-	
+
 	if ( ! LHTsnofailure )
 	{
 		while ( dec.readAlignment() )
@@ -176,7 +176,7 @@ int bamfilternames(::libmaus2::util::ArgInfo const & arginfo)
 				algn.serialise(writer->getStream());
 			if ( verbose && (++c & (1024*1024-1)) == 0 )
 				std::cerr << "[V] " << c/(1024*1024) << std::endl;
-		}	
+		}
 	}
 
 	writer.reset();
@@ -198,9 +198,9 @@ int main(int argc, char * argv[])
 	try
 	{
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
-		
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -209,7 +209,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -219,9 +219,9 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-			
+
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress information" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "names=<[]>", "file containing read names to be kept (default: keep all)" ) );
@@ -234,10 +234,10 @@ int main(int argc, char * argv[])
 				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
-								
+
 				return EXIT_SUCCESS;
 			}
-			
+
 		return bamfilternames(arginfo);
 	}
 	catch(std::exception const & ex)
@@ -246,4 +246,3 @@ int main(int argc, char * argv[])
 		return EXIT_FAILURE;
 	}
 }
-

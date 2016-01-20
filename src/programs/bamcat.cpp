@@ -51,11 +51,11 @@ static int getDefaultStreaming() { return 0; }
 		"bamcat", // PN
 		arginfo.commandline, // CL
 		::libmaus2::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
-		std::string(PACKAGE_VERSION) // VN			
+		std::string(PACKAGE_VERSION) // VN
 	);
 	// construct new header
 	::libmaus2::bambam::BamHeader::unique_ptr_type uphead(new ::libmaus2::bambam::BamHeader(upheadtext));
-	
+
 	return UNIQUE_PTR_MOVE(uphead);
 }
 
@@ -74,10 +74,10 @@ int bamcat(libmaus2::util::ArgInfo const & arginfo)
 	int const streaming = arginfo.getValue<int>("streaming",getDefaultStreaming());
 
 	std::vector<std::string> inputfilenames = arginfo.getPairValues("I");
-	
+
 	for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
 		inputfilenames.push_back(arginfo.restargs[i]);
-	
+
 	libmaus2::bambam::BamCat bamdec(inputfilenames, false /* put rank */, streaming);
 	libmaus2::bambam::BamAlignment const & algn = bamdec.getAlignment();
 	libmaus2::bambam::BamHeader const & header = bamdec.getHeader();
@@ -140,11 +140,11 @@ int bamcat(libmaus2::util::ArgInfo const & arginfo)
 		while ( bamdec.readAlignment() )
 		{
 			algn.serialise(bamoutstr);
-			
+
 			if ( ((++c) & ((1ull<<20)-1)) == 0 )
 				std::cerr << "[V] " << c << std::endl;
 		}
-		
+
 		std::cerr << "[V] " << c << std::endl;
 	}
 	else
@@ -170,9 +170,9 @@ int main(int argc, char * argv[])
 	try
 	{
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
-		
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -181,7 +181,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -191,9 +191,9 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-			
+
 				V.push_back ( std::pair<std::string,std::string> ( "I=<filename>", "input file, can be set multiple times" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
@@ -209,7 +209,7 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;
 			}
-			
+
 		return bamcat(arginfo);
 	}
 	catch(std::exception const & ex)
@@ -218,4 +218,3 @@ int main(int argc, char * argv[])
 		return EXIT_FAILURE;
 	}
 }
-

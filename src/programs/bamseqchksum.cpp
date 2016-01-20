@@ -48,11 +48,11 @@ int bamseqchksum(::libmaus2::util::ArgInfo const & arginfo)
 		se.finish();
 		throw se;
 	}
-	
+
 	libmaus2::timing::RealTimeClock rtc;
 	rtc.start();
 	double prevtime = 0;
-	
+
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
 	std::string const hash = arginfo.getValue<std::string>("hash",getDefaultHash());
 
@@ -71,7 +71,7 @@ int bamseqchksum(::libmaus2::util::ArgInfo const & arginfo)
 	while ( dec.readAlignment() )
 	{
 		chksums.update(algn);
-		
+
 		if ( verbose && (++c & (1024*1024-1)) == 0 )
 		{
 			double const elapsed = rtc.getElapsedSeconds();
@@ -81,7 +81,7 @@ int bamseqchksum(::libmaus2::util::ArgInfo const & arginfo)
 	}
 
 	chksums.printChecksums(std::cout);
-	
+
 	if ( verbose )
 	{
 		std::cerr << "[V] run time " << rtc.getElapsedSeconds() << " (" << rtc.formatTime(rtc.getElapsedSeconds()) << ")" << std::endl;
@@ -111,18 +111,18 @@ libmaus2::math::UnsignedInteger<k+1> nextPrime()
 {
 	libmaus2::math::UnsignedInteger<k+1> U(1);
 	U <<= (k*32);
-	
+
 	mpz_t gmpU;
 	mpz_init(gmpU);
 	mpz_import(gmpU,k+1,-1 /* least sign first */,sizeof(uint32_t),0 /* native endianess */,0 /* don't skip bits */, U.getWords());
-	
+
 	while ( mpz_probab_prime_p(gmpU,200) == 0 )
 		mpz_add_ui(gmpU,gmpU,1);
-	
+
 	libmaus2::math::UnsignedInteger<k+1> const R = convertNumber<k+1>(gmpU);
-	
+
 	mpz_clear(gmpU);
-	
+
 	return R;
 }
 #endif
@@ -132,9 +132,9 @@ int main(int argc, char * argv[])
 	try
 	{
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
-		
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -143,7 +143,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -153,9 +153,9 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-			
+
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress information" ) );
 				#if defined(BIOBAMBAM_LIBMAUS2_HAVE_IO_LIB)
 				V.push_back ( std::pair<std::string,std::string> ( std::string("inputformat=<[")+getDefaultInputFormat()+"]>", "input format: cram, bam or sam" ) );
@@ -165,14 +165,14 @@ int main(int argc, char * argv[])
 				#endif
 
 				V.push_back ( std::pair<std::string,std::string> ( std::string("hash=<[")+getDefaultHash()+"]>", "hash digest function: " + libmaus2::bambam::ChecksumsFactory::getSupportedHashVariantsList()) );
-				
+
 				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
-								
+
 				return EXIT_SUCCESS;
 			}
-			
+
 		return bamseqchksum(arginfo);
 	}
 	catch(std::exception const & ex)
@@ -181,4 +181,3 @@ int main(int argc, char * argv[])
 		return EXIT_FAILURE;
 	}
 }
-

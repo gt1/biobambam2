@@ -36,9 +36,9 @@ static int getDefaultVerbose() { return 0; }
 /**
  * compute a single point for a convolution
  **/
-template<typename accessor_type, typename filter_iterator> 
+template<typename accessor_type, typename filter_iterator>
 typename accessor_type::value_type interpolatingConvolveSingle(
-	uint64_t const i, accessor_type const & M, 
+	uint64_t const i, accessor_type const & M,
 	filter_iterator const F, int64_t const f, int64_t const sub,
 	int64_t const bs, float const s
 )
@@ -49,16 +49,16 @@ typename accessor_type::value_type interpolatingConvolveSingle(
 	if ( f )
 	{
 		int64_t o = sub*bs;
-		
+
 		float vj = M(i,o);
-		
+
 		for ( int64_t j = 0; j < f; ++j )
 		{
 			o += bs;
 			float const vj1 = M(i,o);
 			float const vs = (vj+vj1)*.5f;
 			v += vs * F[j];
-			
+
 			vj = vj1;
 		}
 	}
@@ -85,7 +85,7 @@ std::vector< typename std::iterator_traits<data_iterator>::value_type >
 	std::vector< value_type > R(n);
 	LiftingWaveletTransform::MirrorAccessor<data_iterator> const M(A,n);
 	int64_t const sub = -(f/2);
-	
+
 	#if defined(_OPENMP)
 	#pragma omp parallel for
 	#endif
@@ -105,7 +105,7 @@ void
 	typedef typename std::iterator_traits<data_iterator>::value_type value_type;
 	LiftingWaveletTransform::MirrorAccessor<data_iterator> const M(A,n);
 	int64_t const sub = -(f/2);
-	
+
 	uint64_t const suprad = getSupportRadius(f,bs);
 
 	if ( n < suprad+1 )
@@ -136,7 +136,7 @@ struct PeakInfo
 	int64_t i;
 	float hpre;
 	float hpost;
-	
+
 	PeakInfo() : bs(0), i(0), hpre(0), hpost(0) {}
 	PeakInfo(uint64_t const rbs,
 		int64_t const ri,
@@ -144,14 +144,14 @@ struct PeakInfo
 		float const rhpost
 	) : bs(rbs), i(ri), hpre(rhpre), hpost(rhpost)
 	{
-	
+
 	}
-	
+
 	bool operator<(PeakInfo const & o) const
 	{
 		return i < o.i;
 	}
-	
+
 	int64_t getLeft() const
 	{
 		return static_cast<int64_t>(i) - static_cast<int64_t>(bs);
@@ -186,7 +186,7 @@ struct PeakInfoLeftComparator
 	{
 		int64_t const aleft = A.getLeft();
 		int64_t const bleft = B.getLeft();
-		
+
 		if ( aleft != bleft )
 		{
 			return aleft < bleft;
@@ -207,7 +207,7 @@ std::vector< PeakInfo  > analyse(std::deque<float> const & Q, std::string const 
 	// biorthogonal 3.1 wavelet coefficients
 	float const bior_3_1_reconst_high[] = { -0.3535533906,  -1.0606601718, 1.0606601718, 0.3535533906 };
 
-	// length of filters	
+	// length of filters
 	int64_t const f = sizeof(bior_3_1_reconst_low)/sizeof(bior_3_1_reconst_low[0]);
 	// scaling factor for filtering
 	float const s = 1/sqrt(2);
@@ -216,45 +216,45 @@ std::vector< PeakInfo  > analyse(std::deque<float> const & Q, std::string const 
 
 	// low pass
 	std::vector< float > L(Q.begin(),Q.end());
-	
+
 	std::vector < PeakInfo > peaks;
-	
+
 	#if 0
 	std::map< uint64_t, std::vector<float> > fullHMap;
 	#endif
-			
+
 	for ( uint64_t bs = 1; bs <= maxpeakwidth; bs *= 2 )
 	{
 		// float const scalefactor = s * bs;
 		float const scalefactor = s;
 		// std::cerr << "bs=" << bs << " Q.size()=" << Q.size() << std::endl;
-	
+
 		if ( bs >= minpeakwidth )
 		{
 			LiftingWaveletTransform::MirrorAccessor< std::vector<float>::const_iterator > const M(L.begin(),n);
 			float hpre = n ? interpolatingConvolveSingle(0,M,&bior_3_1_reconst_high[0],f,-f/2,bs,scalefactor) : 0;
 			std::deque<float> hvec;
 			hvec.push_back(hpre);
-	
+
 			#if 0
 			std::vector<float> & fullH = fullHMap[bs];
 			fullH.push_back(hpre);
 			#endif
-		
+
 			for ( int64_t i = 1; i < static_cast<int64_t>(Q.size()); ++i )
 			{
 				float const hnext = interpolatingConvolveSingle(i,M,&bior_3_1_reconst_high[0],f,-f/2,bs,scalefactor);
 				hvec.push_back(hnext);
-			
+
 				#if 0
 				fullH.push_back(hnext);
 				#endif
-			
+
 				int64_t const backpos = static_cast<int64_t>(hvec.size())-1;
 				int64_t const difpos = backpos - static_cast<int64_t>(bs);
-				
-				if ( 
-					difpos >= 0 
+
+				if (
+					difpos >= 0
 					&&
 					hvec[difpos] > peakthres && hvec[backpos] < -peakthres
 				)
@@ -262,11 +262,11 @@ std::vector< PeakInfo  > analyse(std::deque<float> const & Q, std::string const 
 					peaks.push_back(PeakInfo(bs,i-bs/2,hvec[difpos],hvec[backpos]));
 					hvec.pop_front();
 				}
-				
+
 				#if 0
 				if ( hpre > peakthres && hnext < -peakthres )
-					peaks.push_back(PeakInfo(bs,i,hpre,hnext));					
-			
+					peaks.push_back(PeakInfo(bs,i,hpre,hnext));
+
 				// hpre = hnext;
 				#endif
 			}
@@ -279,43 +279,43 @@ std::vector< PeakInfo  > analyse(std::deque<float> const & Q, std::string const 
 	std::sort(peaks.begin(),peaks.end(),PeakInfoBsComparator());
 	// std::vector<PeakInfo> npeaks;
 	uint64_t optr = 0;
-	
+
 	uint64_t low = 0;
 	while ( low != peaks.size() )
 	{
 		uint64_t high = low;
 		while ( high != peaks.size() && peaks[high].bs == peaks[low].bs )
 			++high;
-			
+
 		uint64_t llow = low;
 		while ( llow != high )
 		{
 			uint64_t lhigh = llow+1;
 
-			while ( 
-				lhigh != high 
-				&& 
+			while (
+				lhigh != high
+				&&
 				peaks[lhigh].i - peaks[llow].i == static_cast<int64_t>(lhigh-llow)
 			)
 			{
 				++lhigh;
 			}
-						
+
 			#if 0
 			uint64_t const mid = peaks[(llow+lhigh)/2].i;
-			
+
 			std::cerr << "===" << mid << "===" << std::endl;
 			for ( uint64_t i = llow; i != lhigh; ++i )
 				std::cerr << peaks[i] << std::endl;
 			std::cerr << "===" << std::endl;
 			#endif
-			
+
 			// npeaks.push_back(peaks[(llow+lhigh)/2]);
 			peaks[optr++] = peaks[(llow+lhigh)/2];
-			
+
 			llow = lhigh;
 		}
-			
+
 		low = high;
 	}
 
@@ -335,7 +335,7 @@ std::vector< PeakInfo  > analyse(std::deque<float> const & Q, std::string const 
 		// advance checkptr if intervals do not overlap
 		while ( checkptr < i && peaks[i].getLeft() > peaks[checkptr].getRight() )
 			++checkptr;
-		
+
 		// i is the new check interval, keep it
 		if ( i == checkptr )
 		{
@@ -369,7 +369,7 @@ std::vector< PeakInfo  > analyse(std::deque<float> const & Q, std::string const 
 	std::sort(peaks.begin(),peaks.end());
 
 	// int64_t const kpre = 10;
-	
+
 	for ( uint64_t z = 0; z < peaks.size(); ++z )
 	{
 		// int64_t const i = peaks[z].i;
@@ -377,7 +377,7 @@ std::vector< PeakInfo  > analyse(std::deque<float> const & Q, std::string const 
 		// float const hpre = peaks[z].hpre;
 		// float const hpost = peaks[z].hpost;
 		// int64_t const k = kpre + bs;
-		
+
 		std::ostringstream ostr;
 		ostr << " " << peaks[z] << " ";
 		std::string const ostrstr = ostr.str();
@@ -387,20 +387,20 @@ std::vector< PeakInfo  > analyse(std::deque<float> const & Q, std::string const 
 				D.push_back('*');
 			else
 				D.push_front('*');
-				
+
 		std::cerr << std::string(D.begin(),D.end()) << std::endl;
 
 		#if 0
 		for ( int64_t j = std::max(static_cast<int64_t>(0),i-k); j <= std::min(static_cast<int64_t>(L.size()),i+k); ++j )
-			std::cerr << "j=" << j  << "\tQ=" << Q[j  ] << std::endl;				
+			std::cerr << "j=" << j  << "\tQ=" << Q[j  ] << std::endl;
 		#endif
 	}
-	
+
 	return peaks;
 }
 
 void generateGPL(std::deque<float> const & Q, std::vector< PeakInfo > const & peaks, std::string const & seqname)
-{	
+{
 	#if 0
 	std::set<int64_t> peakcoord;
 	for ( uint64_t i = 0; i < peaks.size(); ++i )
@@ -408,31 +408,31 @@ void generateGPL(std::deque<float> const & Q, std::vector< PeakInfo > const & pe
 		int64_t centre = peaks[i].i;
 		int64_t low = centre - peaks[i].bs;
 		int64_t high = centre + peaks[i].bs;
-		
+
 		for ( int64_t j = low; j <= high; ++j )
 			peakcoord.insert(j);
 	}
 	#endif
-	
+
 	// uint64_t const numblocks = 1024;
 	// uint64_t blocksize = (Q.size() + numblocks-1)/numblocks;
-	
+
 	std::ostringstream depthstr;
 	// depthstr << "plot_" << header.getRefIDName(previd) << ".gpl";
 	depthstr << "plot_" << seqname << ".gpl";
 	std::ostringstream depthpeakstr;
 	depthpeakstr << "plot_" << seqname << "_peaks.gpl";
-	
+
 	libmaus2::aio::OutputStreamInstance depthostr(depthstr.str());
 	libmaus2::aio::OutputStreamInstance depthpeakostr(depthpeakstr.str());
-	
+
 	for ( uint64_t i = 0; i < peaks.size(); ++i )
 	{
 		int64_t centre = peaks[i].i;
 		int64_t low = centre - peaks[i].bs;
 		int64_t high = centre + peaks[i].bs;
 		float maxval = 0;
-		
+
 		for ( int64_t j = low; j <= high; ++j )
 			maxval = std::max(maxval,Q[j]);
 
@@ -444,7 +444,7 @@ void generateGPL(std::deque<float> const & Q, std::vector< PeakInfo > const & pe
 	{
 		depthostr << (i) << "\t" << Q[i] << "\n";
 	}
-	
+
 	#if 0
 	for ( uint64_t i = 0; i < Q.size(); i += blocksize )
 	{
@@ -460,18 +460,18 @@ void generateGPL(std::deque<float> const & Q, std::vector< PeakInfo > const & pe
 				mark = true;
 			#endif
 		}
-		
+
 		if ( avg > 0 )
 		{
 			depthostr << (i+blocksize/2) << "\t" << avg/blocksize << "\n";
 			#if 0
 			if ( mark )
-				depthpeakostr << (i+blocksize/2) << "\t" << avg/blocksize << "\n"; 
+				depthpeakostr << (i+blocksize/2) << "\t" << avg/blocksize << "\n";
 			#endif
 		}
 	}
 	#endif
-	
+
 	depthostr.flush(); depthostr.close();
 	depthpeakostr.flush(); depthpeakostr.close();
 }
@@ -487,11 +487,11 @@ void ztrim(container_type & Q, uint64_t const keep)
 		frontz--;
 		Q.pop_front();
 	}
-	
+
 	uint64_t backz = 0;
 	while ( backz < Q.size() && Q[Q.size()-backz-1] == 0 )
 		backz++;
-		
+
 	while ( backz > keep )
 	{
 		backz--;
@@ -512,20 +512,20 @@ int bamrefdepth(libmaus2::util::ArgInfo const & arginfo)
 	float const peakthres = arginfo.getValue<float>("peakthres",1.0f);
 	uint64_t const minpeakwidth = arginfo.getValueUnsignedNumeric<uint64_t>("minpeakwidth",1);
 	uint64_t const maxpeakwidth = arginfo.getValueUnsignedNumeric<uint64_t>("maxpeakwidth",1024);
-	
+
 	libmaus2::bambam::BamAlignment prevalgn;
 	bool hasprev = false;
 	uint64_t c = 0;
-	
+
 	std::deque<float> Q;
 	libmaus2::autoarray::AutoArray<libmaus2::bambam::cigar_operation> cigop;
 	libmaus2::autoarray::AutoArray<char> decread;
 	int64_t previd = -1;
-	
+
 	std::vector < std::string > refnames;
 	for ( uint64_t i = 0; i < header.getNumRef(); ++i )
 		refnames.push_back(header.getRefIDName(i));
-                        	
+
 	while ( bamdec.readAlignment() )
 	{
 		bool const ok =
@@ -546,7 +546,7 @@ int bamrefdepth(libmaus2::util::ArgInfo const & arginfo)
 					)
 				)
 			);
-			
+
 		if ( ! ok )
 		{
 			libmaus2::exception::LibMausException se;
@@ -556,31 +556,31 @@ int bamrefdepth(libmaus2::util::ArgInfo const & arginfo)
 			se.finish();
 			throw se;
 		}
-		
+
 		// next reference sequence
 		if ( hasprev && (algn.getRefID() != prevalgn.getRefID()) )
 		{
 			uint64_t const len = header.getRefIDLength(previd);
 			while ( Q.size() < len )
 				Q.push_back(0);
-				
+
 			ztrim(Q,2);
-				
+
 			std::vector< PeakInfo > const peaks = analyse(Q,refnames[previd],peakthres,minpeakwidth,maxpeakwidth);
 			generateGPL(Q,peaks,header.getRefIDName(previd));
 			// std::cerr << refnames[prevalgn.getRefID()] << " size " << Q.size() << std::endl;
 			Q.resize(0);
-			
+
 			std::cerr << "inter." << std::endl;
 		}
-		
+
 		if ( algn.isMapped() )
 		{
 			uint32_t const numcigop = algn.getCigarOperations(cigop);
 			uint64_t const readlen = algn.decodeRead(decread);
 			int64_t pos = algn.getPos();
 			uint64_t readpos = 0;
-			
+
 			// std::cerr << "Q.size()=" << Q.size() << std::endl;
 
 			#if 0
@@ -592,7 +592,7 @@ int bamrefdepth(libmaus2::util::ArgInfo const & arginfo)
 				leftpos++;
 			}
 			#endif
-			
+
 			// skip soft clipping at front
 			uint64_t cidx = 0;
 			bool frontskip = true;
@@ -644,24 +644,24 @@ int bamrefdepth(libmaus2::util::ArgInfo const & arginfo)
 						{
 							while ( pos >= static_cast<int64_t>(Q.size()) )
 								Q.push_back(0);
-								
+
 							Q[pos] += 1;
 						}
 						break;
 				}
-			
+
 			#if 0
 			if ( readpos != readlen )
 			{
-				std::cerr << "readpos=" << readpos << " readlen=" << readlen << std::endl;			
+				std::cerr << "readpos=" << readpos << " readlen=" << readlen << std::endl;
 				std::cerr << algn.formatAlignment(header) << std::endl;
-			}	
+			}
 			#endif
 			assert (readpos == readlen);
-			
+
 			previd = algn.getRefID();
 		}
-			
+
 		prevalgn.swap(algn);
 		hasprev = true;
 
@@ -685,7 +685,7 @@ int bamrefdepth(libmaus2::util::ArgInfo const & arginfo)
 		generateGPL(Q,peaks,header.getRefIDName(previd));
 
 		Q.resize(0);
-		
+
 		std::cerr << "done." << std::endl;
 	}
 
@@ -707,7 +707,7 @@ int main(int argc, char * argv[])
 	float A[1841];
 	uint64_t const n = sizeof(A)/sizeof(A[0]);
 	srand(5);
-	
+
 	for ( uint64_t j = 0; j < 1024; ++j )
 	{
 	for ( uint64_t i = 0; i < n; ++i )
@@ -722,7 +722,7 @@ int main(int argc, char * argv[])
 		&A[0],n,
 		&bior_3_1_reconst_high[0],sizeof(bior_3_1_reconst_low)/sizeof(bior_3_1_reconst_high[0]),bs
 	);
-	
+
 	for ( uint64_t i = 0; i < sizeof(A)/sizeof(A[0]); ++i )
 		if ( A[i] != H[i] )
 			std::cerr << i << "\t" << A[i] << "\t" << H[i] << std::endl;
@@ -735,9 +735,9 @@ int main(int argc, char * argv[])
 	try
 	{
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
-		
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -746,7 +746,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -756,9 +756,9 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-			
+
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
 
 				::biobambam2::Licensing::printMap(std::cerr,V);
@@ -766,7 +766,7 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;
 			}
-			
+
 		return bamrefdepth(arginfo);
 	}
 	catch(std::exception const & ex)
@@ -775,4 +775,3 @@ int main(int argc, char * argv[])
 		return EXIT_FAILURE;
 	}
 }
-

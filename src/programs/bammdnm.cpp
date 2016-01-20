@@ -59,7 +59,7 @@ static int bammdnm(libmaus2::util::ArgInfo const & arginfo)
 {
 	libmaus2::timing::RealTimeClock rtc;
 	rtc.start();
-	
+
 	::libmaus2::util::TempFileRemovalContainer::setup();
 
 	std::string const tmpfilenamebase = arginfo.getValue<std::string>("tmpfile",arginfo.getDefaultTmpFileName());
@@ -131,7 +131,7 @@ static int bammdnm(libmaus2::util::ArgInfo const & arginfo)
 
 	::libmaus2::bambam::BamAlignment algn;
 	uint8_t * copyptr = 0;
-	
+
 	bool const validate = !arginfo.getValue<unsigned int>("disablevalidation",getDefaultDisableValidation());
 	int const level = libmaus2::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue("level",Z_DEFAULT_COMPRESSION));
 	bool const verbose = arginfo.getValue<unsigned int>("verbose",getDefaultVerbose());
@@ -141,16 +141,16 @@ static int bammdnm(libmaus2::util::ArgInfo const & arginfo)
 	libmaus2::aio::PosixFdOutputStream::unique_ptr_type Ppfos;
 	libmaus2::bambam::BamWriter::unique_ptr_type Pout;
 	libmaus2::bambam::BamWriter::stream_type * bamout = 0;
-	
+
 	libmaus2::bambam::MdNmRecalculation::unique_ptr_type Precalc;
 
 	while ( !(bgzfinfo = infl.readAndInfo(B.begin(),B.size())).streameof )
 	{
 		uint8_t const * pa = reinterpret_cast<uint8_t *>(B.begin()); // buffer current pointer
 		uint8_t const * pc = pa + bgzfinfo.uncompressed; // buffer end pointer
-		
+
 		if ( (! haveheader) && (pa != pc) )
-		{			
+		{
 			::libmaus2::util::GetObject<uint8_t const *> G(pa);
 			std::pair<bool,uint64_t> const P = bamheaderparsestate.parseHeader(G,bgzfinfo.uncompressed);
 
@@ -160,7 +160,7 @@ static int bammdnm(libmaus2::util::ArgInfo const & arginfo)
 				header.init(bamheaderparsestate);
 				haveheader = true;
 				pa = reinterpret_cast<uint8_t *>(B.begin()) + P.second;
-				
+
 				::libmaus2::bambam::BamHeader::unique_ptr_type uphead(libmaus2::bambam::BamHeaderUpdate::updateHeader(arginfo,header,"bammdnm",std::string(PACKAGE_VERSION)));
 
 				libmaus2::aio::PosixFdOutputStream::unique_ptr_type Tpfos(new libmaus2::aio::PosixFdOutputStream(STDOUT_FILENO,ioblocksize));
@@ -169,12 +169,12 @@ static int bammdnm(libmaus2::util::ArgInfo const & arginfo)
 				libmaus2::bambam::BamWriter::unique_ptr_type Tout(new libmaus2::bambam::BamWriter(*Ppfos,*uphead,level,Pcbs));
 				Pout = UNIQUE_PTR_MOVE(Tout);
 				bamout = &(Pout->getStream());
-				
+
 				libmaus2::bambam::MdNmRecalculation::unique_ptr_type Trecalc(new libmaus2::bambam::MdNmRecalculation(reference,validate,recompindetonly,warnchange,ioblocksize));
 				Precalc = UNIQUE_PTR_MOVE(Trecalc);
 			}
 		}
-		
+
 		if ( (haveheader) && (pa != pc) )
 		{
 			while ( pa != pc )
@@ -185,15 +185,15 @@ static int bammdnm(libmaus2::util::ArgInfo const & arginfo)
 					case state_reading_blocklen:
 						/* if this is a little endian machine allowing unaligned access */
 						#if defined(LIBMAUS2_HAVE_i386)
-						if ( 
-							(!blocklenred) && 
-							((pc-pa) >= static_cast<ptrdiff_t>(sizeof(uint32_t))) 
+						if (
+							(!blocklenred) &&
+							((pc-pa) >= static_cast<ptrdiff_t>(sizeof(uint32_t)))
 						)
 						{
 							blocklen = *(reinterpret_cast<uint32_t const *>(pa));
 							blocklenred = sizeof(uint32_t);
 							pa += sizeof(uint32_t);
-							
+
 							if ( pc - pa >= blocklen )
 							{
 								bool const needupdate = Precalc->calmdnm(pa,blocklen);
@@ -202,9 +202,9 @@ static int bammdnm(libmaus2::util::ArgInfo const & arginfo)
 									if ( algn.D.size() < blocklen )
 										algn.D = ::libmaus2::bambam::BamAlignment::D_array_type(blocklen,false);
 									algn.blocksize = blocklen;
-									
+
 									std::copy(pa,pa+blocklen,algn.D.begin());
-									algn.fillMd(Precalc->context);			
+									algn.fillMd(Precalc->context);
 									algn.serialise(*bamout);
 								}
 								else
@@ -217,11 +217,11 @@ static int bammdnm(libmaus2::util::ArgInfo const & arginfo)
 								}
 
 								alcnt++;
-							
+
 								if ( verbose && (alcnt % (1024*1024) == 0) )
 									std::cerr << "[V] " << alcnt/(1024*1024) << " " << (alcnt / rtc.getElapsedSeconds()) << " " << rtc.formatTime(rtc.getElapsedSeconds()) << " recalculated=" << Precalc->numrecalc << std::endl;
-							
-								pa += blocklen;						
+
+								pa += blocklen;
 								blocklen = 0;
 								blocklenred = 0;
 							}
@@ -250,9 +250,9 @@ static int bammdnm(libmaus2::util::ArgInfo const & arginfo)
 										if ( algn.D.size() < blocklen )
 											algn.D = ::libmaus2::bambam::BamAlignment::D_array_type(blocklen,false);
 										algn.blocksize = blocklen;
-										
+
 										std::copy(pa,pa+blocklen,algn.D.begin());
-										algn.fillMd(Precalc->context);			
+										algn.fillMd(Precalc->context);
 										algn.serialise(*bamout);
 									}
 									else
@@ -265,11 +265,11 @@ static int bammdnm(libmaus2::util::ArgInfo const & arginfo)
 									}
 
 									alcnt++;
-								
+
 									if ( verbose && (alcnt % (1024*1024) == 0) )
 										std::cerr << "[V] " << alcnt/(1024*1024) << " " << (alcnt / rtc.getElapsedSeconds()) << " " << rtc.formatTime(rtc.getElapsedSeconds()) << " recalculated=" << Precalc->numrecalc << std::endl;
 
-									pa += blocklen;			
+									pa += blocklen;
 									blocklen = 0;
 									blocklenred = 0;
 								}
@@ -283,7 +283,7 @@ static int bammdnm(libmaus2::util::ArgInfo const & arginfo)
 								}
 							}
 						}
-						
+
 						break;
 					case state_post_skip:
 					{
@@ -294,18 +294,18 @@ static int bammdnm(libmaus2::util::ArgInfo const & arginfo)
 						copyptr += skip;
 						pa += skip;
 						blocklen -= skip;
-						
+
 						if ( ! blocklen )
 						{
 							bool const needupdate = Precalc->calmdnm(algn);
 							if ( needupdate )
-								algn.fillMd(Precalc->context);			
+								algn.fillMd(Precalc->context);
 
 							algn.serialise(*bamout);
-							
+
 							// finished an alignment, set up for next one
 							state = state_reading_blocklen;
-							
+
 							blocklenred = 0;
 							blocklen = 0;
 
@@ -343,9 +343,9 @@ int main(int argc, char * argv[])
 	{
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
 
-		
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -354,7 +354,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -364,9 +364,9 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-			
+
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "disablevalidation=<["+::biobambam2::Licensing::formatNumber(getDefaultDisableValidation())+"]>", "disable input validation (default is 0)" ) );

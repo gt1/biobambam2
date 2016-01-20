@@ -63,11 +63,11 @@ struct AlPairCmp
 	{
 		bool const apaired = A->isPaired();
 		bool const bpaired = B->isPaired();
-		
+
 		// A smaller when in pair but B is not
 		if ( apaired != bpaired )
 			return apaired;
-			
+
 		bool const asec = A->isSecondary();
 		bool const bsec = B->isSecondary();
 
@@ -81,14 +81,14 @@ struct AlPairCmp
 		// A smaller when not supplementary
 		if ( asup != bsup )
 			return !asup;
-			
+
 		bool const afirst = A->isRead1();
 		bool const bfirst = B->isRead1();
 
-		// A smaller when first				
+		// A smaller when first
 		if ( afirst != bfirst )
 			return afirst;
-		
+
 		return false;
 	}
 };
@@ -103,25 +103,25 @@ void handleAlignmentVector(
 	libmaus2::bambam::BamBlockWriterBase * samestrandwr,
 	libmaus2::bambam::BamBlockWriterBase * improperwr,
 	libmaus2::bambam::BamBlockWriterBase * properwr
-)	
+)
 {
 	std::sort(Calgn.begin(),Calgn.end(),AlPairCmp());
-	
+
 	#if 0
 	std::cerr << Aalgn.size() << std::string(80,'-') << std::endl;
 	for ( uint64_t i = 0; i < Calgn.size(); ++i )
 		std::cerr << Calgn[i]->formatAlignment(header) << std::endl;
 	#endif
-		
+
 	for ( uint64_t i = 1; i < Calgn.size(); ++i )
 		if ( Calgn[i]->isPaired() != Calgn[0]->isPaired() )
 		{
 			::libmaus2::exception::LibMausException se;
 			se.getStream() << "[E] file is broken, read " << Calgn[i]->getName() << " is in a pair and not in a pair" << std::endl;
 			se.finish();
-			throw se;	
+			throw se;
 		}
-	
+
 	// single end
 	if ( ! Calgn[0]->isPaired() )
 	{
@@ -143,9 +143,9 @@ void handleAlignmentVector(
 				::libmaus2::exception::LibMausException se;
 				se.getStream() << "[E] cannot handle read " << Calgn[i]->getName() << " which is not either read 1 or read 2" << std::endl;
 				se.finish();
-				throw se;	
+				throw se;
 			}
-			
+
 			if ( isr1 )
 				R1.push_back(Calgn[i]);
 			else
@@ -155,12 +155,12 @@ void handleAlignmentVector(
 		if ( R1.size() == 0 || R2.size() == 0 )
 		{
 			for ( uint64_t i = 0; i < Calgn.size(); ++i )
-				orphanwr->writeAlignment(*(Calgn[i]));				
+				orphanwr->writeAlignment(*(Calgn[i]));
 		}
 		else
 		{
 			// check that first entries in both lists are primary
-			if ( 
+			if (
 				R1[0]->isSupplementary()
 				||
 				R1[0]->isSecondary()
@@ -169,9 +169,9 @@ void handleAlignmentVector(
 				::libmaus2::exception::LibMausException se;
 				se.getStream() << "[E] first read for name " << R1[0]->getName() << " is not primary" << std::endl;
 				se.finish();
-				throw se;								
+				throw se;
 			}
-			if ( 
+			if (
 				R2[0]->isSupplementary()
 				||
 				R2[0]->isSecondary()
@@ -180,10 +180,10 @@ void handleAlignmentVector(
 				::libmaus2::exception::LibMausException se;
 				se.getStream() << "[E] second read for name " << R2[0]->getName() << " is not primary" << std::endl;
 				se.finish();
-				throw se;								
+				throw se;
 			}
-		
-			// extract and remove supplementary reads	
+
+			// extract and remove supplementary reads
 			uint64_t o = 0;
 			for ( uint64_t i = 0; i < R1.size(); ++i )
 				if ( R1[i]->isSupplementary() )
@@ -198,16 +198,16 @@ void handleAlignmentVector(
 				else
 					R2[o++] = R2[i];
 			R2.resize(o);
-			
+
 			for ( uint64_t i = 1; i < R1.size(); ++i )
 				if ( ! R1[i]->isSecondary() )
 				{
 					::libmaus2::exception::LibMausException se;
 					se.getStream() << "[E] multiple primary mappings for read 1 of name " << R1[0]->getName() << std::endl;
 					se.finish();
-					throw se;											
+					throw se;
 				}
-			
+
 			for ( uint64_t i = 1; i < R2.size(); ++i )
 				if ( ! R2[i]->isSecondary() )
 				{
@@ -223,14 +223,14 @@ void handleAlignmentVector(
 					::libmaus2::exception::LibMausException se;
 					se.getStream() << "[E] read 1 for name " << R1[0]->getName() << " is mapped and unmapped" << std::endl;
 					se.finish();
-					throw se;							
+					throw se;
 				}
 			if ( R1.size() > 1 && (!R1[0]->isMapped()) )
 			{
 				::libmaus2::exception::LibMausException se;
 				se.getStream() << "[E] read 1 for name " << R1[0]->getName() << " has multiple unmapped versions" << std::endl;
 				se.finish();
-				throw se;													
+				throw se;
 			}
 			for ( uint64_t i = 1; i < R1.size(); ++i )
 				if ( R2[i]->isMapped() != R2[0]->isMapped() )
@@ -238,16 +238,16 @@ void handleAlignmentVector(
 					::libmaus2::exception::LibMausException se;
 					se.getStream() << "[E] read 2 for name " << R2[0]->getName() << " is mapped and unmapped" << std::endl;
 					se.finish();
-					throw se;							
+					throw se;
 				}
 			if ( R2.size() > 1 && (!R2[0]->isMapped()) )
 			{
 				::libmaus2::exception::LibMausException se;
 				se.getStream() << "[E] read 2 for name " << R1[0]->getName() << " has multiple unmapped versions" << std::endl;
 				se.finish();
-				throw se;													
+				throw se;
 			}
-			
+
 			#if 0
 			bool properfirst = true;
 			bool improperfirst = true;
@@ -255,12 +255,12 @@ void handleAlignmentVector(
 			bool splitfirst = true;
 			bool unmappedfirst = true;
 			#endif
-			
+
 			if ( R1.size() == 1 && R2.size() == 1 )
 			{
 				libmaus2::bambam::BamAlignment * r1 = R1[0];
 				libmaus2::bambam::BamAlignment * r2 = R2[0];
-				
+
 				// at least one unmapped
 				if ( (!(r1->isMapped())) || (!(r1->isMapped())) )
 				{
@@ -273,14 +273,14 @@ void handleAlignmentVector(
 				{
 					splitwr->writeAlignment(*r1);
 					splitwr->writeAlignment(*r2);
-					// splitfirst = false;							
+					// splitfirst = false;
 				}
 				// both on same strand
 				else if ( r1->isReverse() == r2->isReverse() )
-				{							
+				{
 					samestrandwr->writeAlignment(*r1);
 					samestrandwr->writeAlignment(*r2);
-					// samestrandfirst = false;							
+					// samestrandfirst = false;
 				}
 				// improper
 				else if ( ! r1->isProper() )
@@ -294,7 +294,7 @@ void handleAlignmentVector(
 					}
 					improperwr->writeAlignment(*r1);
 					improperwr->writeAlignment(*r2);
-					// improperfirst = false;							
+					// improperfirst = false;
 				}
 				else
 				{
@@ -316,7 +316,7 @@ void handleAlignmentVector(
 				se.getStream() << "[E] secondary mapping are not yet supported (name " << R1[0]->getName() << ")" << std::endl;
 				se.finish();
 				throw se;
-				
+
 				#if 0
 				for ( uint64_t i = 0; i < R1.size(); ++i )
 					for ( uint64_t j = 0; j < R2.size(); ++j )
@@ -334,7 +334,7 @@ void handleAlignmentVector(
 int bamflagsplit(::libmaus2::util::ArgInfo const & arginfo)
 {
 	::libmaus2::util::TempFileRemovalContainer::setup();
-	
+
 	bool const inputisstdin = (!arginfo.hasArg("I")) || (arginfo.getUnparsedValue("I","-") == "-");
 
 	if ( isatty(STDIN_FILENO) && inputisstdin && (arginfo.getValue<std::string>("inputformat","bam") != "sam") )
@@ -366,28 +366,28 @@ int bamflagsplit(::libmaus2::util::ArgInfo const & arginfo)
 		dec.disableValidation();
 	::libmaus2::bambam::BamHeader const & header = dec.getHeader();
 
-	
+
 	// prefix for tmp files
 	std::string const tmpfilenamebase = arginfo.getValue<std::string>("tmpfile",arginfo.getDefaultTmpFileName());
 	std::string const tmpfilenameout = tmpfilenamebase + "_bamflagsplit";
 	::libmaus2::util::TempFileRemovalContainer::addTempFile(tmpfilenameout);
-	
+
 	::libmaus2::bambam::BamHeader::unique_ptr_type genuphead(
 		libmaus2::bambam::BamHeaderUpdate::updateHeader(arginfo,header,"bamflagsplit",std::string(PACKAGE_VERSION))
 	);
-	::libmaus2::bambam::BamHeader::unique_ptr_type splituphead(	
+	::libmaus2::bambam::BamHeader::unique_ptr_type splituphead(
 		new ::libmaus2::bambam::BamHeader(genuphead->text + "@CO\tsplit reads\n")
 	);
-	::libmaus2::bambam::BamHeader::unique_ptr_type singleuphead(	
+	::libmaus2::bambam::BamHeader::unique_ptr_type singleuphead(
 		new ::libmaus2::bambam::BamHeader(genuphead->text + "@CO\tsingle reads\n")
 	);
-	::libmaus2::bambam::BamHeader::unique_ptr_type orphanuphead(	
+	::libmaus2::bambam::BamHeader::unique_ptr_type orphanuphead(
 		new ::libmaus2::bambam::BamHeader(genuphead->text + "@CO\torphan reads\n")
 	);
-	::libmaus2::bambam::BamHeader::unique_ptr_type unmappeduphead(	
+	::libmaus2::bambam::BamHeader::unique_ptr_type unmappeduphead(
 		new ::libmaus2::bambam::BamHeader(genuphead->text + "@CO\tunmapped reads\n")
 	);
-	::libmaus2::bambam::BamHeader::unique_ptr_type supplementaryuphead(	
+	::libmaus2::bambam::BamHeader::unique_ptr_type supplementaryuphead(
 		new ::libmaus2::bambam::BamHeader(genuphead->text + "@CO\tsupplementary reads\n")
 	);
 	::libmaus2::bambam::BamHeader::unique_ptr_type improperuphead(
@@ -405,9 +405,9 @@ int bamflagsplit(::libmaus2::util::ArgInfo const & arginfo)
 		::libmaus2::exception::LibMausException se;
 		se.getStream() << "File name for split alignments is missing" << std::endl;
 		se.finish();
-		throw se;		
+		throw se;
 	}
-	
+
 	std::string const splitfn = arginfo.getUnparsedValue("split","notset");
 
 	if ( ! arginfo.hasArg("single") )
@@ -415,9 +415,9 @@ int bamflagsplit(::libmaus2::util::ArgInfo const & arginfo)
 		::libmaus2::exception::LibMausException se;
 		se.getStream() << "File name for single alignments is missing" << std::endl;
 		se.finish();
-		throw se;		
+		throw se;
 	}
-	
+
 	std::string const singlefn = arginfo.getUnparsedValue("single","notset");
 
 	if ( ! arginfo.hasArg("orphan") )
@@ -425,9 +425,9 @@ int bamflagsplit(::libmaus2::util::ArgInfo const & arginfo)
 		::libmaus2::exception::LibMausException se;
 		se.getStream() << "File name for orphan alignments is missing" << std::endl;
 		se.finish();
-		throw se;		
+		throw se;
 	}
-	
+
 	std::string const orphanfn = arginfo.getUnparsedValue("orphan","notset");
 
 	if ( ! arginfo.hasArg("unmapped") )
@@ -435,9 +435,9 @@ int bamflagsplit(::libmaus2::util::ArgInfo const & arginfo)
 		::libmaus2::exception::LibMausException se;
 		se.getStream() << "File name for unmapped alignments is missing" << std::endl;
 		se.finish();
-		throw se;		
+		throw se;
 	}
-	
+
 	std::string const unmappedfn = arginfo.getUnparsedValue("unmapped","notset");
 
 	if ( ! arginfo.hasArg("supplementary") )
@@ -445,9 +445,9 @@ int bamflagsplit(::libmaus2::util::ArgInfo const & arginfo)
 		::libmaus2::exception::LibMausException se;
 		se.getStream() << "File name for supplementary alignments is missing" << std::endl;
 		se.finish();
-		throw se;		
+		throw se;
 	}
-	
+
 	std::string const supplementaryfn = arginfo.getUnparsedValue("supplementary","notset");
 
 	if ( ! arginfo.hasArg("improper") )
@@ -455,9 +455,9 @@ int bamflagsplit(::libmaus2::util::ArgInfo const & arginfo)
 		::libmaus2::exception::LibMausException se;
 		se.getStream() << "File name for improper alignments is missing" << std::endl;
 		se.finish();
-		throw se;		
+		throw se;
 	}
-	
+
 	std::string const improperfn = arginfo.getUnparsedValue("improper","notset");
 
 	if ( ! arginfo.hasArg("samestrand") )
@@ -465,7 +465,7 @@ int bamflagsplit(::libmaus2::util::ArgInfo const & arginfo)
 		::libmaus2::exception::LibMausException se;
 		se.getStream() << "File name for samestrand alignments is missing" << std::endl;
 		se.finish();
-		throw se;		
+		throw se;
 	}
 
 	std::string const samestrandfn = arginfo.getUnparsedValue("samestrand","notset");
@@ -475,11 +475,11 @@ int bamflagsplit(::libmaus2::util::ArgInfo const & arginfo)
 		::libmaus2::exception::LibMausException se;
 		se.getStream() << "File name for proper alignments is missing" << std::endl;
 		se.finish();
-		throw se;		
+		throw se;
 	}
 
 	std::string const properfn = arginfo.getUnparsedValue("proper","notset");
-	
+
 	remove(splitfn.c_str());
 	remove(singlefn.c_str());
 	remove(orphanfn.c_str());
@@ -488,7 +488,7 @@ int bamflagsplit(::libmaus2::util::ArgInfo const & arginfo)
 	remove(samestrandfn.c_str());
 	remove(improperfn.c_str());
 	remove(properfn.c_str());
-	
+
 	libmaus2::aio::OutputStreamInstance::unique_ptr_type splitfile(new libmaus2::aio::OutputStreamInstance(splitfn));
 	libmaus2::aio::OutputStreamInstance::unique_ptr_type singlefile(new libmaus2::aio::OutputStreamInstance(singlefn));
 	libmaus2::aio::OutputStreamInstance::unique_ptr_type orphanfile(new libmaus2::aio::OutputStreamInstance(orphanfn));
@@ -515,7 +515,7 @@ int bamflagsplit(::libmaus2::util::ArgInfo const & arginfo)
 	std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > samestrandcbs;
 	std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > impropercbs;
 	std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > propercbs;
-	
+
 	if ( arginfo.hasArg("splitmd5") && arginfo.hasArg("splitmd5filename") && arginfo.getValue<unsigned int>("splitmd5",0) )
 	{
 		::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tsplitmd5(new ::libmaus2::lz::BgzfDeflateOutputCallbackMD5);
@@ -564,7 +564,7 @@ int bamflagsplit(::libmaus2::util::ArgInfo const & arginfo)
 		Ppropermd5 = UNIQUE_PTR_MOVE(Tpropermd5);
 		propercbs.push_back(Ppropermd5.get());
 	}
-	
+
 	#if 0
 	std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
 	if ( cbs.size() )
@@ -596,12 +596,12 @@ int bamflagsplit(::libmaus2::util::ArgInfo const & arginfo)
 	libmaus2::bambam::BamBlockWriterBase::unique_ptr_type properwr(
 		new libmaus2::bambam::BamWriter(*properfile,*properuphead,level,propercbs.size() ? (&propercbs) : 0)
 	);
-	
+
 	libmaus2::bambam::BamAlignment & curalgn = dec.getAlignment();
 	libmaus2::bambam::BamAuxFilterVector MQfilter;
 	MQfilter.set("MQ");
 	uint64_t c = 0;
-	
+
 	std::vector < libmaus2::bambam::BamAlignment::shared_ptr_type > Aalgn;
 	std::vector < libmaus2::bambam::BamAlignment * > Falgn;
 	std::vector < libmaus2::bambam::BamAlignment * > Calgn;
@@ -620,7 +620,7 @@ int bamflagsplit(::libmaus2::util::ArgInfo const & arginfo)
 		libmaus2::bambam::BamAlignment * const calgn = Falgn.back();
 		Falgn.pop_back();
 		calgn->swap(curalgn);
-	
+
 		// new name?
 		if ( !Calgn.size() || (strcmp(Calgn.back()->getName(),calgn->getName()) != 0) )
 		{
@@ -630,7 +630,7 @@ int bamflagsplit(::libmaus2::util::ArgInfo const & arginfo)
 					unmappedwr.get(),splitwr.get(),samestrandwr.get(),
 					improperwr.get(),properwr.get());
 
-				// move alignments to free list				
+				// move alignments to free list
 				while ( Calgn.size() )
 				{
 					Falgn.push_back(Calgn.back());
@@ -640,7 +640,7 @@ int bamflagsplit(::libmaus2::util::ArgInfo const & arginfo)
 		}
 
 		Calgn.push_back(calgn);
-		
+
 		if ( verbose && ( ( ++c & ((1ull<<20)-1) ) == 0 ) )
 			std::cerr << "[V] " << c << std::endl;
 	}
@@ -651,7 +651,7 @@ int bamflagsplit(::libmaus2::util::ArgInfo const & arginfo)
 			unmappedwr.get(),splitwr.get(),samestrandwr.get(),
 			improperwr.get(),properwr.get());
 	}
-	
+
 	if ( verbose )
 		std::cerr << "[V] " << c << std::endl;
 
@@ -689,7 +689,7 @@ int bamflagsplit(::libmaus2::util::ArgInfo const & arginfo)
 		Psamestrandmd5->saveDigestAsFile(arginfo.getUnparsedValue("samestrandmd5filename","not set"));
 	if ( Ppropermd5 )
 		Ppropermd5->saveDigestAsFile(arginfo.getUnparsedValue("propermd5filename","not set"));
-	
+
 	return EXIT_SUCCESS;
 }
 
@@ -698,9 +698,9 @@ int main(int argc, char * argv[])
 	try
 	{
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
-		
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -709,7 +709,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -719,16 +719,16 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-			
+
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "disablevalidation=<["+::biobambam2::Licensing::formatNumber(getDefaultDisableValidation())+"]>", "disable input validation (default is 0)" ) );				
+				V.push_back ( std::pair<std::string,std::string> ( "disablevalidation=<["+::biobambam2::Licensing::formatNumber(getDefaultDisableValidation())+"]>", "disable input validation (default is 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("inputformat=<[")+getDefaultInputFormat()+"]>", std::string("input format (") + libmaus2::bambam::BamMultiAlignmentDecoderFactory::getValidInputFormats() + ")" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "I=<[stdin]>", "input filename (standard input if unset)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "inputthreads=<[1]>", "input helper threads (for inputformat=bam only, default: 1)" ) );
-				
+
 				V.push_back ( std::pair<std::string,std::string> ( "single=<filename>", "output file name for single file" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "singlemd5=<["+::biobambam2::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum for single file (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "singlemd5filename=<filename>", "file name for md5 check sum of sigle file" ) );
@@ -760,13 +760,13 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "proper=<filename>", "output file name for proper file" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "propermd5=<["+::biobambam2::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum for proper file (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "propermd5filename=<filename>", "file name for md5 check sum of sigle file" ) );
-				
+
 				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;
 			}
-			
+
 		return bamflagsplit(arginfo);
 	}
 	catch(std::exception const & ex)

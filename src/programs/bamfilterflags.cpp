@@ -52,11 +52,11 @@ static int getDefaultIndex() { return 0; }
 		"bamfilterflags", // PN
 		arginfo.commandline, // CL
 		::libmaus2::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
-		std::string(PACKAGE_VERSION) // VN			
+		std::string(PACKAGE_VERSION) // VN
 	);
 	// construct new header
 	::libmaus2::bambam::BamHeader::unique_ptr_type uphead(new ::libmaus2::bambam::BamHeader(upheadtext));
-	
+
 	return UNIQUE_PTR_MOVE(uphead);
 }
 
@@ -67,7 +67,7 @@ struct UpdateHeader : public libmaus2::bambam::BamHeaderRewriteCallback
 	UpdateHeader(libmaus2::util::ArgInfo const & rarginfo)
 	: arginfo(rarginfo)
 	{
-	
+
 	}
 
 	::libmaus2::bambam::BamHeader::unique_ptr_type operator()(::libmaus2::bambam::BamHeader const & header)  const
@@ -85,7 +85,7 @@ int bamfilterflags(::libmaus2::util::ArgInfo const & arginfo)
 	std::cerr << "[V] excluding " << excludeflags << std::endl;
 
 	int const level = libmaus2::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",Z_DEFAULT_COMPRESSION));
-	
+
 	uint64_t const numthreads = arginfo.getValue<uint64_t>("numthreads",1);
 	uint64_t cnt = 0;
 	uint64_t kept = 0;
@@ -137,7 +137,7 @@ int bamfilterflags(::libmaus2::util::ArgInfo const & arginfo)
 	/*
 	 * end md5/index callbacks
 	 */
-	 
+
 
 	if ( numthreads == 1 )
 	{
@@ -146,19 +146,19 @@ int bamfilterflags(::libmaus2::util::ArgInfo const & arginfo)
 		::libmaus2::bambam::BamHeader::unique_ptr_type uphead(libmaus2::bambam::BamHeaderUpdate::updateHeader(arginfo,bamheader,"bamfilterflags",std::string(PACKAGE_VERSION)));
 		::libmaus2::bambam::BamAlignment & alignment = BD.getAlignment();
 		::libmaus2::bambam::BamWriter::unique_ptr_type writer(new ::libmaus2::bambam::BamWriter(std::cout,*uphead,level,Pcbs));
-	
+
 		for ( ; BD.readAlignment(); ++cnt )
 		{
 			if ( cnt % (1024*1024) == 0 )
 				std::cerr << "[V] processed " << cnt << " kept " << kept << " removed " << (cnt-kept) << std::endl;
-			if ( ! (alignment.getFlags() & excludeflags) )			
+			if ( ! (alignment.getFlags() & excludeflags) )
 			{
 				alignment.serialise(writer->getStream());
 				++kept;
 			}
 		}
 
-		std::cerr << "[V] " << cnt << std::endl;	
+		std::cerr << "[V] " << cnt << std::endl;
 	}
 	else
 	{
@@ -174,14 +174,14 @@ int bamfilterflags(::libmaus2::util::ArgInfo const & arginfo)
 				std::cerr << "[V] processed " << cnt << " kept " << kept << " removed " << (cnt-kept) << std::endl;
 			if ( ! (algn.getFlags() & excludeflags) )
 			{
-				algn.serialise(writer.getStream());	
+				algn.serialise(writer.getStream());
 				++kept;
 			}
 		}
-		
-		std::cerr << "[V] " << cnt << std::endl;	
+
+		std::cerr << "[V] " << cnt << std::endl;
 	}
-	
+
 	std::cerr << "[V] kept " << kept << " removed " << cnt-kept << std::endl;
 
 	if ( Pmd5cb )
@@ -201,11 +201,11 @@ int main(int argc, char * argv[])
 	try
 	{
 		libmaus2::timing::RealTimeClock rtc; rtc.start();
-		
+
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
-		
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -214,7 +214,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -223,9 +223,9 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license() << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-				
+
 				V.push_back ( std::pair<std::string,std::string> ( "level=<[-1]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
 				V.push_back ( std::pair<std::string,std::string> ( "exclude=<[]>", "exclude alignments matching any of the given flags" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "numthreads=<[1]>", "number of recoding threads" ) );
@@ -234,7 +234,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam2::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "indexfilename=<filename>", "file name for BAM index file (default: extend output file name)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "tmpfile=<filename>", "prefix for temporary files, default: create files in current directory" ) );
-				
+
 				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
@@ -243,10 +243,10 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;
 			}
-		
-			
+
+
 		bamfilterflags(arginfo);
-		
+
 		std::cerr << "[V] " << libmaus2::util::MemUsage() << " wall clock time " << rtc.formatTime(rtc.getElapsedSeconds()) << std::endl;
 
 	}

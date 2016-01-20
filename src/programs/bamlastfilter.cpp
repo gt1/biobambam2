@@ -59,7 +59,7 @@ struct AlignmentComparator
 {
 	bool operator()(::libmaus2::bambam::BamAlignment const * A, ::libmaus2::bambam::BamAlignment const * B)
 	{
-		// put mapped reads before 
+		// put mapped reads before
 		if ( A->isMapped() != B->isMapped() )
 			return A->isMapped();
 		// dont care about order of unmapped reads
@@ -80,7 +80,7 @@ struct MappingRegion
 	uint64_t refFrom;
 	uint64_t refTo;
 	libmaus2::bambam::BamAlignment * algn;
-	
+
 	MappingRegion() : readFrom(0), readTo(0), refFrom(0), refTo(0), algn(0) {}
 	MappingRegion(
 		uint64_t const rreadFrom,
@@ -94,7 +94,7 @@ struct MappingRegion
 
 std::ostream & operator<<(std::ostream & out, MappingRegion const & MR)
 {
-	return out << "MappingRegion(" 
+	return out << "MappingRegion("
 		<< MR.readFrom << ","
 		<< MR.readTo << ","
 		<< MR.refId << ","
@@ -121,7 +121,7 @@ struct MappingRegionRefCoordComparator
 			return A.refId < B.refId;
 		else if ( A.refFrom != B.refFrom )
 			return A.refFrom < B.refFrom;
-		else 
+		else
 			return A.refTo < B.refTo;
 	}
 };
@@ -131,7 +131,7 @@ struct ScoredInterval
 	uint64_t low;
 	uint64_t high;
 	double score;
-	
+
 	ScoredInterval() : low(0), high(0), score(0) {}
 	ScoredInterval(
 		uint64_t const rlow,
@@ -155,14 +155,14 @@ struct ScoredAlignment
 {
 	friend std::ostream & operator<<(std::ostream & out, ScoredAlignment const & S);
 
-	private:	
+	private:
 	libmaus2::bambam::BamAlignment * algn;
 	int64_t score;
 	uint64_t readfrom;
 	uint64_t readto;
 	uint64_t reffrom;
 	uint64_t refto;
-	
+
 	public:
 	ScoredAlignment() : algn(0), score(0), readfrom(0), readto(0), reffrom(0), refto(0) {}
 	ScoredAlignment(
@@ -173,24 +173,24 @@ struct ScoredAlignment
 		uint64_t const rreffrom,
 		uint64_t const rrefto
 	)  : algn(ralgn), score(rscore), readfrom(rreadfrom), readto(rreadto), reffrom(rreffrom), refto(rrefto) {}
-	
+
 	double getNormalisedScore() const
 	{
 		return score / static_cast<double>(readto-readfrom);
 	}
-	
+
 	bool operator<(ScoredAlignment const & O) const
 	{
 		// return score < O.score;
 		return getNormalisedScore() < O.getNormalisedScore();
 	}
-	
+
 	bool overlaps(ScoredAlignment const & O) const
 	{
 		typedef libmaus2::math::IntegerInterval<uint64_t> int_type;
 		return ! int_type::intersection(int_type(readfrom,readto-1),int_type(O.readfrom,O.readto-1)).isEmpty();
 	}
-	
+
 	bool overlaps(std::vector<ScoredAlignment> const & V) const
 	{
 		for ( uint64_t i = 0; i < V.size(); ++i )
@@ -198,7 +198,7 @@ struct ScoredAlignment
 				return true;
 		return false;
 	}
-	
+
 	libmaus2::bambam::BamAlignment * getAlignment()
 	{
 		return algn;
@@ -208,7 +208,7 @@ struct ScoredAlignment
 std::ostream & operator<<(std::ostream & out, ScoredAlignment const & S)
 {
 	return
-		out << "ScoredAlignment(" << S.score << "," << S.readfrom << "," << S.readto 
+		out << "ScoredAlignment(" << S.score << "," << S.readfrom << "," << S.readto
 			<< "," << S.reffrom
 			<< "," << S.refto
 			<< "," << S.getNormalisedScore() << ")";
@@ -230,20 +230,20 @@ void handleVector(
 	typedef std::pair<uint64_t,uint64_t> up;
 	std::vector<MappingRegion> M;
 	int64_t readlen = -1;
-	
+
 	typedef ScoredAlignment scored_alignment_type;
 	std::priority_queue < scored_alignment_type > PQ;
-	
+
 	for ( uint64_t i = 0; i < samename.size() && samename[i]->isMapped(); )
 	{
 		uint64_t j = i;
-		while ( 
-			j < samename.size() && 
-			samename[j]->isMapped() && 
+		while (
+			j < samename.size() &&
+			samename[j]->isMapped() &&
 			samename[j]->getRefID() == samename[i]->getRefID()
 		)
 			++j;
-		
+
 		for ( uint64_t z = i ; z < j; ++z )
 		{
 			::libmaus2::bambam::BamAlignment * palgn = samename[z];
@@ -261,7 +261,7 @@ void handleVector(
 			uint64_t sright = 0;
 			uint64_t cl = 0;
 			uint64_t cr = numcigop;
-				
+
 			while ( cl < cr && cigop[cl].first == libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CHARD_CLIP )
 				hleft += cigop[cl++].second;
 			while ( cr > cl && cigop[cr-1].first == libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CHARD_CLIP )
@@ -271,11 +271,11 @@ void handleVector(
 				sleft += cigop[cl++].second;
 			while ( cr > cl && cigop[cr-1].first == libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CSOFT_CLIP )
 				sright += cigop[--cr].second;
-				
+
 			readpos += sleft;
 
 			for ( uint64_t ci = cl; ci < cr; ++ci )
-				if ( 
+				if (
 					cigop[ci].first == libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CSOFT_CLIP
 					||
 					cigop[ci].first == libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CHARD_CLIP
@@ -287,14 +287,14 @@ void handleVector(
 					lme.finish();
 					throw lme;
 				}
-				
+
 			uint64_t const mpre = readpos;
 			uint64_t const rpre = refpos;
-			
+
 			for ( uint64_t ci = cl; ci < cr; ++ci )
 			{
 				uint64_t const ciglen = cigop[ci].second;
-				
+
 				switch ( cigop[ci].first )
 				{
 					case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CMATCH:
@@ -338,7 +338,7 @@ void handleVector(
 					}
 				}
 			}
-			
+
 			uint64_t const mpost = readpos;
 			uint64_t const rpost = refpos;
 
@@ -346,7 +346,7 @@ void handleVector(
 
 			int64_t const score = palgn->getAuxAsNumber<int64_t>("AS");
 			PQ.push(scored_alignment_type(samename[i],score,hleft+mpre,hleft+mpost,rpre,rpost));
-			
+
 			readpos += sright;
 
 			if ( readpos != seqlen )
@@ -360,13 +360,13 @@ void handleVector(
 			}
 
 			assert ( readpos == seqlen );
-			
+
 			if ( readlen < 0 )
 				readlen = seqlen + hleft + hright;
 			else
 				assert ( static_cast<uint64_t>(readlen) == seqlen + hleft + hright );
 		}
-		
+
 		i = j;
 	}
 
@@ -374,18 +374,18 @@ void handleVector(
 	while ( ! PQ.empty() )
 	{
 		scored_alignment_type const SA = PQ.top(); PQ.pop();
-		
+
 		if ( ! SA.overlaps(scoredout) )
 			scoredout.push_back(SA);
 	}
-	
+
 	std::sort(M.begin(),M.end(),MappingRegionReadCoordComparator());
 
 	std::vector < libmaus2::math::IntegerInterval<uint64_t> > PIIV;
 	for ( uint64_t i = 0; i < M.size(); ++i )
 		if ( M[i].readFrom < M[i].readTo )
 			PIIV.push_back(libmaus2::math::IntegerInterval<uint64_t>(M[i].readFrom,M[i].readTo-1));
-	
+
 	std::vector < libmaus2::math::IntegerInterval<uint64_t> > const IIV = libmaus2::math::IntegerInterval<uint64_t>::mergeOverlapping(PIIV);
 
 	readbases += readlen;
@@ -393,24 +393,24 @@ void handleVector(
 	// count bases used in mapped regions of read
 	for ( uint64_t i = 0; i < IIV.size(); ++i )
 		mappedbases += (IIV[i].to - IIV[i].from + 1);
-	
-	// sort by ref coordinates	
+
+	// sort by ref coordinates
 	std::sort(M.begin(),M.end(),MappingRegionRefCoordComparator());
 	// maximum error rate for linking fragments
 	// linked fragments
 	std::vector<ScoredInterval> alintervals;
-	
+
 	for ( uint64_t refidlow = 0; refidlow != M.size(); )
 	{
 		uint64_t refidhigh = refidlow;
 		while ( refidhigh != M.size() && M[refidhigh].refId == M[refidlow].refId )
 			++refidhigh;
-			
+
 		for ( uint64_t readlow = refidlow; readlow != refidhigh; )
 		{
 			uint64_t readhigh = readlow+1;
-					
-			while ( 
+
+			while (
 				readhigh != refidhigh &&
 				// increasing read coordinates
 				M[readhigh].readFrom >= M[readhigh-1].readTo &&
@@ -438,7 +438,7 @@ void handleVector(
 			{
 				++readhigh;
 			}
-			
+
 			#if 0
 			if ( readhigh - readlow > 1 )
 			{
@@ -453,43 +453,43 @@ void handleVector(
 			double score = 0;
 			for ( uint64_t i = readlow; i < readhigh; ++i )
 				score += static_cast<double>(M[i].algn->getAuxAsNumber<int64_t>("AS"));
-			
+
 			alintervals.push_back(ScoredInterval(readlow,readhigh,score));
-			
+
 			readlow = readhigh;
 		}
-			
+
 		refidlow = refidhigh;
 	}
-	
+
 	// sort by descending score
 	std::sort(alintervals.begin(),alintervals.end(),ScoredIntervalComparator());
-	
+
 	std::vector< ::libmaus2::bambam::BamAlignment * > outputvec;
-	
+
 	if ( link_type == link_type_chain )
 	{
 		if ( alintervals.size() )
 		{
 			ScoredInterval const SI = alintervals.front();
-			
+
 			#if 0
 			std::cerr << std::string(80,'-') << std::endl;
 			for ( uint64_t i = SI.low; i != SI.high; ++i )
 				std::cerr << M[i];
 			std::cerr << std::endl;
 			#endif
-			
+
 			for ( uint64_t i = SI.low; i < SI.high; ++i )
-				outputvec.push_back(M[i].algn);			
+				outputvec.push_back(M[i].algn);
 		}
 	}
 	else if ( link_type == link_type_cluster )
-	{	
+	{
 		for ( uint64_t i = 0; i < scoredout.size(); ++i )
 			outputvec.push_back(scoredout[i].getAlignment());
 	}
-	
+
 	if ( outputvec.size() == 1 )
 	{
 		writer.writeAlignment(*(outputvec[0]));
@@ -515,13 +515,13 @@ int bamlastfilter(libmaus2::util::ArgInfo const & arginfo)
 {
 	bool const verbose = arginfo.getValue("verbose",getDefaultVerbose());
 	std::string const reference = arginfo.getUnparsedValue("reference",std::string());
-	std::string const tmpfilenamebase = arginfo.getUnparsedValue("tmpfile",arginfo.getDefaultTmpFileName());	
+	std::string const tmpfilenamebase = arginfo.getUnparsedValue("tmpfile",arginfo.getDefaultTmpFileName());
 	link_type_enum link_type = link_type_chain;
-	
+
 	if ( arginfo.hasArg("linktype") )
 	{
 		std::string const ltype = arginfo.getUnparsedValue("linktype","");
-		
+
 		if ( ltype == "chain" )
 			link_type = link_type_chain;
 		else if ( ltype == "cluster" )
@@ -532,15 +532,15 @@ int bamlastfilter(libmaus2::util::ArgInfo const & arginfo)
 			lme.getStream() << "Unknown linktype " << ltype << "\n";
 			lme.getStream() << "Supported options are chain and cluster\n";
 			lme.finish();
-			throw lme;		
+			throw lme;
 		}
 	}
-	
+
 	libmaus2::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
 		libmaus2::bambam::BamMultiAlignmentDecoderFactory::construct(arginfo));
 	::libmaus2::bambam::BamAlignmentDecoder * ppdec = &(decwrapper->getDecoder());
 	::libmaus2::bambam::BamAlignmentDecoder & dec = *ppdec;
-	::libmaus2::bambam::BamHeader const & header = dec.getHeader();	
+	::libmaus2::bambam::BamHeader const & header = dec.getHeader();
 	::libmaus2::bambam::BamAlignment & algn = dec.getAlignment();
 	::libmaus2::bambam::BamAlignment prevalgn;
 	bool haveprevalgn = false;
@@ -604,7 +604,7 @@ int bamlastfilter(libmaus2::util::ArgInfo const & arginfo)
 	std::vector< ::libmaus2::bambam::BamAlignment * > samename;
 	uint64_t readbases = 0;
 	uint64_t mappedbases = 0;
-	
+
 	while ( dec.readAlignment() )
 	{
 		if ( haveprevalgn )
@@ -613,7 +613,7 @@ int bamlastfilter(libmaus2::util::ArgInfo const & arginfo)
 				prevalgn.getName(),
 				algn.getName()
 			);
-			
+
 			if ( r > 0 )
 			{
 				libmaus2::exception::LibMausException lme;
@@ -622,12 +622,12 @@ int bamlastfilter(libmaus2::util::ArgInfo const & arginfo)
 				throw lme;
 			}
 		}
-	
+
 		// new name
 		if ( samename.size() && strcmp(samename.back()->getName(),algn.getName()) )
 		{
 			handleVector(samename,cigop,header,readbases,mappedbases,wr,link_type);
-		
+
 			while ( samename.size() )
 			{
 				alfl.put(samename.back());
@@ -638,10 +638,10 @@ int bamlastfilter(libmaus2::util::ArgInfo const & arginfo)
 		::libmaus2::bambam::BamAlignment * calgn = alfl.get();
 		calgn->copyFrom(algn);
 		samename.push_back(calgn);
-		
+
 		algn.swap(prevalgn);
 		haveprevalgn = true;
-		
+
 		if ( verbose && ((++alcnt % (1024*1024)) == 0) )
 			std::cerr << "[V] " << alcnt << std::endl;
 	}
@@ -656,7 +656,7 @@ int bamlastfilter(libmaus2::util::ArgInfo const & arginfo)
 			samename.pop_back();
 		}
 	}
-	
+
 	std::cerr << "[V]\treadbases=" << readbases << "\tmappedbases=" << mappedbases << std::endl;
 
 	// reset BAM writer
@@ -678,7 +678,7 @@ int main(int argc, char * argv[])
 		libmaus2::util::ArgInfo const arginfo(argc,argv);
 
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -687,7 +687,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -697,9 +697,9 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-			
+
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "disablevalidation=<["+::biobambam2::Licensing::formatNumber(getDefaultDisableValidation())+"]>", "disable input validation (default is 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("inputformat=<[")+getDefaultInputFormat()+"]>", std::string("input format (") + libmaus2::bambam::BamMultiAlignmentDecoderFactory::getValidInputFormats() + ")" ) );

@@ -40,12 +40,12 @@ static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 int bamfixmatecoordinatesnamesorted(::libmaus2::util::ArgInfo const & arginfo)
 {
 	bool const verbose = arginfo.getValue<unsigned int>("verbose",getDefaultVerbose());
-	
+
 	::libmaus2::timing::RealTimeClock rtc; rtc.start();
-	
+
 	// gzip compression level for output
 	int const level = libmaus2::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
-	
+
 	::libmaus2::bambam::BamDecoder bamfile(std::cin);
 	std::string const headertext(bamfile.getHeader().text);
 
@@ -56,14 +56,14 @@ int bamfixmatecoordinatesnamesorted(::libmaus2::util::ArgInfo const & arginfo)
 		"bamfixmatecoordinatesnamesorted", // PN
 		arginfo.commandline, // CL
 		::libmaus2::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
-		std::string(PACKAGE_VERSION) // VN			
+		std::string(PACKAGE_VERSION) // VN
 	);
 	// construct new header
 	::libmaus2::bambam::BamHeader uphead(upheadtext);
-	
+
 	if ( uphead.getSortOrder() != "queryname" )
 		uphead.changeSortOrder("unknown");
-		
+
 	std::string const & finalheadtext = uphead.text;
 	::libmaus2::bambam::BamHeader finalheader(finalheadtext);
 
@@ -116,10 +116,10 @@ int bamfixmatecoordinatesnamesorted(::libmaus2::util::ArgInfo const & arginfo)
 	 */
 
 	::libmaus2::bambam::BamWriter::unique_ptr_type writer(new ::libmaus2::bambam::BamWriter(std::cout,finalheader,level,Pcbs));
-	std::pair< std::pair< ::libmaus2::bambam::BamAlignment::shared_ptr_type, bool> , std::pair< ::libmaus2::bambam::BamAlignment::shared_ptr_type, bool> > 
+	std::pair< std::pair< ::libmaus2::bambam::BamAlignment::shared_ptr_type, bool> , std::pair< ::libmaus2::bambam::BamAlignment::shared_ptr_type, bool> >
 		P(std::pair< ::libmaus2::bambam::BamAlignment::shared_ptr_type, bool>(::libmaus2::bambam::BamAlignment::shared_ptr_type(),false),std::pair< ::libmaus2::bambam::BamAlignment::shared_ptr_type, bool>(::libmaus2::bambam::BamAlignment::shared_ptr_type(),false));
-	
-	// try to read two alignments	
+
+	// try to read two alignments
 	P.first.second  = bamfile.readAlignment();
 	if ( P.first.second )
 	{
@@ -127,41 +127,41 @@ int bamfixmatecoordinatesnamesorted(::libmaus2::util::ArgInfo const & arginfo)
 		P.second.second = P.first.second && bamfile.readAlignment();
 		P.second.first  = bamfile.salignment();
 	}
-	
+
 	uint64_t single = 0, pairs = 0;
 	uint64_t proc = 0;
 	uint64_t lastproc = 0;
 	uint64_t const mod = 1024*1024;
-	
+
 	// while we have two alignments
 	while ( P.first.second && P.second.second )
 	{
 		uint32_t const aflags = P.first.first->getFlags();
 		uint32_t const bflags = P.second.first->getFlags();
-	
+
 		// same name?
-		if ( 
+		if (
 			(aflags & ::libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FPAIRED)
 			&&
 			(bflags & ::libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FPAIRED)
 			&&
 			(! strcmp(P.first.first->getName(),P.second.first->getName()))
 		)
-		{			
+		{
 			unsigned int const amap = (aflags & ::libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FUNMAP) ? 0 : 1;
 			unsigned int const bmap = (bflags & ::libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FUNMAP) ? 0 : 1;
 
 			// std::cerr << "Pair " << bam1_qname(P.first.first->alignment) << " amap=" << amap << " bmap=" << bmap << std::endl;
-			
+
 			// if exactly one of the two is mapped
 			if ( amap + bmap == 1 )
 			{
 				::libmaus2::bambam::BamAlignment::shared_ptr_type mapped = amap ? P.first.first : P.second.first;
 				int64_t const tid = mapped->getRefID();
 				int64_t const pos = mapped->getPos();
-				
+
 				// std::cerr << "tid=" << tid << " pos=" << pos << std::endl;
-				
+
 				// set all tid and pos values
 				P.first.first->putRefId(tid);
 				P.first.first->putPos(pos);
@@ -172,7 +172,7 @@ int bamfixmatecoordinatesnamesorted(::libmaus2::util::ArgInfo const & arginfo)
 				P.second.first->putNextRefId(tid);
 				P.second.first->putNextPos(pos);
 			}
-		
+
 			// write alignments
 			P.first.first->serialise(writer->getStream());
 			P.second.first->serialise(writer->getStream());
@@ -184,7 +184,7 @@ int bamfixmatecoordinatesnamesorted(::libmaus2::util::ArgInfo const & arginfo)
 				P.second.second = bamfile.readAlignment();
 				P.second.first = bamfile.salignment();
 			}
-			
+
 			pairs++;
 			proc += 2;
 		}
@@ -199,11 +199,11 @@ int bamfixmatecoordinatesnamesorted(::libmaus2::util::ArgInfo const & arginfo)
 			P.second.second = P.first.second && bamfile.readAlignment();
 			if ( P.second.second )
 				P.second.first = bamfile.salignment();
-			
+
 			single++;
 			proc += 1;
 		}
-		
+
 		if ( verbose && (proc/mod != lastproc/mod) )
 		{
 			std::cerr << proc << "\t" << single << "\t" << pairs << "\t" <<
@@ -212,7 +212,7 @@ int bamfixmatecoordinatesnamesorted(::libmaus2::util::ArgInfo const & arginfo)
 			lastproc = proc;
 		}
 	}
-	
+
 	if ( P.first.second )
 	{
 		P.first.first->serialise(writer->getStream());
@@ -224,7 +224,7 @@ int bamfixmatecoordinatesnamesorted(::libmaus2::util::ArgInfo const & arginfo)
 		std::cerr << proc << "\t" << single << "\t" << pairs << "\t" <<
 			proc/rtc.getElapsedSeconds() << "al/s"
 			<< std::endl;
-		
+
 	assert ( ! P.second.second );
 
 	writer.reset();
@@ -232,7 +232,7 @@ int bamfixmatecoordinatesnamesorted(::libmaus2::util::ArgInfo const & arginfo)
 	if ( Pmd5cb )
 	{
 		Pmd5cb->saveDigestAsFile(md5filename);
-	}	
+	}
 	if ( Pindex )
 	{
 		Pindex->flush(std::string(indexfilename));
@@ -248,7 +248,7 @@ int main(int argc, char * argv[])
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
 
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -257,7 +257,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -267,9 +267,9 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-				
+
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report (default: 1)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
 				V.push_back ( std::pair<std::string,std::string> ( "tmpfile=<filename>", "prefix for temporary files, default: create files in current directory" ) );
@@ -283,7 +283,7 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;
 			}
-		
+
 		return bamfixmatecoordinatesnamesorted(arginfo);
 	}
 	catch(std::exception const & ex)

@@ -39,20 +39,20 @@ int bamrefdepth(libmaus2::util::ArgInfo const & arginfo)
 	libmaus2::bambam::BamAlignment & algn = bamdec.getAlignment();
 	libmaus2::bambam::BamHeader const & header = bamdec.getHeader();
 	std::string const sortorder = libmaus2::bambam::BamHeader::getSortOrderStatic(header.text);
-	
+
 	libmaus2::bambam::BamAlignment prevalgn;
 	bool hasprev = false;
 	uint64_t c = 0;
-	
+
 	std::deque<uint64_t> Q;
 	uint64_t leftpos = 0;
 	libmaus2::autoarray::AutoArray<libmaus2::bambam::cigar_operation> cigop;
 	libmaus2::autoarray::AutoArray<char> decread;
-	
+
 	std::vector < std::string > refnames;
 	for ( uint64_t i = 0; i < header.getNumRef(); ++i )
 		refnames.push_back(header.getRefIDName(i));
-                        	
+
 	while ( bamdec.readAlignment() )
 	{
 		bool const ok =
@@ -73,7 +73,7 @@ int bamrefdepth(libmaus2::util::ArgInfo const & arginfo)
 					)
 				)
 			);
-			
+
 		if ( ! ok )
 		{
 			libmaus2::exception::LibMausException se;
@@ -83,7 +83,7 @@ int bamrefdepth(libmaus2::util::ArgInfo const & arginfo)
 			se.finish();
 			throw se;
 		}
-		
+
 		// next reference sequence
 		if ( hasprev && (algn.getRefID() != prevalgn.getRefID()) )
 		{
@@ -92,20 +92,20 @@ int bamrefdepth(libmaus2::util::ArgInfo const & arginfo)
 				if ( Q[0] )
 					std::cout << refnames[prevalgn.getRefID()] << "\t" << leftpos << "\t" << Q[0] << std::endl;
 				Q.pop_front();
-				leftpos++;				
+				leftpos++;
 			}
-		
+
 			// Q.resize(0);
 			leftpos = 0;
 		}
-		
+
 		if ( algn.isMapped() )
 		{
 			uint32_t const numcigop = algn.getCigarOperations(cigop);
 			uint64_t const readlen = algn.decodeRead(decread);
 			int64_t pos = algn.getPos();
 			uint64_t readpos = 0;
-			
+
 			// std::cerr << "Q.size()=" << Q.size() << std::endl;
 
 			while ( Q.size() && pos > static_cast<int64_t>(leftpos) )
@@ -115,7 +115,7 @@ int bamrefdepth(libmaus2::util::ArgInfo const & arginfo)
 				Q.pop_front();
 				leftpos++;
 			}
-			
+
 			// skip soft clipping at front
 			uint64_t cidx = 0;
 			bool frontskip = true;
@@ -174,24 +174,24 @@ int bamrefdepth(libmaus2::util::ArgInfo const & arginfo)
 							{
 								while ( pos-leftpos >= Q.size() )
 									Q.push_back(0);
-							
-								assert ( pos-leftpos < Q.size() );		
+
+								assert ( pos-leftpos < Q.size() );
 								Q[pos-leftpos] += 1;
 							}
 						}
 						break;
 				}
-			
+
 			#if 0
 			if ( readpos != readlen )
 			{
-				std::cerr << "readpos=" << readpos << " readlen=" << readlen << std::endl;			
+				std::cerr << "readpos=" << readpos << " readlen=" << readlen << std::endl;
 				std::cerr << algn.formatAlignment(header) << std::endl;
-			}	
+			}
 			#endif
 			assert (readpos == readlen);
 		}
-			
+
 		prevalgn.swap(algn);
 		hasprev = true;
 
@@ -204,9 +204,9 @@ int bamrefdepth(libmaus2::util::ArgInfo const & arginfo)
 		if ( Q[0] )
 			std::cout << refnames[prevalgn.getRefID()] << "\t" << leftpos << "\t" << Q[0] << std::endl;
 		Q.pop_front();
-		leftpos++;				
+		leftpos++;
 	}
-		
+
 	if ( verbose )
 		std::cerr << "[V] " << c << std::endl;
 
@@ -218,9 +218,9 @@ int main(int argc, char * argv[])
 	try
 	{
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
-		
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -229,7 +229,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -239,9 +239,9 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-			
+
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
 
 				::biobambam2::Licensing::printMap(std::cerr,V);
@@ -249,7 +249,7 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;
 			}
-			
+
 		return bamrefdepth(arginfo);
 	}
 	catch(std::exception const & ex)
@@ -258,4 +258,3 @@ int main(int argc, char * argv[])
 		return EXIT_FAILURE;
 	}
 }
-

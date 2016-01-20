@@ -55,7 +55,7 @@ void bamalignfrac(::libmaus2::util::ArgInfo const & arginfo)
 
 	while ( dec.readAlignment() )
 	{
-		if ( 
+		if (
 			algn.isMapped()
 			#if defined(LIBMAUS2_HAVE_REGEX_H)
 			&&
@@ -68,9 +68,9 @@ void bamalignfrac(::libmaus2::util::ArgInfo const & arginfo)
 		)
 	        {
 		        uint32_t const numcig = algn.getCigarOperations(cigop);
-		        
+
 		        totalbases += algn.getLseq();
-		        
+
 		        for ( uint64_t i = 0; i < numcig; ++i )
 		        {
 		        	switch ( cigop[i].first )
@@ -93,9 +93,9 @@ void bamalignfrac(::libmaus2::util::ArgInfo const & arginfo)
 						break;
 		        	}
 		        }
-	        }                                                                        
+	        }
 	}
-	
+
 	std::cerr << "total bases in mapped reads\t" << totalbases << std::endl;
 	std::cerr << "clipped (hard and soft) bases in mapped reads\t" << clip << std::endl;
 	std::cerr << "aligned bases in mapped reads\t" << basealgn << std::endl;
@@ -106,11 +106,11 @@ int main(int argc, char *argv[])
 	try
 	{
 		libmaus2::timing::RealTimeClock rtc; rtc.start();
-		
+
 		::libmaus2::util::ArgInfo arginfo(argc,argv);
-		
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -119,7 +119,7 @@ int main(int argc, char *argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -128,9 +128,9 @@ int main(int argc, char *argv[])
 				std::cerr << ::biobambam2::Licensing::license() << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-								
+
 				V.push_back ( std::pair<std::string,std::string> ( "I=<[stdin]>", "input filename (default: read file from standard input)" ) );
 				#if defined(BIOBAMBAM_LIBMAUS2_HAVE_IO_LIB)
 				V.push_back ( std::pair<std::string,std::string> ( std::string("inputformat=<[")+getDefaultInputFormat()+"]>", "input format: cram, bam or sam" ) );
@@ -138,21 +138,21 @@ int main(int argc, char *argv[])
 				#else
 				V.push_back ( std::pair<std::string,std::string> ( "inputformat=<[bam]>", "input format: bam" ) );
 				#endif
-				
+
 				#if defined(LIBMAUS2_HAVE_REGEX_H)
 				V.push_back ( std::pair<std::string,std::string> ( "name=<[]>", "consider only reads with names matching the given regualr expression (default: use all reads)" ) );
 				#endif
-				
+
 				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 
 				return EXIT_SUCCESS;
 			}
-		
+
 		bamalignfrac(arginfo);
-		
-		std::cerr << "[V] " << libmaus2::util::MemUsage() << " wall clock time " << rtc.formatTime(rtc.getElapsedSeconds()) << std::endl;		
+
+		std::cerr << "[V] " << libmaus2::util::MemUsage() << " wall clock time " << rtc.formatTime(rtc.getElapsedSeconds()) << std::endl;
 	}
 	catch(std::exception const & ex)
 	{

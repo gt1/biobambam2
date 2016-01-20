@@ -56,11 +56,11 @@ static int getDefaultIndex() { return 0; }
 		"bammerge", // PN
 		arginfo.commandline, // CL
 		::libmaus2::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
-		std::string(PACKAGE_VERSION) // VN			
+		std::string(PACKAGE_VERSION) // VN
 	);
 	// construct new header
 	::libmaus2::bambam::BamHeader::unique_ptr_type uphead(new ::libmaus2::bambam::BamHeader(upheadtext));
-	
+
 	return UNIQUE_PTR_MOVE(uphead);
 }
 
@@ -150,18 +150,18 @@ int bammerge(libmaus2::util::ArgInfo const & arginfo)
 		::libmaus2::bambam::BamHeader::unique_ptr_type uphead(updateHeader(arginfo,header));
 		libmaus2::bambam::BamBlockWriterBase::unique_ptr_type Pwriter(
 			libmaus2::bambam::BamBlockWriterBaseFactory::construct(*uphead,arginfo,Pcbs));
-		
+
 		if ( verbose )
 		{
 			uint64_t c = 0;
 			while ( bamdec.readAlignment() )
 			{
 				Pwriter->writeAlignment(algn);
-	
+
 				if ( ((++c) & ((1ull<<20)-1)) == 0 )
 					std::cerr << "[V] " << c << std::endl;
 			}
-		
+
 			std::cerr << "[V] " << c << std::endl;
 		}
 		else
@@ -176,7 +176,7 @@ int bammerge(libmaus2::util::ArgInfo const & arginfo)
 		::libmaus2::bambam::BamHeader::unique_ptr_type uphead(updateHeader(arginfo,header));
 		libmaus2::bambam::BamBlockWriterBase::unique_ptr_type Pwriter(
 			libmaus2::bambam::BamBlockWriterBaseFactory::construct(*uphead,arginfo,Pcbs));
-			
+
 		if ( verbose )
 		{
 			uint64_t c = 0;
@@ -184,11 +184,11 @@ int bammerge(libmaus2::util::ArgInfo const & arginfo)
 			while ( bamdec.readAlignment() )
 			{
 				Pwriter->writeAlignment(algn);
-	
+
 				if ( ((++c) & ((1ull<<20)-1)) == 0 )
 					std::cerr << "[V] " << c << std::endl;
 			}
-		
+
 			std::cerr << "[V] " << c << std::endl;
 		}
 		else
@@ -219,16 +219,16 @@ int main(int argc, char * argv[])
                 #endif
 
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
-		
+
 		#if defined(LIBMAUS2_HAVE_IRODS)
 		// set program name for iRODS identification
 		std::stringstream irods_id;
 		irods_id  << PACKAGE_NAME << ":" << arginfo.getProgFileName(arginfo.progname) << ":" << PACKAGE_VERSION;
 		setenv(SP_OPTION, irods_id.str().c_str(), 1);
 		#endif
-		
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -237,7 +237,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -247,9 +247,9 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-			
+
 				V.push_back ( std::pair<std::string,std::string> ( "I=<[filename]>", "input file, can be set multiple times" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "SO=<["+getDefaultSortOrder()+"]>]", "sort order (coordinate or queryname)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
@@ -266,7 +266,7 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;
 			}
-			
+
 		return bammerge(arginfo);
 	}
 	catch(std::exception const & ex)
@@ -275,4 +275,3 @@ int main(int argc, char * argv[])
 		return EXIT_FAILURE;
 	}
 }
-

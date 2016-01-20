@@ -47,11 +47,11 @@ static std::string getDefaultFilePrefix(::libmaus2::util::ArgInfo const & arginf
 		"bamsplit", // PN
 		arginfo.commandline, // CL
 		::libmaus2::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
-		std::string(PACKAGE_VERSION) // VN			
+		std::string(PACKAGE_VERSION) // VN
 	);
 	// construct new header
 	::libmaus2::bambam::BamHeader::unique_ptr_type uphead(new ::libmaus2::bambam::BamHeader(upheadtext));
-	
+
 	return UNIQUE_PTR_MOVE(uphead);
 }
 
@@ -77,7 +77,7 @@ int bamsplit(libmaus2::util::ArgInfo const & arginfo)
 
 	libmaus2::aio::OutputStreamInstance::unique_ptr_type COS;
 	libmaus2::bambam::BamWriter::unique_ptr_type writer;
-	
+
 	uint64_t c = 0;
 	uint64_t f = 0;
 	while ( bamdec.readAlignment() )
@@ -88,24 +88,24 @@ int bamsplit(libmaus2::util::ArgInfo const & arginfo)
 			if ( COS )
 				COS->flush();
 			COS.reset();
-			
+
 			std::ostringstream fnostr;
 			fnostr << prefix << "_" << std::setw(6) << std::setfill('0') << f++ << std::setw(0) << ".bam";
 			std::string const fn = fnostr.str();
-			
+
 			libmaus2::aio::OutputStreamInstance::unique_ptr_type tCOS(new libmaus2::aio::OutputStreamInstance(fn));
 			COS = UNIQUE_PTR_MOVE(tCOS);
-			
+
 			libmaus2::bambam::BamWriter::unique_ptr_type twriter(new libmaus2::bambam::BamWriter(*COS,*uphead,level));
 			writer = UNIQUE_PTR_MOVE(twriter);
-			
+
 			if ( verbose )
 				std::cerr << "[V] opened file " << fn << std::endl;
 		}
-		
+
 		algn.serialise(writer->getStream());
 	}
-	
+
 	writer.reset();
 	if ( COS )
 		COS->flush();
@@ -119,9 +119,9 @@ int main(int argc, char * argv[])
 	try
 	{
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
-		
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -130,7 +130,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -140,9 +140,9 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-			
+
 				V.push_back ( std::pair<std::string,std::string> ( "n=<["+::biobambam2::Licensing::formatNumber(getDefaultN())+"]>", "number of entries" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "prefix=<["+getDefaultFilePrefix(arginfo)+"]>", "default output file prefix" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
@@ -153,7 +153,7 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;
 			}
-			
+
 		return bamsplit(arginfo);
 	}
 	catch(std::exception const & ex)
@@ -162,4 +162,3 @@ int main(int argc, char * argv[])
 		return EXIT_FAILURE;
 	}
 }
-

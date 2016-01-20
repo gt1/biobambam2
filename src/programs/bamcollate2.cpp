@@ -71,18 +71,18 @@ static std::string despace(std::string const & s)
 static uint32_t parseClassList(std::string s)
 {
 	s = despace(s);
-	
+
 	if ( ! s.size() )
 		return 0;
-	
+
 	std::deque<std::string> tokens = libmaus2::util::stringFunctions::tokenize<std::string>(s,std::string(","));
-	
+
 	uint32_t mask = 0;
-	
+
 	for ( uint64_t i = 0; i < tokens.size(); ++i )
 	{
 		tokens[i] = despace(tokens[i]);
-		
+
 		if ( tokens[i] == "F" )
 			mask |= classmask_F;
 		else if ( tokens[i] == "F2" )
@@ -101,7 +101,7 @@ static uint32_t parseClassList(std::string s)
 			throw se;
 		}
 	}
-	
+
 	return mask;
 }
 
@@ -110,13 +110,13 @@ struct BamToFastQInputFileStream
 	std::string const fn;
 	libmaus2::aio::InputStreamInstance::unique_ptr_type CIS;
 	std::istream & in;
-	
+
 	static libmaus2::aio::InputStreamInstance::unique_ptr_type openFile(std::string const & fn)
 	{
 		libmaus2::aio::InputStreamInstance::unique_ptr_type ptr(new libmaus2::aio::InputStreamInstance(fn));
 		return UNIQUE_PTR_MOVE(ptr);
 	}
-	
+
 	BamToFastQInputFileStream(libmaus2::util::ArgInfo const & arginfo)
 	: fn(arginfo.getValue<std::string>("filename","-")),
 	  CIS(
@@ -157,7 +157,7 @@ std::string getModifiedHeaderText(decoder_type const & bamdec, libmaus2::util::A
 		libmaus2::aio::InputStreamInstance CIS(headerfilename);
 		libmaus2::autoarray::AutoArray<char> ctext(headerlen,false);
 		CIS.read(ctext.begin(),headerlen);
-		headertext = std::string(ctext.begin(),ctext.end());		
+		headertext = std::string(ctext.begin(),ctext.end());
 	}
 
 	// add PG line to header
@@ -167,7 +167,7 @@ std::string getModifiedHeaderText(decoder_type const & bamdec, libmaus2::util::A
 		"bamcollate2", // PN
 		arginfo.commandline, // CL
 		::libmaus2::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
-		std::string(PACKAGE_VERSION) // VN			
+		std::string(PACKAGE_VERSION) // VN
 	);
 
 	return headertext;
@@ -178,7 +178,7 @@ std::string getModifiedHeaderText(decoder_type const & bamdec, libmaus2::util::A
 	std::vector < std::string > vreadgroups;
 	std::string const readgroups = arginfo.getValue<std::string>("readgroups",std::string());
 	::libmaus2::trie::LinearHashTrie<char,uint32_t>::shared_ptr_type LHTsnofailure;
-	
+
 	if ( readgroups.size() )
 	{
 		std::deque<std::string> qreadgroups = ::libmaus2::util::stringFunctions::tokenize(readgroups,std::string(","));
@@ -188,7 +188,7 @@ std::string getModifiedHeaderText(decoder_type const & bamdec, libmaus2::util::A
 		::libmaus2::trie::LinearHashTrie<char,uint32_t>::unique_ptr_type LHTnofailure(trienofailure.toLinearHashTrie<uint32_t>());
 		LHTsnofailure = ::libmaus2::trie::LinearHashTrie<char,uint32_t>::shared_ptr_type(LHTnofailure.release());
 	}
-	
+
 	return LHTsnofailure;
 }
 
@@ -198,7 +198,7 @@ struct RGReplaceInfo
 	std::vector<std::string> rgreplacevalues;
 	libmaus2::bambam::BamAuxFilterVector rgauxfilter;
 	std::map<std::string,std::string> RGmap;
-	
+
 	RGReplaceInfo(libmaus2::util::ArgInfo const & arginfo)
 	{
 		rgauxfilter.set("RG");
@@ -259,7 +259,7 @@ struct RGReplaceInfo
 					algn.putAuxString("RG",rgreplacevalues.at(replid));
 				}
 			}
-		}	
+		}
 	}
 };
 
@@ -286,7 +286,7 @@ void bamcollate2NonCollating(libmaus2::util::ArgInfo const & arginfo, libmaus2::
 
 	if ( rgreplinfo.RGmap.size() )
 		uphead.replaceReadGroupNames(rgreplinfo.RGmap);
-	
+
 	/*
 	 * start index/md5 callbacks
 	 */
@@ -342,13 +342,13 @@ void bamcollate2NonCollating(libmaus2::util::ArgInfo const & arginfo, libmaus2::
 
 	// read group trie
 	::libmaus2::trie::LinearHashTrie<char,uint32_t>::shared_ptr_type const rgtrie = getRGTrie(arginfo);
-		
+
 	while ( bamdec.readAlignment() )
 	{
 		uint64_t const precnt = cnt++;
-		
-		if ( 
-			(! (algn.getFlags() & excludeflags)) 
+
+		if (
+			(! (algn.getFlags() & excludeflags))
 			&&
 			( (!rgtrie) || (algn.getReadGroup() && rgtrie->searchCompleteNoFailureZ(algn.getReadGroup()) != -1) )
 		)
@@ -360,22 +360,22 @@ void bamcollate2NonCollating(libmaus2::util::ArgInfo const & arginfo, libmaus2::
 				        libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FSUPPLEMENTARY,
 				        rgfilter /* rg filter */
 				);
-	
-			rgreplinfo.apply(algn);			
-		
+
+			rgreplinfo.apply(algn);
+
 			writer->writeAlignment(algn);
 		}
 
 		if ( (precnt >> verbshift != cnt >> verbshift) && verbose )
-			std::cerr 
-				<< (cnt >> 20) 
+			std::cerr
+				<< (cnt >> 20)
 				<< "\t"
 				<< "\t" << static_cast<double>(cnt)/rtc.getElapsedSeconds() << std::endl;
 	}
 
 	if ( verbose )
 		std::cerr << "[V] " << cnt << std::endl;
-	
+
 	writer.reset();
 
 	if ( Pmd5cb )
@@ -413,7 +413,7 @@ void bamcollate2Collating(
 
 	libmaus2::bambam::CircularHashCollatingBamDecoder::OutputBufferEntry * ob = 0;
 	bool const verbose = arginfo.getValue<unsigned int>("verbose",getDefaultVerbose());
-	
+
 	// number of alignments written to files
 	uint64_t cnt = 0;
 	// number of bytes written to files
@@ -435,7 +435,7 @@ void bamcollate2Collating(
 
 	if ( rgreplinfo.RGmap.size() )
 		uphead.replaceReadGroupNames(rgreplinfo.RGmap);
-		
+
 	// rgreplacetrie
 
 	/*
@@ -494,26 +494,26 @@ void bamcollate2Collating(
 	// read group trie
 	::libmaus2::trie::LinearHashTrie<char,uint32_t>::shared_ptr_type rgtrie = getRGTrie(arginfo);
 	int const mapqthres = arginfo.getValue<int>("mapqthres",getDefaultMapQThreshold());
-	
+
 	while ( (ob = CHCBD.process()) )
 	{
 		uint64_t const precnt = cnt;
-		
+
 		if ( ob->fpair && ((classmask & classmask_F) || (classmask & classmask_F2)) )
 		{
 			bool pass = true;
-			
+
 			if ( rgtrie )
 			{
 				char const * rga = libmaus2::bambam::BamAlignmentDecoderBase::getReadGroup(ob->Da,ob->blocksizea);
 				char const * rgb = libmaus2::bambam::BamAlignmentDecoderBase::getReadGroup(ob->Db,ob->blocksizeb);
-				
-				pass = 
+
+				pass =
 					rga && rgb &&
 					(rgtrie->searchCompleteNoFailureZ(rga) != -1) &&
 					(rgtrie->searchCompleteNoFailureZ(rgb) != -1);
 			}
-			
+
 			if ( mapqthres >= 0 )
 			{
 				bool const amapped = !libmaus2::bambam::BamAlignmentDecoderBase::isUnmap(libmaus2::bambam::BamAlignmentDecoderBase::getFlags(ob->Da));
@@ -521,10 +521,10 @@ void bamcollate2Collating(
 
 				bool const bmapped = !libmaus2::bambam::BamAlignmentDecoderBase::isUnmap(libmaus2::bambam::BamAlignmentDecoderBase::getFlags(ob->Db));
 				bool const bok = bmapped && static_cast<int>(libmaus2::bambam::BamAlignmentDecoderBase::getMapQ(ob->Db)) >= mapqthres;
-				
+
 				pass = pass && (aok || bok);
 			}
-			
+
 			if ( pass )
 			{
 				if ( reset )
@@ -541,11 +541,11 @@ void bamcollate2Collating(
 							);
 
 						rgreplinfo.apply(Ralgna);
-						
+
 						writer->writeAlignment(Ralgna);
 						bcnt += (Ralgna.blocksize);
 					}
-					
+
 					if ( classmask & classmask_F2 )
 					{
 						Ralgnb.copyFrom(ob->Db,ob->blocksizeb);
@@ -556,9 +556,9 @@ void bamcollate2Collating(
 						        libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FSUPPLEMENTARY,
 						        rgfilter /* RG filter */
 						);
-						
+
 						rgreplinfo.apply(Ralgnb);
-						
+
 						writer->writeAlignment(Ralgnb);
 						bcnt += (Ralgnb.blocksize);
 					}
@@ -568,11 +568,11 @@ void bamcollate2Collating(
 					if ( classmask & classmask_F )
 					{
 						Ralgna.copyFrom(ob->Da,ob->blocksizea);
-						rgreplinfo.apply(Ralgna);						
+						rgreplinfo.apply(Ralgna);
 						writer->writeAlignment(Ralgna);
 						bcnt += (Ralgna.blocksize);
 					}
-					
+
 					if ( classmask & classmask_F2 )
 					{
 						Ralgnb.copyFrom(ob->Db,ob->blocksizeb);
@@ -588,7 +588,7 @@ void bamcollate2Collating(
 						writer->writeBamBlock(ob->Da,ob->blocksizea);
 						bcnt += (ob->blocksizea);
 					}
-					
+
 					if ( classmask & classmask_F2 )
 					{
 						writer->writeBamBlock(ob->Db,ob->blocksizeb);
@@ -602,7 +602,7 @@ void bamcollate2Collating(
 		else if ( ob->fsingle && (classmask & classmask_S) )
 		{
 			bool pass = true;
-			
+
 			if ( rgtrie )
 			{
 				char const * rga = libmaus2::bambam::BamAlignmentDecoderBase::getReadGroup(ob->Da,ob->blocksizea);
@@ -613,14 +613,14 @@ void bamcollate2Collating(
 			{
 				bool const amapped = !libmaus2::bambam::BamAlignmentDecoderBase::isUnmap(libmaus2::bambam::BamAlignmentDecoderBase::getFlags(ob->Da));
 				bool const aok = amapped && static_cast<int>(libmaus2::bambam::BamAlignmentDecoderBase::getMapQ(ob->Da)) >= mapqthres;
-				
+
 				pass = pass && aok;
 			}
-			
+
 			if ( pass )
 			{
 				if ( reset )
-				{				
+				{
 					Ralgna.copyFrom(ob->Da,ob->blocksizea);
 					resetAlignment(
 						Ralgna,
@@ -654,7 +654,7 @@ void bamcollate2Collating(
 		else if ( ob->forphan1 && (classmask & classmask_O) )
 		{
 			bool pass = true;
-			
+
 			if ( rgtrie )
 			{
 				char const * rga = libmaus2::bambam::BamAlignmentDecoderBase::getReadGroup(ob->Da,ob->blocksizea);
@@ -665,14 +665,14 @@ void bamcollate2Collating(
 			{
 				bool const amapped = !libmaus2::bambam::BamAlignmentDecoderBase::isUnmap(libmaus2::bambam::BamAlignmentDecoderBase::getFlags(ob->Da));
 				bool const aok = amapped && static_cast<int>(libmaus2::bambam::BamAlignmentDecoderBase::getMapQ(ob->Da)) >= mapqthres;
-				
+
 				pass = pass && aok;
 			}
-			
+
 			if ( pass )
 			{
 				if ( reset )
-				{				
+				{
 					Ralgna.copyFrom(ob->Da,ob->blocksizea);
 					resetAlignment(
 						Ralgna,
@@ -689,7 +689,7 @@ void bamcollate2Collating(
 					Ralgna.copyFrom(ob->Da,ob->blocksizea);
 					rgreplinfo.apply(Ralgna);
 					writer->writeAlignment(Ralgna);
-					bcnt += (Ralgna.blocksize);				
+					bcnt += (Ralgna.blocksize);
 				}
 				else
 				{
@@ -703,7 +703,7 @@ void bamcollate2Collating(
 		else if ( ob->forphan2 && (classmask & classmask_O2) )
 		{
 			bool pass = true;
-			
+
 			if ( rgtrie )
 			{
 				char const * rgb = libmaus2::bambam::BamAlignmentDecoderBase::getReadGroup(ob->Db,ob->blocksizeb);
@@ -714,14 +714,14 @@ void bamcollate2Collating(
 			{
 				bool const bmapped = !libmaus2::bambam::BamAlignmentDecoderBase::isUnmap(libmaus2::bambam::BamAlignmentDecoderBase::getFlags(ob->Db));
 				bool const bok = bmapped && static_cast<int>(libmaus2::bambam::BamAlignmentDecoderBase::getMapQ(ob->Db)) >= mapqthres;
-				
+
 				pass = pass && bok;
 			}
-			
+
 			if ( pass )
 			{
 				if ( reset )
-				{				
+				{
 					Ralgna.copyFrom(ob->Da,ob->blocksizea);
 					resetAlignment(
 						Ralgna,
@@ -733,13 +733,13 @@ void bamcollate2Collating(
 					rgreplinfo.apply(Ralgna);
 					writer->writeAlignment(Ralgna);
 					bcnt += (Ralgna.blocksize);
-				}				
+				}
 				else if ( rgreplinfo.rgreplacetrie )
 				{
 					Ralgna.copyFrom(ob->Da,ob->blocksizea);
 					rgreplinfo.apply(Ralgna);
 					writer->writeAlignment(Ralgna);
-					bcnt += (Ralgna.blocksize);				
+					bcnt += (Ralgna.blocksize);
 				}
 				else
 				{
@@ -750,18 +750,18 @@ void bamcollate2Collating(
 				cnt += 1;
 			}
 		}
-		
+
 		if ( (precnt >> verbshift != cnt >> verbshift) && verbose )
 		{
-			std::cerr 
+			std::cerr
 				<< "[V] "
-				<< (cnt >> 20) 
+				<< (cnt >> 20)
 				<< "\t"
 				<< (static_cast<double>(bcnt)/(1024.0*1024.0))/rtc.getElapsedSeconds() << "MB/s"
 				<< "\t" << static_cast<double>(cnt)/rtc.getElapsedSeconds() << std::endl;
 		}
 	}
-	
+
 	if ( verbose )
 		std::cerr << "[V] " << cnt << std::endl;
 
@@ -784,7 +784,7 @@ void bamcollate2Collating(libmaus2::util::ArgInfo const & arginfo)
 	libmaus2::util::TempFileRemovalContainer::setup();
 	std::string const tmpfilename = arginfo.getUnparsedValue("T",arginfo.getDefaultTmpFileName());
 	libmaus2::util::TempFileRemovalContainer::addTempFile(tmpfilename);
-	
+
 	unsigned int const hlog = arginfo.getValue<unsigned int>("colhlog",18);
 	uint64_t const sbs = arginfo.getValueUnsignedNumeric<uint64_t>("colsbs",128ull*1024ull*1024ull);
 
@@ -797,7 +797,7 @@ void bamcollate2Collating(libmaus2::util::ArgInfo const & arginfo)
 	);
 	libmaus2::bambam::CircularHashCollatingBamDecoder CHCBD(decwrapper->getDecoder(),tmpfilename,excludeflags,hlog,sbs);
 	bamcollate2Collating(arginfo,CHCBD);
-	
+
 	std::cout.flush();
 }
 
@@ -810,7 +810,7 @@ void bamcollate2CollatingRanking(
 		CHCBD.disableValidation();
 
 	libmaus2::bambam::CircularHashCollatingBamDecoder::OutputBufferEntry const * ob = 0;
-	
+
 	// number of alignments written to files
 	uint64_t cnt = 0;
 	// number of bytes written to files
@@ -884,16 +884,16 @@ void bamcollate2CollatingRanking(
 	while ( (ob = CHCBD.process()) )
 	{
 		uint64_t const precnt = cnt;
-		
+
 		if ( ob->fpair )
 		{
 			uint64_t const ranka = libmaus2::bambam::BamAlignmentDecoderBase::getRank(ob->Da,ob->blocksizea);
 			uint64_t const rankb = libmaus2::bambam::BamAlignmentDecoderBase::getRank(ob->Db,ob->blocksizeb);
-							
+
 			std::ostringstream nameostr;
 			nameostr << ranka << "_" << rankb << "_" << libmaus2::bambam::BamAlignmentDecoderBase::getReadName(ob->Da);
 			std::string const name = nameostr.str();
-			
+
 			if ( algn.D.size() < ob->blocksizea )
 				algn.D.resize(ob->blocksizea);
 			std::copy ( ob->Da, ob->Da + ob->blocksizea, algn.D.begin() );
@@ -901,7 +901,7 @@ void bamcollate2CollatingRanking(
 			algn.replaceName(name.c_str(),name.size());
 			algn.filterOutAux(zrtag);
 			writer->writeAlignment(algn);
-			
+
 			if ( algn.D.size() < ob->blocksizeb )
 				algn.D.resize(ob->blocksizeb);
 			std::copy ( ob->Db, ob->Db + ob->blocksizeb, algn.D.begin() );
@@ -909,21 +909,21 @@ void bamcollate2CollatingRanking(
 			algn.replaceName(name.c_str(),name.size());
 			algn.filterOutAux(zrtag);
 			writer->writeAlignment(algn);
-			
+
 			cnt += 2;
 		}
 		else if ( ob->fsingle )
 		{
 			uint64_t const ranka = libmaus2::bambam::BamAlignmentDecoderBase::getRank(ob->Da,ob->blocksizea);
-			
+
 			if ( algn.D.size() < ob->blocksizea )
 				algn.D.resize(ob->blocksizea);
 
-				
+
 			std::ostringstream nameostr;
 			nameostr << ranka << "_" << libmaus2::bambam::BamAlignmentDecoderBase::getReadName(ob->Da);
 			std::string const name = nameostr.str();
-				
+
 			std::copy ( ob->Da, ob->Da + ob->blocksizea, algn.D.begin() );
 			algn.blocksize = ob->blocksizea;
 			algn.replaceName(name.c_str(),name.size());
@@ -935,14 +935,14 @@ void bamcollate2CollatingRanking(
 		else if ( ob->forphan1 )
 		{
 			uint64_t const ranka = libmaus2::bambam::BamAlignmentDecoderBase::getRank(ob->Da,ob->blocksizea);
-			
+
 			if ( algn.D.size() < ob->blocksizea )
 				algn.D.resize(ob->blocksizea);
 
 			std::ostringstream nameostr;
 			nameostr << ranka << "_" << ranka << "_" << libmaus2::bambam::BamAlignmentDecoderBase::getReadName(ob->Da);
 			std::string const name = nameostr.str();
-				
+
 			std::copy ( ob->Da, ob->Da + ob->blocksizea, algn.D.begin() );
 			algn.blocksize = ob->blocksizea;
 			algn.replaceName(name.c_str(),name.size());
@@ -954,14 +954,14 @@ void bamcollate2CollatingRanking(
 		else if ( ob->forphan2 )
 		{
 			uint64_t const ranka = libmaus2::bambam::BamAlignmentDecoderBase::getRank(ob->Da,ob->blocksizea);
-			
+
 			if ( algn.D.size() < ob->blocksizea )
 				algn.D.resize(ob->blocksizea);
 
 			std::ostringstream nameostr;
 			nameostr << ranka << "_" << ranka << "_" << libmaus2::bambam::BamAlignmentDecoderBase::getReadName(ob->Da);
 			std::string const name = nameostr.str();
-				
+
 			std::copy ( ob->Da, ob->Da + ob->blocksizea, algn.D.begin() );
 			algn.blocksize = ob->blocksizea;
 			algn.replaceName(name.c_str(),name.size());
@@ -970,21 +970,21 @@ void bamcollate2CollatingRanking(
 
 			cnt += 1;
 		}
-		
+
 		if ( (precnt >> verbshift != cnt >> verbshift) && verbose )
 		{
-			std::cerr 
+			std::cerr
 				<< "[V] "
-				<< (cnt >> 20) 
+				<< (cnt >> 20)
 				<< "\t"
 				<< (static_cast<double>(bcnt)/(1024.0*1024.0))/rtc.getElapsedSeconds() << "MB/s"
 				<< "\t" << static_cast<double>(cnt)/rtc.getElapsedSeconds() << std::endl;
 		}
 	}
-	
+
 	if ( verbose )
 		std::cerr << "[V] " << cnt << std::endl;
-	
+
 	writer.reset();
 
 	if ( Pmd5cb )
@@ -1018,7 +1018,7 @@ void bamcollate2CollatingRanking(libmaus2::util::ArgInfo const & arginfo)
 	);
 	libmaus2::bambam::CircularHashCollatingBamDecoder CHCBD(decwrapper->getDecoder(),tmpfilename,excludeflags,hlog,sbs);
 	bamcollate2CollatingRanking(arginfo,CHCBD);
-	
+
 	std::cout.flush();
 }
 
@@ -1036,7 +1036,7 @@ void bamcollate2CollatingPostRanking(
 		CHCBD.disableValidation();
 
 	libmaus2::bambam::CircularHashCollatingBamDecoder::OutputBufferEntry const * ob = 0;
-	
+
 	// number of alignments written to files
 	uint64_t cnt = 0;
 	unsigned int const verbshift = 20;
@@ -1114,7 +1114,7 @@ void bamcollate2CollatingPostRanking(
 	while ( (ob = CHCBD.process()) )
 	{
 		uint64_t const precnt = cnt;
-		
+
 		if ( ob->fpair )
 		{
 			uint64_t const ranka = r++;
@@ -1123,8 +1123,8 @@ void bamcollate2CollatingPostRanking(
 			uint64_t const zrankb = libmaus2::bambam::BamAlignmentDecoderBase::getRank(ob->Db,ob->blocksizeb);
 
 			uint64_t const orignamelen = (::libmaus2::bambam::BamAlignmentDecoderBase::getLReadName(ob->Da)-1);
-			char const * origname = libmaus2::bambam::BamAlignmentDecoderBase::getReadName(ob->Da);			
-			uint64_t const namelen = 
+			char const * origname = libmaus2::bambam::BamAlignmentDecoderBase::getReadName(ob->Da);
+			uint64_t const namelen =
 				libmaus2::bambam::BamAlignmentDecoderBase::getDecimalNumberLength(ranka) + 1 +
 				libmaus2::bambam::BamAlignmentDecoderBase::getDecimalNumberLength(rankb) + 1 +
 				orignamelen
@@ -1132,14 +1132,14 @@ void bamcollate2CollatingPostRanking(
 
 			if ( namelen > namebuffer.size() )
 				namebuffer = libmaus2::autoarray::AutoArray<char>(namelen);
-				
+
 			char * np = namebuffer.begin();
 			np = libmaus2::bambam::BamAlignmentDecoderBase::putNumberDecimal(np,ranka);
 			*(np++) = '_';
 			np = libmaus2::bambam::BamAlignmentDecoderBase::putNumberDecimal(np,rankb);
 			*(np++) = '_';
 			std::copy(origname,origname + orignamelen,np);
-			
+
 			if ( algn.D.size() < ob->blocksizea )
 				algn.D.resize(ob->blocksizea);
 			std::copy ( ob->Da, ob->Da + ob->blocksizea, algn.D.begin() );
@@ -1156,7 +1156,7 @@ void bamcollate2CollatingPostRanking(
 				);
 			attachRank(algn,zranka,zzbafv);
 			writer->writeAlignment(algn);
-			
+
 			if ( algn.D.size() < ob->blocksizeb )
 				algn.D.resize(ob->blocksizeb);
 			std::copy ( ob->Db, ob->Db + ob->blocksizeb, algn.D.begin() );
@@ -1173,29 +1173,29 @@ void bamcollate2CollatingPostRanking(
 				);
 			attachRank(algn,zrankb,zzbafv);
 			writer->writeAlignment(algn);
-			
+
 			cnt += 2;
 		}
 		else if ( ob->fsingle )
 		{
 			uint64_t const ranka = r++;
 			uint64_t const zranka = libmaus2::bambam::BamAlignmentDecoderBase::getRank(ob->Da,ob->blocksizea);
-			
+
 			if ( algn.D.size() < ob->blocksizea )
 				algn.D.resize(ob->blocksizea);
-				
+
 			uint64_t const orignamelen = (::libmaus2::bambam::BamAlignmentDecoderBase::getLReadName(ob->Da)-1);
-			char const * origname = libmaus2::bambam::BamAlignmentDecoderBase::getReadName(ob->Da);	
+			char const * origname = libmaus2::bambam::BamAlignmentDecoderBase::getReadName(ob->Da);
 			uint64_t const namelen = libmaus2::bambam::BamAlignmentDecoderBase::getDecimalNumberLength(ranka) + 1 + orignamelen;
 
 			if ( namelen > namebuffer.size() )
 				namebuffer = libmaus2::autoarray::AutoArray<char>(namelen);
-				
+
 			char * np = namebuffer.begin();
 			np = libmaus2::bambam::BamAlignmentDecoderBase::putNumberDecimal(np,ranka);
 			*(np++) = '_';
 			std::copy(origname,origname + orignamelen,np);
-	
+
 			std::copy ( ob->Da, ob->Da + ob->blocksizea, algn.D.begin() );
 			algn.blocksize = ob->blocksizea;
 			algn.replaceName(namebuffer.begin(),namelen);
@@ -1217,13 +1217,13 @@ void bamcollate2CollatingPostRanking(
 		{
 			uint64_t const ranka = r++;
 			uint64_t const zranka = libmaus2::bambam::BamAlignmentDecoderBase::getRank(ob->Da,ob->blocksizea);
-			
+
 			if ( algn.D.size() < ob->blocksizea )
 				algn.D.resize(ob->blocksizea);
 
 			uint64_t const orignamelen = (::libmaus2::bambam::BamAlignmentDecoderBase::getLReadName(ob->Da)-1);
-			char const * origname = libmaus2::bambam::BamAlignmentDecoderBase::getReadName(ob->Da);			
-			uint64_t const namelen = 
+			char const * origname = libmaus2::bambam::BamAlignmentDecoderBase::getReadName(ob->Da);
+			uint64_t const namelen =
 				libmaus2::bambam::BamAlignmentDecoderBase::getDecimalNumberLength(ranka) + 1 +
 				libmaus2::bambam::BamAlignmentDecoderBase::getDecimalNumberLength(ranka) + 1 +
 				orignamelen
@@ -1231,7 +1231,7 @@ void bamcollate2CollatingPostRanking(
 
 			if ( namelen > namebuffer.size() )
 				namebuffer = libmaus2::autoarray::AutoArray<char>(namelen);
-				
+
 			char * np = namebuffer.begin();
 			np = libmaus2::bambam::BamAlignmentDecoderBase::putNumberDecimal(np,ranka);
 			*(np++) = '_';
@@ -1239,49 +1239,6 @@ void bamcollate2CollatingPostRanking(
 			*(np++) = '_';
 			std::copy(origname,origname + orignamelen,np);
 
-			std::copy ( ob->Da, ob->Da + ob->blocksizea, algn.D.begin() );
-			algn.blocksize = ob->blocksizea;
-			algn.replaceName(namebuffer.begin(),namelen);
-			algn.filterOutAux(zrtag);
-			if ( reset )
-				resetAlignment(
-					algn,
-					resetaux,
-					libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FSECONDARY |
-				        libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FSUPPLEMENTARY,
-				        rgfilter /* RG filter */				
-				);
-			attachRank(algn,zranka,zzbafv);
-			writer->writeAlignment(algn);
-
-			cnt += 1;
-		}
-		else if ( ob->forphan2 )
-		{
-			uint64_t const ranka = r++;
-			uint64_t const zranka = libmaus2::bambam::BamAlignmentDecoderBase::getRank(ob->Da,ob->blocksizea);
-			
-			if ( algn.D.size() < ob->blocksizea )
-				algn.D.resize(ob->blocksizea);
-
-			uint64_t const orignamelen = (::libmaus2::bambam::BamAlignmentDecoderBase::getLReadName(ob->Da)-1);
-			char const * origname = libmaus2::bambam::BamAlignmentDecoderBase::getReadName(ob->Da);			
-			uint64_t const namelen = 
-				libmaus2::bambam::BamAlignmentDecoderBase::getDecimalNumberLength(ranka) + 1 +
-				libmaus2::bambam::BamAlignmentDecoderBase::getDecimalNumberLength(ranka) + 1 +
-				orignamelen
-				;
-
-			if ( namelen > namebuffer.size() )
-				namebuffer = libmaus2::autoarray::AutoArray<char>(namelen);
-				
-			char * np = namebuffer.begin();
-			np = libmaus2::bambam::BamAlignmentDecoderBase::putNumberDecimal(np,ranka);
-			*(np++) = '_';
-			np = libmaus2::bambam::BamAlignmentDecoderBase::putNumberDecimal(np,ranka);
-			*(np++) = '_';
-			std::copy(origname,origname + orignamelen,np);
-		
 			std::copy ( ob->Da, ob->Da + ob->blocksizea, algn.D.begin() );
 			algn.blocksize = ob->blocksizea;
 			algn.replaceName(namebuffer.begin(),namelen);
@@ -1299,16 +1256,59 @@ void bamcollate2CollatingPostRanking(
 
 			cnt += 1;
 		}
-		
+		else if ( ob->forphan2 )
+		{
+			uint64_t const ranka = r++;
+			uint64_t const zranka = libmaus2::bambam::BamAlignmentDecoderBase::getRank(ob->Da,ob->blocksizea);
+
+			if ( algn.D.size() < ob->blocksizea )
+				algn.D.resize(ob->blocksizea);
+
+			uint64_t const orignamelen = (::libmaus2::bambam::BamAlignmentDecoderBase::getLReadName(ob->Da)-1);
+			char const * origname = libmaus2::bambam::BamAlignmentDecoderBase::getReadName(ob->Da);
+			uint64_t const namelen =
+				libmaus2::bambam::BamAlignmentDecoderBase::getDecimalNumberLength(ranka) + 1 +
+				libmaus2::bambam::BamAlignmentDecoderBase::getDecimalNumberLength(ranka) + 1 +
+				orignamelen
+				;
+
+			if ( namelen > namebuffer.size() )
+				namebuffer = libmaus2::autoarray::AutoArray<char>(namelen);
+
+			char * np = namebuffer.begin();
+			np = libmaus2::bambam::BamAlignmentDecoderBase::putNumberDecimal(np,ranka);
+			*(np++) = '_';
+			np = libmaus2::bambam::BamAlignmentDecoderBase::putNumberDecimal(np,ranka);
+			*(np++) = '_';
+			std::copy(origname,origname + orignamelen,np);
+
+			std::copy ( ob->Da, ob->Da + ob->blocksizea, algn.D.begin() );
+			algn.blocksize = ob->blocksizea;
+			algn.replaceName(namebuffer.begin(),namelen);
+			algn.filterOutAux(zrtag);
+			if ( reset )
+				resetAlignment(
+					algn,
+					resetaux,
+					libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FSECONDARY |
+				        libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FSUPPLEMENTARY,
+				        rgfilter /* RG filter */
+				);
+			attachRank(algn,zranka,zzbafv);
+			writer->writeAlignment(algn);
+
+			cnt += 1;
+		}
+
 		if ( (precnt >> verbshift != cnt >> verbshift) && verbose )
 		{
-			std::cerr 
+			std::cerr
 				<< "[V] "
-				<< (cnt >> 20) 
+				<< (cnt >> 20)
 				<< "\t" << static_cast<double>(cnt)/rtc.getElapsedSeconds() << std::endl;
 		}
 	}
-	
+
 	if ( verbose )
 		std::cerr << "[V] " << cnt << std::endl;
 
@@ -1345,16 +1345,16 @@ void bamcollate2CollatingPostRanking(libmaus2::util::ArgInfo const & arginfo)
 	);
 	libmaus2::bambam::CircularHashCollatingBamDecoder CHCBD(decwrapper->getDecoder(),tmpfilename,excludeflags,hlog,sbs);
 	bamcollate2CollatingPostRanking(arginfo,CHCBD);
-	
+
 	std::cout.flush();
 }
 
 void bamcollate2(libmaus2::util::ArgInfo const & arginfo)
 {
-	if ( 
-		arginfo.hasArg("ranges") && arginfo.getValue("inputformat", getDefaultInputFormat()) != "bam" 
+	if (
+		arginfo.hasArg("ranges") && arginfo.getValue("inputformat", getDefaultInputFormat()) != "bam"
 		&&
-		arginfo.hasArg("ranges") && arginfo.getValue("inputformat", getDefaultInputFormat()) != "cram" 
+		arginfo.hasArg("ranges") && arginfo.getValue("inputformat", getDefaultInputFormat()) != "cram"
 	)
 	{
 		libmaus2::exception::LibMausException se;
@@ -1387,10 +1387,10 @@ void bamcollate2(libmaus2::util::ArgInfo const & arginfo)
 		case 1:
 			bamcollate2Collating(arginfo);
 			break;
-		case 2:		
+		case 2:
 			bamcollate2CollatingRanking(arginfo);
 			break;
-		case 3:	
+		case 3:
 			bamcollate2CollatingPostRanking(arginfo);
 			break;
 		default:
@@ -1416,9 +1416,9 @@ int main(int argc, char * argv[])
                 #endif
 
 		libmaus2::timing::RealTimeClock rtc; rtc.start();
-		
+
 		::libmaus2::util::ArgInfo arginfo(argc,argv);
-	
+
 		#if defined(LIBMAUS2_HAVE_IRODS)
 		// set program name for iRODS identification
 		std::stringstream irods_id;
@@ -1427,7 +1427,7 @@ int main(int argc, char * argv[])
 		#endif
 
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -1436,7 +1436,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -1445,9 +1445,9 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license() << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-				
+
 				V.push_back ( std::pair<std::string,std::string> ( "collate=<[1]>", "collate pairs" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "reset=<>", "reset alignments and header like bamreset (for collate=0,1 or 3 only, default enabled for 3)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
@@ -1479,7 +1479,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( std::string("resetaux=<[")+::biobambam2::Licensing::formatNumber(getDefaultResetAux())+"]>", "reset auxiliary fields (collate=0,1 only with reset=1)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "auxfilter=[<>]", "comma separated list of aux tags to keep if reset=1 and resetaux=0 (default: keep all)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("outputformat=<[")+libmaus2::bambam::BamBlockWriterBaseFactory::getDefaultOutputFormat()+"]>", std::string("output format (") + libmaus2::bambam::BamBlockWriterBaseFactory::getValidOutputFormats() + ")" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "O=<[stdout]>", "output filename (standard output if unset)" ) );				
+				V.push_back ( std::pair<std::string,std::string> ( "O=<[stdout]>", "output filename (standard output if unset)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "outputthreads=<[1]>", "output helper threads (for outputformat=bam only, default: 1)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("inputbuffersize=<[")+::biobambam2::Licensing::formatNumber(getDefaultInputBufferSize())+"]>", "input buffer size" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("replacereadgroupnames=<[]>"), "name of file containing list of read group identifier replacements (default: no replacements)" ) );
@@ -1501,7 +1501,7 @@ int main(int argc, char * argv[])
 		}
 		if ( arginfo.hasArg("I") && !arginfo.hasArg("filename") )
 		{
-			std::string const fn = arginfo.getUnparsedValue("I",std::string());		
+			std::string const fn = arginfo.getUnparsedValue("I",std::string());
 			arginfo.argmap["filename"] = fn;
 			arginfo.argmultimap.insert(std::pair<std::string,std::string>(std::string("filename"),fn));
 		}
@@ -1513,21 +1513,21 @@ int main(int argc, char * argv[])
 		}
 		if ( arginfo.hasArg("range") && !arginfo.hasArg("ranges") )
 		{
-			std::string const range = arginfo.getUnparsedValue("range",std::string());		
+			std::string const range = arginfo.getUnparsedValue("range",std::string());
 			arginfo.argmap["ranges"] = range;
 			arginfo.argmultimap.insert(std::pair<std::string,std::string>(std::string("ranges"),range));
 		}
 		if ( arginfo.hasArg("threads") )
 		{
-			std::string const threads = arginfo.getUnparsedValue("threads",std::string());		
+			std::string const threads = arginfo.getUnparsedValue("threads",std::string());
 			arginfo.argmap["inputthreads"] = threads;
 			arginfo.argmultimap.insert(std::pair<std::string,std::string>(std::string("inputthreads"),threads));
 		}
-					
+
 		bamcollate2(arginfo);
-		
+
 		if ( arginfo.getValue<unsigned int>("verbose",getDefaultVerbose()) )
-			std::cerr << "[V] " << libmaus2::util::MemUsage() << " wall clock time " << rtc.formatTime(rtc.getElapsedSeconds()) << std::endl;		
+			std::cerr << "[V] " << libmaus2::util::MemUsage() << " wall clock time " << rtc.formatTime(rtc.getElapsedSeconds()) << std::endl;
 	}
 	catch(std::exception const & ex)
 	{

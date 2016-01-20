@@ -54,7 +54,7 @@ int bamCollate(::libmaus2::util::ArgInfo const & arginfo)
 		se.finish();
 		throw se;
 	}
-	
+
 	std::string const tmpfile = arginfo.getValue<std::string>("tmpfile",arginfo.getDefaultTmpFileName());
 	std::string const readgroups = arginfo.getValue<std::string>("readgroups",std::string());
 	bool const pairsonly = arginfo.getValue<unsigned int>("pairsonly",false);
@@ -62,7 +62,7 @@ int bamCollate(::libmaus2::util::ArgInfo const & arginfo)
 	::libmaus2::util::TempFileRemovalContainer::addTempFile(tmpfile);
 	std::vector < std::string > vreadgroups;
 	::libmaus2::trie::LinearHashTrie<char,uint32_t>::shared_ptr_type LHTsnofailure;
-	
+
 	if ( readgroups.size() )
 	{
 		std::deque<std::string> qreadgroups = ::libmaus2::util::stringFunctions::tokenize(readgroups,std::string(","));
@@ -72,11 +72,11 @@ int bamCollate(::libmaus2::util::ArgInfo const & arginfo)
 		::libmaus2::trie::LinearHashTrie<char,uint32_t>::unique_ptr_type LHTnofailure(trienofailure.toLinearHashTrie<uint32_t>());
 		LHTsnofailure = ::libmaus2::trie::LinearHashTrie<char,uint32_t>::shared_ptr_type(LHTnofailure.release());
 	}
-	
+
 	unsigned int const colhashbits = arginfo.getValue<unsigned int>("colhashbits",getDefaultColHashBits());
 	unsigned int const collistsize = arginfo.getValue<unsigned int>("collistsize",getDefaultColListSize());
 	int const level = libmaus2::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
-	
+
 	::libmaus2::bambam::CollatingBamDecoder CBD(std::cin,tmpfile,false/* add rank */,colhashbits,collistsize);
 	::libmaus2::bambam::BamHeader const & bamheader = CBD.getHeader();
 
@@ -89,7 +89,7 @@ int bamCollate(::libmaus2::util::ArgInfo const & arginfo)
 		"bamcollate", // PN
 		arginfo.commandline, // CL
 		::libmaus2::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
-		std::string(PACKAGE_VERSION) // VN			
+		std::string(PACKAGE_VERSION) // VN
 	);
 	// construct new header
 	::libmaus2::bambam::BamHeader uphead(upheadtext);
@@ -148,7 +148,7 @@ int bamCollate(::libmaus2::util::ArgInfo const & arginfo)
 	// bool tryPair(std::pair<alignment_ptr_type,alignment_ptr_type> & P)
 	// std::pair<alignment_ptr_type,alignment_ptr_type> P;
 	typedef ::libmaus2::bambam::CollatingBamDecoder::alignment_ptr_type alignment_ptr_type;
-		
+
 	alignment_ptr_type a;
 	if ( pairsonly )
 	{
@@ -156,13 +156,13 @@ int bamCollate(::libmaus2::util::ArgInfo const & arginfo)
 		{
 			alignment_ptr_type b = CBD.getPair();
 			assert ( b );
-			
-			if ( !readgroups.size() 
+
+			if ( !readgroups.size()
 				||
-				( 
+				(
 					LHTsnofailure->searchCompleteNoFailure(std::string(a->getReadGroup())) != -1 &&
 					LHTsnofailure->searchCompleteNoFailure(std::string(b->getReadGroup())) != -1
-				)	
+				)
 			)
 			{
 				a->serialise(writer->getStream());
@@ -187,7 +187,7 @@ int bamCollate(::libmaus2::util::ArgInfo const & arginfo)
 	{
 		Pindex->flush(std::string(indexfilename));
 	}
-		
+
 	return EXIT_SUCCESS;
 }
 
@@ -196,11 +196,11 @@ int main(int argc, char * argv[])
 	try
 	{
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
-		
+
 		std::cerr << "[V] This program is deprecated, please use bamcollate2 instead." << std::endl;
-		
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -209,7 +209,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -219,9 +219,9 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-				
+
 				V.push_back ( std::pair<std::string,std::string> ( "tmpfile=[<filename>]", "prefix for temporary files, default: create files in current directory" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "readgroups=[]", "filter for read groups, default: do not filter" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "pairsonly=["+ ::biobambam2::Licensing::formatNumber(getDefaultPairsOnly())+ "]", "output complete pairs only (1=yes,0=no)" ) );
@@ -238,7 +238,7 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;
 			}
-			
+
 		return bamCollate(arginfo);
 	}
 	catch(std::exception const & ex)
@@ -247,4 +247,3 @@ int main(int argc, char * argv[])
 		return EXIT_FAILURE;
 	}
 }
-

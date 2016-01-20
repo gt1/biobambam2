@@ -38,15 +38,15 @@ int bamchecksort(libmaus2::util::ArgInfo const & arginfo)
 	libmaus2::bambam::BamHeader const & header = bamdec.getHeader();
 	std::string const sortorder = libmaus2::bambam::BamHeader::getSortOrderStatic(header.text);
 	libmaus2::bambam::BamAlignment prevalgn;
-	
+
 	if ( bamdec.readAlignment() )
 	{
 		prevalgn.swap(algn);
-		
+
 		if ( sortorder == "coordinate" )
 		{
 			uint64_t c = 0;
-		
+
 			while ( bamdec.readAlignment() )
 			{
 				bool const ok =
@@ -63,7 +63,7 @@ int bamchecksort(libmaus2::util::ArgInfo const & arginfo)
 						 static_cast<uint32_t>(prevalgn.getPos())
 						)
 					);
-					
+
 				if ( ! ok )
 				{
 					libmaus2::exception::LibMausException se;
@@ -73,26 +73,26 @@ int bamchecksort(libmaus2::util::ArgInfo const & arginfo)
 					se.finish();
 					throw se;
 				}
-				
+
 				prevalgn.swap(algn);
 
 				if ( verbose && ( ((++c) & ((1ull<<20)-1)) == 0 ) )
 					std::cerr << "[V] " << c << std::endl;
 			}
-			
+
 			if ( verbose )
 				std::cerr << "[V] " << c << std::endl;
-			
+
 			std::cerr << "Alignments sorted by coordinate." << std::endl;
 		}
 		else if ( sortorder == "queryname" )
 		{
 			uint64_t c = 0;
-			
+
 			while ( bamdec.readAlignment() )
 			{
 				// bool const ok = libmaus2::bambam::BamAlignmentNameComparator::compareInt(prevalgn,algn) <= 0;
-				bool const ok = 
+				bool const ok =
 					!libmaus2::bambam::BamAlignmentNameComparator::compare(algn,prevalgn);
 
 				if ( ! ok )
@@ -132,9 +132,9 @@ int main(int argc, char * argv[])
 	try
 	{
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
-		
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -143,7 +143,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -153,9 +153,9 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-			
+
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
 
 				::biobambam2::Licensing::printMap(std::cerr,V);
@@ -163,7 +163,7 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;
 			}
-			
+
 		return bamchecksort(arginfo);
 	}
 	catch(std::exception const & ex)
@@ -172,4 +172,3 @@ int main(int argc, char * argv[])
 		return EXIT_FAILURE;
 	}
 }
-
