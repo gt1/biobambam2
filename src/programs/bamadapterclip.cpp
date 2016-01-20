@@ -82,7 +82,7 @@ int bamadapterclip(::libmaus2::util::ArgInfo const & arginfo)
 		"bamadapterclip", // PN
 		arginfo.commandline, // CL
 		::libmaus2::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
-		std::string(PACKAGE_VERSION) // VN			
+		std::string(PACKAGE_VERSION) // VN
 	);
 	// construct new header
 	::libmaus2::bambam::BamHeader uphead(upheadtext);
@@ -154,12 +154,12 @@ int bamadapterclip(::libmaus2::util::ArgInfo const & arginfo)
 			std::cerr << "[V]\t" << alcnt << std::endl;
 			lastalcnt = alcnt;
 		}
-		
+
 		clipAdapters(algn,R,Q,seqenc,cigop,T);
-			
+
 		alcnt++;
 
-		algn.serialise(writer->getStream());		
+		algn.serialise(writer->getStream());
 	}
 
 	if ( verbose )
@@ -184,9 +184,9 @@ int main(int argc, char * argv[])
 	try
 	{
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
-		
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -195,7 +195,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -205,9 +205,9 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-			
+
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "mod=<["+::biobambam2::Licensing::formatNumber(getDefaultMod())+"]>", "print progress for every mod'th alignment if verbose" ) );
@@ -222,7 +222,7 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;
 			}
-			
+
 		return bamadapterclip(arginfo);
 	}
 	catch(std::exception const & ex)
@@ -231,4 +231,3 @@ int main(int argc, char * argv[])
 		return EXIT_FAILURE;
 	}
 }
-

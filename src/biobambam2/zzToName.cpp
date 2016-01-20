@@ -22,10 +22,10 @@ bool zzToRank(libmaus2::bambam::BamAlignment & algn, libmaus2::bambam::BamAuxFil
 {
 	uint64_t const rank = algn.getRank("zz");
 	algn.filterOutAux(zzbafv);
-	
-	std::string const newname = 
+
+	std::string const newname =
 		libmaus2::util::NumberSerialisation::formatNumber(rank,0) + "_" + algn.getName();
-		
+
 	algn.replaceName(newname.begin(),newname.size());
 
 	return true;

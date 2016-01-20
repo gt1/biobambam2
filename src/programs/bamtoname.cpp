@@ -33,13 +33,13 @@ struct BamToFastQInputFileStream
 	std::string const fn;
 	libmaus2::aio::InputStreamInstance::unique_ptr_type CIS;
 	std::istream & in;
-	
+
 	static libmaus2::aio::InputStreamInstance::unique_ptr_type openFile(std::string const & fn)
 	{
 		libmaus2::aio::InputStreamInstance::unique_ptr_type ptr(new libmaus2::aio::InputStreamInstance(fn));
 		return UNIQUE_PTR_MOVE(ptr);
 	}
-	
+
 	BamToFastQInputFileStream(libmaus2::util::ArgInfo const & arginfo)
 	: fn(arginfo.getValue<std::string>("filename","-")),
 	  CIS(
@@ -61,11 +61,11 @@ void bamtonameNonCollating(libmaus2::util::ArgInfo const & arginfo, libmaus2::ba
 	uint64_t cnt = 0;
 	uint64_t bcnt = 0;
 	unsigned int const verbshift = 20;
-		
+
 	while ( bamdec.readAlignment() )
 	{
 		uint64_t const precnt = cnt++;
-		
+
 		if ( ! (algn.getFlags() & excludeflags) )
 		{
 			char const * name = libmaus2::bambam::BamAlignmentDecoderBase::getReadName(algn.D.begin());
@@ -77,8 +77,8 @@ void bamtonameNonCollating(libmaus2::util::ArgInfo const & arginfo, libmaus2::ba
 
 		if ( precnt >> verbshift != cnt >> verbshift )
 		{
-			std::cerr 
-				<< (cnt >> 20) 
+			std::cerr
+				<< (cnt >> 20)
 				<< "\t"
 				<< (static_cast<double>(bcnt)/(1024.0*1024.0))/rtc.getElapsedSeconds() << "MB/s"
 				<< "\t" << static_cast<double>(cnt)/rtc.getElapsedSeconds() << std::endl;
@@ -91,7 +91,7 @@ void bamtonameNonCollating(libmaus2::util::ArgInfo const & arginfo)
 {
 	std::string const inputformat = arginfo.getValue<std::string>("inputformat","bam");
 	std::string const inputfilename = arginfo.getValue<std::string>("filename","-");
-	
+
 	if ( inputformat == "bam" )
 	{
 		BamToFastQInputFileStream bamin(inputfilename);
@@ -118,7 +118,7 @@ void bamtonameNonCollating(libmaus2::util::ArgInfo const & arginfo)
 		se.finish();
 		throw se;
 	}
-		
+
 	std::cout.flush();
 }
 
@@ -130,7 +130,7 @@ void bamtonameCollating(
 	libmaus2::bambam::BamToFastqOutputFileSet OFS(arginfo);
 
 	libmaus2::bambam::CircularHashCollatingBamDecoder::OutputBufferEntry const * ob = 0;
-	
+
 	// number of alignments written to files
 	uint64_t cnt = 0;
 	// number of bytes written to files
@@ -138,11 +138,11 @@ void bamtonameCollating(
 	unsigned int const verbshift = 20;
 	libmaus2::timing::RealTimeClock rtc; rtc.start();
 	::libmaus2::autoarray::AutoArray<uint8_t> T;
-	
+
 	while ( (ob = CHCBD.process()) )
 	{
 		uint64_t const precnt = cnt;
-		
+
 		if ( ob->fpair )
 		{
 			char const * namea = libmaus2::bambam::BamAlignmentDecoderBase::getReadName(ob->Da);
@@ -188,21 +188,21 @@ void bamtonameCollating(
 			cnt += 1;
 			bcnt += (la);
 		}
-		
+
 		if ( precnt >> verbshift != cnt >> verbshift )
 		{
-			std::cerr 
+			std::cerr
 				<< "[V] "
-				<< (cnt >> 20) 
+				<< (cnt >> 20)
 				<< "\t"
 				<< (static_cast<double>(bcnt)/(1024.0*1024.0))/rtc.getElapsedSeconds() << "MB/s"
-				<< "\t" << static_cast<double>(cnt)/rtc.getElapsedSeconds() 
+				<< "\t" << static_cast<double>(cnt)/rtc.getElapsedSeconds()
 				<< "\t" << cnt
 				<< "\t" << CHCBD.getRank()
 				<< std::endl;
 		}
 	}
-	
+
 	std::cerr << "[V] " << cnt << "\t" << CHCBD.getRank() << std::endl;
 }
 
@@ -250,7 +250,7 @@ void bamtonameCollating(libmaus2::util::ArgInfo const & arginfo)
 		se.finish();
 		throw se;
 	}
-	
+
 	std::cout.flush();
 }
 
@@ -267,9 +267,9 @@ int main(int argc, char * argv[])
 	try
 	{
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
-		
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -278,7 +278,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -287,9 +287,9 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license() << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-				
+
 				V.push_back ( std::pair<std::string,std::string> ( "F=<[stdout]>", "matched pairs first mates" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "F2=<[stdout]>", "matched pairs second mates" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "S=<[stdout]>", "single end" ) );
@@ -304,7 +304,7 @@ int main(int argc, char * argv[])
 				#endif
 				V.push_back ( std::pair<std::string,std::string> ( "exclude=<[SECONDARY,SUPPLEMENTARY]>", "exclude alignments matching any of the given flags" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("T=<[") + arginfo.getDefaultTmpFileName() + "]>" , "temporary file name" ) );
-				
+
 				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
@@ -313,7 +313,7 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;
 			}
-			
+
 		bamtoname(arginfo);
 	}
 	catch(std::exception const & ex)

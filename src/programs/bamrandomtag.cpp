@@ -73,11 +73,11 @@ int bamrandomtag(::libmaus2::util::ArgInfo const & arginfo)
 	// tag field
 	bool const havetag = arginfo.hasArg("tag");
 	std::string const tag = arginfo.getUnparsedValue("tag","no tag");
-	
+
 	if ( (!havetag)
 		||
 			(
-				tag.size() != 2 
+				tag.size() != 2
 				||
 				(!isalpha(tag[0]))
 				||
@@ -88,10 +88,10 @@ int bamrandomtag(::libmaus2::util::ArgInfo const & arginfo)
 		::libmaus2::exception::LibMausException se;
 		se.getStream() << "mandatory argument tag is invalid" << std::endl;
 		se.finish();
-		throw se;			
+		throw se;
 	}
 
-	
+
 	::libmaus2::bambam::BamDecoder dec(std::cin,false);
 	::libmaus2::bambam::BamHeader const & header = dec.getHeader();
 
@@ -104,13 +104,13 @@ int bamrandomtag(::libmaus2::util::ArgInfo const & arginfo)
 		"bamrandomtag", // PN
 		arginfo.commandline, // CL
 		::libmaus2::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
-		std::string(PACKAGE_VERSION) // VN			
+		std::string(PACKAGE_VERSION) // VN
 	);
 	// construct new header
 	libmaus2::bambam::BamHeader const uphead(upheadtext);
 
 	::libmaus2::bambam::BamWriter::unique_ptr_type writer(new ::libmaus2::bambam::BamWriter(std::cout,uphead,level));
- 	
+
 	libmaus2::bambam::BamAlignment & algn = dec.getAlignment();
 	uint64_t c = 0;
 
@@ -125,7 +125,7 @@ int bamrandomtag(::libmaus2::util::ArgInfo const & arginfo)
 		algn.filterOutAux(tagfilter);
 		algn.putAuxString(tag.c_str(),(rand()&1) ? taga : tagb);
 		algn.serialise(writer->getStream());
- 			
+
 		if ( verbose && (++c & (1024*1024-1)) == 0 )
 			std::cerr << "[V] " << c/(1024*1024) << std::endl;
 	}
@@ -140,9 +140,9 @@ int main(int argc, char * argv[])
 	try
 	{
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
-		
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -151,7 +151,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -161,9 +161,9 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-			
+
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress information" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam2::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
@@ -175,10 +175,10 @@ int main(int argc, char * argv[])
 				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
-								
+
 				return EXIT_SUCCESS;
 			}
-			
+
 		return bamrandomtag(arginfo);
 	}
 	catch(std::exception const & ex)
@@ -187,4 +187,3 @@ int main(int argc, char * argv[])
 		return EXIT_FAILURE;
 	}
 }
-

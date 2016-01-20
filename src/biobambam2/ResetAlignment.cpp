@@ -18,7 +18,7 @@
 **/
 #include <biobambam2/ResetAlignment.hpp>
 
-uint64_t resetAlignment(uint8_t * const D, uint64_t blocksize, bool const resetaux, 
+uint64_t resetAlignment(uint8_t * const D, uint64_t blocksize, bool const resetaux,
 	libmaus2::bambam::BamAuxFilterVector const * rgfilter
 )
 {
@@ -28,16 +28,16 @@ uint64_t resetAlignment(uint8_t * const D, uint64_t blocksize, bool const reseta
 	libmaus2::bambam::BamAlignmentEncoderBase::putNextPos(D,-1);
 	libmaus2::bambam::BamAlignmentEncoderBase::putTlen(D,0);
 	libmaus2::bambam::BamAlignmentEncoderBase::putMapQ(D,0);
-	
+
 	if ( rgfilter )
 		blocksize = libmaus2::bambam::BamAlignmentDecoderBase::filterAux(D,blocksize,*rgfilter);
 	if ( resetaux )
 		blocksize = libmaus2::bambam::BamAlignment::eraseAux(D);
-		
+
 	blocksize = libmaus2::bambam::BamAlignment::eraseCigarString(D,blocksize);
-	
+
 	uint32_t const inflags = libmaus2::bambam::BamAlignmentDecoderBase::getFlags(D);
-	
+
 	if ( libmaus2::bambam::BamAlignmentDecoderBase::isReverse(inflags) )
 		libmaus2::bambam::BamAlignment::reverseComplementInplace(D);
 
@@ -49,8 +49,8 @@ uint64_t resetAlignment(uint8_t * const D, uint64_t blocksize, bool const reseta
 			(~(static_cast<uint32_t>(libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FPROPER_PAIR))) &
 			(~(static_cast<uint32_t>(libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FREVERSE))) &
 			(~(static_cast<uint32_t>(libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FMREVERSE)))
-		
-		);	
+
+		);
 	}
 	else
 	{
@@ -60,9 +60,9 @@ uint64_t resetAlignment(uint8_t * const D, uint64_t blocksize, bool const reseta
 			(~(static_cast<uint32_t>(libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FPROPER_PAIR))) &
 			(~(static_cast<uint32_t>(libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FREVERSE))) &
 			(~(static_cast<uint32_t>(libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FMREVERSE)))
-		);	
+		);
 	}
-	
+
 	return blocksize;
 }
 
@@ -73,9 +73,9 @@ bool resetAlignment(
 )
 {
 	algn.blocksize = resetAlignment(algn.D.begin(),algn.blocksize,resetaux,rgfilter);
-	
+
 	if ( algn.getFlags() & excludeflags )
 		return false;
-		
+
 	return true;
 }

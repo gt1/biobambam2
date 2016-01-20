@@ -54,7 +54,7 @@ int bamstreamingmarkduplicates(libmaus2::util::ArgInfo const & arginfo)
 	bool const resetdupflag = arginfo.getValue<uint64_t>("resetdupflag",getDefaultResetDupFlag());
 	bool const filterdupmarktags = arginfo.getValue<uint64_t>("filterdupmarktags",getDefaultFilterDupMarkTags());
 	bool const filterolddupmarktags = arginfo.getValue<uint64_t>("filterolddupmarktags",getDefaultFilterOldDupMarkTags());
-	std::string const tmpfilenamebase = arginfo.getUnparsedValue("tmpfile",arginfo.getDefaultTmpFileName());	
+	std::string const tmpfilenamebase = arginfo.getUnparsedValue("tmpfile",arginfo.getDefaultTmpFileName());
 
 	libmaus2::aio::PosixFdInputStream PFIS(STDIN_FILENO);
 	libmaus2::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
@@ -132,7 +132,7 @@ int bamstreamingmarkduplicates(libmaus2::util::ArgInfo const & arginfo)
 	batchrtc.start();
 
 	uint32_t const flagmask = ~static_cast<uint32_t>(libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FDUP);
-				
+
 	while ( dec.readAlignment() )
 	{
 		if ( resetdupflag )
@@ -140,24 +140,24 @@ int bamstreamingmarkduplicates(libmaus2::util::ArgInfo const & arginfo)
 			uint32_t const flags = algn.getFlags();
 			algn.putFlags(flags&flagmask);
 		}
-	
+
 		BSMD.addAlignment(algn);
-		
+
 		if ( verbose && ((++cnt % (1024*1024)) == 0) )
 		{
-			std::cerr 
-				<< "[V] " 
-				<< cnt << " " 
-				<< BSMD.OQ.nextout << " " 
+			std::cerr
+				<< "[V] "
+				<< cnt << " "
+				<< BSMD.OQ.nextout << " "
 				<< libmaus2::util::MemUsage() << " "
 				<< globalrtc.formatTime(globalrtc.getElapsedSeconds()) << " "
 				<< batchrtc.formatTime(batchrtc.getElapsedSeconds())
 				<< std::endl;
-			
+
 			batchrtc.start();
 		}
 	}
-	
+
 	BSMD.flush();
 
 	// reset BAM writer
@@ -170,7 +170,7 @@ int bamstreamingmarkduplicates(libmaus2::util::ArgInfo const & arginfo)
 
 	// write metrics
 	BSMD.writeMetrics(arginfo);
-	
+
 	return EXIT_SUCCESS;
 }
 
@@ -180,9 +180,9 @@ int main(int argc, char *argv[])
 	{
 		libmaus2::util::ArgInfo const arginfo(argc,argv);
 
-		
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -191,7 +191,7 @@ int main(int argc, char *argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -201,9 +201,9 @@ int main(int argc, char *argv[])
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-			
+
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "tmpfile=<filename>", "prefix for temporary files, default: create files in current directory" ) );
@@ -222,34 +222,34 @@ int main(int argc, char *argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "outputthreads=<[1]>", "output helper threads (for outputformat=bam only, default: 1)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "O=<[stdout]>", "output filename (standard output if unset)" ) );
 
-				V.push_back ( 
-					std::pair<std::string,std::string> ( 
-						std::string("maxreadlen=<[")+::biobambam2::Licensing::formatNumber(libmaus2::bambam::BamStreamingMarkDuplicates::getDefaultMaxReadLen())+"]>", 
-						std::string("maximum read length (default ") + ::biobambam2::Licensing::formatNumber(libmaus2::bambam::BamStreamingMarkDuplicates::getDefaultMaxReadLen()) + ")" 
+				V.push_back (
+					std::pair<std::string,std::string> (
+						std::string("maxreadlen=<[")+::biobambam2::Licensing::formatNumber(libmaus2::bambam::BamStreamingMarkDuplicates::getDefaultMaxReadLen())+"]>",
+						std::string("maximum read length (default ") + ::biobambam2::Licensing::formatNumber(libmaus2::bambam::BamStreamingMarkDuplicates::getDefaultMaxReadLen()) + ")"
 					)
 				);
-				V.push_back ( 
-					std::pair<std::string,std::string> ( 
-						std::string("optminpixeldif=<[")+::biobambam2::Licensing::formatNumber(libmaus2::bambam::BamStreamingMarkDuplicates::getDefaultOptMinPixelDif())+"]>", 
-						std::string("maximum distance for optical duplicates (default ") + ::biobambam2::Licensing::formatNumber(libmaus2::bambam::BamStreamingMarkDuplicates::getDefaultOptMinPixelDif()) + ")" 
+				V.push_back (
+					std::pair<std::string,std::string> (
+						std::string("optminpixeldif=<[")+::biobambam2::Licensing::formatNumber(libmaus2::bambam::BamStreamingMarkDuplicates::getDefaultOptMinPixelDif())+"]>",
+						std::string("maximum distance for optical duplicates (default ") + ::biobambam2::Licensing::formatNumber(libmaus2::bambam::BamStreamingMarkDuplicates::getDefaultOptMinPixelDif()) + ")"
 					)
 				);
-				V.push_back ( 
-					std::pair<std::string,std::string> ( 
-						std::string("resetdupflag=<[")+::biobambam2::Licensing::formatNumber(getDefaultResetDupFlag())+"]>", 
-						std::string("reset dup flag before checking for duplicates (default ") + ::biobambam2::Licensing::formatNumber(getDefaultResetDupFlag()) + ")" 
+				V.push_back (
+					std::pair<std::string,std::string> (
+						std::string("resetdupflag=<[")+::biobambam2::Licensing::formatNumber(getDefaultResetDupFlag())+"]>",
+						std::string("reset dup flag before checking for duplicates (default ") + ::biobambam2::Licensing::formatNumber(getDefaultResetDupFlag()) + ")"
 					)
 				);
 
 				V.push_back ( std::pair<std::string,std::string> ( "tag=<[a-zA-Z][a-zA-Z0-9]>", "aux field id for tag string extraction" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "nucltag=<[a-zA-Z][a-zA-Z0-9]>", "aux field id for nucleotide tag extraction" ) );
-				V.push_back ( std::pair<std::string,std::string> ( 
-					std::string("filterdupmarktags=<[") + ::biobambam2::Licensing::formatNumber(getDefaultFilterDupMarkTags()) + std::string("]>"), 
+				V.push_back ( std::pair<std::string,std::string> (
+					std::string("filterdupmarktags=<[") + ::biobambam2::Licensing::formatNumber(getDefaultFilterDupMarkTags()) + std::string("]>"),
 					std::string("remove aux fields mc, MQ, ms, and mt from output (default: ") + ::biobambam2::Licensing::formatNumber(getDefaultFilterDupMarkTags()) + std::string(")") ) );
 
 				::biobambam2::Licensing::printMap(std::cerr,V);
-				V.push_back ( std::pair<std::string,std::string> ( 
-					std::string("filterolddupmarktags=<[") + ::biobambam2::Licensing::formatNumber(getDefaultFilterOldDupMarkTags()) + std::string("]>"), 
+				V.push_back ( std::pair<std::string,std::string> (
+					std::string("filterolddupmarktags=<[") + ::biobambam2::Licensing::formatNumber(getDefaultFilterOldDupMarkTags()) + std::string("]>"),
 					std::string("remove former aux fields MC, MQ, MS, and MT from output (filterdupmarktags must also be set) (default: ") + ::biobambam2::Licensing::formatNumber(getDefaultFilterOldDupMarkTags()) + std::string(")") ) );
 
 				std::cerr << std::endl;

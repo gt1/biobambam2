@@ -54,13 +54,13 @@ struct BamDownsampleRandomInputFileStream
 	std::string const fn;
 	libmaus2::aio::InputStreamInstance::unique_ptr_type CIS;
 	std::istream & in;
-	
+
 	static libmaus2::aio::InputStreamInstance::unique_ptr_type openFile(std::string const & fn)
 	{
 		libmaus2::aio::InputStreamInstance::unique_ptr_type ptr(new libmaus2::aio::InputStreamInstance(fn));
 		return UNIQUE_PTR_MOVE(ptr);
 	}
-	
+
 	BamDownsampleRandomInputFileStream(libmaus2::util::ArgInfo const & arginfo)
 	: fn(arginfo.getValue<std::string>("filename","-")),
 	  CIS(
@@ -86,7 +86,7 @@ std::string getModifiedHeaderText(decoder_type const & bamdec, libmaus2::util::A
 		"bamdownsamplerandom", // PN
 		arginfo.commandline, // CL
 		::libmaus2::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
-		std::string(PACKAGE_VERSION) // VN			
+		std::string(PACKAGE_VERSION) // VN
 	);
 
 	if ( reset )
@@ -118,11 +118,11 @@ void bamdownsamplerandom(
 	}
 	else
 	{
-		libmaus2::random::Random::setup();	
+		libmaus2::random::Random::setup();
 	}
-	
+
 	double const p = arginfo.getValue<double>("p",getDefaultProb());
-	
+
 	if ( p < 0.0 || p > 1.0 )
 	{
 		libmaus2::exception::LibMausException se;
@@ -130,9 +130,9 @@ void bamdownsamplerandom(
 		se.finish();
 		throw se;
 	}
-	
+
 	uint32_t const up =
-		( p == 1 ) ? 
+		( p == 1 ) ?
 		std::numeric_limits<uint32_t>::max() :
 		static_cast<uint32_t>(std::max(0.0,
 			std::min(
@@ -143,7 +143,7 @@ void bamdownsamplerandom(
 		;
 
 	libmaus2::bambam::CircularHashCollatingBamDecoder::OutputBufferEntry const * ob = 0;
-	
+
 	// number of alignments processed
 	uint64_t cnt = 0;
 	// number of bytes processed
@@ -206,15 +206,15 @@ void bamdownsamplerandom(
 	 */
 
 	// construct writer
-	libmaus2::bambam::BamBlockWriterBase::unique_ptr_type Pout ( 
-		libmaus2::bambam::BamBlockWriterBaseFactory::construct(uphead, arginfo, Pcbs) 
+	libmaus2::bambam::BamBlockWriterBase::unique_ptr_type Pout (
+		libmaus2::bambam::BamBlockWriterBaseFactory::construct(uphead, arginfo, Pcbs)
 	);
-	
+
 	while ( (ob = CHCBD.process()) )
 	{
 		uint64_t const precnt = cnt;
 		uint32_t const rv = ::libmaus2::random::Random::rand32();
-		
+
 		if ( ob->fpair )
 		{
 			if ( rv <= up )
@@ -260,22 +260,22 @@ void bamdownsamplerandom(
 			cnt += 1;
 			bcnt += (ob->blocksizea);
 		}
-		
+
 		if ( precnt >> verbshift != cnt >> verbshift )
 		{
-			std::cerr 
+			std::cerr
 				<< "[V] "
-				<< (cnt >> 20) 
+				<< (cnt >> 20)
 				<< "\t"
 				<< (static_cast<double>(bcnt)/(1024.0*1024.0))/rtc.getElapsedSeconds() << "MB/s"
-				<< "\t" << static_cast<double>(cnt)/rtc.getElapsedSeconds() 
+				<< "\t" << static_cast<double>(cnt)/rtc.getElapsedSeconds()
 				<< " kept " << ocnt << " (" << static_cast<double>(ocnt)/cnt << ")"
 				<< std::endl;
 		}
 	}
-	
+
 	std::cerr << "[V] " << cnt << std::endl;
-	
+
 	Pout.reset();
 
 	if ( Pmd5cb )
@@ -313,7 +313,7 @@ void bamdownsamplerandom(libmaus2::util::ArgInfo const & arginfo)
 		se.finish();
 		throw se;
 	}
-	
+
 	uint32_t const excludeflags = libmaus2::bambam::BamFlagBase::stringToFlags(arginfo.getValue<std::string>("exclude","SECONDARY,SUPPLEMENTARY"));
 	libmaus2::util::TempFileRemovalContainer::setup();
 	std::string const tmpfilename = arginfo.getValue<std::string>("T",arginfo.getDefaultTmpFileName());
@@ -389,7 +389,7 @@ void bamdownsamplerandom(libmaus2::util::ArgInfo const & arginfo)
 		se.finish();
 		throw se;
 	}
-	
+
 	std::cout.flush();
 }
 
@@ -398,11 +398,11 @@ int main(int argc, char * argv[])
 	try
 	{
 		libmaus2::timing::RealTimeClock rtc; rtc.start();
-		
+
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
-		
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -411,7 +411,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -420,9 +420,9 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license() << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-				
+
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("p=<[")+libmaus2::util::NumberSerialisation::formatNumber(getDefaultProb(),0)+"]>", "probability for keeping read" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("seed=<[]>"), "random seed" ) );
@@ -447,7 +447,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "outputthreads=<[1]>", "output helper threads (for outputformat=bam only, default: 1)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "O=<[stdout]>", "output filename (standard output if unset)" ) );
 
-				
+
 				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
@@ -456,11 +456,11 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;
 			}
-		
-			
+
+
 		bamdownsamplerandom(arginfo);
-		
-		std::cerr << "[V] " << libmaus2::util::MemUsage() << " wall clock time " << rtc.formatTime(rtc.getElapsedSeconds()) << std::endl;		
+
+		std::cerr << "[V] " << libmaus2::util::MemUsage() << " wall clock time " << rtc.formatTime(rtc.getElapsedSeconds()) << std::endl;
 	}
 	catch(std::exception const & ex)
 	{

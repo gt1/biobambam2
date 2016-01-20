@@ -36,21 +36,21 @@ static std::string writeHeader(libmaus2::util::ArgInfo const & arginfo, std::ost
 
 	std::ostringstream headerostr;
 	headerostr << "@HD\tVN:1.4\tSO:unknown\n";
-	headerostr 
-		<< "@PG"<< "\t" 
-		<< "ID:" << "fastqtobam" << "\t" 
+	headerostr
+		<< "@PG"<< "\t"
+		<< "ID:" << "fastqtobam" << "\t"
 		<< "PN:" << "fastqtobam" << "\t"
 		<< "CL:" << arginfo.commandline << "\t"
 		<< "VN:" << std::string(PACKAGE_VERSION)
 		<< std::endl;
 	headerostr << rginfo.toString();
 	::libmaus2::bambam::BamHeader bamheader;
-	bamheader.text = headerostr.str();		
+	bamheader.text = headerostr.str();
 
 	libmaus2::lz::BgzfOutputStream bgzf(out);
 	bamheader.serialise(bgzf);
 	bgzf.flush();
-	
+
 	return rginfo.ID;
 }
 
@@ -59,7 +59,7 @@ static int fastqtobampar(libmaus2::util::ArgInfo const & arginfo)
 	std::ostream & out = std::cout;
 	uint64_t const numlogcpus = arginfo.getValue<int>("threads", 1 /* libmaus2::parallel::NumCpus::getNumLogicalProcessors() */);
 	int const level = arginfo.getValue<int>("level",Z_DEFAULT_COMPRESSION);
-		
+
 	std::string const rgid = writeHeader(arginfo,out);
 
 	libmaus2::parallel::SimpleThreadPool STP(numlogcpus);
@@ -71,8 +71,8 @@ static int fastqtobampar(libmaus2::util::ArgInfo const & arginfo)
 
 	FTBC.enqueReadPackage();
 	FTBC.waitCompressionFinished();
-		
-	STP.terminate();		
+
+	STP.terminate();
 	STP.join();
 
 	return EXIT_SUCCESS;
@@ -82,11 +82,11 @@ int main(int argc, char * argv[])
 {
 	try
 	{
-		libmaus2::timing::RealTimeClock rtc; rtc.start();	
+		libmaus2::timing::RealTimeClock rtc; rtc.start();
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
-		
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -95,7 +95,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -104,7 +104,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license() << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
 
 				V.push_back ( std::pair<std::string,std::string> ( "level=<[-1]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
@@ -128,7 +128,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "RGPL=<>", "PL field of RG header line if RGID is set (default: not present)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "RGPU=<>", "PU field of RG header line if RGID is set (default: not present)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "RGSM=<>", "SM field of RG header line if RGID is set (default: not present)" ) );
-				
+
 				#if 0
 				V.push_back ( std::pair<std::string,std::string> ( "qualityoffset=<["+::biobambam2::Licensing::formatNumber(getDefaultQualityOffset())+"]>", "quality offset (default: 33)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "qualitymax=<["+::biobambam2::Licensing::formatNumber(getDefaultQualityMaximum())+"]>", "maximum valid quality value (default: 41)" ) );
@@ -136,20 +136,20 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( std::string("namescheme=<[")+(getDefaultNameScheme())+"]>", "read name scheme (generic, c18s, c18pe, pairedfiles)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "qualityhist=<["+::biobambam2::Licensing::formatNumber(getDefaultQualityHist())+"]>", "compute quality histogram and print it on standard error" ) );
 				#endif
-				
+
 				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
-				
+
 				std::cerr << "The I key can be given twice for a pair of synced FastQ files." << std::endl;
 				std::cerr << "Any none key=value arguments will be considered as input file names." << std::endl;
 
 				return EXIT_SUCCESS;
 			}
-		
-			
+
+
 		fastqtobampar(arginfo);
-		
+
 		std::cerr << "[V] " << libmaus2::util::MemUsage() << " wall clock time " << rtc.formatTime(rtc.getElapsedSeconds()) << std::endl;
 	}
 	catch(std::exception const & ex)

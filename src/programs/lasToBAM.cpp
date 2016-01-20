@@ -75,7 +75,7 @@ struct RgInfo
 	std::string PM;
 	std::string PU;
 	std::string SM;
-	
+
 	RgInfo() {}
 	RgInfo(libmaus2::util::ArgInfo const & arginfo)
 	:
@@ -93,17 +93,17 @@ struct RgInfo
 		PU(arginfo.getUnparsedValue("RGPU","")),
 		SM(arginfo.getUnparsedValue("RGSM",""))
 	{
-		
+
 	}
-	
+
 	std::string toString() const
 	{
 		std::ostringstream ostr;
-		
+
 		if ( ID.size() )
 		{
 			ostr << "@RG\tID:" << ID;
-			
+
 			if ( CN.size() ) ostr << "\tCN:" << CN;
 			if ( DS.size() ) ostr << "\tDS:" << DS;
 			if ( DT.size() ) ostr << "\tDT:" << DT;
@@ -116,10 +116,10 @@ struct RgInfo
 			if ( PM.size() ) ostr << "\tPM:" << PM;
 			if ( PU.size() ) ostr << "\tPU:" << PU;
 			if ( SM.size() ) ostr << "\tSM:" << SM;
-			
+
 			ostr << "\n";
 		}
-		
+
 		return ostr.str();
 	}
 };
@@ -142,7 +142,7 @@ struct LASToBAMConverter
 	std::vector<libmaus2::dazzler::db::Read> const & readsMeta1;
 	std::vector<libmaus2::dazzler::db::Read> const & readsMeta2;
 
-	libmaus2::lcs::EditDistanceTraceContainer ATC;		
+	libmaus2::lcs::EditDistanceTraceContainer ATC;
 	libmaus2::lcs::Aligner::unique_ptr_type Pal;
 	libmaus2::lcs::Aligner & ND;
 	::libmaus2::fastx::UCharBuffer ubuffer;
@@ -152,9 +152,9 @@ struct LASToBAMConverter
 	::libmaus2::bambam::BamSeqEncodeTable const seqenc;
 
 	char const * aptr;
-	
+
 	libmaus2::aio::InputStream::unique_ptr_type PbaseStreamB;
-	
+
 	bool const loadallb;
 	libmaus2::autoarray::AutoArray<char> const * const readsB;
 	std::vector<uint64_t> const * const readsOffB;
@@ -165,7 +165,7 @@ struct LASToBAMConverter
 	char const * bbaseptr;
 	char const * bptr;
 	bool Binvspacevalid;
-	
+
 	uint64_t const tspace;
 
 	bool const calmdnm;
@@ -173,19 +173,19 @@ struct LASToBAMConverter
 	libmaus2::autoarray::AutoArray<std::pair<libmaus2::lcs::AlignmentTraceContainer::step_type,uint64_t> > Aopblocks;
 	libmaus2::autoarray::AutoArray<libmaus2::bambam::cigar_operation> Acigop;
 	libmaus2::autoarray::AutoArray<uint8_t> ASQ;
-	
+
 	enum supplementary_seq_strategy_t {
 		supplementary_seq_strategy_soft,
 		supplementary_seq_strategy_hard,
 		supplementary_seq_strategy_none
 	};
-	
+
 	supplementary_seq_strategy_t const supplementary_seq_strategy;
-	
+
 	static libmaus2::lcs::Aligner::unique_ptr_type constructAligner()
 	{
 		std::set<libmaus2::lcs::AlignerFactory::aligner_type> const S = libmaus2::lcs::AlignerFactory::getSupportedAligners();
-		
+
 		if ( S.find(libmaus2::lcs::AlignerFactory::libmaus2_lcs_AlignerFactory_y256_8) != S.end() )
 		{
 			libmaus2::lcs::Aligner::unique_ptr_type T(libmaus2::lcs::AlignerFactory::construct(libmaus2::lcs::AlignerFactory::libmaus2_lcs_AlignerFactory_y256_8));
@@ -206,7 +206,7 @@ struct LASToBAMConverter
 			libmaus2::exception::LibMausException lme;
 			lme.getStream() << "LASToBAMConverter::constructAligner: no aligners found" << std::endl;
 			lme.finish();
-			throw lme;		
+			throw lme;
 		}
 	}
 
@@ -222,7 +222,7 @@ struct LASToBAMConverter
 		bool const rcalmdnm,
 		supplementary_seq_strategy_t const rsupplementaryStrategy
 	)
-	: 
+	:
 	  DB2(rDB2),
 	  readsMeta1(rreadsMeta1), readsMeta2(rreadsMeta2),
 	  ATC(),
@@ -243,14 +243,14 @@ struct LASToBAMConverter
 	  calmdnm(rcalmdnm),
 	  supplementary_seq_strategy(rsupplementaryStrategy)
 	{
-	
+
 	}
-	
+
 	void setaptr(char const * aptr)
 	{
 		this->aptr = aptr;
 	}
-	
+
 	std::pair<uint64_t,uint64_t> operator()(
 		libmaus2::dazzler::align::Overlap const & OVL,
 		::libmaus2::fastx::UCharBuffer & tbuffer,
@@ -264,11 +264,11 @@ struct LASToBAMConverter
 			p += OVL.path.path[i].second;
 		assert ( p == OVL.path.bepos );
 		#endif
-		
+
 		if ( OVL.bread != bid )
 		{
 			libmaus2::dazzler::db::Read const & R = readsMeta2.at(OVL.bread);
-			
+
 			if ( loadallb )
 			{
 				#if 0
@@ -285,23 +285,23 @@ struct LASToBAMConverter
 				libmaus2::dazzler::db::DatabaseFile::decodeRead(*PbaseStreamB,Bspace,R.rlen);
 				bbaseptr = Bspace.begin();
 			}
-			
+
 			bid = OVL.bread;
-			Binvspacevalid = false;						
+			Binvspacevalid = false;
 		}
-		
+
 		if ( OVL.isInverse() )
 		{
 			if ( ! Binvspacevalid )
 			{
 				libmaus2::dazzler::db::Read const & R = readsMeta2.at(OVL.bread);
-			
+
 				if ( R.rlen > static_cast<int64_t>(Binvspace.size()) )
 					Binvspace.resize(R.rlen);
-			
+
 				char const * pin =  bbaseptr;
 				char * pout = Binvspace.begin() + R.rlen;
-			
+
 				for ( int64_t i = 0; i < R.rlen; ++i )
 					*(--pout) = libmaus2::fastx::invertUnmapped(*(pin++));
 
@@ -314,7 +314,7 @@ struct LASToBAMConverter
 		{
 			bptr = bbaseptr;
 		}
-		
+
 		#if 0
 		int32_t const bstartforw = OVL.isInverse() ? (readsMeta2->at(OVL.bread).rlen - OVL.path.bepos) : OVL.path.bbpos;
 		#endif
@@ -326,10 +326,10 @@ struct LASToBAMConverter
 		int32_t a_i = ( OVL.path.abpos / tspace ) * tspace;
 		// current point on B
 		int32_t b_i = ( OVL.path.bbpos );
-		
+
 		// reset trace container
 		ATC.reset();
-		
+
 		for ( size_t i = 0; i < OVL.path.path.size(); ++i )
 		{
 			// block end point on A
@@ -340,7 +340,7 @@ struct LASToBAMConverter
 			// block on A
 			char const * asubsub_b = aptr + std::max(a_i,OVL.path.abpos);
 			char const * asubsub_e = asubsub_b + a_i_1-std::max(a_i,OVL.path.abpos);
-			
+
 			// block on B
 			char const * bsubsub_b = bptr + b_i;
 			char const * bsubsub_e = bsubsub_b + (b_i_1-b_i);
@@ -354,27 +354,27 @@ struct LASToBAMConverter
 			#if 0
 			ND.printAlignmentLines(std::cout,asubsub_b,asubsub_e-asubsub_b,bsubsub_b,bsubsub_e-bsubsub_b,cols);
 			#endif
-			
+
 			#if 0
 			std::cerr << ED_EDR << "\t" << OVL.path.path[i].first << std::endl;
 			ED.printAlignmentLines(std::cout,asubsub,bsubsub,cols);
 			#endif
-			
+
 			// add trace to full alignment
 			ATC.push(ND.getTraceContainer());
-			
+
 			// update start points
 			b_i = b_i_1;
 			a_i = a_i_1;
 		}
-		
+
 		size_t const nopblocks = ATC.getOpBlocks(Aopblocks);
 		size_t const cigopblocks = nopblocks + (bclipleft?1:0) + (bclipright?1:0);
-		
+
 		if ( cigopblocks > Acigop.size() )
 			Acigop.resize(cigopblocks);
 		uint64_t cigp = 0;
-		
+
 		int64_t as = 0;
 		if ( bclipleft )
 		{
@@ -434,20 +434,20 @@ struct LASToBAMConverter
 				}
 			}
 		}
-		
+
 		uint64_t const offa = tbuffer.end()-tbuffer.begin();
 
 		std::string const readname = DB2.getReadName(OVL.bread,readsMeta2);
 		uint64_t const readlen = readsMeta2.at(OVL.bread).rlen;
-		
+
 		if ( readlen > ASQ.size() )
 		{
 			ASQ.resize(readlen);
 			std::fill(ASQ.begin(),ASQ.end(),255);
 		}
-		
+
 		uint64_t storeseqlen;
-		
+
 		if ( primary )
 		{
 			storeseqlen = readlen;
@@ -494,7 +494,7 @@ struct LASToBAMConverter
 		);
 
 		if ( calmdnm )
-		{		
+		{
 			if ( primary || (supplementary_seq_strategy != supplementary_seq_strategy_none) )
 			{
 				libmaus2::bambam::BamAlignmentDecoderBase::calculateMd(
@@ -521,13 +521,13 @@ struct LASToBAMConverter
 		}
 
 		uint64_t const offe = tbuffer.end()-tbuffer.begin();
-		
+
 		#if defined(LASTOBAM_ALIGNMENT_PRINT_DEBUG)
 		// print alignment if requested
 		if ( printAlignments )
 		{
 			libmaus2::lcs::AlignmentStatistics const AS = ATC.getAlignmentStatistics();
-			
+
 			if ( AS.getErrorRate() <= eratelimit )
 			{
 				std::cout << OVL << std::endl;
@@ -536,7 +536,7 @@ struct LASToBAMConverter
 			}
 		}
 		#endif
-		
+
 		return std::pair<uint64_t,uint64_t>(offa,offe);
 	}
 };
@@ -545,18 +545,18 @@ struct OverlapLoader : public libmaus2::parallel::PosixThread
 {
 	libmaus2::dazzler::align::AlignmentFile & algn;
 	libmaus2::aio::InputStream & algnfile;
-	
+
 	typedef libmaus2::dazzler::align::Overlap o_type;
 	typedef std::vector<o_type> v_type;
 	typedef libmaus2::util::shared_ptr<v_type>::type p_type;
-	
+
 	libmaus2::parallel::SynchronousQueue             < p_type > freelist;
 	libmaus2::parallel::TerminatableSynchronousQueue < p_type > filledlist;
-	
+
 	std::stack < libmaus2::dazzler::align::Overlap > stallstack;
-	
+
 	uint64_t const thres;
-	
+
 	OverlapLoader(
 		libmaus2::dazzler::align::AlignmentFile & ralgn, libmaus2::aio::InputStream & ralgnfile, uint64_t const rthres = 32*1024
 	)
@@ -568,7 +568,7 @@ struct OverlapLoader : public libmaus2::parallel::PosixThread
 			freelist.enque(p);
 		}
 	}
-	
+
 	virtual void * run()
 	{
 		libmaus2::dazzler::align::Overlap OVL;
@@ -579,11 +579,11 @@ struct OverlapLoader : public libmaus2::parallel::PosixThread
 			p_type V = freelist.deque();
 			V->clear();
 			libmaus2::dazzler::align::Overlap OVL;
-			
-			while ( 
+
+			while (
 				algn.peekNextOverlap(algnfile,OVL) &&
 				(
-					(!V->size()) 
+					(!V->size())
 					||
 					(
 						(V->size() < thres) &&
@@ -596,17 +596,17 @@ struct OverlapLoader : public libmaus2::parallel::PosixThread
 				assert ( ok );
 				V->push_back(OVL);
 			}
-			
-			while ( 
+
+			while (
 				V->size() && algn.peekNextOverlap(algnfile,OVL) && (OVL.aread == V->front().aread) &&
-				(OVL.bread == V->back().bread)	
+				(OVL.bread == V->back().bread)
 			)
-			{			
+			{
 				bool const ok = algn.getNextOverlap(algnfile,OVL);
 				assert ( ok );
 				V->push_back(OVL);
 			}
-			
+
 			if ( V->size() )
 			{
 				filledlist.enque(V);
@@ -618,7 +618,7 @@ struct OverlapLoader : public libmaus2::parallel::PosixThread
 				running = false;
 			}
 		}
-	
+
 		return NULL;
 	}
 };
@@ -639,17 +639,17 @@ int lasToBAM(libmaus2::util::ArgInfo const & arginfo)
 	#if 0
 	double const eratelimit = arginfo.getValue<double>("eratelimit",1.0);
 	#endif
-	
+
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
 	int const calmdnm = arginfo.getValue<int>("calmdnm",getDefaultCalMdNm());
 
 	uint64_t const numprocs = libmaus2::parallel::NumCpus::getNumLogicalProcessors();
 	uint64_t const numthreads = std::max ( static_cast<uint64_t>(1), arginfo.getValueUnsignedNumeric<uint64_t>("threads",numprocs));
-	
+
 	std::string const supstorestrat_s = arginfo.getUnparsedValue("supstrat",getDefaultSupStoreStrat());
-	
+
 	LASToBAMConverter::supplementary_seq_strategy_t supstorestrat;
-	
+
 	if ( supstorestrat_s == "soft" )
 		supstorestrat = LASToBAMConverter::supplementary_seq_strategy_soft;
 	else if ( supstorestrat_s == "hard" )
@@ -661,9 +661,9 @@ int lasToBAM(libmaus2::util::ArgInfo const & arginfo)
 		libmaus2::exception::LibMausException lme;
 		lme.getStream() << "unknown strategy for storing supplementary alignments: " << supstorestrat_s << " (available options are soft, hard and none)" << std::endl;
 		lme.finish();
-		throw lme;	
+		throw lme;
 	}
-		
+
 	std::string const referencekey = "reference";
 	if ( ! arginfo.hasArg(referencekey) )
 	{
@@ -672,12 +672,12 @@ int lasToBAM(libmaus2::util::ArgInfo const & arginfo)
 		lme.finish();
 		throw lme;
 	}
-	
+
 	std::string const reference = arginfo.getUnparsedValue(referencekey,"");
 
 	libmaus2::fastx::FastAIndex::unique_ptr_type Prefindex(libmaus2::fastx::FastAIndex::load(reference+".fai"));
 	libmaus2::fastx::FastAIndex const & refindex = *Prefindex;
-	
+
 	std::string const curdir = libmaus2::util::ArgInfo::getCurDir();
 	std::string const absreference =  (reference.size() && reference[0] == '/') ? reference : (curdir+'/'+reference);
 	std::ostringstream sqstream;
@@ -687,7 +687,7 @@ int lasToBAM(libmaus2::util::ArgInfo const & arginfo)
 		libmaus2::fastx::FastAIndexEntry const & entry = refindex[i];
 		sqstream << "@SQ\t" << "SN:" << entry.name << "\tLN:" << entry.length << "\tUR:file://" << absreference << std::endl;
 	}
-	
+
 	libmaus2::dazzler::db::DatabaseFile::unique_ptr_type PDB1;
 	libmaus2::dazzler::db::DatabaseFile::unique_ptr_type PDB2;
 	libmaus2::dazzler::db::DatabaseFile * DB1 = 0;
@@ -699,36 +699,36 @@ int lasToBAM(libmaus2::util::ArgInfo const & arginfo)
 	std::vector<libmaus2::dazzler::db::Read> const * readsMeta2 = 0;
 
 	libmaus2::autoarray::AutoArray<char> AreadsA;
-	std::vector<uint64_t> AreadsOffA;	
+	std::vector<uint64_t> AreadsOffA;
 	libmaus2::autoarray::AutoArray<char> AreadsB;
-	std::vector<uint64_t> AreadsOffB;	
+	std::vector<uint64_t> AreadsOffB;
 
 	libmaus2::autoarray::AutoArray<char> const * readsA = 0;
-	std::vector<uint64_t> const * readsOffA = 0;	
+	std::vector<uint64_t> const * readsOffA = 0;
 	libmaus2::autoarray::AutoArray<char> const * readsB = 0;
-	std::vector<uint64_t> const * readsOffB = 0;	
-	
+	std::vector<uint64_t> const * readsOffB = 0;
+
 	if ( arginfo.restargs.size() == 2 )
 	{
 		std::string const dbfn = arginfo.restargs.at(0);
 		aligns = arginfo.restargs.at(1);
-	
+
 		libmaus2::dazzler::db::DatabaseFile::unique_ptr_type PDB(new libmaus2::dazzler::db::DatabaseFile(dbfn));
 		PDB->computeTrimVector();
-		PDB1 = UNIQUE_PTR_MOVE(PDB);	
+		PDB1 = UNIQUE_PTR_MOVE(PDB);
 		DB1 = PDB1.get();
 		DB2 = PDB1.get();
-		
+
 		DB1->getAllReads(VreadsMeta1);
 		readsMeta1 = &VreadsMeta1;
 		readsMeta2 = &VreadsMeta1;
-		
+
 		if ( loadalla || loadallb )
 		{
 			DB1->decodeAllReads(AreadsA,AreadsOffA);
 			loadalla = true;
 			loadallb = true;
-			
+
 			readsA = &AreadsA;
 			readsOffA = &AreadsOffA;
 			readsB = &AreadsA;
@@ -740,7 +740,7 @@ int lasToBAM(libmaus2::util::ArgInfo const & arginfo)
 		std::string const db1fn = arginfo.restargs.at(0);
 		std::string const db2fn = arginfo.restargs.at(1);
 		aligns = arginfo.restargs.at(2);
-	
+
 		libmaus2::dazzler::db::DatabaseFile::unique_ptr_type TPDB1(new libmaus2::dazzler::db::DatabaseFile(db1fn));
 		TPDB1->computeTrimVector();
 		PDB1 = UNIQUE_PTR_MOVE(TPDB1);
@@ -748,10 +748,10 @@ int lasToBAM(libmaus2::util::ArgInfo const & arginfo)
 		libmaus2::dazzler::db::DatabaseFile::unique_ptr_type TPDB2(new libmaus2::dazzler::db::DatabaseFile(db2fn));
 		TPDB2->computeTrimVector();
 		PDB2 = UNIQUE_PTR_MOVE(TPDB2);
-			
+
 		DB1 = PDB1.get();
 		DB2 = PDB2.get();
-		
+
 		DB1->getAllReads(VreadsMeta1);
 		readsMeta1 = &VreadsMeta1;
 
@@ -776,20 +776,20 @@ int lasToBAM(libmaus2::util::ArgInfo const & arginfo)
 		std::cerr << getUsage(arginfo) << std::endl;
 		return EXIT_FAILURE;
 	}
-				
+
 	libmaus2::aio::InputStream::unique_ptr_type Palgnfile(libmaus2::aio::InputStreamFactoryContainer::constructUnique(aligns));
 	libmaus2::dazzler::align::AlignmentFile algn(*Palgnfile);
 
-	libmaus2::lcs::EditDistanceTraceContainer ATC;		
+	libmaus2::lcs::EditDistanceTraceContainer ATC;
 	// libmaus2::lcs::NDextendDNA ND;
 	libmaus2::lcs::ND ND;
 	//libmaus2::dazzler::align::Overlap OVL;
-	
+
 	// number of alignments processed
 	libmaus2::autoarray::AutoArray<char> Aspace;
 	int64_t aid = -1;
 	char const * aptr = NULL;
-	
+
 	#if 0
 	libmaus2::autoarray::AutoArray<char> Bspace;
 	libmaus2::autoarray::AutoArray<char> Binvspace;
@@ -807,9 +807,9 @@ int lasToBAM(libmaus2::util::ArgInfo const & arginfo)
 
 	std::ostringstream headerostr;
 	headerostr << "@HD\tVN:1.4\tSO:unknown\n";
-	headerostr 
-		<< "@PG"<< "\t" 
-		<< "ID:" << "lasToBAM" << "\t" 
+	headerostr
+		<< "@PG"<< "\t"
+		<< "ID:" << "lasToBAM" << "\t"
 		<< "PN:" << "lasToBAM" << "\t"
 		<< "CL:" << arginfo.commandline << "\t"
 		<< "VN:" << std::string(PACKAGE_VERSION)
@@ -817,7 +817,7 @@ int lasToBAM(libmaus2::util::ArgInfo const & arginfo)
 	headerostr << rginfo.toString();
 	headerostr << sqstream.str();
 	::libmaus2::bambam::BamHeader bamheader(headerostr.str());
-	
+
 	/*
 	 * start md5 callbacks
 	 */
@@ -847,8 +847,8 @@ int lasToBAM(libmaus2::util::ArgInfo const & arginfo)
 	 */
 
 	// construct writer
-	libmaus2::bambam::BamBlockWriterBase::unique_ptr_type Pout ( 
-		libmaus2::bambam::BamBlockWriterBaseFactory::construct(bamheader, arginfo, Pcbs) 
+	libmaus2::bambam::BamBlockWriterBase::unique_ptr_type Pout (
+		libmaus2::bambam::BamBlockWriterBaseFactory::construct(bamheader, arginfo, Pcbs)
 	);
 
 	libmaus2::bambam::BamBlockWriterBase & bamwr = *Pout;
@@ -859,9 +859,9 @@ int lasToBAM(libmaus2::util::ArgInfo const & arginfo)
 	::libmaus2::timing::RealTimeClock rtc; rtc.start();
 
 	libmaus2::autoarray::AutoArray < LASToBAMConverter::unique_ptr_type > Aconverters(numthreads);
-	
+
 	for ( uint64_t i = 0; i < Aconverters.size(); ++i )
-	{	
+	{
 		libmaus2::aio::InputStream::unique_ptr_type TPbaseStreamB(DB2->openBaseStream());
 		LASToBAMConverter::unique_ptr_type conv(new LASToBAMConverter(
 			*DB2,
@@ -878,18 +878,18 @@ int lasToBAM(libmaus2::util::ArgInfo const & arginfo)
 		Aconverters[i] = UNIQUE_PTR_MOVE(conv);
 	}
 
-	
+
 	uint64_t processed = 0;
-	
+
 	OverlapLoader OL(algn,*Palgnfile,32*1024);
 	OL.start();
 	bool reading = true;
 	libmaus2::bitio::BitVector BV(readsMeta2->size());
-	
+
 	while ( reading )
 	{
 		libmaus2::util::shared_ptr < std::vector<libmaus2::dazzler::align::Overlap> >::type PVOVL;
-		
+
 		try
 		{
 			PVOVL = OL.filledlist.deque();
@@ -898,7 +898,7 @@ int lasToBAM(libmaus2::util::ArgInfo const & arginfo)
 			if ( VOVL.size() && VOVL.front().aread != aid )
 			{
 				libmaus2::dazzler::db::Read const & R = readsMeta1->at(VOVL.front().aread);
-				
+
 				if ( loadalla )
 				{
 					#if 0
@@ -906,7 +906,7 @@ int lasToBAM(libmaus2::util::ArgInfo const & arginfo)
 						Aspace.resize(R.rlen);
 					std::copy(readsA.begin()+readsOffA[VOFL.front().aread],readsA.begin()+readsOffA[VOFL.front().aread+1],Aspace.begin());
 					#endif
-					
+
 					aptr = readsA->begin()+(*readsOffA)[VOVL.front().aread];
 				}
 				else
@@ -916,7 +916,7 @@ int lasToBAM(libmaus2::util::ArgInfo const & arginfo)
 					libmaus2::dazzler::db::DatabaseFile::decodeRead(*PbaseStreamA,Aspace,R.rlen);
 					aptr = Aspace.begin();
 				}
-				
+
 				aid = VOVL.front().aread;
 			}
 
@@ -926,9 +926,9 @@ int lasToBAM(libmaus2::util::ArgInfo const & arginfo)
 				Aconverters[i]->setaptr(aptr);
 				Aconverters[i]->wbuffer.reset();
 			}
-				
+
 			std::vector < std::pair < uint64_t, std::pair<uint64_t,uint64_t> > > off(VOVL.size());
-				
+
 			#if defined(_OPENMP)
 			#pragma omp parallel for schedule(dynamic,1) num_threads(numthreads)
 			#endif
@@ -941,16 +941,16 @@ int lasToBAM(libmaus2::util::ArgInfo const & arginfo)
 				#endif
 
 				LASToBAMConverter & converter = *(Aconverters[tid]);
-				bool const primary = 
+				bool const primary =
 					(!BV.get(VOVL[i].bread))
 					&&
 					(
-						(i == 0) 
+						(i == 0)
 						||
 						(VOVL[i].bread != VOVL[i-1].bread)
 					)
 				;
-				std::pair<uint64_t,uint64_t> const loff = converter(VOVL[i],converter.ubuffer,primary);	
+				std::pair<uint64_t,uint64_t> const loff = converter(VOVL[i],converter.ubuffer,primary);
 				off[i] = std::pair < uint64_t, std::pair<uint64_t,uint64_t> >(tid,loff);
 				if ( primary )
 					BV.setSync(VOVL[i].bread);
@@ -959,13 +959,13 @@ int lasToBAM(libmaus2::util::ArgInfo const & arginfo)
 			#if 0
 			uint64_t const onumthreads = libmaus2::parallel::OMPNumThreadsScope::getMaxThreads();
 			uint64_t const operthread = (off.size() + onumthreads - 1) / onumthreads;
-			
+
 			for ( uint64_t t = 0; t < onumthreads; ++t )
 			{
 				uint64_t const low = std::min(t * operthread, static_cast<uint64_t>(off.size()));
 				uint64_t const high = std::min(low + operthread, static_cast<uint64_t>(off.size()));
 				::libmaus2::fastx::UCharBuffer const & wbuffer = *(Aconverters[t]).wbuffer;
-				
+
 				for ( uint64_t i = low; i < high; ++i )
 				{
 					uint64_t const tid = off[i].first;
@@ -986,7 +986,7 @@ int lasToBAM(libmaus2::util::ArgInfo const & arginfo)
 				::libmaus2::fastx::UCharBuffer const & ubuffer = converter.ubuffer;
 				bamwr.writeBamBlock(ubuffer.begin() + loff.first,loff.second-loff.first);
 			}
-			
+
 			processed += VOVL.size();
 
 			if ( verbose )
@@ -1000,8 +1000,8 @@ int lasToBAM(libmaus2::util::ArgInfo const & arginfo)
 			std::cerr << ex.what() << std::endl;
 			reading = false;
 		}
-	}                                
-		
+	}
+
 	Pout.reset();
 
 	if ( Pmd5cb )
@@ -1019,7 +1019,7 @@ int main(int argc, char * argv[])
 		libmaus2::util::ArgInfo const arginfo(argc,argv);
 
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -1028,7 +1028,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -1041,9 +1041,9 @@ int main(int argc, char * argv[])
 
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-			
+
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam2::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
@@ -1060,7 +1060,7 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;
 			}
-			
+
 		return lasToBAM(arginfo);
 	}
 	catch(std::exception const & ex)

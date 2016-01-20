@@ -33,7 +33,7 @@ int bamexplode(libmaus2::util::ArgInfo const & arginfo)
 	libmaus2::bambam::BamAlignmentDecoderWrapper::unique_ptr_type Preader(libmaus2::bambam::BamMultiAlignmentDecoderFactory::construct(arginfo));
 
 	libmaus2::bambam::BamBlockWriterBase::unique_ptr_type Pwriter;
-	
+
 	libmaus2::bambam::BamAlignmentDecoder & decoder = Preader->getDecoder();
 	libmaus2::bambam::BamHeader const & header = decoder.getHeader();
 	libmaus2::bambam::BamAlignment const & algn = decoder.getAlignment();
@@ -43,7 +43,7 @@ int bamexplode(libmaus2::util::ArgInfo const & arginfo)
 	std::string const outputformat = arginfo.getUnparsedValue("outputformat",libmaus2::bambam::BamBlockWriterBaseFactory::getDefaultOutputFormat());
 	std::string const prefix = arginfo.getUnparsedValue("prefix",getDefaultPrefix());
 	uint64_t const thres = arginfo.getValueUnsignedNumeric("sizethres",getDefaultSizeThres());
-	
+
 	while ( decoder.readAlignment() )
 	{
 		int32_t const refid = algn.getRefID();
@@ -59,13 +59,13 @@ int bamexplode(libmaus2::util::ArgInfo const & arginfo)
 			Pwriter = UNIQUE_PTR_MOVE(Twriter);
 			written = 0;
 		}
-		
+
 		Pwriter->writeAlignment(algn);
-		
+
 		prevrefid = refid;
 		written ++;
 	}
-	
+
 	Pwriter.reset();
 
 	return EXIT_SUCCESS;
@@ -78,7 +78,7 @@ int main(int argc, char * argv[])
 		libmaus2::util::ArgInfo const arginfo(argc,argv);
 
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -87,7 +87,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -97,9 +97,9 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-			
+
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("inputformat=<[")+getDefaultInputFormat()+"]>", std::string("input format (") + libmaus2::bambam::BamMultiAlignmentDecoderFactory::getValidInputFormats() + ")" ) );
@@ -118,7 +118,7 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;
 			}
-			
+
 		return bamexplode(arginfo);
 	}
 	catch(std::exception const & ex)

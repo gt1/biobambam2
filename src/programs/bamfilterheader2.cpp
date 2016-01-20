@@ -46,7 +46,7 @@ static ::libmaus2::bitio::IndexedBitVector::unique_ptr_type getUsedSeqVector(lib
 	::libmaus2::bitio::IndexedBitVector::unique_ptr_type Psqused(new ::libmaus2::bitio::IndexedBitVector(PBHLM->getNumRef()));
 	::libmaus2::bitio::IndexedBitVector & sqused = *Psqused;
 	uint64_t c = 0;
-	while ( 
+	while (
 		libmaus2::bambam::BamAlignmentDecoder::readAlignmentGz(bgzfin,algn)
 	)
 	{
@@ -62,13 +62,13 @@ static ::libmaus2::bitio::IndexedBitVector::unique_ptr_type getUsedSeqVector(lib
 			assert ( refid >= 0 );
 			sqused.set(refid,true);
 		}
-		
+
 		if ( verbose && (((++c) & (1024*1024-1)) == 0) )
 			std::cerr << "[V] " << c/(1024*1024) << std::endl;
 	}
-	
+
 	sqused.setupIndex();
-	
+
 	return UNIQUE_PTR_MOVE(Psqused);
 }
 
@@ -108,7 +108,7 @@ static void filterBamUsedSequences(
 		)
 	);
 	libmaus2::lz::BgzfDeflate<std::ostream> & bgzfout = *Pbgzfout;
-	
+
 	if ( verbose )
 		std::cerr << "[V] writing filtered header...";
 	PBHLM->serialiseSequenceSubset(bgzfout,IBV,"bamfilterheader2" /* id */,"bamfilterheader2" /* pn */,
@@ -132,7 +132,7 @@ static void filterBamUsedSequences(
 		{
 			algn.putRefId(-1);
 		}
-		
+
 		if ( algn.isPaired() && algn.isMapped() )
 		{
 			int64_t const refid = algn.getNextRefID();
@@ -144,16 +144,16 @@ static void filterBamUsedSequences(
 		{
 			algn.putNextRefId(-1);
 		}
-		
+
 		algn.serialise(bgzfout);
-		
+
 		if ( verbose && ( ((++c) & (1024*1024-1)) == 0 ) )
 			std::cerr << "[V] " << c/(1024*1024) << std::endl;
 	}
-	
+
 	bgzfout.flush();
-	bgzfout.addEOFBlock();	
-		
+	bgzfout.addEOFBlock();
+
 	Pbgzfout.reset();
 
 	if ( Pmd5cb )
@@ -163,7 +163,7 @@ static void filterBamUsedSequences(
 int bamfilterheader2(libmaus2::util::ArgInfo const & arginfo)
 {
 	std::string const fn = arginfo.getUnparsedRestArg(0);
-	
+
 	::libmaus2::bitio::IndexedBitVector::unique_ptr_type PIBV;
 
 	// compute vector of used sequences
@@ -172,13 +172,13 @@ int bamfilterheader2(libmaus2::util::ArgInfo const & arginfo)
 		::libmaus2::bitio::IndexedBitVector::unique_ptr_type TIBV(getUsedSeqVector(arginfo,in));
 		PIBV = UNIQUE_PTR_MOVE(TIBV);
 	}
-	
+
 	// filter file and remove all unused sequences from header
 	{
 		libmaus2::aio::PosixFdInputStream in(fn);
 		filterBamUsedSequences(arginfo,in,*PIBV,std::cout);
 	}
-	
+
 	return EXIT_SUCCESS;
 }
 
@@ -187,9 +187,9 @@ int main(int argc, char * argv[])
 	try
 	{
 		libmaus2::util::ArgInfo const arginfo(argc,argv);
-		
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -198,7 +198,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -208,9 +208,9 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-			
+
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "I=<[input filename]>", "name of the input file (mandatory)" ) );
@@ -223,7 +223,7 @@ int main(int argc, char * argv[])
 				return EXIT_SUCCESS;
 			}
 
-		return bamfilterheader2(arginfo);		
+		return bamfilterheader2(arginfo);
 	}
 	catch(std::exception const & ex)
 	{

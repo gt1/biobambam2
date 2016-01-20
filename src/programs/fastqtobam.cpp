@@ -57,20 +57,20 @@ int getDefaultMD5()
 	return 0;
 }
 
-static int getDefaultLevel() 
+static int getDefaultLevel()
 {
 	return Z_DEFAULT_COMPRESSION;
 }
-static int getDefaultVerbose() 
+static int getDefaultVerbose()
 {
 	return 0;
 }
 
-static int getDefaultGz() 
+static int getDefaultGz()
 {
 	return 0;
 }
-static std::string getDefaultNameScheme() 
+static std::string getDefaultNameScheme()
 {
 	return "generic";
 }
@@ -95,7 +95,7 @@ struct RgInfo
 	std::string PM;
 	std::string PU;
 	std::string SM;
-	
+
 	RgInfo() {}
 	RgInfo(libmaus2::util::ArgInfo const & arginfo)
 	:
@@ -113,17 +113,17 @@ struct RgInfo
 		PU(arginfo.getUnparsedValue("RGPU","")),
 		SM(arginfo.getUnparsedValue("RGSM",""))
 	{
-		
+
 	}
-	
+
 	std::string toString() const
 	{
 		std::ostringstream ostr;
-		
+
 		if ( ID.size() )
 		{
 			ostr << "@RG\tID:" << ID;
-			
+
 			if ( CN.size() ) ostr << "\tCN:" << CN;
 			if ( DS.size() ) ostr << "\tDS:" << DS;
 			if ( DT.size() ) ostr << "\tDT:" << DT;
@@ -136,10 +136,10 @@ struct RgInfo
 			if ( PM.size() ) ostr << "\tPM:" << PM;
 			if ( PU.size() ) ostr << "\tPU:" << PU;
 			if ( SM.size() ) ostr << "\tSM:" << SM;
-			
+
 			ostr << "\n";
 		}
-		
+
 		return ostr.str();
 	}
 };
@@ -161,11 +161,11 @@ struct FastQSeqMapTable
 				touppertable[i] = ::toupper(i);
 			else
 				touppertable[i] = i;
-		
+
 		// map . to N
 		touppertable['.'] = 'N';
 	}
-	
+
 	char operator()(char const a) const
 	{
 		return static_cast<char>(touppertable[static_cast<uint8_t>(a)]);
@@ -175,7 +175,7 @@ struct FastQSeqMapTable
 	{
 		return touppertable[a];
 	}
-	
+
 	void toupper(std::string & s) const
 	{
 		for ( std::string::size_type i = 0; i < s.size(); ++i )
@@ -190,7 +190,7 @@ struct FastQSeqMapTable
 	}
 };
 
-enum fastq_name_scheme_type { 
+enum fastq_name_scheme_type {
 	fastq_name_scheme_generic,
 	fastq_name_scheme_casava18_single,
 	fastq_name_scheme_casava18_paired_end,
@@ -235,7 +235,7 @@ static fastq_name_scheme_type parseNameScheme(std::string const & schemename)
 		libmaus2::exception::LibMausException lme;
 		lme.getStream() << "unknown read name scheme " << schemename << std::endl;
 		lme.finish();
-		throw lme;	
+		throw lme;
 	}
 }
 
@@ -247,10 +247,10 @@ struct NameInfo
 	uint64_t gl;
 	uint64_t gr;
 	fastq_name_scheme_type const namescheme;
-		
+
 	NameInfo() : name(), ispair(false), isfirst(false), gl(0), gr(0), namescheme(fastq_name_scheme_generic) {}
 	NameInfo(
-		std::string const & rname, 
+		std::string const & rname,
 		libmaus2::fastx::SpaceTable const & ST,
 		fastq_name_scheme_type const rnamescheme
 	)
@@ -270,13 +270,13 @@ struct NameInfo
 					uint64_t r = l;
 					while ( (r != name.size()) && (!ST.spacetable[name[r]]) )
 						++r;
-					
+
 					// check whether this part of the name ends on /1 or /2
 					if ( r-l >= 2 && name[r-2] == '/' && (name[r-1] == '1' || name[r-1] == '2') )
 					{
 						if ( name[r-1] == '2' )
 							isfirst = false;
-							
+
 						gl = l;
 						gr = r;
 						ispair = true;
@@ -287,45 +287,45 @@ struct NameInfo
 						gr = r;
 						ispair = false;
 					}
-					
+
 					l = r;
-				}	
-				
+				}
+
 				break;
 			}
 			case fastq_name_scheme_casava18_single:
 			case fastq_name_scheme_casava18_paired_end:
 			{
 				uint64_t l = 0;
-				
-				while ( l != name.size() && ST.spacetable[name[l]] )
-					++l;
-					
-				uint64_t const l0 = l;
-				
-				while ( l != name.size() && ! ST.spacetable[name[l]] )
-					++l;
-				
-				uint64_t const l0l = l-l0;	
 
 				while ( l != name.size() && ST.spacetable[name[l]] )
 					++l;
-					
+
+				uint64_t const l0 = l;
+
+				while ( l != name.size() && ! ST.spacetable[name[l]] )
+					++l;
+
+				uint64_t const l0l = l-l0;
+
+				while ( l != name.size() && ST.spacetable[name[l]] )
+					++l;
+
 				uint64_t const l1 = l;
 
 				while ( l != name.size() && ! ST.spacetable[name[l]] )
 					++l;
-					
+
 				uint64_t const l1l = l-l1;
-			
-				// count number of colons	
+
+				// count number of colons
 				uint64_t l0c = 0;
 				for ( uint64_t i = l0; i != l0+l0l; ++i )
 					l0c += (name[i] == ':');
 				uint64_t l1c = 0;
 				for ( uint64_t i = l1; i != l1+l1l; ++i )
 					l1c += (name[i] == ':');
-			
+
 				if ( l0c != 6 || l1c != 3 )
 				{
 					::libmaus2::exception::LibMausException se;
@@ -333,10 +333,10 @@ struct NameInfo
 					se.finish();
 					throw se;
 				}
-				
+
 				gl = l0;
 				gr = l0+l0l;
-				
+
 				if ( namescheme == fastq_name_scheme_casava18_single )
 				{
 					ispair = false;
@@ -344,7 +344,7 @@ struct NameInfo
 				else
 				{
 					ispair = true;
-					
+
 					uint64_t fragid = 0;
 					unsigned int fragidlen = 0;
 					uint64_t p = l1;
@@ -354,18 +354,18 @@ struct NameInfo
 						fragid += name[p++]-'0';
 						fragidlen++;
 					}
-					
+
 					if ( (! fragidlen) || (fragid<1) || (fragid>2) || name[p] != ':' )
 					{
 						::libmaus2::exception::LibMausException se;
 						se.getStream() << "malformed read name " << name << " (malformed fragment id) for name scheme" << namescheme << std::endl;
 						se.finish();
-						throw se;	
+						throw se;
 					}
-					
+
 					isfirst = (fragid==1);
 				}
-				
+
 				break;
 			}
 			case fastq_name_scheme_pairedfiles:
@@ -373,19 +373,19 @@ struct NameInfo
 				::libmaus2::exception::LibMausException se;
 				se.getStream() << "pairedfiles name scheme is not supported in NameInfo" << std::endl;
 				se.finish();
-				throw se;	
+				throw se;
 				break;
 			}
 		}
 	}
-	
+
 	std::string getName() const
 	{
 		switch ( namescheme )
 		{
 			case fastq_name_scheme_generic:
 				if ( ispair )
-					return name.substr(gl,gr-gl-2);		
+					return name.substr(gl,gr-gl-2);
 				else
 					return name.substr(gl,gr-gl);
 				break;
@@ -397,7 +397,7 @@ struct NameInfo
 				::libmaus2::exception::LibMausException se;
 				se.getStream() << "NameInfo::getName(): invalid name scheme" << std::endl;
 				se.finish();
-				throw se;			
+				throw se;
 			}
 		}
 	}
@@ -405,21 +405,21 @@ struct NameInfo
 
 template<typename element_type>
 void checkFastQElement(
-	element_type const & element, 
-	int const qualityoffset, 
+	element_type const & element,
+	int const qualityoffset,
 	int const maxvalid = 41
 )
 {
 	for ( uint64_t i = 0; i < element.quality.size(); ++i )
-		if ( 
+		if (
 			static_cast<int>(static_cast<uint8_t>(element.quality[i])) - qualityoffset < 0
 			||
 			static_cast<int>(static_cast<uint8_t>(element.quality[i])) - qualityoffset > maxvalid
 		)
 	{
 		libmaus2::exception::LibMausException lme;
-		lme.getStream() 
-			<< "quality string " << element.quality << " of read " << element.sid 
+		lme.getStream()
+			<< "quality string " << element.quality << " of read " << element.sid
 			<< " is invalid, first invalid symbol is " << element.quality[i]
 			<< " deduced value is " << static_cast<int>(static_cast<uint8_t>(element.quality[i])) - qualityoffset;
 
@@ -433,10 +433,10 @@ void checkFastQElement(
 				<< " above the maximum of " << maxvalid << "\n";
 			lme.getStream() << "If this value is valid, then please set qualitymax to " << static_cast<int>(static_cast<uint8_t>(element.quality[i])) - qualityoffset << " (or above)" << std::endl;
 		}
-		
+
 		lme.finish();
 		throw lme;
-	}	
+	}
 }
 
 template<typename element_type>
@@ -448,7 +448,7 @@ void updateQualityHistogram(element_type const & element, int const qualityoffse
 
 template<typename writer_type, fastq_name_scheme_type namescheme>
 void fastqtobamSingleTemplate(
-	std::istream & in, writer_type & bamwr, int const verbose, std::string const & rgid, 
+	std::istream & in, writer_type & bamwr, int const verbose, std::string const & rgid,
 	int const qualityoffset,
 	int const maxvalid,
 	bool const checkquality,
@@ -457,11 +457,11 @@ void fastqtobamSingleTemplate(
 {
 	typedef ::libmaus2::fastx::StreamFastQReaderWrapper reader_type;
 	typedef reader_type::pattern_type pattern_type;
-	::libmaus2::fastx::StreamFastQReaderWrapper fqin(in);	
+	::libmaus2::fastx::StreamFastQReaderWrapper fqin(in);
 	libmaus2::fastx::SpaceTable ST;
 	uint64_t proc = 0;
 	FastQSeqMapTable const toup;
-	
+
 	switch ( namescheme )
 	{
 		case fastq_name_scheme_generic:
@@ -469,13 +469,13 @@ void fastqtobamSingleTemplate(
 		case fastq_name_scheme_casava18_paired_end:
 		{
 			pattern_type element;
-			
+
 			while ( fqin.getNextPatternUnlocked(element) )
 			{
 				toup.toupper(element.spattern);
 				std::string const & name = element.sid;
 				NameInfo const NI(name,ST,namescheme);
-				
+
 				if ( checkquality )
 					checkFastQElement(element,qualityoffset,maxvalid);
 				if ( H )
@@ -522,7 +522,7 @@ void fastqtobamSingleTemplate(
 					);
 					if ( rgid.size() )
 						bamwr.putAuxString("RG",rgid.c_str());
-					bamwr.commit();		
+					bamwr.commit();
 				}
 
 				proc += 1;
@@ -575,9 +575,9 @@ void fastqtobamSingleTemplate(
 						l2 = i;
 				if ( l2 != element_2.sid.size() )
 					element_2.sid = element_2.sid.substr(0,l2);
-				
+
 				// if read names end in /1 and /2 then chop those off
-				if ( 
+				if (
 					element_1.sid.size() >= 2 && element_2.sid.size() >= 2 &&
 					element_1.sid[element_1.sid.size()-2] == '/' &&
 					element_1.sid[element_1.sid.size()-1] == '1' &&
@@ -588,7 +588,7 @@ void fastqtobamSingleTemplate(
 					element_1.sid = element_1.sid.substr(0,element_1.sid.size()-2);
 					element_2.sid = element_2.sid.substr(0,element_2.sid.size()-2);
 				}
-				
+
 				if ( element_1.sid != element_2.sid )
 				{
 					::libmaus2::exception::LibMausException se;
@@ -596,7 +596,7 @@ void fastqtobamSingleTemplate(
 					se.finish();
 					throw se;
 				}
-			
+
 				bamwr.encodeAlignment(
 					element_1.sid,
 					-1,
@@ -639,7 +639,7 @@ void fastqtobamSingleTemplate(
 					bamwr.putAuxString("RG",rgid.c_str());
 				bamwr.commit();
 			}
-			
+
 			break;
 		}
 	}
@@ -649,7 +649,7 @@ void fastqtobamSingleTemplate(
 
 template<typename writer_type>
 void fastqtobamSingle(
-	std::istream & in, writer_type & bamwr, int const verbose, std::string const & rgid, 
+	std::istream & in, writer_type & bamwr, int const verbose, std::string const & rgid,
 	int const qualityoffset,
 	int const maxvalid,
 	bool const checkquality,
@@ -676,25 +676,25 @@ void fastqtobamSingle(
 
 template<typename writer_type, fastq_name_scheme_type namescheme>
 void fastqtobamPairTemplate(
-	std::istream & in_1, std::istream & in_2, 
-	writer_type & bamwr, int const verbose, std::string const & rgid, 
+	std::istream & in_1, std::istream & in_2,
+	writer_type & bamwr, int const verbose, std::string const & rgid,
 	int const qualityoffset, int const maxvalid, bool const checkquality,
 	uint64_t * const H
 )
 {
 	typedef ::libmaus2::fastx::StreamFastQReaderWrapper reader_type;
 	typedef reader_type::pattern_type pattern_type;
-	::libmaus2::fastx::StreamFastQReaderWrapper fqin_1(in_1);	
+	::libmaus2::fastx::StreamFastQReaderWrapper fqin_1(in_1);
 	::libmaus2::fastx::StreamFastQReaderWrapper fqin_2(in_2);
 	pattern_type element_1, element_2;
 	libmaus2::fastx::SpaceTable ST;
 	uint64_t proc = 0;
 	FastQSeqMapTable const toup;
-	
+
 	while ( fqin_1.getNextPatternUnlocked(element_1) )
 	{
 		bool const ok_2 = fqin_2.getNextPatternUnlocked(element_2);
-		
+
 		if ( ! ok_2 )
 		{
 			libmaus2::exception::LibMausException ex;
@@ -719,7 +719,7 @@ void fastqtobamPairTemplate(
 
 		std::string const & name_1 = element_1.sid;
 		std::string const & name_2 = element_2.sid;
-		
+
 		switch ( namescheme )
 		{
 			case fastq_name_scheme_generic:
@@ -728,20 +728,20 @@ void fastqtobamPairTemplate(
 			{
 				NameInfo const NI_1(name_1,ST,namescheme);
 				NameInfo const NI_2(name_2,ST,namescheme);
-				
+
 				if ( (!NI_1.ispair) || (!NI_1.isfirst) )
 				{
 					libmaus2::exception::LibMausException ex;
 					ex.getStream() << "name " << name_1 << " does not look like a first mate read name in name scheme " << namescheme << ". Please check the namescheme parameter." << std::endl;
 					ex.finish();
-					throw ex;		
+					throw ex;
 				}
 				if ( NI_2.isfirst )
 				{
 					libmaus2::exception::LibMausException ex;
 					ex.getStream() << "name " << name_2 << " does not look like a second mate read name in name scheme " << namescheme << ". Please check the namescheme parameter." << std::endl;
 					ex.finish();
-					throw ex;		
+					throw ex;
 				}
 
 				bamwr.encodeAlignment(
@@ -804,9 +804,9 @@ void fastqtobamPairTemplate(
 						l2 = i;
 				if ( l2 != element_2.sid.size() )
 					element_2.sid = element_2.sid.substr(0,l2);
-				
+
 				// if read names end in /1 and /2 then chop those off
-				if ( 
+				if (
 					element_1.sid.size() >= 2 && element_2.sid.size() >= 2 &&
 					element_1.sid[element_1.sid.size()-2] == '/' &&
 					element_1.sid[element_1.sid.size()-1] == '1' &&
@@ -817,7 +817,7 @@ void fastqtobamPairTemplate(
 					element_1.sid = element_1.sid.substr(0,element_1.sid.size()-2);
 					element_2.sid = element_2.sid.substr(0,element_2.sid.size()-2);
 				}
-				
+
 				if ( element_1.sid != element_2.sid )
 				{
 					::libmaus2::exception::LibMausException se;
@@ -825,7 +825,7 @@ void fastqtobamPairTemplate(
 					se.finish();
 					throw se;
 				}
-			
+
 				bamwr.encodeAlignment(
 					element_1.sid,
 					-1,
@@ -869,7 +869,7 @@ void fastqtobamPairTemplate(
 				bamwr.commit();
 			}
 		}
-		
+
 		proc += 2;
 		if ( verbose && ((proc & (1024*1024-1)) == 0) )
 			std::cerr << "[V] " << proc << std::endl;
@@ -881,8 +881,8 @@ void fastqtobamPairTemplate(
 
 template<typename writer_type>
 void fastqtobamPair(
-	std::istream & in_1, std::istream & in_2, 
-	writer_type & bamwr, int const verbose, std::string const & rgid, 
+	std::istream & in_1, std::istream & in_2,
+	writer_type & bamwr, int const verbose, std::string const & rgid,
 	int const qualityoffset, int const maxvalid, bool const checkquality,
 	uint64_t * const H,
 	fastq_name_scheme_type const namescheme
@@ -923,7 +923,7 @@ void fastqtobam(libmaus2::util::ArgInfo const & arginfo)
 	unsigned int const threads = arginfo.getValue<unsigned int>("threads",1);
 	int const qualityoffset = arginfo.getValue<int>("qualityoffset",getDefaultQualityOffset());
 	int const maxvalid = arginfo.getValue<int>("qualitymax",getDefaultQualityMaximum());
-	
+
 	uint64_t const bamqualmax = ('~'-'!'+1);
 	if ( maxvalid > static_cast<int>(bamqualmax) )
 	{
@@ -932,7 +932,7 @@ void fastqtobam(libmaus2::util::ArgInfo const & arginfo)
 		lme.finish();
 		throw lme;
 	}
-	
+
 	bool const checkquality = arginfo.getValue<int>("checkquality",getDefaultCheckQuality());
 	fastq_name_scheme_type const namescheme = parseNameScheme(
 		arginfo.getValue<std::string>("namescheme",getDefaultNameScheme())
@@ -943,16 +943,16 @@ void fastqtobam(libmaus2::util::ArgInfo const & arginfo)
 	::libmaus2::bambam::BamHeader bamheader;
 	std::ostringstream headerostr;
 	headerostr << "@HD\tVN:1.4\tSO:unknown\n";
-	headerostr 
-		<< "@PG"<< "\t" 
-		<< "ID:" << "fastqtobam" << "\t" 
+	headerostr
+		<< "@PG"<< "\t"
+		<< "ID:" << "fastqtobam" << "\t"
 		<< "PN:" << "fastqtobam" << "\t"
 		<< "CL:" << arginfo.commandline << "\t"
 		<< "VN:" << std::string(PACKAGE_VERSION)
 		<< std::endl;
 	headerostr << rginfo.toString();
 
-	bamheader.text = headerostr.str();		
+	bamheader.text = headerostr.str();
 
 	/*
 	 * start md5 callbacks
@@ -1004,8 +1004,8 @@ void fastqtobam(libmaus2::util::ArgInfo const & arginfo)
 		}
 		else if ( filenames.size() == 1 )
 		{
-			libmaus2::aio::InputStreamInstance CIS(filenames[0]);		
-			
+			libmaus2::aio::InputStreamInstance CIS(filenames[0]);
+
 			if ( gz )
 			{
 				libmaus2::lz::BufferedGzipStream BGS(CIS);
@@ -1020,7 +1020,7 @@ void fastqtobam(libmaus2::util::ArgInfo const & arginfo)
 		{
 			if ( filenames.size() > 2 )
 				std::cerr << "[D] warning, ignoring additional input files past first two" << std::endl;
-		
+
 			libmaus2::aio::InputStreamInstance CIS_1(filenames[0]);
 			libmaus2::aio::InputStreamInstance CIS_2(filenames[1]);
 
@@ -1060,8 +1060,8 @@ void fastqtobam(libmaus2::util::ArgInfo const & arginfo)
 		}
 		else if ( filenames.size() == 1 )
 		{
-			libmaus2::aio::InputStreamInstance CIS(filenames[0]);		
-			
+			libmaus2::aio::InputStreamInstance CIS(filenames[0]);
+
 			if ( gz )
 			{
 				libmaus2::lz::BufferedGzipStream BGS(CIS);
@@ -1069,14 +1069,14 @@ void fastqtobam(libmaus2::util::ArgInfo const & arginfo)
 			}
 			else
 			{
-				fastqtobamSingle(CIS,*bamwr,verbose,rgid,qualityoffset,maxvalid,checkquality,H,namescheme);		
+				fastqtobamSingle(CIS,*bamwr,verbose,rgid,qualityoffset,maxvalid,checkquality,H,namescheme);
 			}
 		}
 		else
 		{
 			if ( filenames.size() > 2 )
 				std::cerr << "[D] warning, ignoring additional input files past first two" << std::endl;
-		
+
 			libmaus2::aio::InputStreamInstance CIS_1(filenames[0]);
 			libmaus2::aio::InputStreamInstance CIS_2(filenames[1]);
 
@@ -1084,33 +1084,33 @@ void fastqtobam(libmaus2::util::ArgInfo const & arginfo)
 			{
 				libmaus2::lz::BufferedGzipStream BGS_1(CIS_1);
 				libmaus2::lz::BufferedGzipStream BGS_2(CIS_2);
-				fastqtobamPair(BGS_1,BGS_2,*bamwr,verbose,rgid,qualityoffset,maxvalid,checkquality,H,namescheme);			
+				fastqtobamPair(BGS_1,BGS_2,*bamwr,verbose,rgid,qualityoffset,maxvalid,checkquality,H,namescheme);
 			}
 			else
 			{
-				fastqtobamPair(CIS_1,CIS_2,*bamwr,verbose,rgid,qualityoffset,maxvalid,checkquality,H,namescheme);		
+				fastqtobamPair(CIS_1,CIS_2,*bamwr,verbose,rgid,qualityoffset,maxvalid,checkquality,H,namescheme);
 			}
 		}
 
 		bamwr.reset();
-	
+
 	}
 
 	if ( Pmd5cb )
 	{
 		Pmd5cb->saveDigestAsFile(md5filename);
 	}
-	
+
 	if ( H )
 	{
 		uint64_t const allbases = std::accumulate(H,H+256,0ull);
 		double const dallbases = allbases;
 		double acc = 0;
-		
+
 		for ( uint64_t ii = 0; ii < 256; ++ii )
 		{
 			uint64_t i = 256-ii-1;
-			
+
 			if ( H[i] )
 			{
 				acc += H[i]/dallbases;
@@ -1166,11 +1166,11 @@ int main(int argc, char * argv[])
 {
 	try
 	{
-		libmaus2::timing::RealTimeClock rtc; rtc.start();	
+		libmaus2::timing::RealTimeClock rtc; rtc.start();
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
-		
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -1179,7 +1179,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -1188,7 +1188,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license() << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
 
 				V.push_back ( std::pair<std::string,std::string> ( "level=<[-1]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
@@ -1216,20 +1216,20 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "checkquality=<["+::biobambam2::Licensing::formatNumber(getDefaultCheckQuality())+"]>", "check quality (default: true)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("namescheme=<[")+(getDefaultNameScheme())+"]>", "read name scheme (generic, c18s, c18pe, pairedfiles)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "qualityhist=<["+::biobambam2::Licensing::formatNumber(getDefaultQualityHist())+"]>", "compute quality histogram and print it on standard error" ) );
-				
+
 				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
-				
+
 				std::cerr << "The I key can be given twice for a pair of synced FastQ files." << std::endl;
 				std::cerr << "Any none key=value arguments will be considered as input file names." << std::endl;
 
 				return EXIT_SUCCESS;
 			}
-		
-			
+
+
 		fastqtobam(arginfo);
-		
+
 		std::cerr << "[V] " << libmaus2::util::MemUsage() << " wall clock time " << rtc.formatTime(rtc.getElapsedSeconds()) << std::endl;
 	}
 	catch(std::exception const & ex)

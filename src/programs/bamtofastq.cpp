@@ -98,12 +98,12 @@ struct BamToFastQInputFileStream
 	int64_t const inputbuffersize;
 	libmaus2::aio::PosixFdInputStream::unique_ptr_type CIS;
 	std::istream & in;
-	
+
 	static int64_t getDefaultBufferSize()
 	{
 		return -1;
 	}
-	
+
 	static libmaus2::aio::PosixFdInputStream::unique_ptr_type openFile(std::string const & fn, int64_t const bufsize = getDefaultBufferSize())
 	{
 		libmaus2::aio::PosixFdInputStream::unique_ptr_type ptr(new libmaus2::aio::PosixFdInputStream(fn,bufsize,0));
@@ -115,13 +115,13 @@ struct BamToFastQInputFileStream
 		libmaus2::aio::PosixFdInputStream::unique_ptr_type ptr(new libmaus2::aio::PosixFdInputStream(fd,bufsize,0));
 		return UNIQUE_PTR_MOVE(ptr);
 	}
-	
+
 	BamToFastQInputFileStream(libmaus2::util::ArgInfo const & arginfo)
 	: fn(arginfo.getValue<std::string>("filename","-")),
 	  inputbuffersize(arginfo.hasArg("inputbuffersize") ? arginfo.getValueUnsignedNumeric<uint64_t>("inputbuffersize",getDefaultBufferSize()) : -1),
 	  CIS(
 		(fn != "-") ? openFile(fn) : openFile(STDIN_FILENO)
-	  ), in(*CIS) 
+	  ), in(*CIS)
 	{
         }
 
@@ -130,7 +130,7 @@ struct BamToFastQInputFileStream
 	  inputbuffersize(rinputbuffersize),
 	  CIS(
 		(fn != "-") ? openFile(fn) : openFile(STDIN_FILENO)
-	), in(*CIS) 
+	), in(*CIS)
 	{
 	}
 };
@@ -172,11 +172,11 @@ void bamtofastqNonCollating(libmaus2::util::ArgInfo const & arginfo, libmaus2::b
 	std::ostream * poutputstream = &std::cout;
 	libmaus2::aio::LineSplittingPosixFdOutputStream::unique_ptr_type Psplitos;
 	libmaus2::lz::LineSplittingGzipOutputStream::unique_ptr_type Psplitgzos;
-	
+
 	if ( split )
 	{
 		uint64_t const mult = getSplitMultiplier<conversion_type>();
-		
+
 		if ( gz )
 		{
 			libmaus2::lz::LineSplittingGzipOutputStream::unique_ptr_type Tsplitgzos(
@@ -184,7 +184,7 @@ void bamtofastqNonCollating(libmaus2::util::ArgInfo const & arginfo, libmaus2::b
 			);
 			Psplitgzos = UNIQUE_PTR_MOVE(Tsplitgzos);
 			poutputstream = Psplitgzos.get();
-		
+
 		}
 		else
 		{
@@ -201,17 +201,17 @@ void bamtofastqNonCollating(libmaus2::util::ArgInfo const & arginfo, libmaus2::b
 		Pgzos = UNIQUE_PTR_MOVE(tPgzos);
 		poutputstream = Pgzos.get();
 	}
-	
+
 	std::ostream & outputstream = *poutputstream;
-		
+
 	while ( bamdec.readAlignment() )
 	{
 		uint64_t const precnt = cnt++;
-		
+
 		if ( ! (algn.getFlags() & excludeflags) )
 		{
 			uint64_t la;
-			
+
 			switch ( conversion_type )
 			{
 				case bamtofastq_conversion_type_fastq:
@@ -231,8 +231,8 @@ void bamtofastqNonCollating(libmaus2::util::ArgInfo const & arginfo, libmaus2::b
 
 		if ( precnt >> verbshift != cnt >> verbshift )
 		{
-			std::cerr 
-				<< (cnt >> 20) 
+			std::cerr
+				<< (cnt >> 20)
 				<< "\t"
 				<< (static_cast<double>(bcnt)/(1024.0*1024.0))/rtc.getElapsedSeconds() << "MB/s"
 				<< "\t" << static_cast<double>(cnt)/rtc.getElapsedSeconds() << std::endl;
@@ -254,7 +254,7 @@ void bamtofastqNonCollating(libmaus2::util::ArgInfo const & arginfo, libmaus2::b
 		case bamtofastq_conversion_type_fasta:
 			bamtofastqNonCollating<bamtofastq_conversion_type_fasta>(arginfo,bamdec);
 			break;
-		case bamtofastq_conversion_type_fastq:					
+		case bamtofastq_conversion_type_fastq:
 			bamtofastqNonCollating<bamtofastq_conversion_type_fastq>(arginfo,bamdec);
 			break;
 		case bamtofastq_conversion_type_fastq_try_oq:
@@ -269,7 +269,7 @@ void bamtofastqNonCollating(libmaus2::util::ArgInfo const & arginfo)
 		arginfo.hasArg("inputbuffersize") ? arginfo.getValueUnsignedNumeric<uint64_t>("inputbuffersize",BamToFastQInputFileStream::getDefaultBufferSize()) : -1;
 
 	bool const fasta = arginfo.getValue<int>("fasta",getDefaultFastA());
-	bool const tryoq = arginfo.getValue<int>("tryoq",getDefaultTryOQ());	
+	bool const tryoq = arginfo.getValue<int>("tryoq",getDefaultTryOQ());
 	bamtofastq_conversion_type const conversion_type = fasta ? bamtofastq_conversion_type_fasta : (tryoq ? bamtofastq_conversion_type_fastq_try_oq : bamtofastq_conversion_type_fastq);
 
 	libmaus2::aio::PosixFdInputStream PFIS(STDIN_FILENO,inputbuffersize);
@@ -296,7 +296,7 @@ struct CollateCombs
 	CollateCombs()
 	: pairs(0), orphans1(0), orphans2(0), single(0), alignments(0)
 	{
-	
+
 	}
 };
 
@@ -305,7 +305,7 @@ std::ostream & operator<<(std::ostream & out, CollateCombs const & combs)
 	out << "[C]\tAlignments:\t" << combs.alignments << std::endl;
 	out << "[C]\tComplete pairs:\t" << combs.pairs << std::endl;
 	out << "[C]\tSingle:\t" << combs.single << std::endl;
-	out << "[C]\tOrphans:\t" << (combs.orphans1 + combs.orphans2) 
+	out << "[C]\tOrphans:\t" << (combs.orphans1 + combs.orphans2)
 		<< "\t" << combs.orphans1 << "\t" << combs.orphans2 << std::endl;
 	return out;
 };
@@ -320,7 +320,7 @@ void bamtofastqCollating(
 		CHCBD.disableValidation();
 
 	libmaus2::bambam::CircularHashCollatingBamDecoder::OutputBufferEntry const * ob = 0;
-	
+
 	// number of alignments written to files
 	uint64_t cnt = 0;
 	// number of bytes written to files
@@ -341,7 +341,7 @@ void bamtofastqCollating(
 		std::string const Osuffix = arginfo.getUnparsedValue("outputperreadgroupsuffixO",getDefaultReadGroupSuffixO(gz,split));
 		std::string const O2suffix = arginfo.getUnparsedValue("outputperreadgroupsuffixO2",getDefaultReadGroupSuffixO2(gz,split));
 		std::string const Ssuffix = arginfo.getUnparsedValue("outputperreadgroupsuffixS",getDefaultReadGroupSuffixS(gz,split));
-		
+
 		// collect set of all suffixes
 		std::set<std::string> suffixset;
 		suffixset.insert(Fsuffix);
@@ -364,18 +364,18 @@ void bamtofastqCollating(
 		uint64_t const Omap = suffixmap.find(Osuffix)->second;
 		uint64_t const O2map = suffixmap.find(O2suffix)->second;
 		uint64_t const Smap = suffixmap.find(Ssuffix)->second;
-		
+
 		// get bam header
 		libmaus2::bambam::BamHeader const & header = CHCBD.getHeader();
-		
+
 		// get read group vector
 		std::vector<libmaus2::bambam::ReadGroup> const & readgroups = header.getReadGroups();
-		
+
 		// compute set of read group ids
 		std::set<std::string> readgroupsidset;
 		for ( uint64_t i = 0; i < readgroups.size(); ++i )
 			readgroupsidset.insert(readgroups[i].ID);
-			
+
 		// check that read group ids are unique
 		if ( readgroupsidset.size() != readgroups.size() )
 		{
@@ -384,7 +384,7 @@ void bamtofastqCollating(
 			ex.finish();
 			throw ex;
 		}
-			
+
 		// construct id for default read group
 		std::string defaultidprefix = "default";
 		std::string defaultid = defaultidprefix;
@@ -396,40 +396,40 @@ void bamtofastqCollating(
 			defaultid = ostr.str();
 		}
 		assert ( readgroupsidset.find(defaultid) == readgroupsidset.end() );
-		
+
 		// number of output files
 		uint64_t const filesperrg = suffixset.size();
 		uint64_t const numoutputfiles = (readgroups.size()+1) * filesperrg;
-		
+
 		// output directory
 		std::string outputdir = arginfo.getUnparsedValue("outputdir","");
 		if ( outputdir.size() )
 			outputdir += "/";
-		
+
 		// construct output file names
-		std::vector<std::string> outputfilenamevector;	
+		std::vector<std::string> outputfilenamevector;
 		for ( std::set<std::string>::const_iterator ita = suffixset.begin(); ita != suffixset.end(); ++ita )
 			outputfilenamevector.push_back(outputdir + defaultid + *ita);
 		for ( uint64_t i = 0; i < readgroups.size(); ++i )
 			for ( std::set<std::string>::const_iterator ita = suffixset.begin(); ita != suffixset.end(); ++ita )
 				outputfilenamevector.push_back(outputdir + readgroups[i].ID + *ita);
-				
+
 		assert ( outputfilenamevector.size() == numoutputfiles );
 		// int64_t const posixoutbufsize = 256*1024;
 		libmaus2::autoarray::AutoArray< ::libmaus2::aio::OutputStreamInstance::unique_ptr_type > APFOS(numoutputfiles);
 		libmaus2::autoarray::AutoArray< libmaus2::lz::GzipOutputStream::unique_ptr_type > AGZOS(numoutputfiles);
-		
+
 		libmaus2::autoarray::AutoArray< ::libmaus2::aio::LineSplittingPosixFdOutputStream::unique_ptr_type > ALSPFDOS(numoutputfiles);
 		libmaus2::autoarray::AutoArray< ::libmaus2::lz::LineSplittingGzipOutputStream::unique_ptr_type > ALSGZOS(numoutputfiles);
-		
+
 		libmaus2::autoarray::AutoArray< std::ostream * > AOS(numoutputfiles);
 		libmaus2::autoarray::AutoArray< uint64_t > filefrags(numoutputfiles);
 		int const level = std::min(9,std::max(-1,arginfo.getValue<int>("level",Z_DEFAULT_COMPRESSION)));
-		
+
 		if ( split )
 		{
 			uint64_t const mult = getSplitMultiplier<conversion_type>();
-			
+
 			if ( gz )
 			{
 				for ( uint64_t i = 0; i < numoutputfiles; ++i )
@@ -439,7 +439,7 @@ void bamtofastqCollating(
 					);
 					ALSGZOS[i] = UNIQUE_PTR_MOVE(tptr);
 					AOS[i] = ALSGZOS[i].get();
-				}	
+				}
 			}
 			else
 			{
@@ -450,7 +450,7 @@ void bamtofastqCollating(
 					);
 					ALSPFDOS[i] = UNIQUE_PTR_MOVE(tptr);
 					AOS[i] = ALSPFDOS[i].get();
-				}				
+				}
 			}
 		}
 		else
@@ -461,7 +461,7 @@ void bamtofastqCollating(
 					new ::libmaus2::aio::OutputStreamInstance(outputfilenamevector[i])
 				);
 				APFOS[i] = UNIQUE_PTR_MOVE(tptr);
-				
+
 				if ( gz )
 				{
 					libmaus2::lz::GzipOutputStream::unique_ptr_type tPgzos(new libmaus2::lz::GzipOutputStream(*(APFOS[i]),libmaus2::bambam::BamToFastqOutputFileSet::getGzipBufferSize(),level));
@@ -478,7 +478,7 @@ void bamtofastqCollating(
 		while ( (ob = CHCBD.process()) )
 		{
 			uint64_t const precnt = cnt;
-			
+
 			int64_t const rg = ob->Da ?
 				header.getReadGroupId(libmaus2::bambam::BamAlignmentDecoderBase::getReadGroup(ob->Da,ob->blocksizea))
 				:
@@ -487,7 +487,7 @@ void bamtofastqCollating(
 			int64_t const rgfbase = rg + 1;
 			assert ( static_cast<int64_t>(rgfbase) < static_cast<int64_t>(readgroups.size() + 1) );
 			uint64_t const rgfshift = rgfbase * filesperrg;
-			
+
 			if ( ob->fpair )
 			{
 				uint64_t la;
@@ -506,7 +506,7 @@ void bamtofastqCollating(
 
 				AOS[rgfshift + Fmap]->write(reinterpret_cast<char const *>(T.begin()),la);
 				filefrags[rgfshift + Fmap]++;
-				
+
 				uint64_t lb;
 				switch ( conversion_type )
 				{
@@ -597,12 +597,12 @@ void bamtofastqCollating(
 				cnt += 1;
 				bcnt += (la);
 			}
-			
+
 			if ( precnt >> verbshift != cnt >> verbshift )
 			{
-				std::cerr 
+				std::cerr
 					<< "[V] "
-					<< (cnt >> 20) 
+					<< (cnt >> 20)
 					<< "\t"
 					<< (static_cast<double>(bcnt)/(1024.0*1024.0))/rtc.getElapsedSeconds() << "MB/s"
 					<< "\t" << static_cast<double>(cnt)/rtc.getElapsedSeconds() << std::endl;
@@ -625,7 +625,7 @@ void bamtofastqCollating(
 				if ( AGZOS[i] )
 					AGZOS[i].reset();
 				APFOS[i].reset();
-			
+
 				// remove empty files
 				if ( ! filefrags[i] )
 					remove(outputfilenamevector[i].c_str());
@@ -633,13 +633,13 @@ void bamtofastqCollating(
 		}
 	}
 	else
-	{		
+	{
 		libmaus2::bambam::BamToFastqOutputFileSet OFS(arginfo);
-		
+
 		while ( (ob = CHCBD.process()) )
 		{
 			uint64_t const precnt = cnt;
-			
+
 			if ( ob->fpair )
 			{
 				uint64_t la;
@@ -739,12 +739,12 @@ void bamtofastqCollating(
 				cnt += 1;
 				bcnt += (la);
 			}
-			
+
 			if ( precnt >> verbshift != cnt >> verbshift )
 			{
-				std::cerr 
+				std::cerr
 					<< "[V] "
-					<< (cnt >> 20) 
+					<< (cnt >> 20)
 					<< "\t"
 					<< (static_cast<double>(bcnt)/(1024.0*1024.0))/rtc.getElapsedSeconds() << "MB/s"
 					<< "\t" << static_cast<double>(cnt)/rtc.getElapsedSeconds() << std::endl;
@@ -753,7 +753,7 @@ void bamtofastqCollating(
 	}
 
 	std::cerr << "[V] " << cnt << std::endl;
-	
+
 	combs.alignments = CHCBD.getRank();
 
 	if ( arginfo.getValue<unsigned int>("combs",0) )
@@ -784,12 +784,12 @@ void bamtofastqCollating(libmaus2::util::ArgInfo const & arginfo)
 {
 	// set up for temp file
 	libmaus2::util::TempFileRemovalContainer::setup();
-	std::string const tmpfilename = arginfo.getValue<std::string>("T",arginfo.getDefaultTmpFileName());	
+	std::string const tmpfilename = arginfo.getValue<std::string>("T",arginfo.getDefaultTmpFileName());
 	libmaus2::util::TempFileRemovalContainer::addTempFile(tmpfilename);
-	
+
 	// exclude flags for collation
 	uint32_t const excludeflags = libmaus2::bambam::BamFlagBase::stringToFlags(arginfo.getValue<std::string>("exclude","SECONDARY,SUPPLEMENTARY"));
-	
+
 	// input format
 	std::string const inputformat = arginfo.getValue<std::string>("inputformat",getDefaultInputFormat());
 	// input filename
@@ -798,9 +798,9 @@ void bamtofastqCollating(libmaus2::util::ArgInfo const & arginfo)
 	// input buffer size (if input is not via io_lib)
 	int64_t const inputbuffersize =
 		arginfo.hasArg("inputbuffersize") ? arginfo.getValueUnsignedNumeric<uint64_t>("inputbuffersize",BamToFastQInputFileStream::getDefaultBufferSize()) : -1;
-	
+
 	bool const fasta = arginfo.getValue<int>("fasta",getDefaultFastA());
-	bool const tryoq = arginfo.getValue<int>("tryoq",getDefaultTryOQ());	
+	bool const tryoq = arginfo.getValue<int>("tryoq",getDefaultTryOQ());
 	bamtofastq_conversion_type const conversion_type = fasta ? bamtofastq_conversion_type_fasta : (tryoq ? bamtofastq_conversion_type_fastq_try_oq : bamtofastq_conversion_type_fastq);
 
 	// table size
@@ -819,7 +819,7 @@ void bamtofastqCollating(libmaus2::util::ArgInfo const & arginfo)
 	// collator
 	libmaus2::bambam::CircularHashCollatingBamDecoder CHCBD(decoder,tmpfilename,excludeflags,hlog,sbs);
 	bamtofastqCollating(arginfo,CHCBD,conversion_type);
-	
+
 	std::cout.flush();
 }
 
@@ -834,7 +834,7 @@ void bamtofastqCollatingRanking(
 	libmaus2::bambam::BamToFastqOutputFileSet OFS(arginfo);
 
 	libmaus2::bambam::CircularHashCollatingBamDecoder::OutputBufferEntry const * ob = 0;
-	
+
 	// number of alignments written to files
 	uint64_t cnt = 0;
 	// number of bytes written to files
@@ -843,16 +843,16 @@ void bamtofastqCollatingRanking(
 	libmaus2::timing::RealTimeClock rtc; rtc.start();
 	::libmaus2::autoarray::AutoArray<uint8_t> T;
 	CollateCombs combs;
-	
+
 	while ( (ob = CHCBD.process()) )
 	{
 		uint64_t const precnt = cnt;
-		
+
 		if ( ob->fpair )
 		{
 			uint64_t const ranka = libmaus2::bambam::BamAlignmentDecoderBase::getRank(ob->Da,ob->blocksizea);
 			uint64_t const rankb = libmaus2::bambam::BamAlignmentDecoderBase::getRank(ob->Db,ob->blocksizeb);
-			uint64_t const la = libmaus2::bambam::BamAlignmentDecoderBase::putFastQRanks(ob->Da,ranka,rankb,T);		
+			uint64_t const la = libmaus2::bambam::BamAlignmentDecoderBase::putFastQRanks(ob->Da,ranka,rankb,T);
 			OFS.Fout.write(reinterpret_cast<char const *>(T.begin()),la);
 			uint64_t lb = libmaus2::bambam::BamAlignmentDecoderBase::putFastQRanks(ob->Db,ranka,rankb,T);
 			OFS.F2out.write(reinterpret_cast<char const *>(T.begin()),lb);
@@ -864,7 +864,7 @@ void bamtofastqCollatingRanking(
 		else if ( ob->fsingle )
 		{
 			uint64_t const ranka = libmaus2::bambam::BamAlignmentDecoderBase::getRank(ob->Da,ob->blocksizea);
-			
+
 			uint64_t la = libmaus2::bambam::BamAlignmentDecoderBase::putFastQRanks(ob->Da,ranka,ranka,T);
 			OFS.Sout.write(reinterpret_cast<char const *>(T.begin()),la);
 
@@ -875,7 +875,7 @@ void bamtofastqCollatingRanking(
 		else if ( ob->forphan1 )
 		{
 			uint64_t const ranka = libmaus2::bambam::BamAlignmentDecoderBase::getRank(ob->Da,ob->blocksizea);
-			
+
 			uint64_t la = libmaus2::bambam::BamAlignmentDecoderBase::putFastQRanks(ob->Da,ranka,ranka,T);
 			OFS.Oout.write(reinterpret_cast<char const *>(T.begin()),la);
 
@@ -886,7 +886,7 @@ void bamtofastqCollatingRanking(
 		else if ( ob->forphan2 )
 		{
 			uint64_t const ranka = libmaus2::bambam::BamAlignmentDecoderBase::getRank(ob->Da,ob->blocksizea);
-			
+
 			uint64_t la = libmaus2::bambam::BamAlignmentDecoderBase::putFastQRanks(ob->Da,ranka,ranka,T);
 			OFS.O2out.write(reinterpret_cast<char const *>(T.begin()),la);
 
@@ -894,18 +894,18 @@ void bamtofastqCollatingRanking(
 			cnt += 1;
 			bcnt += (la);
 		}
-		
+
 		if ( precnt >> verbshift != cnt >> verbshift )
 		{
-			std::cerr 
+			std::cerr
 				<< "[V] "
-				<< (cnt >> 20) 
+				<< (cnt >> 20)
 				<< "\t"
 				<< (static_cast<double>(bcnt)/(1024.0*1024.0))/rtc.getElapsedSeconds() << "MB/s"
 				<< "\t" << static_cast<double>(cnt)/rtc.getElapsedSeconds() << std::endl;
 		}
 	}
-	
+
 	std::cerr << "[V] " << cnt << std::endl;
 
 	combs.alignments = CHCBD.getRank();
@@ -985,16 +985,16 @@ void bamtofastqCollatingRanking(libmaus2::util::ArgInfo const & arginfo)
 		se.finish();
 		throw se;
 	}
-	
+
 	std::cout.flush();
 }
 
 void bamtofastq(libmaus2::util::ArgInfo const & arginfo)
 {
 	// if range is requested than check whether they are supported
-	if ( 
+	if (
 		arginfo.hasArg("ranges") && arginfo.getValue("inputformat", getDefaultInputFormat()) != "bam"
-		&&		
+		&&
 		arginfo.hasArg("ranges") && arginfo.getValue("inputformat", getDefaultInputFormat()) != "cram"
 	)
 	{
@@ -1028,7 +1028,7 @@ void bamtofastq(libmaus2::util::ArgInfo const & arginfo)
 		case 1:
 			bamtofastqCollating(arginfo);
 			break;
-		case 2:		
+		case 2:
 			bamtofastqCollatingRanking(arginfo);
 			break;
 		default:
@@ -1054,9 +1054,9 @@ int main(int argc, char * argv[])
 		#endif
 
 		libmaus2::timing::RealTimeClock rtc; rtc.start();
-		
+
 		::libmaus2::util::ArgInfo arginfo(argc,argv);
-		
+
 		#if defined(LIBMAUS2_HAVE_IRODS)
 		// set program name for iRODS identification
 		std::stringstream irods_id;
@@ -1065,7 +1065,7 @@ int main(int argc, char * argv[])
 		#endif
 
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -1074,7 +1074,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -1083,12 +1083,12 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license() << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-				
+
 				bool const gz = arginfo.getValue<unsigned int>("gz",0);
 				uint64_t const split = arginfo.getValueUnsignedNumeric("split",0);
-				
+
 				V.push_back ( std::pair<std::string,std::string> ( "F=<[stdout]>", "matched pairs first mates" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "F2=<[stdout]>", "matched pairs second mates" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "S=<[stdout]>", "single end" ) );
@@ -1127,7 +1127,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( std::string("tryoq=<[") + ::biobambam2::Licensing::formatNumber(getDefaultTryOQ()) + "]>", "use OQ field instead of quality field if present (collate={0,1} only)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("split=<[")+libmaus2::util::NumberSerialisation::formatNumber(getDefaultSplit(),0)+"]>", "split named output files into chunks of this amount of reads (0: do not split)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("splitprefix=<[")+getDefaultSplitPrefix()+"]>", "file name prefix if collate=0 and split>0" ) );
-				
+
 				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
@@ -1136,7 +1136,7 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;
 			}
-		
+
 		if ( arginfo.hasArg("filename") )
 		{
 			std::string const fn = arginfo.getUnparsedValue("filename",std::string());
@@ -1145,7 +1145,7 @@ int main(int argc, char * argv[])
 		}
 		if ( arginfo.hasArg("I") && !arginfo.hasArg("filename") )
 		{
-			std::string const fn = arginfo.getUnparsedValue("I",std::string());		
+			std::string const fn = arginfo.getUnparsedValue("I",std::string());
 			arginfo.argmap["filename"] = fn;
 			arginfo.argmultimap.insert(std::pair<std::string,std::string>(std::string("filename"),fn));
 		}
@@ -1157,14 +1157,14 @@ int main(int argc, char * argv[])
 		}
 		if ( arginfo.hasArg("range") && !arginfo.hasArg("ranges") )
 		{
-			std::string const range = arginfo.getUnparsedValue("range",std::string());		
+			std::string const range = arginfo.getUnparsedValue("range",std::string());
 			arginfo.argmap["ranges"] = range;
 			arginfo.argmultimap.insert(std::pair<std::string,std::string>(std::string("ranges"),range));
 		}
-			
+
 		bamtofastq(arginfo);
-		
-		std::cerr << "[V] " << libmaus2::util::MemUsage() << " wall clock time " << rtc.formatTime(rtc.getElapsedSeconds()) << std::endl;		
+
+		std::cerr << "[V] " << libmaus2::util::MemUsage() << " wall clock time " << rtc.formatTime(rtc.getElapsedSeconds()) << std::endl;
 	}
 	catch(std::exception const & ex)
 	{

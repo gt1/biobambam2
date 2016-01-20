@@ -68,10 +68,10 @@ char const * getDefaultInputFormat()
 template<bool passthrough>
 int bamvalidateTemplate(::libmaus2::util::ArgInfo const & arginfo)
 {
-	libmaus2::timing::RealTimeClock rtc; rtc.start();	
+	libmaus2::timing::RealTimeClock rtc; rtc.start();
 	bool const verbose = arginfo.getValue("verbose",getDefaultVerbose());
 	bool const basequalhist = arginfo.getValue("basequalhist",getDefaultBaseQualHist());
-	
+
 	libmaus2::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
 		libmaus2::bambam::BamMultiAlignmentDecoderFactory::construct(
 			arginfo,false // put rank
@@ -79,7 +79,7 @@ int bamvalidateTemplate(::libmaus2::util::ArgInfo const & arginfo)
 	);
 	::libmaus2::bambam::BamAlignmentDecoder * ppdec = &(decwrapper->getDecoder());
 	::libmaus2::bambam::BamAlignmentDecoder & dec = *ppdec;
-	::libmaus2::bambam::BamHeader const & header = dec.getHeader();	
+	::libmaus2::bambam::BamHeader const & header = dec.getHeader();
 	::libmaus2::bambam::BamAlignment const & algn = dec.getAlignment();
 
 	// add PG line to header
@@ -89,7 +89,7 @@ int bamvalidateTemplate(::libmaus2::util::ArgInfo const & arginfo)
 		"bamvalidate", // PN
 		arginfo.commandline, // CL
 		::libmaus2::bambam::ProgramHeaderLineSet(header.text).getLastIdInChain(), // PP
-		std::string(PACKAGE_VERSION) // VN			
+		std::string(PACKAGE_VERSION) // VN
 	);
 	// construct new header
 	::libmaus2::bambam::BamHeader uphead(upheadtext);
@@ -110,7 +110,7 @@ int bamvalidateTemplate(::libmaus2::util::ArgInfo const & arginfo)
 		std::string const tmpfilenamebase = arginfo.getValue<std::string>("tmpfile",arginfo.getDefaultTmpFileName());
 		std::string const tmpfileindex = tmpfilenamebase + "_index";
 		::libmaus2::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
-		
+
 		if ( arginfo.getValue<unsigned int>("md5",getDefaultMD5()) )
 		{
 			if ( arginfo.hasArg("md5filename") &&  arginfo.getUnparsedValue("md5filename","") != "" )
@@ -144,19 +144,19 @@ int bamvalidateTemplate(::libmaus2::util::ArgInfo const & arginfo)
 			Pcbs = &cbs;
 
 
-		libmaus2::bambam::BamBlockWriterBase::unique_ptr_type Tout ( 
-			libmaus2::bambam::BamBlockWriterBaseFactory::construct(uphead, arginfo, Pcbs) 
+		libmaus2::bambam::BamBlockWriterBase::unique_ptr_type Tout (
+			libmaus2::bambam::BamBlockWriterBaseFactory::construct(uphead, arginfo, Pcbs)
 		);
 		Pout = UNIQUE_PTR_MOVE(Tout);
 	}
-	
+
 	libmaus2::autoarray::AutoArray<char> lastvalidname(256); // max valid read name is 255 bytes
 	uint64_t alsok = 0;
 
 	::libmaus2::autoarray::AutoArray<char> qual;
 	libmaus2::autoarray::AutoArray<uint64_t> H(static_cast<uint64_t>(std::numeric_limits<uint8_t>::max())+1);
 	std::fill(H.begin(),H.end(),0ull);
-	
+
 	try
 	{
 		while ( dec.readAlignment() )
@@ -167,9 +167,9 @@ int bamvalidateTemplate(::libmaus2::util::ArgInfo const & arginfo)
 			if ( basequalhist )
 			{
 				uint64_t const l = algn.getLseq();
-				uint8_t const * Qc = libmaus2::bambam::BamAlignmentDecoderBase::getQual(algn.D.begin());					
+				uint8_t const * Qc = libmaus2::bambam::BamAlignmentDecoderBase::getQual(algn.D.begin());
 				uint8_t const * const Qe = Qc + l;
-				
+
 				while ( Qc != Qe )
 					H[*(Qc++)]++;
 			}
@@ -177,7 +177,7 @@ int bamvalidateTemplate(::libmaus2::util::ArgInfo const & arginfo)
 			uint64_t const lname = algn.getLReadName();
 			char const * name = algn.getName();
 			std::copy(name,name+lname+1,lastvalidname.begin());
-			
+
 			alsok += 1;
 		}
 	}
@@ -187,7 +187,7 @@ int bamvalidateTemplate(::libmaus2::util::ArgInfo const & arginfo)
 		std::cerr << "[E] read " << alsok << " valid alignments" << std::endl;
 		throw;
 	}
-	
+
 	Pout.reset();
 
 	if ( Pmd5cb )
@@ -200,38 +200,38 @@ int bamvalidateTemplate(::libmaus2::util::ArgInfo const & arginfo)
 	}
 
 	if ( verbose )
-		std::cerr << "[V] checked " << alsok << " alignments in " << rtc.formatTime(rtc.getElapsedSeconds()) 
+		std::cerr << "[V] checked " << alsok << " alignments in " << rtc.formatTime(rtc.getElapsedSeconds())
 			<< " (" << alsok / rtc.getElapsedSeconds() << " al/s)" << std::endl;
-			
+
 	if ( basequalhist )
 	{
 		uint64_t const s = std::accumulate(H.begin(),H.end(),0ull);
-		
-		uint64_t a = 0;		
+
+		uint64_t a = 0;
 		uint64_t minq = std::numeric_limits<uint64_t>::max();
 		uint64_t maxq = 0;
-		
+
 		for ( uint64_t i = 0; i < H.size(); ++i )
 			if ( H[i] )
 			{
 				minq = std::min(minq,i);
 				maxq = std::max(maxq,i);
-			
+
 				a += H[i];
-				
-				std::cerr 
+
+				std::cerr
 					<< "[H]\t" << i << "\t";
-				
+
 				if ( ( static_cast<uint64_t>(i+33) < static_cast<uint64_t>(std::numeric_limits<char>::max()) && isprint(i+33)) )
 					std::cerr << static_cast<char>(i+33);
-				
+
 				std::cerr << "\t"
-					<< H[i] << "\t" 
+					<< H[i] << "\t"
 					<< (H[i] / static_cast<double>(s)) << "\t"
 					<< (a / static_cast<double>(s))
 					<< std::endl;
 			}
-			
+
 		if ( s )
 		{
 			std::cerr << "[H]\tmin\t" << minq << "\t";
@@ -244,14 +244,14 @@ int bamvalidateTemplate(::libmaus2::util::ArgInfo const & arginfo)
 			std::cerr << std::endl;
 		}
 	}
-	
+
 	return EXIT_SUCCESS;
 }
 
 int bamvalidate(::libmaus2::util::ArgInfo const & arginfo)
 {
 	bool const passthrough = arginfo.getValue<unsigned int>("passthrough",getDefaultPassThrough());
-	
+
 	if ( passthrough )
 		return bamvalidateTemplate<true>(arginfo);
 	else
@@ -265,7 +265,7 @@ int main(int argc, char * argv[])
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
 
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -274,7 +274,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -284,9 +284,9 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-			
+
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print stats at the end of a successfull run" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "basequalhist=<["+::biobambam2::Licensing::formatNumber(getDefaultBaseQualHist())+"]>", "print base quality histogram at end of a successfull run" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "passthrough=<["+::biobambam2::Licensing::formatNumber(getDefaultPassThrough())+"]>", "write alignments to standard output (default: do not pass through)" ) );

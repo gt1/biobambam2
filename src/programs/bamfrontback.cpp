@@ -61,11 +61,11 @@ int bamreset(::libmaus2::util::ArgInfo const & arginfo)
 		se.finish();
 		throw se;
 	}
-	
+
 	int const level = libmaus2::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
 	int const resetsortorder = arginfo.getValue<int>("resetsortorder",getDefaultResetSortOrder());
-	
+
 	::libmaus2::bambam::BamDecoder dec(std::cin,false);
 	::libmaus2::bambam::BamHeader const & header = dec.getHeader();
 
@@ -92,7 +92,7 @@ int bamreset(::libmaus2::util::ArgInfo const & arginfo)
 		libmaus2::aio::InputStreamInstance CIS(headerfilename);
 		libmaus2::autoarray::AutoArray<char> ctext(headerlen,false);
 		CIS.read(ctext.begin(),headerlen);
-		headertext = std::string(ctext.begin(),ctext.end());		
+		headertext = std::string(ctext.begin(),ctext.end());
 	}
 
 	// add PG line to header
@@ -102,9 +102,9 @@ int bamreset(::libmaus2::util::ArgInfo const & arginfo)
 		"bamreset", // PN
 		arginfo.commandline, // CL
 		::libmaus2::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
-		std::string(PACKAGE_VERSION) // VN			
+		std::string(PACKAGE_VERSION) // VN
 	);
-	
+
 	// construct new header
 	libmaus2::bambam::BamHeader uphead(headertext);
 	if ( resetsortorder )
@@ -162,7 +162,7 @@ int bamreset(::libmaus2::util::ArgInfo const & arginfo)
 
 	::libmaus2::bambam::BamWriter::unique_ptr_type writer(new ::libmaus2::bambam::BamWriter(std::cout,uphead,level,Pcbs));
  	libmaus2::timing::RealTimeClock rtc; rtc.start();
- 	
+
 	libmaus2::bambam::BamAlignment & algn = dec.getAlignment();
 	uint64_t c = 0;
 
@@ -171,19 +171,19 @@ int bamreset(::libmaus2::util::ArgInfo const & arginfo)
 	::libmaus2::autoarray::AutoArray<char> qualdata;
 	libmaus2::autoarray::AutoArray<uint8_t,libmaus2::bambam::BamAlignment::D_array_alloc_type> T;
 	uint64_t const klen = arginfo.getValueUnsignedNumeric<uint64_t>("border",20);
-	libmaus2::bambam::BamSeqEncodeTable const seqenc;           
-	
+	libmaus2::bambam::BamSeqEncodeTable const seqenc;
+
 	char const * cfront = "_front";
 	uint64_t const cfrontlen = strlen(cfront);
 	char const * cback = "_back";
 	uint64_t const cbacklen = strlen(cback);
-	
+
 	::libmaus2::autoarray::AutoArray<char> namedata;
 
 	while ( dec.readAlignment() )
 	{
 		bool const keep = resetAlignment(algn,true /* reset aux */,excludeflags);
-		
+
 		if ( keep )
 		{
 			if ( 1 ) // !algn.isPaired() )
@@ -193,19 +193,19 @@ int bamreset(::libmaus2::util::ArgInfo const & arginfo)
 
 				uint64_t const lseq = front.decodeRead(readdata);
 				front.decodeQual(qualdata);
-				
+
 				if ( lseq > klen )
 				{
 					char const * name = front.getName();
 					uint64_t const lname = strlen(name);
-					
+
 					if ( lname + std::max(cfrontlen,cbacklen) + 1 > namedata.size() )
 						namedata = ::libmaus2::autoarray::AutoArray<char>(lname+std::max(cfrontlen,cbacklen)+1,false);
-						
+
 					std::copy(name,name+lname,namedata.begin());
 					std::copy(cfront,cfront+cfrontlen,namedata.begin()+lname);
 					namedata[lname+cfrontlen] = 0;
-								
+
 					front.replaceSequence(seqenc,readdata.begin(),qualdata.begin(),klen,T);
 					front.replaceName(namedata.begin(),lname+cfrontlen);
 
@@ -225,14 +225,14 @@ int bamreset(::libmaus2::util::ArgInfo const & arginfo)
 			}
 			else
 			{
-				algn.serialise(writer->getStream());			
+				algn.serialise(writer->getStream());
 			}
 		}
 
 		if ( verbose && (++c & (1024*1024-1)) == 0 )
  			std::cerr << "[V] " << c/(1024*1024) << " " << (c / rtc.getElapsedSeconds()) << std::endl;
 	}
-	
+
 	writer.reset();
 
 	if ( Pmd5cb )
@@ -252,9 +252,9 @@ int main(int argc, char * argv[])
 	try
 	{
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
-		
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -263,7 +263,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -273,9 +273,9 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-			
+
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress information" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam2::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
@@ -291,10 +291,10 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 
 				std::cerr << "Alignment flags: PAIRED,PROPER_PAIR,UNMAP,MUNMAP,REVERSE,MREVERSE,READ1,READ2,SECONDARY,QCFAIL,DUP,SUPPLEMENTARY" << std::endl;
-				
+
 				return EXIT_SUCCESS;
 			}
-			
+
 		return bamreset(arginfo);
 	}
 	catch(std::exception const & ex)
@@ -303,4 +303,3 @@ int main(int argc, char * argv[])
 		return EXIT_FAILURE;
 	}
 }
-

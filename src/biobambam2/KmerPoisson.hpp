@@ -24,7 +24,7 @@
 /**
  * this function computes an approximation of the probability
  * of a query sequence of KA A bases, KC C bases, KG G bases and
- * KT T bases appearing exactly n times in a reference sequence 
+ * KT T bases appearing exactly n times in a reference sequence
  * of length L. This is based on a simplified model using a Poisson
  * distribution (see e.g. Zhou, Xie: Exact Distribution of the Occurence
  * Number for K-tuples Over an Alphabet of Non-Equal Probability Letters)
@@ -41,6 +41,6 @@ double kmerPoisson(
 	double const pA = 0.25,
 	double const pC = 0.25,
 	double const pG = 0.25,
-	double const pT = 0.25 
+	double const pT = 0.25
 );
 #endif

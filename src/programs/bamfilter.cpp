@@ -41,7 +41,7 @@ int bamfilter(libmaus2::util::ArgInfo const & arginfo)
 	uint64_t const maxmapped = arginfo.getValue<uint64_t>("maxmapped",getDefaultMaxMapped());
 	uint64_t const minlen = arginfo.getValue<uint64_t>("minlen",getDefaultMinLen());
 	int const level = libmaus2::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
-	
+
 	::libmaus2::bambam::BamDecoder BD(std::cin);
 	::libmaus2::bambam::BamHeader const & bamheader = BD.getHeader();
 	::libmaus2::bambam::BamAlignment & alignment = BD.getAlignment();
@@ -96,7 +96,7 @@ int bamfilter(libmaus2::util::ArgInfo const & arginfo)
 
 	::libmaus2::bambam::BamHeader::unique_ptr_type uphead(libmaus2::bambam::BamHeaderUpdate::updateHeader(arginfo,bamheader,"bamfilter",std::string(PACKAGE_VERSION)));
 	::libmaus2::bambam::BamWriter::unique_ptr_type writer(new ::libmaus2::bambam::BamWriter(std::cout,*uphead,level,Pcbs));
-	
+
 	while ( BD.readAlignment() )
 	{
 		bool const a_1_mapped = !(alignment.getFlags() & ::libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FUNMAP);
@@ -105,13 +105,13 @@ int bamfilter(libmaus2::util::ArgInfo const & arginfo)
 
 		uint64_t const nummapped = (a_1_mapped?1:0)+(a_2_mapped?1:0)+(proper?1:0);
 
-		if ( 
-			nummapped >= minmapped && 
-			nummapped <= maxmapped && 
+		if (
+			nummapped >= minmapped &&
+			nummapped <= maxmapped &&
 			alignment.getLseq() >= static_cast<int64_t>(minlen)
 		)
 			alignment.serialise(writer->getStream());
-	}	
+	}
 
 	writer.reset();
 
@@ -123,7 +123,7 @@ int bamfilter(libmaus2::util::ArgInfo const & arginfo)
 	{
 		Pindex->flush(std::string(indexfilename));
 	}
-	
+
 	return EXIT_SUCCESS;
 }
 
@@ -132,9 +132,9 @@ int main(int argc, char * argv[])
 	try
 	{
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
-		
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -143,7 +143,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -153,9 +153,9 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-				
+
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
 				V.push_back ( std::pair<std::string,std::string> ( "minmapped=<["+::biobambam2::Licensing::formatNumber(getDefaultMinMapped())+"]>", "minimum number of mapped fragments in a template" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "maxmapped=<["+::biobambam2::Licensing::formatNumber(getDefaultMaxMapped())+"]>", "maximum number of mapped fragments in a template" ) );

@@ -59,7 +59,7 @@ struct NamedInterval
 	uint64_t from;
 	uint64_t to;
 	uint64_t bin;
-	
+
 	NamedInterval() : name(0), refseq(0), from(0), to(0), bin(0) {}
 	NamedInterval(
 		uint64_t const rname,
@@ -68,7 +68,7 @@ struct NamedInterval
 		uint64_t const rto,
 		uint64_t const rbin = 0
 	) : name(rname), refseq(rrefseq), from(rfrom), to(rto), bin(rbin) {}
-	
+
 	bool operator<(NamedInterval const & O) const
 	{
 		if ( refseq != O.refseq )
@@ -115,7 +115,7 @@ struct NamedIntervalGeneMeta
 {
 	std::string genename;
 	std::string name;
-	
+
 	NamedIntervalGeneMeta()
 	: genename(), name()
 	{}
@@ -149,7 +149,7 @@ struct NamedIntervalGeneSet
 			libmaus2::exception::LibMausException lme;
 			lme.getStream() << "[E] cannot parse empty string as number." << std::endl;
 			lme.finish();
-			throw lme;	
+			throw lme;
 		}
 
 		unsigned char const * c = reinterpret_cast<unsigned char const *>(s.c_str());
@@ -167,17 +167,17 @@ struct NamedIntervalGeneSet
 				n *= 10;
 				n += c[i]-'0';
 			}
-			
+
 		return n;
 	}
-	
+
 	static std::string unifyTranscripts(std::string const & fn, std::string const & refregex)
 	{
 		libmaus2::regex::PosixRegex regex(refregex);
 		libmaus2::bambam::GeneFlatFile::unique_ptr_type PGFF(libmaus2::bambam::GeneFlatFile::construct(fn));
 		std::ostringstream ostr;
 		libmaus2::bambam::GeneFlatFileEntry entry;
-		
+
 		// compute map gene -> set of chromosomes
 		std::map< std::string, std::set<std::string> > genechroms;
 
@@ -200,7 +200,7 @@ struct NamedIntervalGeneSet
 
 		std::map< std::string,std::pair<uint64_t,uint64_t> > geneCoord;
 		std::map< std::string,std::vector<uint64_t> > geneInst;
-		
+
 		// iterate over all lines
 		for ( uint64_t i = 0; i < PGFF->size(); ++i )
 		{
@@ -219,7 +219,7 @@ struct NamedIntervalGeneSet
 				if ( genechroms.find(geneName)->second.size() > 1 )
 				{
 					uint64_t minsize = std::numeric_limits<uint64_t>::max();
-					
+
 					// find length of shortest chromosome name gene is on
 					for ( std::set<std::string>::const_iterator ita = genechroms.find(geneName)->second.begin();
 						ita != genechroms.find(geneName)->second.end(); ++ita )
@@ -227,26 +227,26 @@ struct NamedIntervalGeneSet
 							static_cast<uint64_t>(minsize),
 							static_cast<uint64_t>(ita->size())
 						);
-					
+
 					// number of chromosome names with minimum size
 					uint64_t minsizecnt = 0;
 					for ( std::set<std::string>::const_iterator ita = genechroms.find(geneName)->second.begin();
 						ita != genechroms.find(geneName)->second.end(); ++ita )
 						if ( ita->size() == minsize )
 							minsizecnt++;
-					
+
 					// append name of chromosome if not the unique shortest one
-					if ( 
-						minsizecnt > 1 
+					if (
+						minsizecnt > 1
 						||
 						chrom.size() > minsize
 					)
 						geneName += (std::string("_")+chrom);
 				}
-				
+
 				std::map< std::string,std::pair<uint64_t,uint64_t> >::iterator ita =
 					geneCoord.find(geneName);
-			
+
 				// name is not yet stored in geneCoord
 				if ( ita == geneCoord.end() )
 				{
@@ -257,7 +257,7 @@ struct NamedIntervalGeneSet
 				{
 					libmaus2::math::IntegerInterval<int64_t> prevint(ita->second.first,ita->second.second);
 					libmaus2::math::IntegerInterval<int64_t> newint(entry.txStart,entry.txEnd);
-				
+
 					// no intersection?
 					if ( prevint.intersection(newint).isEmpty() )
 					{
@@ -278,18 +278,18 @@ struct NamedIntervalGeneSet
 			}
 			else
 			{
-				// std::cerr << "[V] dropping " << chrom << std::endl; 
-			}		
+				// std::cerr << "[V] dropping " << chrom << std::endl;
+			}
 		}
-		
+
 		uint64_t nonuniquecnt = 0;
 		for ( std::map< std::string,std::vector<uint64_t> >::const_iterator ita = geneInst.begin(); ita != geneInst.end(); ++ita )
 		{
 			std::string const & geneName = ita->first;
 			std::vector<uint64_t> const & inst = ita->second;
-			
+
 			assert ( inst.size() > 0 );
-			
+
 			// single instance?
 			if ( inst.size() == 1 )
 			{
@@ -302,22 +302,22 @@ struct NamedIntervalGeneSet
 			{
 				std::pair<uint64_t,uint64_t> maxcoord = geneCoord.find(geneName)->second;
 				uint64_t maxcnt = 0, maxid = inst.size();
-				
+
 				for ( uint64_t i = 0; i < inst.size(); ++i )
 				{
 					PGFF->get(inst[i],entry);
-					
+
 					if ( entry.txStart == maxcoord.first && entry.txEnd == maxcoord.second )
 					{
 						maxcnt++;
 						maxid = i;
 					}
 				}
-				
+
 				if ( maxcnt )
 				{
 					PGFF->get(inst[maxid],entry);
-					
+
 					entry.geneName.first  = geneName.c_str();
 					entry.geneName.second = geneName.c_str() + geneName.size();
 
@@ -328,7 +328,7 @@ struct NamedIntervalGeneSet
 						entry.name = entry.geneName;
 						entry.exons.resize(0);
 					}
-					ostr << entry << "\n";		
+					ostr << entry << "\n";
 				}
 				else
 				{
@@ -344,15 +344,15 @@ struct NamedIntervalGeneSet
 					entry.name    = entry.geneName;
 					entry.exons.resize(0);
 
-					ostr << entry << "\n";		
+					ostr << entry << "\n";
 				}
 			}
 		}
-		
+
 		// std::cerr << "[V] found " << nonuniquecnt << " non unique transcript genes" << std::endl;
-		
+
 		// std::cerr << ostr.str();
-		
+
 		return ostr.str();
 	}
 
@@ -363,9 +363,9 @@ struct NamedIntervalGeneSet
 	)
 	: ilog(-1), intervals(), meta()
 	{
-		
+
 		std::istream * Pistr = 0;
-		libmaus2::util::unique_ptr<std::istringstream>::type Puistr;		
+		libmaus2::util::unique_ptr<std::istringstream>::type Puistr;
 		libmaus2::aio::InputStreamInstance CIS(fn);
 		libmaus2::lz::BufferedGzipStream::unique_ptr_type PBGS;
 		std::string unif;
@@ -382,7 +382,7 @@ struct NamedIntervalGeneSet
 		else
 		{
 			bool const isgz = libmaus2::bambam::MdNmRecalculation::isGzip(fn);
-			
+
 			if ( isgz )
 			{
 				libmaus2::lz::BufferedGzipStream::unique_ptr_type TBGS(new libmaus2::lz::BufferedGzipStream(CIS));
@@ -394,7 +394,7 @@ struct NamedIntervalGeneSet
 				Pistr = &CIS;
 			}
 		}
-		
+
 		std::istream & istr = *Pistr;
 
 		std::map<std::string,uint64_t> refmap;
@@ -403,36 +403,36 @@ struct NamedIntervalGeneSet
 		{
 			refmap[header.getRefIDName(i)] = i;
 		}
-		
+
 		refidintervals.resize(header.getNumRef());
-		
+
 		while ( istr )
 		{
 			std::string line;
 			std::getline(istr,line);
-			
+
 			if ( line.size() )
 			{
 				std::deque<std::string> const Q = libmaus2::util::stringFunctions::tokenize<std::string>(line,std::string("\t"));
-				
+
 				// ignore line if it does not have a  sufficient number of columns
 				if ( Q.size() < 6 )
 					continue;
-					
+
 				std::string const & genename = Q.at(0);
 				std::string const & name = Q.at(1);
 				std::string const & refname = Q.at(2);
 				// std::string const & codingstrand = Q.at(3);
 				std::string const & sstart = Q.at(4);
 				std::string const & send = Q.at(5);
-				
+
 				std::map<std::string,uint64_t>::const_iterator it = refmap.find(refname);
-				
+
 				if ( it == refmap.end() )
 				{
 					std::cerr << "[W] cannot find reference " << refname << " in BAM file, not searching for gene " << genename << std::endl;
 					continue;
-					
+
 					#if 0
 					libmaus2::exception::LibMausException lme;
 					lme.getStream() << "[E] cannot find reference " << refname << " in BAM file" << std::endl;
@@ -444,21 +444,21 @@ struct NamedIntervalGeneSet
 				uint64_t const refseq = it->second;
 				uint64_t const start = parseNumber(sstart);
 				uint64_t const end = parseNumber(send);
-				
+
 				NamedIntervalGeneMeta nmeta(genename,name);
 				NamedInterval interval(meta.size(),refseq,start,end);
-				
+
 				intervals.push_back(interval);
 				meta.push_back(nmeta);
 			}
 		}
-		
+
 		std::sort(intervals.begin(),intervals.end());
-		
+
 		uint64_t maxtop = 0;
 		for ( uint64_t i = 0; i < intervals.size(); ++i )
 			maxtop = std::max(maxtop,intervals[i].to);
-			
+
 		// next power of two
 		uint64_t const ntp = libmaus2::math::nextTwoPow(maxtop+1);
 		// number of bits used
@@ -467,7 +467,7 @@ struct NamedIntervalGeneSet
 		int const maxbinbits1 = maxbinbits-1;
 		blockmask = ~((1ull << ((ilog>=maxbinbits1) ? (ilog-maxbinbits1) : 0))-1);
 
-		// compute bins for all intervals		
+		// compute bins for all intervals
 		for ( uint64_t i = 0; i < intervals.size(); ++i )
 		{
 			uint64_t bin = 0;
@@ -475,26 +475,26 @@ struct NamedIntervalGeneSet
 			uint64_t from = intervals[i].from;
 			uint64_t to = intervals[i].to;
 
-			for ( 
-				uint64_t m = 1ull << (ilog-1); 
-				(m!=0) && ((from & m) == (to & m)); 
-				(m = ((m >> 1) & blockmask)), (binadd <<= 1) 
+			for (
+				uint64_t m = 1ull << (ilog-1);
+				(m!=0) && ((from & m) == (to & m));
+				(m = ((m >> 1) & blockmask)), (binadd <<= 1)
 			)
 			{
 				bin <<= 1;
 				bin += 1+((from&m)!=0);
 			}
-			
+
 			#if 0
 			std::cerr << "[" << from << "," << to << "] bin " << bin << std::endl;
 			#endif
-			
+
 			intervals[i].bin = bin;
 		}
-		
+
 		// sort by reference sequence, bin
 		std::sort(intervals.begin(),intervals.end(),NamedIntervalBinComparator());
-		
+
 		// compute interval for each reference sequence
 		uint64_t low = 0;
 		while ( low != intervals.size() )
@@ -504,7 +504,7 @@ struct NamedIntervalGeneSet
 				++high;
 
 			refidintervals[intervals[low].refseq] = std::pair<uint64_t,uint64_t>(low,high);
-			
+
 			low = high;
 		}
 	}
@@ -515,13 +515,13 @@ struct NamedIntervalGeneSet
 		uint64_t bin;
 		uint64_t subfrom;
 		uint64_t subto;
-		
+
 		FindIntervalsQueueElement() : s(0), bin(0), subfrom(0), subto(0) {}
-		FindIntervalsQueueElement(int const rs, uint64_t const rbin, uint64_t const rsubfrom, uint64_t const rsubto) 
+		FindIntervalsQueueElement(int const rs, uint64_t const rbin, uint64_t const rsubfrom, uint64_t const rsubto)
 		: s(rs), bin(rbin), subfrom(rsubfrom), subto(rsubto)
 		{}
 	};
-	
+
 
 	void findIntervals(
 		libmaus2::bambam::BamAlignment const & algn,
@@ -530,7 +530,7 @@ struct NamedIntervalGeneSet
 	const
 	{
 		binMatchingIntervals.resize(0);
-	
+
 		if ( algn.isMapped() )
 		{
 			uint64_t const refid = algn.getRefID();
@@ -543,7 +543,7 @@ struct NamedIntervalGeneSet
 			std::cerr << "from=" << from << " to=" << to << std::endl;
 			#endif
 			std::vector<uint64_t> matchingIntervals;
-						
+
 			for ( uint64_t i = refidintervals[refid].first; i < refidintervals[refid].second; ++i )
 			{
 				assert ( intervals[i].refseq == refid );
@@ -552,12 +552,12 @@ struct NamedIntervalGeneSet
 				{
 					matchingIntervals.push_back(i);
 					#if 0
-					std::cerr << "matching " << intervals[i] << std::endl;						
+					std::cerr << "matching " << intervals[i] << std::endl;
 					#endif
 				}
 			}
 			#endif
-			
+
 			std::deque<FindIntervalsQueueElement> Q;
 			Q.push_back(FindIntervalsQueueElement(ilog-1,0,from,to));
 
@@ -565,45 +565,45 @@ struct NamedIntervalGeneSet
 			{
 				FindIntervalsQueueElement C = Q.front();
 				Q.pop_front();
-				
+
 				#if 0
 				std::cerr << "[" << C.subfrom << "," << C.subto << "] bin " << C.bin << std::endl;
 				#endif
-				
+
 				std::vector<NamedInterval>::const_iterator it = std::lower_bound(
 					intervals.begin()+refidintervals[refid].first,
 					intervals.begin()+refidintervals[refid].second,
 					NamedInterval(0,refid,0,0,C.bin),
 					NamedIntervalBinComparator()
 				);
-				
+
 				for ( ; it != intervals.end() && it->bin == C.bin; ++it )
 					if ( ! A.intersection(libmaus2::math::IntegerInterval<int64_t>(it->from,it->to)).isEmpty() )
 					{
 						binMatchingIntervals.push_back(it-intervals.begin());
-						
+
 						#if 0
-						std::cerr << "bin-matching " << (*it) << std::endl;									
+						std::cerr << "bin-matching " << (*it) << std::endl;
 						#endif
 					}
-			
+
 				uint64_t const m = (1ull << C.s) & blockmask;
-				
+
 				if ( m )
 				{
 					if ( ( C.subfrom & m ) != (C.subto & m) )
 					{
 						uint64_t leftfrom = C.subfrom;
 						uint64_t leftto = C.subfrom | libmaus2::math::lowbits(C.s);
-					
+
 						uint64_t rightfrom = C.subto & (~libmaus2::math::lowbits(C.s));
 						uint64_t rightto = C.subto;
 
-						#if 0					
+						#if 0
 						std::cerr << "split [" << C.subfrom << "," << C.subto << "] into [" << leftfrom << "," << leftto << "] and ["
 							<< rightfrom << "," << rightto << "]\n";
 						#endif
-							
+
 						Q.push_back(
 							FindIntervalsQueueElement(
 								C.s-1,
@@ -631,7 +631,7 @@ struct NamedIntervalGeneSet
 								C.subto
 							)
 						);
-						
+
 						#if 0
 						std::cerr << "unsplit left [" << C.subfrom << "," << C.subto << "]" << std::endl;
 						#endif
@@ -645,7 +645,7 @@ struct NamedIntervalGeneSet
 								C.subfrom,
 								C.subto
 							)
-						);				
+						);
 
 						#if 0
 						std::cerr << "unsplit right [" << C.subfrom << "," << C.subto << "]" << std::endl;
@@ -653,11 +653,11 @@ struct NamedIntervalGeneSet
 					}
 				}
 			}
-		
+
 			#if defined(FIND_INTERVALS_DEBUG)
 			std::sort(matchingIntervals.begin(),matchingIntervals.end());
 			std::sort(binMatchingIntervals.begin(),binMatchingIntervals.end());
-			
+
 			assert ( matchingIntervals == binMatchingIntervals );
 			#endif
 		}
@@ -667,21 +667,21 @@ struct NamedIntervalGeneSet
 std::ostream & operator<<(std::ostream & out, NamedIntervalGeneSet const & NIGS)
 {
 	out << "NamedIntervalGeneSet(\n";
-	
+
 	for ( uint64_t i = 0; i < NIGS.intervals.size(); ++i )
 		out << "\t" << NIGS.intervals[i] << "\n";
 	for ( uint64_t i = 0; i < NIGS.meta.size(); ++i )
 		out << "\t" << NIGS.meta[i] << "\n";
-	
+
 	out << ")\n";
-	
+
 	return out;
 }
 
 int bamintervalcomment(::libmaus2::util::ArgInfo const & arginfo)
 {
 	::libmaus2::util::TempFileRemovalContainer::setup();
-	
+
 	bool const inputisstdin = (!arginfo.hasArg("I")) || (arginfo.getUnparsedValue("I","-") == "-");
 
 	if ( isatty(STDIN_FILENO) && inputisstdin && (arginfo.getValue<std::string>("inputformat","bam") != "sam") )
@@ -691,7 +691,7 @@ int bamintervalcomment(::libmaus2::util::ArgInfo const & arginfo)
 		se.finish();
 		throw se;
 	}
-	
+
 	if ( ! arginfo.hasArg("intervals") )
 	{
 		::libmaus2::exception::LibMausException se;
@@ -715,19 +715,19 @@ int bamintervalcomment(::libmaus2::util::ArgInfo const & arginfo)
 	if ( disablevalidation )
 		dec.disableValidation();
 	::libmaus2::bambam::BamHeader const & header = dec.getHeader();
-	
+
 	std::string const chromregex = arginfo.getUnparsedValue("chromregex",".*");
 	bool const unifytranscripts = arginfo.getValue<unsigned int>("unifytranscripts",false);
-	
+
 	NamedIntervalGeneSet const NIGS(arginfo.getUnparsedValue("intervals","not set"),header,unifytranscripts,chromregex);
-	
+
 	// prefix for tmp files
 	std::string const tmpfilenamebase = arginfo.getValue<std::string>("tmpfile",arginfo.getDefaultTmpFileName());
 	std::string const tmpfilenameout = tmpfilenamebase + "_bamintervalcomment";
 	std::string const tmpfileindex = tmpfilenamebase + "_bamintervalcomment_index";
 	::libmaus2::util::TempFileRemovalContainer::addTempFile(tmpfilenameout);
 	::libmaus2::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
-	
+
 	::libmaus2::bambam::BamHeader::unique_ptr_type genuphead(
 		libmaus2::bambam::BamHeaderUpdate::updateHeader(arginfo,header,"bamintervalcomment",std::string(PACKAGE_VERSION))
 	);
@@ -758,7 +758,7 @@ int bamintervalcomment(::libmaus2::util::ArgInfo const & arginfo)
 			cbs.push_back(Pindex.get());
 		}
 	}
-	
+
 	libmaus2::bambam::BamBlockWriterBase::unique_ptr_type Pwriter(
 		libmaus2::bambam::BamBlockWriterBaseFactory::construct(
 			*genuphead,arginfo,
@@ -772,38 +772,38 @@ int bamintervalcomment(::libmaus2::util::ArgInfo const & arginfo)
 	uint64_t c = 0;
 	std::vector<uint64_t> matchingIntervals;
 	bool const coord = arginfo.getValue<unsigned int>("coord",0);
-	
+
 	while ( dec.readAlignment() )
 	{
 		NIGS.findIntervals(curalgn,matchingIntervals);
-		
+
 		if ( matchingIntervals.size() )
 		{
 			std::ostringstream ostr;
 			for ( uint64_t i = 0; i < matchingIntervals.size(); ++i )
 			{
 				ostr << ((i>0)?";":"");
-				
+
 				NamedInterval const & NI = NIGS.intervals[matchingIntervals[i]];
 				uint64_t const nameid = NI.name;
 				NamedIntervalGeneMeta const & meta = NIGS.meta[nameid];
-				
+
 				if ( coord )
 				{
 					ostr << "(";
 
-					#if 0					
+					#if 0
 					if ( meta.name != meta.genename )
 						ostr << meta.genename << "," << meta.name;
 					else
 					#endif
 						ostr << meta.genename;
-					
+
 					ostr << "," << header.getRefIDName(NI.refseq);
 					ostr << "," << NI.from;
 					ostr << "," << NI.to;
-					
-					ostr << ")";					
+
+					ostr << ")";
 				}
 				else
 					ostr << NIGS.meta[nameid];
@@ -811,13 +811,13 @@ int bamintervalcomment(::libmaus2::util::ArgInfo const & arginfo)
 			curalgn.filterOutAux(COfilter);
 			curalgn.putAuxString("CO",ostr.str());
 		}
-		
+
 		Pwriter->writeAlignment(curalgn);
 
 		if ( (++c & (1024*1024-1)) == 0 && verbose )
-			std::cerr << "[V] " << c << std::endl;		
+			std::cerr << "[V] " << c << std::endl;
 	}
-	
+
 	if ( verbose )
 		std::cerr << "[V] " << c << std::endl;
 
@@ -827,7 +827,7 @@ int bamintervalcomment(::libmaus2::util::ArgInfo const & arginfo)
 		Pmd5->saveDigestAsFile(arginfo.getUnparsedValue("md5filename","not set"));
 	if ( Pindex )
 		Pindex->flush(std::string(indexfilename));
-	
+
 	return EXIT_SUCCESS;
 }
 
@@ -836,9 +836,9 @@ int main(int argc, char * argv[])
 	try
 	{
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
-		
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -847,7 +847,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -857,12 +857,12 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-			
+
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "disablevalidation=<["+::biobambam2::Licensing::formatNumber(getDefaultDisableValidation())+"]>", "disable input validation (default is 0)" ) );				
+				V.push_back ( std::pair<std::string,std::string> ( "disablevalidation=<["+::biobambam2::Licensing::formatNumber(getDefaultDisableValidation())+"]>", "disable input validation (default is 0)" ) );
 
 				V.push_back ( std::pair<std::string,std::string> ( std::string("inputformat=<[")+getDefaultInputFormat()+"]>", std::string("input format (") + libmaus2::bambam::BamMultiAlignmentDecoderFactory::getValidInputFormats() + ")" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "I=<[stdin]>", "input filename (standard input if unset)" ) );
@@ -878,13 +878,13 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( std::string("outputformat=<[")+libmaus2::bambam::BamBlockWriterBaseFactory::getDefaultOutputFormat()+"]>", std::string("output format (") + libmaus2::bambam::BamBlockWriterBaseFactory::getValidOutputFormats() + ")" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "reference=<>", "reference FastA (.fai file required, for cram i/o only)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "intervals=<>", "intervals file (plain tab separated or tab separated gzip compressed)" ) );
-				
+
 				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;
 			}
-			
+
 		return bamintervalcomment(arginfo);
 	}
 	catch(std::exception const & ex)

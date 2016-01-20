@@ -87,7 +87,7 @@ struct MarkDuplicatesRewriteRequest
 	bool const md5;
 	bool const index;
 	uint64_t const markthreads;
-	
+
 	MarkDuplicatesRewriteRequest(std::istream & in)
 	:
 		arginfo(in),
@@ -106,7 +106,7 @@ struct MarkDuplicatesRewriteRequest
 		md5(libmaus2::util::NumberSerialisation::deserialiseNumber(in)),
 		index(libmaus2::util::NumberSerialisation::deserialiseNumber(in)),
 		markthreads(libmaus2::util::NumberSerialisation::deserialiseNumber(in))
-	{	
+	{
 	}
 
 	static void serialise(
@@ -146,7 +146,7 @@ struct MarkDuplicatesRewriteRequest
 		libmaus2::util::NumberSerialisation::serialiseNumber(out,index);
 		libmaus2::util::NumberSerialisation::serialiseNumber(out,markthreads);
 	}
-	
+
 	void dispatch() const
 	{
 		libmaus2::bambam::DupMarkBase::markDuplicatesInFile(
@@ -168,15 +168,15 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 		se.finish();
 		throw se;
 	}
-	
+
 	if ( (!(arginfo.hasArg("O") && (arginfo.getValue<std::string>("O","") != ""))) && isatty(STDOUT_FILENO) )
 	{
 		::libmaus2::exception::LibMausException se;
 		se.getStream() << "refusing to write compressed data to terminal. please use O=<filename> or redirect standard output to a file" << std::endl;
 		se.finish();
-		throw se;		
+		throw se;
 	}
-	
+
 	// logarithm of collation hash table size
 	unsigned int const colhashbits = arginfo.getValue<unsigned int>("colhashbits",getDefaultColHashBits());
 	// length of collation output list
@@ -206,9 +206,9 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 		::libmaus2::exception::LibMausException se;
 		se.getStream() << "tag " << tag << " is invalid" << std::endl;
 		se.finish();
-		throw se;			
+		throw se;
 	}
-	
+
 	if ( havetag )
 	{
 		libmaus2::trie::SimpleTrie::unique_ptr_type Ttagtrie(new libmaus2::trie::SimpleTrie);
@@ -228,19 +228,19 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 		::libmaus2::exception::LibMausException se;
 		se.getStream() << "nucltag " << tag << " is invalid" << std::endl;
 		se.finish();
-		throw se;			
+		throw se;
 	}
-	
+
 	if ( havetag && havenucltag )
 	{
 		::libmaus2::exception::LibMausException se;
 		se.getStream() << "tag and nucltag are mutually exclusive" << std::endl;
 		se.finish();
-		throw se;					
+		throw se;
 	}
-	
+
 	tag_type_enum tag_type;
-	
+
 	if ( havetag )
 		tag_type = tag_type_string;
 	else if ( havenucltag )
@@ -271,7 +271,7 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 	::libmaus2::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
 
 	int const level = libmaus2::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
-	
+
 	if ( verbose )
 		std::cerr << "[V] output compression level " << level << std::endl;
 
@@ -286,10 +286,10 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 	typedef ::libmaus2::bambam::BamParallelCircularHashCollatingBamDecoder par_col_type;
 	typedef ::libmaus2::bambam::CircularHashCollatingBamDecoder col_base_type;
 	typedef ::libmaus2::bambam::BamMergeCoordinateCircularHashCollatingBamDecoder merge_col_type;
-	typedef col_base_type::unique_ptr_type col_base_ptr_type;	
+	typedef col_base_type::unique_ptr_type col_base_ptr_type;
 	col_base_ptr_type CBD;
 
-	uint64_t const markthreads = 
+	uint64_t const markthreads =
 		std::max(static_cast<uint64_t>(1),arginfo.getValue<uint64_t>("markthreads",getDefaultMarkThreads()));
 
 	uint64_t const colexcludeflags =
@@ -309,7 +309,7 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 		std::string const inputfilename = arginfo.getValue<std::string>("I","I");
 		::libmaus2::aio::InputStreamInstance::unique_ptr_type tCIS(new ::libmaus2::aio::InputStreamInstance(inputfilename));
 		CIS = UNIQUE_PTR_MOVE(tCIS);
-		
+
 		if ( markthreads > 1 )
 		{
 			col_base_ptr_type tCBD(new par_col_type(
@@ -329,7 +329,7 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
                                 tmpfilename,
                                 colexcludeflags,
                                 true /* put rank */,
-                                colhashbits,collistsize));	
+                                colhashbits,collistsize));
 			CBD = UNIQUE_PTR_MOVE(tCBD);
 		}
 	}
@@ -417,7 +417,7 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 				std::cerr << "[V] Writing snappy compressed alignments to file " << tmpfilesnappyreads << std::endl;
 		}
 	}
-	
+
 	::libmaus2::bambam::BamHeader const bamheader = CBD->getHeader();
 
 	typedef col_base_type::alignment_ptr_type alignment_ptr_type;
@@ -435,7 +435,7 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 	#endif
 	::libmaus2::bambam::ReadEndsContainer::unique_ptr_type fragREC(new ::libmaus2::bambam::ReadEndsContainer(fragbufsize,tmpfilenamereadfrags,copyAlignments)); // fragment container
 	::libmaus2::bambam::ReadEndsContainer::unique_ptr_type pairREC(new ::libmaus2::bambam::ReadEndsContainer(fragbufsize,tmpfilenamereadpairs,copyAlignments)); // pair container
-	
+
 	int64_t maxrank = -1; // maximal appearing rank
 	uint64_t als = 0; // number of processed alignments (= mapped+unmapped fragments)
 	std::map<uint64_t,::libmaus2::bambam::DuplicationMetrics> metrics;
@@ -447,30 +447,30 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 	#if defined(UNPAIREDDEBUG)
 	::libmaus2::bambam::BamFormatAuxiliary bamauxiliary;
 	#endif
-	
+
 	libmaus2::timing::RealTimeClock readinrtc; readinrtc.start();
-	
+
 	while ( CBD->tryPair(P) )
 	{
 		assert ( P.first || P.second );
-		uint64_t const lib = 
-			P.first 
-			? 
-			P.first->getLibraryId(bamheader) 
+		uint64_t const lib =
+			P.first
+			?
+			P.first->getLibraryId(bamheader)
 			:
-			P.second->getLibraryId(bamheader) 				
+			P.second->getLibraryId(bamheader)
 			;
 		::libmaus2::bambam::DuplicationMetrics & met = metrics[lib];
-		
+
 		if ( P.first )
 		{
 			maxrank = std::max(maxrank,P.first->getRank());
 			als++;
-			
-			if ( P.first->isUnmap() ) 
+
+			if ( P.first->isUnmap() )
 			{
 				++met.unmapped;
-			}                                    
+			}
 			else if ( (!P.first->isPaired()) || P.first->isMateUnmap() )
 			{
 				#if defined(UNPAIREDDEBUG)
@@ -503,7 +503,7 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 			{
 				// length of tags for read1 and read2
 				uint64_t l1 = 0, l2 = 0;
-				
+
 				// aux lookup for read1
 				if ( P.first )
 				{
@@ -516,7 +516,7 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 					tag2 = P.second->getAuxString(ctag);
 					l2 = tag2 ? strlen(tag2) : 0;
 				}
-				
+
 				// length of concatenated tag
 				taglen = l1 + l2 + 2;
 				// expand buffer if necessary
@@ -536,7 +536,7 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 
 				assert ( outptr - tagbuffer.begin() == static_cast<ptrdiff_t>(taglen) );
 
-				// look up tag id			
+				// look up tag id
 				tagid = Ptagtrie->insert(
 					tagbuffer.begin(),
 					outptr
@@ -552,7 +552,7 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 				tag2 = P.second ? P.second->getAuxString(cnucltag) : 0;
 
 				tagid = (FATBT(tag1) << 32) | FATBT(tag2);
-				
+
 				break;
 			}
 			default:
@@ -562,7 +562,7 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 			}
 		}
 
-			
+
 		// we are not interested in unmapped reads below, ignore them
 		if ( P.first && P.first->isUnmap() )
 		{
@@ -572,23 +572,23 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 		{
 			P.second = 0;
 		}
-			
+
 		if ( P.first && P.second )
 		{
 			#if defined(DEBUG)
-			std::cerr << "[V] Got pair for name " << P.first->getName() 
+			std::cerr << "[V] Got pair for name " << P.first->getName()
 				<< "," << P.first->getCoordinate()
 				<< "," << P.first->getFlagsS()
 				<< "," << P.second->getCoordinate()
 				<< "," << P.second->getFlagsS()
 				<< std::endl;
 			#endif
-		
+
 			met.readpairsexamined++;
-		
+
 			assert ( ! P.first->isUnmap() );
 			assert ( ! P.second->isUnmap() );
-			
+
 			// if first appears after second one, then swap the reads, otherwise leave
 			if ( !libmaus2::bambam::ReadEndsBase::orderOK(*(P.first),*(P.second)) )
 				std::swap(P.first,P.second);
@@ -596,7 +596,7 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 			pairREC->putPair(*(P.first),*(P.second),bamheader,tagid);
 			paircnt++;
 		}
-	
+
 		if ( P.first )
 		{
 			fragREC->putFrag(*(P.first),bamheader,tagid);
@@ -606,14 +606,14 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 		{
 			fragREC->putFrag(*(P.second),bamheader,tagid);
 			fragcnt++;
-		}	
-		
+		}
+
 		if ( verbose && fragcnt/mod != lastproc/mod )
 		{
 			std::cerr
-				<< "[V] " 
+				<< "[V] "
 				<< als << " als, "
-				<< fragcnt << " mapped frags, " 
+				<< fragcnt << " mapped frags, "
 				<< paircnt << " mapped pairs, "
 				<< fragcnt/rtc.getElapsedSeconds() << " frags/s "
 				<< ::libmaus2::util::MemUsage()
@@ -624,9 +624,9 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 				<< std::endl;
 			readinrtc.start();
 			lastproc = fragcnt;
-		}		
+		}
 	}
-	
+
 	if ( copybamstr )
 	{
 		copybamstr->flush();
@@ -636,33 +636,33 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 	// number of lines in input file (due to dropping secondary etc. alignments this can be larger than
 	// maxrank+1 and larger than als)
 	uint64_t const numranks = CBD->getRank(); // maxrank+1;
-	
+
 	CBD.reset();
 	CIS.reset();
 	SRC.reset();
 	BWR.reset();
-			
+
 	fragREC->flush();
 	pairREC->flush();
 	fragREC->releaseArray();
 	pairREC->releaseArray();
-	
+
 	if ( verbose )
 		std::cerr << "[V] fragment and pair data computed in time " << fragrtc.getElapsedSeconds() << " (" << fragrtc.formatTime(fragrtc.getElapsedSeconds()) << ")" << std::endl;
 
-	#if 0	
+	#if 0
 	if ( numranks != als )
 		std::cerr << "[D] numranks=" << numranks << " != als=" << als << std::endl;
-	
+
 	assert ( numranks == als );
 	#endif
 
 	if ( verbose )
 		std::cerr
-			<< "[V] " 
+			<< "[V] "
 			<< numranks << " lines, "
 			<< als << " als, "
-			<< fragcnt << " mapped frags, " 
+			<< fragcnt << " mapped frags, "
 			<< paircnt << " mapped pairs, "
 			<< fragcnt/rtc.getElapsedSeconds() << " frags/s "
 			<< ::libmaus2::util::MemUsage()
@@ -672,7 +672,7 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 
 	/*
 	 * process fragment and pair data to determine which reads are to be marked as duplicates
-	 */		
+	 */
 	::libmaus2::bambam::ReadEnds nextfrag;
 	std::vector< ::libmaus2::bambam::ReadEnds > lfrags;
 	uint64_t dupcnt = 0;
@@ -721,7 +721,7 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 	lfrags.resize(0);
 	fragDec.reset();
 	if ( verbose )
-		std::cerr << "done, rate " << fragcnt/rtc.getElapsedSeconds() << std::endl;		
+		std::cerr << "done, rate " << fragcnt/rtc.getElapsedSeconds() << std::endl;
 
 	if ( verbose )
 		std::cerr << "[V] number of alignments marked as duplicates: " << DSCV.getNumDups() << " time " << fragrtc.getElapsedSeconds() << " (" << fragrtc.formatTime(fragrtc.getElapsedSeconds()) << ")" << std::endl;
@@ -734,7 +734,7 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 	 **/
 	::libmaus2::aio::OutputStreamInstance::unique_ptr_type pM;
 	std::ostream * pmetricstr = 0;
-	
+
 	if ( arginfo.hasArg("M") && (arginfo.getValue<std::string>("M","") != "") )
 	{
 		::libmaus2::aio::OutputStreamInstance::unique_ptr_type tpM(
@@ -754,14 +754,14 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 	for ( std::map<uint64_t,::libmaus2::bambam::DuplicationMetrics>::const_iterator ita = metrics.begin(); ita != metrics.end();
 		++ita )
 		ita->second.format(metricsstr, bamheader.getLibraryName(ita->first));
-	
+
 	if ( metrics.size() == 1 )
 	{
 		metricsstr << std::endl;
 		metricsstr << "## HISTOGRAM\nBIN\tVALUE" << std::endl;
 		metrics.begin()->second.printHistogram(metricsstr);
 	}
-	
+
 	metricsstr.flush();
 	pM.reset();
 	/*
@@ -781,15 +781,15 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 		getDefaultIndex(),
 		getDefaultMarkThreads()
 	);
-		
+
 	if ( verbose )
-		std::cerr << "[V] " << ::libmaus2::util::MemUsage() << " " 
-			<< globrtc.getElapsedSeconds() 
+		std::cerr << "[V] " << ::libmaus2::util::MemUsage() << " "
+			<< globrtc.getElapsedSeconds()
 			<< " ("
 			<< globrtc.formatTime(globrtc.getElapsedSeconds())
 			<< ")"
 			<< std::endl;
-		
+
 	return EXIT_SUCCESS;
 }
 
@@ -798,9 +798,9 @@ int main(int argc, char * argv[])
 	try
 	{
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
-		
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -809,7 +809,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -819,9 +819,9 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-				
+
 				V.push_back ( std::pair<std::string,std::string> ( "I=<filename>", "input file, stdin if unset" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "O=<filename>", "output file, stdout if unset" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "M=<filename>", "metrics file, stderr if unset" ) );
@@ -855,7 +855,7 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;
 			}
-			
+
 		return markDuplicates(arginfo);
 	}
 	catch(std::exception const & ex)
@@ -864,4 +864,3 @@ int main(int argc, char * argv[])
 		return EXIT_FAILURE;
 	}
 }
-

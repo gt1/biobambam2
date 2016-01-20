@@ -35,17 +35,17 @@ void fastabgzfextract(libmaus2::util::ArgInfo const & arginfo)
 		libmaus2::exception::LibMausException se;
 		se.getStream() << "reference key is missing." << std::endl;
 		se.finish();
-		throw se;			
+		throw se;
 	}
-	
+
 	std::string const reference = arginfo.getUnparsedValue("reference","");
-	
+
 	if ( ! libmaus2::util::GetFileSize::fileExists(reference) )
 	{
 		libmaus2::exception::LibMausException se;
 		se.getStream() << "file " << reference << " does not exist." << std::endl;
 		se.finish();
-		throw se;				
+		throw se;
 	}
 
 	if ( ! libmaus2::util::GetFileSize::fileExists(reference+".idx") )
@@ -53,47 +53,47 @@ void fastabgzfextract(libmaus2::util::ArgInfo const & arginfo)
 		libmaus2::exception::LibMausException se;
 		se.getStream() << "file " << reference << " does not exist." << std::endl;
 		se.finish();
-		throw se;				
+		throw se;
 	}
-	
+
 	libmaus2::aio::PosixFdInputStream PFIS(reference,128*1024);
 	libmaus2::aio::InputStreamInstance indexCIS(reference+".idx");
 	libmaus2::fastx::FastABgzfIndex index(indexCIS);
 	libmaus2::autoarray::AutoArray<char> B;
-	
+
 	while ( std::cin )
 	{
 		std::string line;
 		std::getline(std::cin,line);
-		
+
 		if ( line.size() )
 		{
 			std::deque<std::string> tokens = ::libmaus2::util::stringFunctions::tokenize(line,std::string("\t"));
-			
+
 			if ( tokens.size() != 3 )
 				continue;
-			
+
 			std::string const & name = tokens[0];
 			std::istringstream posistr(tokens[1]);
 			std::istringstream lenistr(tokens[2]);
 			uint64_t pos, len;
-			
+
 			posistr >> pos;
 			lenistr >> len;
-			
+
 			int64_t const thisseqid = index.getSequenceId(name);
-			
+
 			if ( thisseqid >= 0 )
 			{
 				libmaus2::fastx::FastABgzfDecoder::unique_ptr_type Pstr = index.getStream(PFIS,thisseqid);
 				Pstr->seekg(pos);
-				
+
 				if ( len > B.size() )
 					B = libmaus2::autoarray::AutoArray<char>(len,false);
-					
+
 				Pstr->read(B.begin(),len);
 				uint64_t const rlen = Pstr->gcount();
-				
+
 				std::cout.write(B.begin(),rlen);
 				std::cout.put('\n');
 			}
@@ -107,9 +107,9 @@ int main(int argc, char * argv[])
 	{
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
 
-		
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -118,7 +118,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -128,9 +128,9 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-			
+
 				V.push_back ( std::pair<std::string,std::string> ( "reference=<>", "reference FastA.bgzf" ) );
 
 				::biobambam2::Licensing::printMap(std::cerr,V);

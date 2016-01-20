@@ -54,17 +54,17 @@ void getUsedRefSeqs(
 	::libmaus2::bambam::BamAlignmentDecoder & dec = *ppdec;
 	::libmaus2::bambam::BamHeader const & header = dec.getHeader();
 	::libmaus2::bambam::BamAlignment const & algn = dec.getAlignment();
-	uint64_t const numrefseq = header.getNumRef();	
+	uint64_t const numrefseq = header.getNumRef();
 	libmaus2::bitio::IndexedBitVector::unique_ptr_type tusedrefseq(new libmaus2::bitio::IndexedBitVector(numrefseq));
 	libmaus2::bitio::IndexedBitVector::unique_ptr_type tusedrg(new libmaus2::bitio::IndexedBitVector(header.getNumReadGroups()));
-	
+
 	while ( dec.readAlignment() )
 	{
 		if ( (!algn.isPaired()) && algn.isMapped() )
 		{
 			assert ( algn.getRefID() >= 0 );
 			assert ( algn.getRefID() < static_cast<int64_t>(tusedrefseq->size()) );
-			tusedrefseq->set(algn.getRefID(),true);		
+			tusedrefseq->set(algn.getRefID(),true);
 		}
 		if ( algn.isPaired() && algn.isMapped() )
 		{
@@ -78,19 +78,19 @@ void getUsedRefSeqs(
 			assert ( algn.getNextRefID() < static_cast<int64_t>(tusedrefseq->size()) );
 			tusedrefseq->set(algn.getNextRefID(),true);
 		}
-			
+
 		int64_t const rgid = header.getReadGroupId(algn.getReadGroup());
-		
+
 		if ( rgid >= 0 )
 		{
 			assert ( rgid < static_cast<int64_t>(header.getNumReadGroups()) );
 			tusedrg->set(rgid,true);
 		}
 	}
-	
+
 	tusedrefseq->setupIndex();
 	tusedrg->setupIndex();
-	
+
 	usedrefseq = UNIQUE_PTR_MOVE(tusedrefseq);
 	usedrg = UNIQUE_PTR_MOVE(tusedrg);
 	libmaus2::bambam::BamHeader::unique_ptr_type tuheader(header.uclone());
@@ -162,7 +162,7 @@ uint64_t bamheaderfilter(libmaus2::util::ArgInfo const & arginfo)
 
 	std::string headertext(uheader->text);
 	std::vector<libmaus2::bambam::HeaderLine> hl = libmaus2::bambam::HeaderLine::extractLines(headertext);
-	
+
 	std::ostringstream headertextostr;
 	uint64_t rscnt = 0;
 	uint64_t rgcnt = 0;
@@ -179,7 +179,7 @@ uint64_t bamheaderfilter(libmaus2::util::ArgInfo const & arginfo)
 		{
 			if ( usedrg->get(rgcnt) )
 				headertextostr << hl[i].line << std::endl;
-			
+
 			rgcnt += 1;
 		}
 		else
@@ -196,7 +196,7 @@ uint64_t bamheaderfilter(libmaus2::util::ArgInfo const & arginfo)
 		"bamheaderfilter", // PN
 		arginfo.commandline, // CL
 		::libmaus2::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
-		std::string(PACKAGE_VERSION) // VN			
+		std::string(PACKAGE_VERSION) // VN
 	);
 	// construct new header
 	::libmaus2::bambam::BamHeader uphead(upheadtext);
@@ -211,7 +211,7 @@ uint64_t bamheaderfilter(libmaus2::util::ArgInfo const & arginfo)
 	::libmaus2::bambam::BamAlignmentDecoder * ppdec = &(decwrapper->getDecoder());
 	::libmaus2::bambam::BamAlignmentDecoder & dec = *ppdec;
 	::libmaus2::bambam::BamAlignment & algn = dec.getAlignment();
-	
+
 	while ( dec.readAlignment() )
 	{
 		if ( (!algn.isPaired()) && algn.isMapped() )
@@ -238,7 +238,7 @@ uint64_t bamheaderfilter(libmaus2::util::ArgInfo const & arginfo)
 			assert ( usedrefseq->rank1(algn.getNextRefID())-1 < uphead.getNumRef() );
 			algn.putNextRefId(usedrefseq->rank1(algn.getNextRefID())-1);
 		}
-		
+
 		// erase unmapped refid and pos
 		if ( algn.isUnmap() )
 		{
@@ -265,7 +265,7 @@ uint64_t bamheaderfilter(libmaus2::util::ArgInfo const & arginfo)
 	{
 		Pindex->flush(std::string(indexfilename));
 	}
-	
+
 	return 0;
 }
 
@@ -274,9 +274,9 @@ int main(int argc, char *argv[])
 	try
 	{
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
-		
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -285,7 +285,7 @@ int main(int argc, char *argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -295,9 +295,9 @@ int main(int argc, char *argv[])
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-			
+
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "I=<[input filename]>", "name of the input file" ) );
@@ -313,7 +313,7 @@ int main(int argc, char *argv[])
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;
 			}
-			
+
 		return bamheaderfilter(arginfo);
 	}
 	catch(std::exception const & ex)

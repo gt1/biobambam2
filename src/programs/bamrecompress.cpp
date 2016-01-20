@@ -101,27 +101,27 @@ uint64_t bamrecompress(libmaus2::util::ArgInfo const & arginfo)
 	while ( (r = BIDP->read(B.begin(),B.size())) )
 	{
 		BIDP->write(B.begin(),r);
-		
+
 		lcnt += r;
 		t += r;
-		
+
 		if ( t/mod != last/mod )
 		{
 			if ( verbose )
 			{
 				if ( isatty(STDERR_FILENO) )
-					std::cerr 
+					std::cerr
 						<< "\r" << std::string(60,' ') << "\r";
 
 				std::cerr
 						<< rtc.formatTime(rtc.getElapsedSeconds()) << " " << t/(1024*1024) << "MB, " << (lcnt/lrtc.getElapsedSeconds())/(1024.0*1024.0) << "MB/s";
-			
+
 				if ( isatty(STDERR_FILENO) )
 					std::cerr << std::flush;
 				else
 					std::cerr << std::endl;
 			}
-			
+
 			lrtc.start();
 			last = t;
 			lcnt = 0;
@@ -131,15 +131,15 @@ uint64_t bamrecompress(libmaus2::util::ArgInfo const & arginfo)
 	if ( verbose )
 	{
 		if ( isatty(STDERR_FILENO) )
-			std::cerr 
+			std::cerr
 				<< "\r" << std::string(60,' ') << "\r";
-	
+
 		std::cerr
 				<< rtc.formatTime(rtc.getElapsedSeconds()) << " " << t/(1024*1024) << "MB, " << (t/rtc.getElapsedSeconds())/(1024.0*1024.0) << "MB/s";
-			
+
 		std::cerr << std::endl;
 	}
-	
+
 	BIDP.reset();
 
 	if ( Pmd5cb )
@@ -150,7 +150,7 @@ uint64_t bamrecompress(libmaus2::util::ArgInfo const & arginfo)
 	{
 		Pindex->flush(std::string(indexfilename));
 	}
-	
+
 	return 0;
 }
 
@@ -159,9 +159,9 @@ int main(int argc, char *argv[])
 	try
 	{
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
-		
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -170,7 +170,7 @@ int main(int argc, char *argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -180,9 +180,9 @@ int main(int argc, char *argv[])
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-			
+
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "numthreads=<["+::biobambam2::Licensing::formatNumber(getDefaultNumThreads())+"]>", "number of recoding threads" ) );
@@ -197,7 +197,7 @@ int main(int argc, char *argv[])
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;
 			}
-			
+
 		return bamrecompress(arginfo);
 
 	}

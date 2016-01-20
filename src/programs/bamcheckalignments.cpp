@@ -47,24 +47,24 @@ bool checkCigarValid(
 		std::cerr << "[E] inconsistent cigar " << alignment.getCigarString() << " for " << alignment.getName() << std::endl;
 		return false;
 	}
-	
+
 	if ( alignment.getRefID() < 0 || alignment.getRefID() >= static_cast<int64_t>(bamheader.getNumRef()) )
 	{
 		std::cerr << "[E] reference id " << alignment.getRefID() << " out of range for " << alignment.getName() << std::endl;
 		return false;
 	}
-	
+
 	::libmaus2::autoarray::AutoArray<uint8_t> const & ctext = *(text[alignment.getRefID()]);
 	int64_t refpos = alignment.getPos();
 	int64_t seqpos = 0;
 	bool alok = true;
 	std::string const read = alignment.getRead();
-	
+
 	for ( uint64_t i = 0; alok && i < alignment.getNCigar(); ++i )
 	{
 		char const cop = alignment.getCigarFieldOpAsChar(i);
 		int64_t const clen = alignment.getCigarFieldLength(i);
-		
+
 		switch ( cop )
 		{
 			// match/mismatch, increment both
@@ -106,7 +106,7 @@ bool checkCigarValid(
 					if ( seqpos >= alignment.getLseq() )
 					{
 						std::cerr << "[E] " << cop << " operation outside of sequence coordinate range " << " for " << alignment.getName() << std::endl;
-						alok = false;						
+						alok = false;
 					}
 				}
 				break;
@@ -119,7 +119,7 @@ bool checkCigarValid(
 					if ( refpos < 0 || refpos >= static_cast<int64_t>(ctext.size()) )
 					{
 						std::cerr << "[E] " << cop << " operation outside of reference coordinate range " << " for " << alignment.getName() << std::endl;
-						alok = false;						
+						alok = false;
 					}
 				}
 				break;
@@ -132,7 +132,7 @@ bool checkCigarValid(
 					if ( seqpos >= alignment.getLseq() )
 					{
 						std::cerr << "[E] " << cop << " operation outside of sequence coordinate range " << " for " << alignment.getName() << std::endl;
-						alok = false;						
+						alok = false;
 					}
 				}
 				break;
@@ -150,14 +150,14 @@ bool checkCigarValid(
 					if ( refpos < 0 || refpos >= static_cast<int64_t>(ctext.size()) )
 					{
 						std::cerr << "[E] " << cop << " operation outside of reference coordinate range " << " for " << alignment.getName() << std::endl;
-						alok = false;						
+						alok = false;
 					}
 				}
 				break;
 			}
 		}
 	}
-	
+
 	return alok;
 }
 
@@ -167,7 +167,7 @@ int main(int argc, char * argv[])
 	{
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
 		::libmaus2::util::TempFileRemovalContainer::setup();
-		
+
 		::std::vector<std::string> const & inputfilenames = arginfo.restargs;
 		char const * fasuffixes[] = { ".fa", ".fasta", 0 };
 		std::string defoutname = libmaus2::util::OutputFileNameTools::endClipLcp(inputfilenames,&fasuffixes[0]) + ".fa";
@@ -175,11 +175,11 @@ int main(int argc, char * argv[])
 			defoutname += "_";
 		std::string const fatempfilename = arginfo.getValue<std::string>("fatempfilename",defoutname);
 		::libmaus2::util::TempFileRemovalContainer::addTempFile(fatempfilename);
-		
+
 		// std::cerr << "output file name " << defoutname << std::endl;
-		
+
 		::std::vector< ::libmaus2::fastx::FastAReader::RewriteInfo > const info = ::libmaus2::fastx::FastAReader::rewriteFiles(inputfilenames,fatempfilename);
-		
+
 		std::map < std::string, uint64_t > fachr;
 		::libmaus2::autoarray::AutoArray < uint64_t > fapref(info.size()+1);
 		for ( uint64_t i = 0; i < info.size(); ++i )
@@ -198,7 +198,7 @@ int main(int argc, char * argv[])
 		::libmaus2::autoarray::AutoArray<uint8_t> uptab(256,false);
 		for ( uint64_t j = 0; j < uptab.size(); ++j )
 			uptab[j] = toupper(j);
-		
+
 		::libmaus2::autoarray::AutoArray < ::libmaus2::autoarray::AutoArray<uint8_t>::unique_ptr_type > text(bamheader.getNumRef());
 		for ( uint64_t i = 0; i < bamheader.getNumRef(); ++i )
 		{
@@ -218,7 +218,7 @@ int main(int argc, char * argv[])
 				se.finish();
 				throw se;
 			}
-			
+
 			if ( bamheader.getNumRef() < 100 )
 				std::cerr << "Loading sequence " << bamchrname << " of length " << info[faid].seqlen << std::endl;
 			::libmaus2::autoarray::AutoArray<uint8_t>::unique_ptr_type ttext(new ::libmaus2::autoarray::AutoArray<uint8_t>(info[faid].seqlen,false));
@@ -230,17 +230,17 @@ int main(int argc, char * argv[])
 			int c;
 			c = CIS.get();
 			assert ( c == '\n' );
-			
+
 			// convert to upper case
 			for ( uint8_t * pa = text[i]->begin(); pa != text[i]->end(); ++pa )
 				*pa = uptab[*pa];
 		}
-		
+
 		for ( uint64_t i = 0; i < bamheader.getNumRef(); ++i )
 		{
 			assert ( static_cast<int64_t>(text[i]->size()) == bamheader.getRefIDLength(i) );
 		}
-		
+
 		uint64_t decoded = 0;
 
 		/*
@@ -290,23 +290,23 @@ int main(int argc, char * argv[])
 		/*
 		 * end md5/index callbacks
 		 */
-		
+
 		::libmaus2::bambam::BamHeader::unique_ptr_type uphead(libmaus2::bambam::BamHeaderUpdate::updateHeader(arginfo,bamheader,"bamcheckalignments",std::string(PACKAGE_VERSION)));
 		::libmaus2::bambam::BamWriter BW(std::cout,*uphead,Z_DEFAULT_COMPRESSION,Pcbs);
-		
+
 		while ( decoder.readAlignment() )
 		{
 			++decoded;
-			
+
 			if ( decoded % (1024*1024) == 0 )
 			{
 				std::cerr << "[V] " << decoded << std::endl;
 			}
-			
+
 			::libmaus2::bambam::BamAlignment & alignment = decoder.getAlignment();
 
 			bool const cigok = checkCigarValid(alignment,bamheader,text);
-			
+
 			// if cigar is ok then keep alignment
 			if ( cigok )
 			{
@@ -317,25 +317,25 @@ int main(int argc, char * argv[])
 					std::string const read = alignment.getRead();
 					std::string modseq = read;
 					::libmaus2::autoarray::AutoArray<uint8_t> const & ctext = *(text[alignment.getRefID()]);
-					
+
 					std::ostringstream newcigarstream;
 
 					for ( uint64_t i = 0; i < alignment.getNCigar(); ++i )
 					{
 						char const cop = alignment.getCigarFieldOpAsChar(i);
 						int64_t const clen = alignment.getCigarFieldLength(i);
-						
+
 						switch ( cop )
 						{
 							// match/mismatch, increment both
 							case 'M':
 							{
 								int64_t low = 0;
-								
+
 								while ( low != clen )
 								{
 									int64_t high = low;
-									
+
 									while ( high != clen && ctext[refpos] == read[seqpos] )
 									{
 										modseq[seqpos] = '=';
@@ -343,17 +343,17 @@ int main(int argc, char * argv[])
 									}
 									if ( high != low )
 										newcigarstream << high-low << "=";
-										
+
 									low = high;
 
 									while ( high != clen && ctext[refpos] != read[seqpos] )
 										++refpos, ++seqpos, ++ high;
 									if ( high != low )
 										newcigarstream << high-low << "X";
-										
+
 									low = high;
-								}						
-								
+								}
+
 								break;
 							}
 							case '=':
@@ -361,50 +361,50 @@ int main(int argc, char * argv[])
 								refpos += clen;
 								for ( int64_t j = 0; j < clen; ++j, ++seqpos )
 									modseq[seqpos] = '=';
-								newcigarstream << clen << cop; 
+								newcigarstream << clen << cop;
 								break;
 							}
 							case 'X':
 							{
 								refpos += clen;
 								seqpos += clen;
-								newcigarstream << clen << cop; 
+								newcigarstream << clen << cop;
 								break;
 							}
 							case 'P':
 							case 'I':
 							{
 								seqpos += clen;
-								newcigarstream << clen << cop; 
+								newcigarstream << clen << cop;
 								break;
 							}
 							case 'N':
 							case 'D':
 							{
 								refpos += clen;
-								newcigarstream << clen << cop; 
+								newcigarstream << clen << cop;
 								break;
 							}
 							case 'S':
 							{
 								seqpos += clen;
-								newcigarstream << clen << cop; 
+								newcigarstream << clen << cop;
 								break;
 							}
 							case 'H':
 							{
-								newcigarstream << clen << cop; 
+								newcigarstream << clen << cop;
 								break;
 							}
 						}
 					}
-					
+
 					alignment.replaceCigarString(newcigarstream.str());
 					alignment.replaceSequence(modseq,alignment.getQual());
 				}
 
 				alignment.serialise(BW.getStream());
-			}			
+			}
 		}
 
 		if ( Pmd5cb )

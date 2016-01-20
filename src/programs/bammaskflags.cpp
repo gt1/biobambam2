@@ -66,7 +66,7 @@ int bammaskflags(::libmaus2::util::ArgInfo const & arginfo)
 
 	int const level = libmaus2::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
 	int const resetmatecoord = arginfo.getValue<int>("resetmatecoord",0);
-	
+
 	::libmaus2::bambam::BamDecoder BD(std::cin);
 	::libmaus2::bambam::BamHeader const & bamheader = BD.getHeader();
 
@@ -79,7 +79,7 @@ int bammaskflags(::libmaus2::util::ArgInfo const & arginfo)
 		"bammaskflags", // PN
 		arginfo.commandline, // CL
 		::libmaus2::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
-		std::string(PACKAGE_VERSION) // VN			
+		std::string(PACKAGE_VERSION) // VN
 	);
 	// construct new header
 	::libmaus2::bambam::BamHeader uphead(upheadtext);
@@ -135,7 +135,7 @@ int bammaskflags(::libmaus2::util::ArgInfo const & arginfo)
 	 */
 
 	::libmaus2::bambam::BamWriter::unique_ptr_type writer(new ::libmaus2::bambam::BamWriter(std::cout,uphead,level,Pcbs));
-	
+
 	while ( BD.readAlignment() )
 	{
 		alignment.putFlags(alignment.getFlags() & mask);
@@ -145,7 +145,7 @@ int bammaskflags(::libmaus2::util::ArgInfo const & arginfo)
 			alignment.putNextPos(-1);
 		}
 		alignment.serialise(writer->getStream());
-	}	
+	}
 
 	writer.reset();
 
@@ -168,7 +168,7 @@ int main(int argc, char * argv[])
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
 
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -177,7 +177,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -187,9 +187,9 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-			
+
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
 				V.push_back ( std::pair<std::string,std::string> ( "maskneg=<["+::biobambam2::Licensing::formatNumber(getDefaultMaskNeg())+"]>", "flag masking bitmask (bits set are removed)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam2::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
@@ -203,7 +203,7 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;
 			}
-			
+
 		return bammaskflags(arginfo);
 	}
 	catch(std::exception const & ex)

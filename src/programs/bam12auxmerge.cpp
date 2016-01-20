@@ -71,7 +71,7 @@ bool is_suffix(const char *str, const char *suf)
     	    	return true;
 	else
     	    	return false;
-} 
+}
 
 int bam12auxmerge(::libmaus2::util::ArgInfo const & arginfo)
 {
@@ -90,7 +90,7 @@ int bam12auxmerge(::libmaus2::util::ArgInfo const & arginfo)
 		se.finish();
 		throw se;
 	}
-	
+
 	std::string const prefilename = arginfo.getRestArg<std::string>(0);
 	libmaus2::bambam::BamDecoder bampredec(prefilename);
 
@@ -104,7 +104,7 @@ int bam12auxmerge(::libmaus2::util::ArgInfo const & arginfo)
 	uint64_t const mod = arginfo.getValue<int>("mod",getDefaultMod());
 	uint64_t const bmod = libmaus2::math::nextTwoPow(mod);
 	uint64_t const bmask = bmod-1;
-	
+
 	libmaus2::autoarray::AutoArray<char> Aread;
 
 	::libmaus2::bambam::BamDecoder bamdec(std::cin,false);
@@ -113,18 +113,18 @@ int bam12auxmerge(::libmaus2::util::ArgInfo const & arginfo)
 
 	std::string const headertext(header.text);
 	std::string const preheadertext(libmaus2::bambam::HeaderLine::removeSequenceLines(preheader.text));
-	
+
 	libmaus2::bambam::ProgramHeaderLineSet headerlines(headertext);
 	libmaus2::bambam::ProgramHeaderLineSet preheaderlines(preheadertext);
-	
+
 	std::vector<libmaus2::bambam::HeaderLine> allheaderlines = libmaus2::bambam::HeaderLine::extractLines(headertext);
-	
+
 	std::string const lastid = preheaderlines.getLastIdInChain();
-	
+
 	std::stack < std::pair<uint64_t,std::string> > pgtodo;
 	for ( uint64_t i = 0; i < headerlines.roots.size(); ++i )
 		pgtodo.push(std::pair<uint64_t,std::string>(headerlines.roots[i],lastid));
-	
+
 	std::string upheadtext = preheadertext;
 	while ( pgtodo.size() )
 	{
@@ -132,13 +132,13 @@ int bam12auxmerge(::libmaus2::util::ArgInfo const & arginfo)
 		std::string const PP = pgtodo.top().second;
 		pgtodo.pop();
 		libmaus2::bambam::HeaderLine const & line = headerlines.lines[hid];
-		
+
 		// ID, PP, PN, CL, VN
 		std::string       ID = (line.M.find("ID") != line.M.end()) ? line.M.find("ID")->second : "";
 		std::string const PN = (line.M.find("PN") != line.M.end()) ? line.M.find("PN")->second : "";
 		std::string const CL = (line.M.find("CL") != line.M.end()) ? line.M.find("CL")->second : "";
 		std::string const VN = (line.M.find("VN") != line.M.end()) ? line.M.find("VN")->second : "";
-		
+
 		upheadtext = ::libmaus2::bambam::ProgramHeaderLineSet::addProgramLineRef(
 			upheadtext,
 			ID,
@@ -147,16 +147,16 @@ int bam12auxmerge(::libmaus2::util::ArgInfo const & arginfo)
 			PP,
 			VN
 		);
-	
+
 		if ( headerlines.edges.find(hid) != headerlines.edges.end() )
 		{
 			std::vector<uint64_t> const & children = headerlines.edges.find(hid)->second;
-			
+
 			for ( uint64_t j = 0; j < children.size(); ++j )
 				pgtodo.push(std::pair<uint64_t,std::string>(children[j],ID));
 		}
 	}
-	
+
 	/* copy SQ lines */
 	std::ostringstream sqconcstr;
 	sqconcstr << upheadtext;
@@ -217,14 +217,14 @@ int bam12auxmerge(::libmaus2::util::ArgInfo const & arginfo)
 	 */
 
 	::libmaus2::bambam::BamWriter::unique_ptr_type writer(new ::libmaus2::bambam::BamWriter(std::cout,uphead,level,Pcbs));
-	
+
 	::libmaus2::bambam::BamAlignment & algn = bamdec.getAlignment();
 	::libmaus2::bambam::BamAlignment & prealgn = bampredec.getAlignment();
 	int64_t curid = -1;
-	
+
 	libmaus2::autoarray::AutoArray< std::pair<uint8_t,uint8_t> > auxpre;
 	libmaus2::autoarray::AutoArray< std::pair<uint8_t,uint8_t> > auxnew;
-	
+
 	libmaus2::bambam::BamAuxFilterVector auxfilter;
 
 	// helpers for clipReinsert
@@ -237,7 +237,7 @@ int bam12auxmerge(::libmaus2::util::ArgInfo const & arginfo)
 	auxfilterout.set('q','s');
 	auxfilterout.set('q','q');
 
-	// helpers for zztoname	
+	// helpers for zztoname
  	libmaus2::bambam::BamAuxFilterVector zzbafv;
  	zzbafv.set('z','z');
 
@@ -258,7 +258,7 @@ int bam12auxmerge(::libmaus2::util::ArgInfo const & arginfo)
 	{
 		if ( ranksplit )
 			split12(algn);
-	
+
 		// extract rank
 		char const * name = algn.getName();
 		char const * u1 = name;
@@ -271,19 +271,19 @@ int bam12auxmerge(::libmaus2::util::ArgInfo const & arginfo)
 			ok = ok && isdigit(*u1);
 			++u1;
 		}
-		
+
 		// unable to find rank?	write out as is and continue
 		if ( ! ok )
 		{
 			algn.serialise(writer->getStream());
 			continue;
 		}
-		
+
 		// loop over unaligned BAM file
 		while ( curid != static_cast<int64_t>(rank) )
 		{
 			bool const a_ok = bampredec.readAlignment();
-			
+
 			if ( ! a_ok )
 			{
 				libmaus2::exception::LibMausException se;
@@ -293,27 +293,27 @@ int bam12auxmerge(::libmaus2::util::ArgInfo const & arginfo)
 			}
 			assert ( a_ok );
 			++curid;
-			
+
 			if ( verbose && (! (curid & bmask)) )
 				std::cerr << "[V] " << (curid / bmod) << std::endl;
 		}
-			
+
 		if ( verbose > 1 )
 			std::cerr << "Merging:\n" << algn.formatAlignment(header) << "\n" << prealgn.formatAlignment(preheader) << std::endl;
-		
+
 		uint64_t pretagnum = prealgn.enumerateAuxTags(auxpre);
 		uint64_t newtagnum = algn.enumerateAuxTags(auxnew);
-		
+
 		// do some sanity checking
 		if ( sanity )
 		{
 		    	// first do a name check
 			char const * prename = prealgn.getName();
 			u1++; // put on the first letter of readname
-			
+
 			if ( verbose > 1 )
-    	    	    	    	std::cerr << "Sanity: comparing " << name << " and " << prename << std::endl;			    
-			
+    	    	    	    	std::cerr << "Sanity: comparing " << name << " and " << prename << std::endl;
+
 			if ( !is_suffix(prename, u1) ) // names do not match
 			{
 			    	libmaus2::exception::LibMausException se;
@@ -321,9 +321,9 @@ int bam12auxmerge(::libmaus2::util::ArgInfo const & arginfo)
 				se.finish();
 				throw se;
 			}
-			
+
 			// now the names match so try the flags
-			
+
 			if ( !(algn.isPaired() == prealgn.isPaired() &&
 			     algn.isRead1() == prealgn.isRead1() &&
 			     algn.isRead2() == prealgn.isRead2()) )
@@ -335,21 +335,21 @@ int bam12auxmerge(::libmaus2::util::ArgInfo const & arginfo)
 				se.finish();
 				throw se;
 			}
-			
+
 			if ( verbose > 1 )
 			    std::cerr << "Sanity check on flags: " << std::endl
 				    	       << "Aligned " << name << " paired " << algn.isPaired() << " first " << algn.isRead1() << " last " << algn.isRead2() << std::endl
-			    	    	       << "Unaligned " << prename << " paired " << prealgn.isPaired() << " first " << prealgn.isRead1() << " last " << prealgn.isRead2() << std::endl;	
-			
-			
+			    	    	       << "Unaligned " << prename << " paired " << prealgn.isPaired() << " first " << prealgn.isRead1() << " last " << prealgn.isRead2() << std::endl;
+
+
 		}
-		
+
 		std::sort(auxpre.begin(),auxpre.begin()+pretagnum);
 		std::sort(auxnew.begin(),auxnew.begin()+newtagnum);
-		
+
 		if ( verbose > 1 )
 			std::cerr << "pretagnum=" << pretagnum << " newtagnum=" << newtagnum << std::endl;
-		
+
 		std::pair<uint8_t,uint8_t> * prec = auxpre.begin();
 		std::pair<uint8_t,uint8_t> * pree = prec + pretagnum;
 		std::pair<uint8_t,uint8_t> * preo = prec;
@@ -357,7 +357,7 @@ int bam12auxmerge(::libmaus2::util::ArgInfo const & arginfo)
 		std::pair<uint8_t,uint8_t> * newc = auxnew.begin();
 		std::pair<uint8_t,uint8_t> * newe = newc + newtagnum;
 		std::pair<uint8_t,uint8_t> * newo = newc;
-		
+
 		while ( prec != pree && newc != newe )
 		{
 			// pre which is not in new
@@ -374,21 +374,21 @@ int bam12auxmerge(::libmaus2::util::ArgInfo const & arginfo)
 			// new not in pre
 			else
 			{
-				*(newo++) = *(newc++);					
+				*(newo++) = *(newc++);
 			}
 		}
-		
+
 		while ( prec != pree )
 			*(preo++) = *(prec++);
 		while ( newc != newe )
 			*(newo++) = *(newc++);
-			
+
 		pretagnum = preo-auxpre.begin();
 		newtagnum = newo-auxnew.begin();
-		
+
 		for ( uint64_t i = 0; i < pretagnum; ++i )
 			auxfilter.set(auxpre[i].first,auxpre[i].second);
-			
+
 		algn.copyAuxTags(prealgn, auxfilter);
 
 		for ( uint64_t i = 0; i < pretagnum; ++i )
@@ -396,33 +396,33 @@ int bam12auxmerge(::libmaus2::util::ArgInfo const & arginfo)
 
 		if ( verbose > 1 )
 		{
-			std::cerr << "pretagnum=" << pretagnum << " newtagnum=" << newtagnum << std::endl;	
+			std::cerr << "pretagnum=" << pretagnum << " newtagnum=" << newtagnum << std::endl;
 			std::cerr << "result: " << algn.formatAlignment(header) << std::endl;
 		}
-		
-		
+
+
 		if ( algn.isSecondary() || algn.isSupplementary() )
 		{
 		    	// adding adapter clip data to secondary/supplementary reads
 			// can lead to incorrect clip reinserts so remove these tags
-			
+
 			algn.filterOutAux(auxfiltersec);
 		}
-		
 
-		// copy QC fail flag from original file to aligner output		
+
+		// copy QC fail flag from original file to aligner output
 		if ( prealgn.isQCFail() )
 			algn.putFlags( algn.getFlags() | libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FQCFAIL );
-		
+
 		if ( rankstrip )
 			strip12(algn);
 
 		if ( clipreinsert )
 			clipReinsert(algn,auxtags,bafv,cigop,Tcigar,hardstack,auxfilterout);
-			
+
 		if ( zztoname )
-			zzToRank(algn,zzbafv);	
-		
+			zzToRank(algn,zzbafv);
+
 		algn.serialise(writer->getStream());
 	}
 
@@ -436,7 +436,7 @@ int bam12auxmerge(::libmaus2::util::ArgInfo const & arginfo)
 	{
 		Pindex->flush(std::string(indexfilename));
 	}
-	
+
 	return EXIT_SUCCESS;
 }
 
@@ -445,9 +445,9 @@ int main(int argc, char * argv[])
 	try
 	{
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
-		
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -456,7 +456,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -466,9 +466,9 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-			
+
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "mod=<["+::biobambam2::Licensing::formatNumber(getDefaultMod())+"]>", "print progress for every mod'th alignment if verbose" ) );
@@ -482,13 +482,13 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "indexfilename=<filename>", "file name for BAM index file (default: extend output file name)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "tmpfile=<filename>", "prefix for temporary files, default: create files in current directory" ) );
     	    	    	    	V.push_back ( std::pair<std::string,std::string> ( "sanity=<["+::biobambam2::Licensing::formatNumber(getDefaultSanity())+"]>", "extra checking of reads" ) );
-				
+
 				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;
 			}
-			
+
 		return bam12auxmerge(arginfo);
 	}
 	catch(std::exception const & ex)
@@ -497,4 +497,3 @@ int main(int argc, char * argv[])
 		return EXIT_FAILURE;
 	}
 }
-

@@ -51,11 +51,11 @@ std::string getClippedRead(libmaus2::bambam::BamAlignment const & algn)
 {
 	uint64_t const f = algn.getFrontSoftClipping();
 	uint64_t const b = algn.getBackSoftClipping();
-	
+
 	std::string r = algn.getRead();
-	r = r.substr(0,r.size()-b); 
+	r = r.substr(0,r.size()-b);
 	r = r.substr(f);
-	
+
 	return r;
 }
 
@@ -71,7 +71,7 @@ std::vector<libmaus2::bambam::BamFlagBase::bam_cigar_ops> getCigarOperations(
 	for ( uint64_t i = 0; i < cigop.size(); ++i )
 		for ( int64_t j = 0; j < cigop[i].second; ++j )
 			V.push_back(static_cast<libmaus2::bambam::BamFlagBase::bam_cigar_ops>(cigop[i].first));
-			
+
 	if ( removeFrontSoftClip )
 	{
 		uint64_t f = algn.getFrontSoftClipping();
@@ -80,14 +80,14 @@ std::vector<libmaus2::bambam::BamFlagBase::bam_cigar_ops> getCigarOperations(
 			V.pop_back();
 		std::reverse(V.begin(),V.end());
 	}
-	
+
 	if ( removeBackSoftClip )
 	{
 		uint64_t b = algn.getBackSoftClipping();
 		while ( b-- )
-			V.pop_back();	
+			V.pop_back();
 	}
-			
+
 	return V;
 }
 
@@ -132,10 +132,10 @@ std::string encodeCigarString(std::vector<libmaus2::bambam::BamFlagBase::bam_cig
 				ostr.put('X');
 				break;
 		}
-			
+
 		low = high;
 	}
-	
+
 	return ostr.str();
 }
 
@@ -143,7 +143,7 @@ std::vector<libmaus2::bambam::BamAlignment::shared_ptr_type> handleChain(std::ve
 {
 	int64_t previd = -1;
 	int64_t prevend = -1;
-	
+
 	std::vector<libmaus2::bambam::BamAlignment::shared_ptr_type> outchain;
 
 	for ( uint64_t i = 0; i < chain.size(); ++i )
@@ -160,12 +160,12 @@ std::vector<libmaus2::bambam::BamAlignment::shared_ptr_type> handleChain(std::ve
 		if ( thisid == previd && thisid >= 0 )
 		{
 			std::cerr << "\t" << offset;
-			
+
 		}
 		std::cerr << std::endl;
 
 		if ( offset < 0 && offset != std::numeric_limits<int64_t>::min() )
-		{	
+		{
 			std::string prevread = getClippedRead(*(outchain.back()));
 			uint64_t const prevreadkeep = std::min(
 				static_cast<uint64_t>(prevread.size()),static_cast<uint64_t>(5*-offset)
@@ -183,7 +183,7 @@ std::vector<libmaus2::bambam::BamAlignment::shared_ptr_type> handleChain(std::ve
 			//if ( !ok && !SP.startsWithDeletion() && !SP.endsWithInsertion() && SSPR.nummat >= 50 )
 			std::cerr << SSPR << std::endl;
 			SP.printAlignmentLines(std::cerr, prevread, thisread, SSPR, 120);
-			
+
 			std::cerr << "back clip a? ";
 			int64_t backclipa = -1;
 			std::cin >> backclipa;
@@ -191,30 +191,30 @@ std::vector<libmaus2::bambam::BamAlignment::shared_ptr_type> handleChain(std::ve
 			if ( backclipa > 0 )
 			{
 				uint64_t soft = 0, hard = 0;
-				
+
 				std::vector<libmaus2::bambam::BamFlagBase::bam_cigar_ops> cigops = getCigarOperations(
 					*(outchain.back()),false,false);
-				
-				while ( cigops.size() && 
+
+				while ( cigops.size() &&
 					cigops.back() == libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CHARD_CLIP
 				)
 				{
 					hard++;
 					cigops.pop_back();
 				}
-				while ( cigops.size() && 
+				while ( cigops.size() &&
 					cigops.back() == libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CSOFT_CLIP
 				)
 				{
 					soft++;
 					cigops.pop_back();
 				}
-				
+
 				uint64_t tbackclipa = backclipa;
 				while ( tbackclipa > 0 )
 				{
 					assert ( cigops.size() );
-					
+
 					switch ( cigops.back() )
 					{
 						case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CMATCH:
@@ -226,13 +226,13 @@ std::vector<libmaus2::bambam::BamAlignment::shared_ptr_type> handleChain(std::ve
 						default:
 							break;
 					}
-					
+
 					cigops.pop_back();
 				}
-				
-				while ( cigops.size() && 
+
+				while ( cigops.size() &&
 					(
-						cigops.back() == libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CDEL 
+						cigops.back() == libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CDEL
 						||
 						cigops.back() == libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CREF_SKIP
 						||
@@ -242,25 +242,25 @@ std::vector<libmaus2::bambam::BamAlignment::shared_ptr_type> handleChain(std::ve
 				{
 					cigops.pop_back();
 				}
-				
+
 				for ( uint64_t i = 0; i < backclipa+soft; ++i )
 					cigops.push_back(libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CSOFT_CLIP);
 				for ( uint64_t i = 0; i < hard; ++i )
 					cigops.push_back(libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CHARD_CLIP);
-					
+
 				std::string const newcig = encodeCigarString(cigops);
 
 				std::cerr << outchain.back()->getCigarString() << std::endl;
-				
+
 				outchain.back()->replaceCigarString(newcig);
-			
+
 				std::cerr << newcig << std::endl;
 			}
 		}
 
 		previd = thisid;
 		prevend = algn.getAlignmentEnd();
-		
+
 		outchain.push_back(algn.sclone());
 	}
 
@@ -271,7 +271,7 @@ void printChain(std::vector<libmaus2::bambam::BamAlignment::shared_ptr_type> con
 {
 	int64_t previd = -1;
 	int64_t prevend = -1;
-	
+
 	for ( uint64_t i = 0; i < chain.size(); ++i )
 	{
 		libmaus2::bambam::BamAlignment const & algn = *(chain[i]);
@@ -280,17 +280,17 @@ void printChain(std::vector<libmaus2::bambam::BamAlignment::shared_ptr_type> con
 		int64_t const thispos = algn.getPos();
 		int64_t const thisend = algn.getAlignmentEnd();
 
-		std::cerr << algn.getName() 
+		std::cerr << algn.getName()
 			<< "\t" << algn.getFrontSoftClipping()
 			<< "\t" << algn.getBackSoftClipping()
-			<< "\t" << "[" << thispos << "," << thisend << "]" << "\t" 
+			<< "\t" << "[" << thispos << "," << thisend << "]" << "\t"
 			<< (thisend-thispos+1) << "\t" << algn.getAuxAsString("ZJ");
 
 		int64_t const offset = ( thisid == previd && thisid >= 0 ) ? (thispos-prevend) : std::numeric_limits<int64_t>::min();
 		if ( thisid == previd && thisid >= 0 )
 		{
 			std::cerr << "\t" << offset;
-			
+
 		}
 		std::cerr << std::endl;
 
@@ -303,10 +303,10 @@ std::pair<bool,std::string> chainToContig(std::vector<libmaus2::bambam::BamAlign
 {
 	int64_t previd = -1;
 	int64_t prevend = -1;
-	
+
 	bool ok = true;
 	std::ostringstream ostr;
-	
+
 	for ( uint64_t i = 0; i < chain.size(); ++i )
 	{
 		libmaus2::bambam::BamAlignment const & algn = *(chain[i]);
@@ -321,16 +321,16 @@ std::pair<bool,std::string> chainToContig(std::vector<libmaus2::bambam::BamAlign
 		if ( thisid == previd && thisid >= 0 )
 			std::cerr << "\t" << offset;
 		std::cerr << std::endl;
-		
+
 		if ( i == 0 )
-			ostr << getClippedRead(algn);		
+			ostr << getClippedRead(algn);
 		else if ( offset >= 0 )
 			ostr << std::string(offset,'N') << getClippedRead(algn);
 		else
 			ok = false;
 
 		previd = thisid;
-		prevend = algn.getAlignmentEnd();		
+		prevend = algn.getAlignmentEnd();
 	}
 
 	return std::pair<bool,std::string>(ok,ostr.str());
@@ -346,9 +346,9 @@ static int bamalignmentoffsets(libmaus2::util::ArgInfo const & arginfo)
 	libmaus2::bambam::BamDecoder bamdec(PFIS);
 	libmaus2::bambam::BamHeader const & header = bamdec.getHeader();
 	libmaus2::bambam::BamAlignment & algn = bamdec.getAlignment();
-	
+
 	std::vector< std::vector<libmaus2::bambam::BamAlignment::shared_ptr_type> > chains;
-	
+
 	int64_t previd = -1;
 	int64_t prevend = -1;
 
@@ -365,19 +365,19 @@ static int bamalignmentoffsets(libmaus2::util::ArgInfo const & arginfo)
 			int64_t const offset = ( thisid == previd && thisid >= 0 ) ? (thispos-prevend) : std::numeric_limits<int64_t>::min();
 			if ( thisid == previd && thisid >= 0 )
 				std::cerr << "\t" << offset;
-				
+
 			if ( offset == std::numeric_limits<int64_t>::min() || offset >= contigsplit )
 				chains.push_back(std::vector<libmaus2::bambam::BamAlignment::shared_ptr_type>());
-				
+
 			chains.back().push_back(algn.sclone());
-			
+
 			previd = thisid;
 			prevend = algn.getAlignmentEnd();
-			
+
 			std::cerr << std::endl;
 		}
 	}
-	
+
 	int64_t maxchainid = -1;
 	int64_t maxchainlength = -1;
 	int64_t maxchainsize = 0;
@@ -386,7 +386,7 @@ static int bamalignmentoffsets(libmaus2::util::ArgInfo const & arginfo)
 		int64_t chainlength = 0;
 		for ( uint64_t j = 0; j < chains[i].size(); ++j )
 			chainlength += (chains[i][j]->getAlignmentEnd() - chains[i][j]->getPos())+1;
-			
+
 		if ( chainlength > maxchainlength )
 		{
 			maxchainid = i;
@@ -394,14 +394,14 @@ static int bamalignmentoffsets(libmaus2::util::ArgInfo const & arginfo)
 			maxchainsize = chains[i].size();
 		}
 	}
-	
+
 	if ( modify )
 	{
 		libmaus2::bambam::BamWriter bw(std::cout,header);
-		
+
 		uint64_t contigid = 0;
 		libmaus2::aio::OutputStreamInstance faout(fn+".fa");
-		
+
 		if ( maxchainid >= 0 )
 		{
 			std::cerr << "[I] maximum chain length " << maxchainlength << std::endl;
@@ -415,15 +415,15 @@ static int bamalignmentoffsets(libmaus2::util::ArgInfo const & arginfo)
 				faout << ">contig_" << contigid++ << " " << contig.second.size() << "\n";
 				faout << contig.second << "\n";
 			}
-			
+
 			for ( uint64_t j = 0; j < chains.size(); ++j )
 				if ( static_cast<int64_t>(j) != maxchainid && static_cast<int64_t>(chains[j].size()) == maxchainsize )
 				{
 					int64_t chainlength = 0;
 					for ( uint64_t i = 0; i < chains[j].size(); ++i )
 						chainlength += (chains[j][i]->getAlignmentEnd() - chains[j][i]->getPos())+1;
-						
-					std::cerr << "[I] equivalent chain length " << chainlength << std::endl;	
+
+					std::cerr << "[I] equivalent chain length " << chainlength << std::endl;
 					chains[j] = handleChain(chains[j]);
 
 					for ( uint64_t i = 0; i < chains[j].size(); ++i )
@@ -437,9 +437,9 @@ static int bamalignmentoffsets(libmaus2::util::ArgInfo const & arginfo)
 					}
 				}
 		}
-		
+
 		faout.flush();
-		
+
 		if ( ! contigid )
 			remove((fn+".fa").c_str());
 	}
@@ -456,8 +456,8 @@ static int bamalignmentoffsets(libmaus2::util::ArgInfo const & arginfo)
 					int64_t chainlength = 0;
 					for ( uint64_t i = 0; i < chains[j].size(); ++i )
 						chainlength += (chains[j][i]->getAlignmentEnd() - chains[j][i]->getPos())+1;
-						
-					std::cerr << "[I] equivalent chain length " << chainlength << std::endl;	
+
+					std::cerr << "[I] equivalent chain length " << chainlength << std::endl;
 					printChain(chains[j]);
 				}
 
@@ -467,8 +467,8 @@ static int bamalignmentoffsets(libmaus2::util::ArgInfo const & arginfo)
 					int64_t chainlength = 0;
 					for ( uint64_t i = 0; i < chains[j].size(); ++i )
 						chainlength += (chains[j][i]->getAlignmentEnd() - chains[j][i]->getPos())+1;
-						
-					std::cerr << "[I] shorter chain length " << chainlength << std::endl;	
+
+					std::cerr << "[I] shorter chain length " << chainlength << std::endl;
 					printChain(chains[j]);
 				}
 		}
@@ -483,9 +483,9 @@ int main(int argc, char * argv[])
 	{
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
 
-		
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -494,7 +494,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -504,9 +504,9 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-			
+
 				V.push_back ( std::pair<std::string,std::string> ( "ioblocksize=<["+::biobambam2::Licensing::formatNumber(getDefaultIOBlockSize())+"]>", "block size for I/O operations" ) );
 
 				::biobambam2::Licensing::printMap(std::cerr,V);
