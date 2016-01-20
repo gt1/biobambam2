@@ -1,3 +1,9 @@
+biobambam2 (2.0.27) unstable; urgency=medium
+
+  * add fastaexplode program 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Wed, 20 Jan 2016 15:27:26 +0100
+
 biobambam2 (2.0.26) unstable; urgency=medium
 
   * update to libmaus2 2.0.114
