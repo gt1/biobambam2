@@ -181,6 +181,10 @@ checksums are computed via sha2-512 and combined over multiple records by multip
 checksums are computed via sha2-512 and combined over multiple records by adding modulo the Mersenne prime number 2^521-1.
 .IP sha512primesums512:
 checksums are computed via sha2-512 and combined over multiple records by adding modulo 2^512-75.
+.IP murmur3:
+checksums are computed via MurmurHash3_x64_128 (see https://github.com/aappleby/smhasher/blob/master/src/MurmurHash3.cpp) and combined over multiple records by summing modulo 2^128.
+.IP murmur3primesums128:
+checksums are computed via MurmurHash3_x64_128 (see https://github.com/aappleby/smhasher/blob/master/src/MurmurHash3.cpp) and combined over multiple records by summing modulo 2^128+51.
 .SH AUTHOR
 Written by David Jackson (using code by German Tischler as a template).
 Extended to hash digests beyond crc32prod by German Tischler.
@@ -188,7 +192,7 @@ Extended to hash digests beyond crc32prod by German Tischler.
 Report bugs to <tischler@mpi-cbg.de>
 .SH COPYRIGHT
 Copyright \(co 2014-2014 David Jackson, \(co 2014-2014 Genome Research Limited.
-Copyright \(co 2009-2014 German Tischler, \(co 2011-2014 Genome Research Limited.
+Copyright \(co 2009-2016 German Tischler, \(co 2011-2014 Genome Research Limited.
 License GPLv3+: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>
 .br
 This is free software: you are free to change and redistribute it.
