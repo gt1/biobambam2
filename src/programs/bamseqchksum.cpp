@@ -1,7 +1,7 @@
 /**
     bambam
     Copyright (C) 2014-2014 David K. Jackson
-    Copyright (C) 2009-2013 German Tischler
+    Copyright (C) 2009-2016 German Tischler
     Copyright (C) 2011-2014 Genome Research Limited
 
     This program is free software: you can redistribute it and/or modify
