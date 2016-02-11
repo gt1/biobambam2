@@ -1,3 +1,9 @@
+biobambam2 (2.0.29) unstable; urgency=medium
+
+  * add murmur3 based digest option in bamseqchksum 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Thu, 11 Feb 2016 16:10:33 +0100
+
 biobambam2 (2.0.28) unstable; urgency=medium
 
   * add bamrecalculatecigar program 
