@@ -1,3 +1,9 @@
+biobambam2 (2.0.30) unstable; urgency=medium
+
+  * do not exit/fail bam indexing when encountering reads with mapping coordinates but flagged as unmapped as sole reads assigned to a reference sequence
+
+ -- German Tischler <gt1@sanger.ac.uk>  Wed, 17 Feb 2016 10:05:51 +0100
+
 biobambam2 (2.0.29) unstable; urgency=medium
 
   * add murmur3 based digest option in bamseqchksum 
