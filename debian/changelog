@@ -1,3 +1,9 @@
+biobambam2 (2.0.31) unstable; urgency=medium
+
+  * fix setting sort order field in bamsort/bamsormadup in case there is no sort order field in the input file 
+
+ -- German Tischler <gt1@sanger.ac.uk>  Mon, 07 Mar 2016 15:05:13 +0100
+
 biobambam2 (2.0.30) unstable; urgency=medium
 
   * do not exit/fail bam indexing when encountering reads with mapping coordinates but flagged as unmapped as sole reads assigned to a reference sequence
