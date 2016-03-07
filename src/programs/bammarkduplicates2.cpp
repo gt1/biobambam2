@@ -1282,7 +1282,7 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 	else if ( arginfo.hasArg("I") && (arginfo.getValue<std::string>("I","") != "") )
 	{
 		std::string const inputfilename = arginfo.getValue<std::string>("I","I");
-		uint64_t const inputbuffersize = arginfo.getValueUnsignedNumeric<uint64_t>("inputbuffersize",getDefaultInputBufferSize());
+		// uint64_t const inputbuffersize = arginfo.getValueUnsignedNumeric<uint64_t>("inputbuffersize",getDefaultInputBufferSize());
 		libmaus2::aio::InputStreamInstance::unique_ptr_type tPFIS(new libmaus2::aio::InputStreamInstance(inputfilename /*,inputbuffersize,0 */));
 		PFIS = UNIQUE_PTR_MOVE(tPFIS);
 

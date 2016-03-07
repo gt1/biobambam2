@@ -44,11 +44,6 @@ static double getDefaultProb() { return 1.0; }
 static int getDefaultMD5() { return 0; }
 static int getDefaultIndex() { return 0; }
 
-static int getLevel(libmaus2::util::ArgInfo const & arginfo)
-{
-	return libmaus2::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
-}
-
 struct BamDownsampleRandomInputFileStream
 {
 	std::string const fn;
