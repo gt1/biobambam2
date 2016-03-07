@@ -227,7 +227,7 @@ void handleVector(
 {
 	std::sort(samename.begin(),samename.end());
 
-	typedef std::pair<uint64_t,uint64_t> up;
+	// typedef std::pair<uint64_t,uint64_t> up;
 	std::vector<MappingRegion> M;
 	int64_t readlen = -1;
 

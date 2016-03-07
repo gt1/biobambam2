@@ -414,6 +414,8 @@ struct LASToBAMConverter
 					Acigop[cigp++] = libmaus2::bambam::cigar_operation(libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CDEL,Aopblocks[i].second);
 					as -= static_cast<int64_t>(Aopblocks[i].second);
 					break;
+				default:
+					break;
 			}
 		}
 		if ( bclipright )

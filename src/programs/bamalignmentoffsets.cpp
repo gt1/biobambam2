@@ -131,6 +131,8 @@ std::string encodeCigarString(std::vector<libmaus2::bambam::BamFlagBase::bam_cig
 			case libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_CDIFF:
 				ostr.put('X');
 				break;
+			default:
+				break;
 		}
 
 		low = high;
