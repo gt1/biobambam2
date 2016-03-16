@@ -179,6 +179,10 @@ contained in the file). Setting markduplicates=1 implies
 adddupmarksupport=1. The temporarily added auxiliary fields are removed
 during output generation. The markduplicates option is disabled by default.
 .PP
+.B rmdup=<[0]>:
+remove the duplicates marked by the markduplicates option. As this requires
+markduplicates=1, the requirements stated for markduplicates also apply for rmdup.
+.PP
 .B tag=<tag>
 name of auxiliary field storing tag information for duplicate marking in string form. Read fragments or pairs 
 with different tags will not be considered as duplicates, even they would be according to their
