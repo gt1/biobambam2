@@ -1,3 +1,9 @@
+biobambam2 (2.0.33) unstable; urgency=medium
+
+  * update manual page for bamsort 
+
+ -- German Tischler <tischler@mpi-cbg.de>  Wed, 16 Mar 2016 21:30:17 +0100
+
 biobambam2 (2.0.32) unstable; urgency=medium
 
   * add rmdup option in bamsort 
