@@ -66,6 +66,7 @@ static int getDefaultCalMdNmWarnChange() { return 0; }
 static int getDefaultAddDupMarkSupport() { return 0; }
 static int getDefaultMarkDuplicates() { return 0; }
 static int getDefaultStreaming() { return 1; }
+static int getDefaultRmDup() { return 0; }
 
 /*
    biobambam used MC as a mate coordinate tag which now has a clash
@@ -126,7 +127,7 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
 	bool const disablevalidation = arginfo.getValue<int>("disablevalidation",getDefaultDisableValidation());
-	bool const markduplicates = arginfo.getValue<int>("markduplicates",getDefaultMarkDuplicates());
+	bool markduplicates = arginfo.getValue<int>("markduplicates",getDefaultMarkDuplicates());
 
 	std::string const inputformat = arginfo.getUnparsedValue("inputformat",getDefaultInputFormat());
 
@@ -277,6 +278,13 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 
 	bool addMSMC = arginfo.getValue<int>("adddupmarksupport",getDefaultAddDupMarkSupport());
 	bool fixmates = arginfo.getValue<int>("fixmates",getDefaultFixMates());
+	bool rmdup = arginfo.getValue<int>("rmdup",getDefaultRmDup());
+
+	if ( rmdup && (!markduplicates) )
+	{
+		std::cerr << "[W] rmdup is enabled, forcing markduplicates=1" << std::endl;
+		markduplicates = true;
+	}
 
 	if ( (havetag || havenucltag) && (!addMSMC) )
 	{
@@ -303,7 +311,10 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 	if ( markduplicates )
 	{
 		libmaus2::bambam::BamStreamingMarkDuplicates::unique_ptr_type TMaDuout(
-			new libmaus2::bambam::BamStreamingMarkDuplicates(arginfo,header,*Pout,true /* filter tags out */, true /* put rank */)
+			new libmaus2::bambam::BamStreamingMarkDuplicates(arginfo,header,*Pout,true /* filter tags out */, true /* put rank */,
+				libmaus2::bambam::BamStreamingMarkDuplicates::getDefaultFilterOld(),
+				rmdup
+			)
 		);
 		MaDuout = UNIQUE_PTR_MOVE(TMaDuout);
 		Pout = MaDuout.get();
@@ -657,6 +668,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "tag=<[a-zA-Z][a-zA-Z0-9]>", "aux field id for tag string extraction (adddupmarksupport=1 only)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "nucltag=<[a-zA-Z][a-zA-Z0-9]>", "aux field id for nucleotide tag extraction (adddupmarksupport=1 only)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("markduplicates=<[")+::biobambam2::Licensing::formatNumber(getDefaultMarkDuplicates())+"]>", "mark duplicates (only when input name collated and output coordinate sorted, disabled by default)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("rmdup=<[")+::biobambam2::Licensing::formatNumber(getDefaultRmDup())+"]>", "remove duplicates (only when input name collated and output coordinate sorted, disabled by default)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("streaming=<[")+::biobambam2::Licensing::formatNumber(getDefaultStreaming())+"]>", "do not open input files multiple times when set" ) );
 
 				::biobambam2::Licensing::printMap(std::cerr,V);

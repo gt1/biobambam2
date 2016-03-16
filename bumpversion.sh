@@ -46,7 +46,7 @@ git merge experimental
 
 # create change log message
 pushd debian
-export DEBEMAIL=gt1@sanger.ac.uk
+export DEBEMAIL=tischler@mpi-cbg.de
 export DEBFULLNAME="German Tischler"
 dch --distribution unstable -v ${FIRST}.${SECOND}.${NEXTTHIRD}
 dch --release
