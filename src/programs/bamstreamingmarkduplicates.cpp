@@ -122,7 +122,7 @@ int bamstreamingmarkduplicates(libmaus2::util::ArgInfo const & arginfo)
 	libmaus2::bambam::BamBlockWriterBase::unique_ptr_type Pwriter(libmaus2::bambam::BamBlockWriterBaseFactory::construct(*genuphead,arginfo,Pcbs));
 	libmaus2::bambam::BamBlockWriterBase & wr = *Pwriter;
 
-	libmaus2::bambam::BamStreamingMarkDuplicates BSMD(arginfo,header,wr,filterdupmarktags, false, filterolddupmarktags);
+	libmaus2::bambam::BamStreamingMarkDuplicates BSMD(arginfo,header,wr,filterdupmarktags, false /* put rank */, filterolddupmarktags, libmaus2::bambam::BamStreamingMarkDuplicates::getDefaultRmDup());
 
 	uint64_t cnt = 0;
 
