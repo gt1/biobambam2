@@ -84,8 +84,8 @@ int bamstreamingmarkduplicates(libmaus2::util::ArgInfo const & arginfo)
 	::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
 	if ( arginfo.getValue<unsigned int>("md5",getDefaultMD5()) )
 	{
-		if ( arginfo.hasArg("md5filename") &&  arginfo.getUnparsedValue("md5filename","") != "" )
-			md5filename = arginfo.getUnparsedValue("md5filename","");
+		if ( libmaus2::bambam::BamBlockWriterBaseFactory::getMD5FileName(arginfo) != std::string() )
+			md5filename = libmaus2::bambam::BamBlockWriterBaseFactory::getMD5FileName(arginfo);
 		else
 			std::cerr << "[V] no filename for md5 given, not creating hash" << std::endl;
 
@@ -99,8 +99,8 @@ int bamstreamingmarkduplicates(libmaus2::util::ArgInfo const & arginfo)
 	libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Pindex;
 	if ( arginfo.getValue<unsigned int>("index",getDefaultIndex()) )
 	{
-		if ( arginfo.hasArg("indexfilename") &&  arginfo.getUnparsedValue("indexfilename","") != "" )
-			indexfilename = arginfo.getUnparsedValue("indexfilename","");
+		if ( libmaus2::bambam::BamBlockWriterBaseFactory::getIndexFileName(arginfo) != std::string() )
+			indexfilename = libmaus2::bambam::BamBlockWriterBaseFactory::getIndexFileName(arginfo);
 		else
 			std::cerr << "[V] no filename for index given, not creating index" << std::endl;
 
