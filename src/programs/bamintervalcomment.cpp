@@ -735,7 +735,11 @@ int bamintervalcomment(::libmaus2::util::ArgInfo const & arginfo)
 	::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5;
 	std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > cbs;
 
-	if ( arginfo.hasArg("md5") && arginfo.hasArg("md5filename") && arginfo.getValue<unsigned int>("md5",getDefaultMD5()) )
+	std::string md5filename;
+	if ( libmaus2::bambam::BamBlockWriterBaseFactory::getMD5FileName(arginfo) != std::string() )
+		md5filename = libmaus2::bambam::BamBlockWriterBaseFactory::getMD5FileName(arginfo);
+
+	if ( arginfo.hasArg("md5") && arginfo.getValue<unsigned int>("md5",getDefaultMD5()) && md5filename.size() )
 	{
 		::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5(new ::libmaus2::lz::BgzfDeflateOutputCallbackMD5);
 		Pmd5 = UNIQUE_PTR_MOVE(Tmd5);
@@ -746,8 +750,8 @@ int bamintervalcomment(::libmaus2::util::ArgInfo const & arginfo)
 	std::string indexfilename;
 	if ( arginfo.getValue<unsigned int>("index",getDefaultIndex()) )
 	{
-		if ( arginfo.hasArg("indexfilename") &&  arginfo.getUnparsedValue("indexfilename","") != "" )
-			indexfilename = arginfo.getUnparsedValue("indexfilename","");
+		if ( libmaus2::bambam::BamBlockWriterBaseFactory::getIndexFileName(arginfo) != std::string() )
+			indexfilename = libmaus2::bambam::BamBlockWriterBaseFactory::getIndexFileName(arginfo);
 		else
 			std::cerr << "[V] no filename for index given, not creating index" << std::endl;
 
@@ -824,7 +828,7 @@ int bamintervalcomment(::libmaus2::util::ArgInfo const & arginfo)
 	Pwriter.reset();
 
 	if ( Pmd5 )
-		Pmd5->saveDigestAsFile(arginfo.getUnparsedValue("md5filename","not set"));
+		Pmd5->saveDigestAsFile(md5filename);
 	if ( Pindex )
 		Pindex->flush(std::string(indexfilename));
 
