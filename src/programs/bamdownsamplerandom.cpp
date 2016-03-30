@@ -34,6 +34,7 @@
 #include <libmaus2/util/MemUsage.hpp>
 #include <libmaus2/bambam/ProgramHeaderLineSet.hpp>
 #include <libmaus2/random/Random.hpp>
+#include <libmaus2/bambam/BamMultiAlignmentDecoderFactory.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static std::string getDefaultInputFormat() { return "bam"; }
@@ -43,30 +44,6 @@ static double getDefaultProb() { return 1.0; }
 #include <libmaus2/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
 static int getDefaultMD5() { return 0; }
 static int getDefaultIndex() { return 0; }
-
-struct BamDownsampleRandomInputFileStream
-{
-	std::string const fn;
-	libmaus2::aio::InputStreamInstance::unique_ptr_type CIS;
-	std::istream & in;
-
-	static libmaus2::aio::InputStreamInstance::unique_ptr_type openFile(std::string const & fn)
-	{
-		libmaus2::aio::InputStreamInstance::unique_ptr_type ptr(new libmaus2::aio::InputStreamInstance(fn));
-		return UNIQUE_PTR_MOVE(ptr);
-	}
-
-	BamDownsampleRandomInputFileStream(libmaus2::util::ArgInfo const & arginfo)
-	: fn(arginfo.getValue<std::string>("filename","-")),
-	  CIS(
-		(fn != "-") ? openFile(fn) : (libmaus2::aio::InputStreamInstance::unique_ptr_type())
-	), in((fn != "-") ? (*CIS) : std::cin) {}
-
-	BamDownsampleRandomInputFileStream(std::string const & rfn)
-	: fn(rfn), CIS(
-		(fn != "-") ? openFile(fn) : (libmaus2::aio::InputStreamInstance::unique_ptr_type())
-	), in((fn != "-") ? (*CIS) : std::cin) {}
-};
 
 template<typename decoder_type>
 std::string getModifiedHeaderText(decoder_type const & bamdec, libmaus2::util::ArgInfo const & arginfo, bool reset = false)
@@ -285,105 +262,19 @@ void bamdownsamplerandom(
 
 void bamdownsamplerandom(libmaus2::util::ArgInfo const & arginfo)
 {
-	if ( arginfo.hasArg("ranges") && arginfo.getValue("inputformat", getDefaultInputFormat()) != "bam" )
-	{
-		libmaus2::exception::LibMausException se;
-		se.getStream() << "ranges are only supported for inputformat=bam" << std::endl;
-		se.finish();
-		throw se;
-	}
+	uint32_t const excludeflags = libmaus2::bambam::BamFlagBase::stringToFlags(arginfo.getUnparsedValue("exclude","SECONDARY,SUPPLEMENTARY"));
 
-	if ( arginfo.hasArg("ranges") && ((!arginfo.hasArg("filename")) || arginfo.getValue<std::string>("filename","-") == "-") )
-	{
-		libmaus2::exception::LibMausException se;
-		se.getStream() << "ranges are not supported for reading via standard input" << std::endl;
-		se.finish();
-		throw se;
-	}
-
-	if ( arginfo.hasArg("ranges") && arginfo.getValue<uint64_t>("collate",1) > 1 )
-	{
-		libmaus2::exception::LibMausException se;
-		se.getStream() << "ranges are not supported for collate > 1" << std::endl;
-		se.finish();
-		throw se;
-	}
-
-	uint32_t const excludeflags = libmaus2::bambam::BamFlagBase::stringToFlags(arginfo.getValue<std::string>("exclude","SECONDARY,SUPPLEMENTARY"));
 	libmaus2::util::TempFileRemovalContainer::setup();
 	std::string const tmpfilename = arginfo.getValue<std::string>("T",arginfo.getDefaultTmpFileName());
 	libmaus2::util::TempFileRemovalContainer::addTempFile(tmpfilename);
-	std::string const inputformat = arginfo.getValue<std::string>("inputformat",getDefaultInputFormat());
-	std::string const inputfilename = arginfo.getValue<std::string>("filename","-");
-	uint64_t const numthreads = arginfo.getValue<uint64_t>("threads",0);
 
 	unsigned int const hlog = arginfo.getValue<unsigned int>("colhlog",18);
 	uint64_t const sbs = arginfo.getValueUnsignedNumeric<uint64_t>("colsbs",128ull*1024ull*1024ull);
 
-	if ( inputformat == "bam" )
-	{
-		if ( arginfo.hasArg("ranges") )
-		{
-			libmaus2::bambam::BamRangeCircularHashCollatingBamDecoder CHCBD(inputfilename,arginfo.getUnparsedValue("ranges",""),tmpfilename,excludeflags,false,hlog,sbs);
-			bamdownsamplerandom(arginfo,CHCBD);
-		}
-		else
-		{
-			BamDownsampleRandomInputFileStream bamin(inputfilename);
-
-			if ( numthreads > 0 )
-			{
-				libmaus2::bambam::BamParallelCircularHashCollatingBamDecoder CHCBD(
-					bamin.in,
-					numthreads,
-					tmpfilename,excludeflags,
-					false, /* put rank */
-					hlog,
-					sbs
-					);
-				bamdownsamplerandom(arginfo,CHCBD);
-			}
-			else
-			{
-				libmaus2::bambam::BamCircularHashCollatingBamDecoder CHCBD(
-					bamin.in,
-					tmpfilename,excludeflags,
-					false, /* put rank */
-					hlog,
-					sbs
-					);
-				bamdownsamplerandom(arginfo,CHCBD);
-			}
-		}
-	}
-	#if defined(BIOBAMBAM_LIBMAUS2_HAVE_IO_LIB)
-	else if ( inputformat == "sam" )
-	{
-		libmaus2::bambam::ScramCircularHashCollatingBamDecoder CHCBD(inputfilename,"r","",
-			tmpfilename,excludeflags,
-			false, /* put rank */
-			hlog,sbs
-		);
-		bamdownsamplerandom(arginfo,CHCBD);
-	}
-	else if ( inputformat == "cram" )
-	{
-		std::string const reference = arginfo.getValue<std::string>("reference","");
-		libmaus2::bambam::ScramCircularHashCollatingBamDecoder CHCBD(inputfilename,"rc",reference,
-			tmpfilename,excludeflags,
-			false, /* put rank */
-			hlog,sbs
-		);
-		bamdownsamplerandom(arginfo,CHCBD);
-	}
-	#endif
-	else
-	{
-		libmaus2::exception::LibMausException se;
-		se.getStream() << "unknown input format " << inputformat << std::endl;
-		se.finish();
-		throw se;
-	}
+	libmaus2::bambam::BamAlignmentDecoderWrapper::unique_ptr_type
+		Pdecoder(libmaus2::bambam::BamMultiAlignmentDecoderFactory::construct(arginfo,false, /* put rank */NULL /* copy stream */,std::cin,false,false));
+	libmaus2::bambam::CircularHashCollatingBamDecoder CHCBD(Pdecoder->getDecoder(),tmpfilename,excludeflags,hlog,sbs);
+	bamdownsamplerandom(arginfo,CHCBD);
 
 	std::cout.flush();
 }
@@ -394,7 +285,13 @@ int main(int argc, char * argv[])
 	{
 		libmaus2::timing::RealTimeClock rtc; rtc.start();
 
-		::libmaus2::util::ArgInfo const arginfo(argc,argv);
+		::libmaus2::util::ArgInfo arginfo(argc,argv);
+
+		if ( arginfo.hasArg("filename") )
+		{
+			arginfo.replaceKey("I",arginfo.getUnparsedValue("filename",std::string()));
+			arginfo.removeKey("filename");
+		}
 
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
 			if (
@@ -421,7 +318,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("p=<[")+libmaus2::util::NumberSerialisation::formatNumber(getDefaultProb(),0)+"]>", "probability for keeping read" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("seed=<[]>"), "random seed" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "filename=<[stdin]>", "input filename (default: read file from standard input)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "I=<[stdin]>", "input filename (default: read file from standard input)" ) );
 				#if defined(BIOBAMBAM_LIBMAUS2_HAVE_IO_LIB)
 				V.push_back ( std::pair<std::string,std::string> ( std::string("inputformat=<[")+getDefaultInputFormat()+"]>", "input format: cram, bam or sam" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "reference=<[]>", "name of reference FastA in case of inputformat=cram" ) );
