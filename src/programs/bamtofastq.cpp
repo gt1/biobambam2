@@ -916,75 +916,27 @@ void bamtofastqCollatingRanking(
 
 void bamtofastqCollatingRanking(libmaus2::util::ArgInfo const & arginfo)
 {
-	uint32_t const excludeflags = libmaus2::bambam::BamFlagBase::stringToFlags(arginfo.getValue<std::string>("exclude","SECONDARY,SUPPLEMENTARY"));
+	uint32_t const excludeflags = libmaus2::bambam::BamFlagBase::stringToFlags(arginfo.getUnparsedValue("exclude","SECONDARY,SUPPLEMENTARY"));
 	libmaus2::util::TempFileRemovalContainer::setup();
 	std::string const tmpfilename = arginfo.getValue<std::string>("T",arginfo.getDefaultTmpFileName());
 	libmaus2::util::TempFileRemovalContainer::addTempFile(tmpfilename);
-	std::string const inputformat = arginfo.getValue<std::string>("inputformat",getDefaultInputFormat());
-	std::string const inputfilename = arginfo.getValue<std::string>("filename","-");
-	uint64_t const numthreads = arginfo.getValue<uint64_t>("threads",0);
 	int64_t const inputbuffersize =
 		arginfo.hasArg("inputbuffersize") ? arginfo.getValueUnsignedNumeric<uint64_t>("inputbuffersize",BamToFastQInputFileStream::getDefaultBufferSize()) : -1;
 
 	unsigned int const hlog = arginfo.getValue<unsigned int>("colhlog",18);
 	uint64_t const sbs = arginfo.getValueUnsignedNumeric<uint64_t>("colsbs",32ull*1024ull*1024ull);
 
-	if ( inputformat == "bam" )
-	{
-		BamToFastQInputFileStream bamin(inputfilename,inputbuffersize);
+	libmaus2::aio::PosixFdInputStream PFIS(STDIN_FILENO,inputbuffersize);
+	libmaus2::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
+		libmaus2::bambam::BamMultiAlignmentDecoderFactory::construct(
+			arginfo,true /* put rank */, 0 /* copy stream */, PFIS
+		)
+	);
+	libmaus2::bambam::BamAlignmentDecoder & decoder = decwrapper->getDecoder();
+	// collator
+	libmaus2::bambam::CircularHashCollatingBamDecoder CHCBD(decoder,tmpfilename,excludeflags,hlog,sbs);
 
-		if ( numthreads > 0 )
-		{
-			libmaus2::bambam::BamParallelCircularHashCollatingBamDecoder CHCBD(
-				bamin.in,
-				numthreads,
-				tmpfilename,excludeflags,
-				true, /* put rank */
-				hlog,
-				sbs
-				);
-			bamtofastqCollatingRanking(arginfo,CHCBD);
-		}
-		else
-		{
-			libmaus2::bambam::BamCircularHashCollatingBamDecoder CHCBD(
-				bamin.in,
-				tmpfilename,excludeflags,
-				true, /* put rank */
-				hlog,
-				sbs
-				);
-			bamtofastqCollatingRanking(arginfo,CHCBD);
-		}
-	}
-	#if defined(BIOBAMBAM_LIBMAUS2_HAVE_IO_LIB)
-	else if ( inputformat == "sam" )
-	{
-		libmaus2::bambam::ScramCircularHashCollatingBamDecoder CHCBD(inputfilename,"r","",
-			tmpfilename,excludeflags,
-			true, /* put rank */
-			hlog,sbs
-		);
-		bamtofastqCollatingRanking(arginfo,CHCBD);
-	}
-	else if ( inputformat == "cram" )
-	{
-		std::string const reference = arginfo.getValue<std::string>("reference","");
-		libmaus2::bambam::ScramCircularHashCollatingBamDecoder CHCBD(inputfilename,"rc",reference,
-			tmpfilename,excludeflags,
-			true, /* put rank */
-			hlog,sbs
-		);
-		bamtofastqCollatingRanking(arginfo,CHCBD);
-	}
-	#endif
-	else
-	{
-		libmaus2::exception::LibMausException se;
-		se.getStream() << "unknown input format " << inputformat << std::endl;
-		se.finish();
-		throw se;
-	}
+	bamtofastqCollatingRanking(arginfo,CHCBD);
 
 	std::cout.flush();
 }
