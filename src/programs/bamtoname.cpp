@@ -27,30 +27,7 @@
 #include <libmaus2/bambam/CircularHashCollatingBamDecoder.hpp>
 #include <libmaus2/bambam/BamToFastqOutputFileSet.hpp>
 #include <libmaus2/util/TempFileRemovalContainer.hpp>
-
-struct BamToFastQInputFileStream
-{
-	std::string const fn;
-	libmaus2::aio::InputStreamInstance::unique_ptr_type CIS;
-	std::istream & in;
-
-	static libmaus2::aio::InputStreamInstance::unique_ptr_type openFile(std::string const & fn)
-	{
-		libmaus2::aio::InputStreamInstance::unique_ptr_type ptr(new libmaus2::aio::InputStreamInstance(fn));
-		return UNIQUE_PTR_MOVE(ptr);
-	}
-
-	BamToFastQInputFileStream(libmaus2::util::ArgInfo const & arginfo)
-	: fn(arginfo.getValue<std::string>("filename","-")),
-	  CIS(
-		(fn != "-") ? (openFile(fn)) : (libmaus2::aio::InputStreamInstance::unique_ptr_type())
-	), in((fn != "-") ? (*CIS) : std::cin) {}
-
-	BamToFastQInputFileStream(std::string const & rfn)
-	: fn(rfn), CIS(
-		(fn != "-") ? (openFile(fn)) : (libmaus2::aio::InputStreamInstance::unique_ptr_type())
-	), in((fn != "-") ? (*CIS) : std::cin) {}
-};
+#include <libmaus2/bambam/BamMultiAlignmentDecoderFactory.hpp>
 
 void bamtonameNonCollating(libmaus2::util::ArgInfo const & arginfo, libmaus2::bambam::BamAlignmentDecoder & bamdec)
 {
@@ -92,32 +69,15 @@ void bamtonameNonCollating(libmaus2::util::ArgInfo const & arginfo)
 	std::string const inputformat = arginfo.getValue<std::string>("inputformat","bam");
 	std::string const inputfilename = arginfo.getValue<std::string>("filename","-");
 
-	if ( inputformat == "bam" )
-	{
-		BamToFastQInputFileStream bamin(inputfilename);
-		libmaus2::bambam::BamDecoder bamdec(bamin.in);
-		bamtonameNonCollating(arginfo,bamdec);
-	}
-	#if defined(BIOBAMBAM_LIBMAUS2_HAVE_IO_LIB)
-	else if ( inputformat == "sam" )
-	{
-		libmaus2::bambam::ScramDecoder bamdec(inputfilename,"r","");
-		bamtonameNonCollating(arginfo,bamdec);
-	}
-	else if ( inputformat == "cram" )
-	{
-		std::string const reference = arginfo.getValue<std::string>("reference","");
-		libmaus2::bambam::ScramDecoder bamdec(inputfilename,"r",reference);
-		bamtonameNonCollating(arginfo,bamdec);
-	}
-	#endif
-	else
-	{
-		libmaus2::exception::LibMausException se;
-		se.getStream() << "unknown input format " << inputformat << std::endl;
-		se.finish();
-		throw se;
-	}
+	libmaus2::aio::PosixFdInputStream PFIS(STDIN_FILENO);
+	libmaus2::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
+		libmaus2::bambam::BamMultiAlignmentDecoderFactory::construct(
+			arginfo,false /* put rank */, 0 /* copy stream */, PFIS
+		)
+	);
+	libmaus2::bambam::BamAlignmentDecoder & decoder = decwrapper->getDecoder();
+
+	bamtonameNonCollating(arginfo,decoder);
 
 	std::cout.flush();
 }
@@ -213,43 +173,18 @@ void bamtonameCollating(libmaus2::util::ArgInfo const & arginfo)
 	std::string const tmpfilename = arginfo.getValue<std::string>("T",arginfo.getDefaultTmpFileName());
 	libmaus2::util::TempFileRemovalContainer::addTempFile(tmpfilename);
 	std::string const inputformat = arginfo.getValue<std::string>("inputformat","bam");
-	std::string const inputfilename = arginfo.getValue<std::string>("filename","-");
 
-	if ( inputformat == "bam" )
-	{
-		BamToFastQInputFileStream bamin(inputfilename);
-		libmaus2::bambam::BamCircularHashCollatingBamDecoder CHCBD(bamin.in,
-			tmpfilename,excludeflags,
-			true /* put rank */
-			);
-		bamtonameCollating(arginfo,CHCBD);
-	}
-	#if defined(BIOBAMBAM_LIBMAUS2_HAVE_IO_LIB)
-	else if ( inputformat == "sam" )
-	{
-		libmaus2::bambam::ScramCircularHashCollatingBamDecoder CHCBD(inputfilename,"r","",
-			tmpfilename,excludeflags,
-			true /* put rank */
-		);
-		bamtonameCollating(arginfo,CHCBD);
-	}
-	else if ( inputformat == "cram" )
-	{
-		std::string const reference = arginfo.getValue<std::string>("reference","");
-		libmaus2::bambam::ScramCircularHashCollatingBamDecoder CHCBD(inputfilename,"rc",reference,
-			tmpfilename,excludeflags,
-			true /* put rank */
-		);
-		bamtonameCollating(arginfo,CHCBD);
-	}
-	#endif
-	else
-	{
-		libmaus2::exception::LibMausException se;
-		se.getStream() << "unknown input format " << inputformat << std::endl;
-		se.finish();
-		throw se;
-	}
+	libmaus2::aio::PosixFdInputStream PFIS(STDIN_FILENO);
+	libmaus2::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
+		libmaus2::bambam::BamMultiAlignmentDecoderFactory::construct(
+			arginfo,true /* put rank */, 0 /* copy stream */, PFIS
+		)
+	);
+	libmaus2::bambam::BamAlignmentDecoder & decoder = decwrapper->getDecoder();
+	// collator
+	libmaus2::bambam::CircularHashCollatingBamDecoder CHCBD(decoder,tmpfilename,excludeflags);
+
+	bamtonameCollating(arginfo,CHCBD);
 
 	std::cout.flush();
 }
@@ -266,7 +201,20 @@ int main(int argc, char * argv[])
 {
 	try
 	{
-		::libmaus2::util::ArgInfo const arginfo(argc,argv);
+		::libmaus2::util::ArgInfo arginfo(argc,argv);
+
+		if ( arginfo.hasArg("filename") )
+		{
+			std::string const fn = arginfo.getUnparsedValue("filename",std::string());
+			arginfo.argmap["I"] = fn;
+			arginfo.argmultimap.insert(std::pair<std::string,std::string>(std::string("I"),fn));
+		}
+		if ( arginfo.hasArg("I") && !arginfo.hasArg("filename") )
+		{
+			std::string const fn = arginfo.getUnparsedValue("I",std::string());
+			arginfo.argmap["filename"] = fn;
+			arginfo.argmultimap.insert(std::pair<std::string,std::string>(std::string("filename"),fn));
+		}
 
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
 			if (

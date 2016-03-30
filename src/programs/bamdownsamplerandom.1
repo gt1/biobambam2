@@ -25,7 +25,7 @@ used, i.e. each run of the program will select a different subset of reads
 from an input file. If the behaviour of the program needs to be
 reproducible a fixed number can be used as the random seed.
 .PP
-.B filename=<stdin>: 
+.B I=<stdin>:
 input file name (data is read from standard input if this option is not given)
 .PP
 .B inputformat=<bam>: input file format
@@ -110,7 +110,7 @@ file name of temporary file used for collation
 .B ranges=<>:
 coordinate ranges selected from input. This option is only available for
 input files in BAM format which have a corresponding index (.bai file) and
-if input is via file (i.e. the filename argument is set). 
+if input is via file (i.e. the I argument is set).
 Valid ranges consist either of
 .IP "whole\ reference\ sequence:"
 a whole reference sequence (e.g. "chr1")
@@ -170,8 +170,6 @@ written to the given file. If indexfilename is unset, then no BAM index will be 
 .PP
 .B indexfilename
 file name for output BAM index if index=1.
-
-
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"
