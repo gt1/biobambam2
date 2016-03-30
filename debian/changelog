@@ -1,3 +1,11 @@
+biobambam2 (2.0.35) unstable; urgency=medium
+
+  * use factory class in ranking output for bamtofastq
+  * use factory class in bamtoname
+  * cleanup bamdownsamplerandom source and use factory class to instantiate alignment file decoder
+
+ -- German Tischler <tischler@mpi-cbg.de>  Wed, 30 Mar 2016 11:12:32 +0200
+
 biobambam2 (2.0.34) unstable; urgency=medium
 
   * deduce index and md5 filenames from output file name if possible
