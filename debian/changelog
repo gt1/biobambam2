@@ -1,3 +1,9 @@
+biobambam2 (2.0.36) unstable; urgency=medium
+
+  * add name hash based sub sampling in bamdownsamplerandom
+
+ -- German Tischler <tischler@mpi-cbg.de>  Tue, 05 Apr 2016 08:12:57 +0200
+
 biobambam2 (2.0.35) unstable; urgency=medium
 
   * use factory class in ranking output for bamtofastq
