@@ -170,6 +170,12 @@ written to the given file. If indexfilename is unset, then no BAM index will be 
 .PP
 .B indexfilename
 file name for output BAM index if index=1.
+.PP
+.B hash=<0|1>:
+use hash of query name instead of a random number for selection. This makes
+the output depend on how random the hashes produced for the query names are,
+but it has the advantage of not requiring collation to keep pairs together.
+In contast the order of retained reads does not change for hash=1.
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"

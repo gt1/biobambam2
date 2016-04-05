@@ -35,6 +35,8 @@
 #include <libmaus2/bambam/ProgramHeaderLineSet.hpp>
 #include <libmaus2/random/Random.hpp>
 #include <libmaus2/bambam/BamMultiAlignmentDecoderFactory.hpp>
+#include <libmaus2/bambam/BamStreamingMarkDuplicatesSupport.hpp>
+#include <libmaus2/digest/MurmurHash3_x64_128.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static std::string getDefaultInputFormat() { return "bam"; }
@@ -75,112 +77,21 @@ std::string getModifiedHeaderText(decoder_type const & bamdec, libmaus2::util::A
 	return upheadtext;
 }
 
-void bamdownsamplerandom(
-	libmaus2::util::ArgInfo const & arginfo,
-	libmaus2::bambam::CircularHashCollatingBamDecoder & CHCBD
-)
+template<typename writer_type>
+void runSelection(libmaus2::bambam::CircularHashCollatingBamDecoder & CHCBD, uint32_t const up, writer_type Pout)
 {
-	if ( arginfo.getValue<unsigned int>("disablevalidation",0) )
-		CHCBD.disableValidation();
-
-	if ( arginfo.hasArg("seed") )
-	{
-		uint64_t const seed = arginfo.getValue<uint64_t>("seed",0);
-		libmaus2::random::Random::setup(seed);
-	}
-	else
-	{
-		libmaus2::random::Random::setup();
-	}
-
-	double const p = arginfo.getValue<double>("p",getDefaultProb());
-
-	if ( p < 0.0 || p > 1.0 )
-	{
-		libmaus2::exception::LibMausException se;
-		se.getStream() << "Value of p must be in [0,1] but is " << p << std::endl;
-		se.finish();
-		throw se;
-	}
-
-	uint32_t const up =
-		( p == 1 ) ?
-		std::numeric_limits<uint32_t>::max() :
-		static_cast<uint32_t>(std::max(0.0,
-			std::min(
-				std::floor(p * static_cast<double>(std::numeric_limits<uint32_t>::max()) + 0.5),
-				static_cast<double>(std::numeric_limits<uint32_t>::max())
-			)
-		))
-		;
-
-	libmaus2::bambam::CircularHashCollatingBamDecoder::OutputBufferEntry const * ob = 0;
-
 	// number of alignments processed
 	uint64_t cnt = 0;
 	// number of bytes processed
 	uint64_t bcnt = 0;
 	// number of alignments written
 	uint64_t ocnt = 0;
+	// verbosity shift
 	unsigned int const verbshift = 20;
+	// clock
 	libmaus2::timing::RealTimeClock rtc; rtc.start();
 
-	// construct new header
-	::libmaus2::bambam::BamHeader uphead(getModifiedHeaderText(CHCBD,arginfo));
-	uphead.changeSortOrder("unknown");
-
-	/*
-	 * start index/md5 callbacks
-	 */
-	std::string const tmpfilenamebase = arginfo.getValue<std::string>("T",arginfo.getDefaultTmpFileName());
-	std::string const tmpfileindex = tmpfilenamebase + "_index";
-	::libmaus2::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
-
-	std::string md5filename;
-	std::string indexfilename;
-
-	std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > cbs;
-	::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
-	if ( arginfo.getValue<unsigned int>("md5",getDefaultMD5()) )
-	{
-		if ( libmaus2::bambam::BamBlockWriterBaseFactory::getMD5FileName(arginfo) != std::string() )
-			md5filename = libmaus2::bambam::BamBlockWriterBaseFactory::getMD5FileName(arginfo);
-		else
-			std::cerr << "[V] no filename for md5 given, not creating hash" << std::endl;
-
-		if ( md5filename.size() )
-		{
-			::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5cb(new ::libmaus2::lz::BgzfDeflateOutputCallbackMD5);
-			Pmd5cb = UNIQUE_PTR_MOVE(Tmd5cb);
-			cbs.push_back(Pmd5cb.get());
-		}
-	}
-	libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Pindex;
-	if ( arginfo.getValue<unsigned int>("index",getDefaultIndex()) )
-	{
-		if ( libmaus2::bambam::BamBlockWriterBaseFactory::getIndexFileName(arginfo) != std::string() )
-			indexfilename = libmaus2::bambam::BamBlockWriterBaseFactory::getIndexFileName(arginfo);
-		else
-			std::cerr << "[V] no filename for index given, not creating index" << std::endl;
-
-		if ( indexfilename.size() )
-		{
-			libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Tindex(new libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex(tmpfileindex));
-			Pindex = UNIQUE_PTR_MOVE(Tindex);
-			cbs.push_back(Pindex.get());
-		}
-	}
-	std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
-	if ( cbs.size() )
-		Pcbs = &cbs;
-	/*
-	 * end md5/index callbacks
-	 */
-
-	// construct writer
-	libmaus2::bambam::BamBlockWriterBase::unique_ptr_type Pout (
-		libmaus2::bambam::BamBlockWriterBaseFactory::construct(uphead, arginfo, Pcbs)
-	);
+	libmaus2::bambam::CircularHashCollatingBamDecoder::OutputBufferEntry const * ob = 0;
 
 	while ( (ob = CHCBD.process()) )
 	{
@@ -247,6 +158,278 @@ void bamdownsamplerandom(
 	}
 
 	std::cerr << "[V] " << cnt << std::endl;
+}
+
+template<typename writer_type>
+void runSelectionHash(libmaus2::bambam::BamAlignmentDecoder & BAD, uint32_t const up, writer_type Pout, uint32_t const seed)
+{
+	// number of alignments processed
+	uint64_t cnt = 0;
+	// number of bytes processed
+	uint64_t bcnt = 0;
+	// number of alignments written
+	uint64_t ocnt = 0;
+	// verbosity shift
+	unsigned int const verbshift = 20;
+	// clock
+	libmaus2::timing::RealTimeClock rtc; rtc.start();
+
+	libmaus2::bambam::BamAlignment const & algn = BAD.getAlignment();
+
+	libmaus2::digest::MurmurHash3_x64_128 dig;
+	std::size_t const dlen = dig.getDigestLength();
+	libmaus2::autoarray::AutoArray<uint8_t> D(dlen);
+
+	while ( BAD.readAlignment() )
+	{
+		uint64_t const precnt = cnt;
+		char const * qname = algn.getName();
+
+		dig.init(seed);
+		dig.update(reinterpret_cast<uint8_t const *>(qname),strlen(qname));
+		dig.digest(D.begin());
+
+		uint32_t rv = 0;
+		for ( uint64_t i = 0; i < dlen; ++i )
+			rv ^= static_cast<uint32_t>(D[i]) << (8*(i&3));
+
+		if ( rv <= up )
+		{
+			Pout->writeAlignment(algn);
+			ocnt += 1;
+		}
+
+		cnt += 1;
+		bcnt += algn.blocksize + sizeof(uint32_t);
+
+		if ( precnt >> verbshift != cnt >> verbshift )
+		{
+			std::cerr
+				<< "[V] "
+				<< (cnt >> 20)
+				<< "\t"
+				<< (static_cast<double>(bcnt)/(1024.0*1024.0))/rtc.getElapsedSeconds() << "MB/s"
+				<< "\t" << static_cast<double>(cnt)/rtc.getElapsedSeconds()
+				<< " kept " << ocnt << " (" << static_cast<double>(ocnt)/cnt << ")"
+				<< std::endl;
+		}
+	}
+
+	std::cerr << "[V] " << cnt << std::endl;
+}
+
+void bamdownsamplerandom(
+	libmaus2::util::ArgInfo const & arginfo,
+	libmaus2::bambam::CircularHashCollatingBamDecoder & CHCBD
+)
+{
+	if ( arginfo.getValue<unsigned int>("disablevalidation",0) )
+		CHCBD.disableValidation();
+
+	if ( arginfo.hasArg("seed") )
+	{
+		uint64_t const seed = arginfo.getValue<uint64_t>("seed",0);
+		libmaus2::random::Random::setup(seed);
+	}
+	else
+	{
+		libmaus2::random::Random::setup();
+	}
+
+	double const p = arginfo.getValue<double>("p",getDefaultProb());
+
+	if ( p < 0.0 || p > 1.0 )
+	{
+		libmaus2::exception::LibMausException se;
+		se.getStream() << "Value of p must be in [0,1] but is " << p << std::endl;
+		se.finish();
+		throw se;
+	}
+
+	uint32_t const up =
+		( p == 1 ) ?
+		std::numeric_limits<uint32_t>::max() :
+		static_cast<uint32_t>(std::max(0.0,
+			std::min(
+				std::floor(p * static_cast<double>(std::numeric_limits<uint32_t>::max()) + 0.5),
+				static_cast<double>(std::numeric_limits<uint32_t>::max())
+			)
+		))
+		;
+
+
+	// construct new header
+	::libmaus2::bambam::BamHeader uphead(getModifiedHeaderText(CHCBD,arginfo));
+	uphead.changeSortOrder("unknown");
+
+	/*
+	 * start index/md5 callbacks
+	 */
+	std::string const tmpfilenamebase = arginfo.getValue<std::string>("T",arginfo.getDefaultTmpFileName());
+	std::string const tmpfileindex = tmpfilenamebase + "_index";
+	::libmaus2::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
+
+
+	std::string md5filename;
+	std::string indexfilename;
+
+	std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > cbs;
+	::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
+	if ( arginfo.getValue<unsigned int>("md5",getDefaultMD5()) )
+	{
+		if ( libmaus2::bambam::BamBlockWriterBaseFactory::getMD5FileName(arginfo) != std::string() )
+			md5filename = libmaus2::bambam::BamBlockWriterBaseFactory::getMD5FileName(arginfo);
+		else
+			std::cerr << "[V] no filename for md5 given, not creating hash" << std::endl;
+
+		if ( md5filename.size() )
+		{
+			::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5cb(new ::libmaus2::lz::BgzfDeflateOutputCallbackMD5);
+			Pmd5cb = UNIQUE_PTR_MOVE(Tmd5cb);
+			cbs.push_back(Pmd5cb.get());
+		}
+	}
+	libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Pindex;
+	if ( arginfo.getValue<unsigned int>("index",getDefaultIndex()) )
+	{
+		if ( libmaus2::bambam::BamBlockWriterBaseFactory::getIndexFileName(arginfo) != std::string() )
+			indexfilename = libmaus2::bambam::BamBlockWriterBaseFactory::getIndexFileName(arginfo);
+		else
+			std::cerr << "[V] no filename for index given, not creating index" << std::endl;
+
+		if ( indexfilename.size() )
+		{
+			libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Tindex(new libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex(tmpfileindex));
+			Pindex = UNIQUE_PTR_MOVE(Tindex);
+			cbs.push_back(Pindex.get());
+		}
+	}
+	std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
+	if ( cbs.size() )
+		Pcbs = &cbs;
+	/*
+	 * end md5/index callbacks
+	 */
+
+	// construct writer
+	libmaus2::bambam::BamBlockWriterBase::unique_ptr_type Pout (
+		libmaus2::bambam::BamBlockWriterBaseFactory::construct(uphead, arginfo, Pcbs)
+	);
+
+
+	runSelection(CHCBD,up,Pout.get());
+
+	Pout.reset();
+
+	if ( Pmd5cb )
+	{
+		Pmd5cb->saveDigestAsFile(md5filename);
+	}
+	if ( Pindex )
+	{
+		Pindex->flush(std::string(indexfilename));
+	}
+}
+
+void bamdownsamplerandomHash(
+	libmaus2::util::ArgInfo const & arginfo,
+	libmaus2::bambam::BamAlignmentDecoder & BAD
+)
+{
+	if ( arginfo.getValue<unsigned int>("disablevalidation",0) )
+		BAD.disableValidation();
+
+	if ( arginfo.hasArg("seed") )
+	{
+		uint64_t const seed = arginfo.getValue<uint64_t>("seed",0);
+		libmaus2::random::Random::setup(seed);
+	}
+	else
+	{
+		libmaus2::random::Random::setup();
+	}
+
+	double const p = arginfo.getValue<double>("p",getDefaultProb());
+
+	if ( p < 0.0 || p > 1.0 )
+	{
+		libmaus2::exception::LibMausException se;
+		se.getStream() << "Value of p must be in [0,1] but is " << p << std::endl;
+		se.finish();
+		throw se;
+	}
+
+	uint32_t const up =
+		( p == 1 ) ?
+		std::numeric_limits<uint32_t>::max() :
+		static_cast<uint32_t>(std::max(0.0,
+			std::min(
+				std::floor(p * static_cast<double>(std::numeric_limits<uint32_t>::max()) + 0.5),
+				static_cast<double>(std::numeric_limits<uint32_t>::max())
+			)
+		))
+		;
+
+
+	// construct new header
+	::libmaus2::bambam::BamHeader uphead(getModifiedHeaderText(BAD,arginfo));
+
+	/*
+	 * start index/md5 callbacks
+	 */
+	std::string const tmpfilenamebase = arginfo.getValue<std::string>("T",arginfo.getDefaultTmpFileName());
+	std::string const tmpfileindex = tmpfilenamebase + "_index";
+	::libmaus2::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
+
+
+	std::string md5filename;
+	std::string indexfilename;
+
+	std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > cbs;
+	::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
+	if ( arginfo.getValue<unsigned int>("md5",getDefaultMD5()) )
+	{
+		if ( libmaus2::bambam::BamBlockWriterBaseFactory::getMD5FileName(arginfo) != std::string() )
+			md5filename = libmaus2::bambam::BamBlockWriterBaseFactory::getMD5FileName(arginfo);
+		else
+			std::cerr << "[V] no filename for md5 given, not creating hash" << std::endl;
+
+		if ( md5filename.size() )
+		{
+			::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Tmd5cb(new ::libmaus2::lz::BgzfDeflateOutputCallbackMD5);
+			Pmd5cb = UNIQUE_PTR_MOVE(Tmd5cb);
+			cbs.push_back(Pmd5cb.get());
+		}
+	}
+	libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Pindex;
+	if ( arginfo.getValue<unsigned int>("index",getDefaultIndex()) )
+	{
+		if ( libmaus2::bambam::BamBlockWriterBaseFactory::getIndexFileName(arginfo) != std::string() )
+			indexfilename = libmaus2::bambam::BamBlockWriterBaseFactory::getIndexFileName(arginfo);
+		else
+			std::cerr << "[V] no filename for index given, not creating index" << std::endl;
+
+		if ( indexfilename.size() )
+		{
+			libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Tindex(new libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex(tmpfileindex));
+			Pindex = UNIQUE_PTR_MOVE(Tindex);
+			cbs.push_back(Pindex.get());
+		}
+	}
+	std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
+	if ( cbs.size() )
+		Pcbs = &cbs;
+	/*
+	 * end md5/index callbacks
+	 */
+
+	// construct writer
+	libmaus2::bambam::BamBlockWriterBase::unique_ptr_type Pout (
+		libmaus2::bambam::BamBlockWriterBaseFactory::construct(uphead, arginfo, Pcbs)
+	);
+
+
+	runSelectionHash(BAD,up,Pout.get(),libmaus2::random::Random::rand32());
 
 	Pout.reset();
 
@@ -270,11 +453,20 @@ void bamdownsamplerandom(libmaus2::util::ArgInfo const & arginfo)
 
 	unsigned int const hlog = arginfo.getValue<unsigned int>("colhlog",18);
 	uint64_t const sbs = arginfo.getValueUnsignedNumeric<uint64_t>("colsbs",128ull*1024ull*1024ull);
+	bool hash = arginfo.getValue<unsigned int>("hash",false);
 
 	libmaus2::bambam::BamAlignmentDecoderWrapper::unique_ptr_type
 		Pdecoder(libmaus2::bambam::BamMultiAlignmentDecoderFactory::construct(arginfo,false, /* put rank */NULL /* copy stream */,std::cin,false,false));
-	libmaus2::bambam::CircularHashCollatingBamDecoder CHCBD(Pdecoder->getDecoder(),tmpfilename,excludeflags,hlog,sbs);
-	bamdownsamplerandom(arginfo,CHCBD);
+
+	if ( hash )
+	{
+		bamdownsamplerandomHash(arginfo,Pdecoder->getDecoder());
+	}
+	else
+	{
+		libmaus2::bambam::CircularHashCollatingBamDecoder CHCBD(Pdecoder->getDecoder(),tmpfilename,excludeflags,hlog,sbs);
+		bamdownsamplerandom(arginfo,CHCBD);
+	}
 
 	std::cout.flush();
 }
@@ -338,7 +530,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( std::string("outputformat=<[")+libmaus2::bambam::BamBlockWriterBaseFactory::getDefaultOutputFormat()+"]>", std::string("output format (") + libmaus2::bambam::BamBlockWriterBaseFactory::getValidOutputFormats() + ")" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "outputthreads=<[1]>", "output helper threads (for outputformat=bam only, default: 1)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "O=<[stdout]>", "output filename (standard output if unset)" ) );
-
+				V.push_back ( std::pair<std::string,std::string> ( "hash=<[0]>", "use query name hash instead of random number for selection (default: 0)" ) );
 
 				::biobambam2::Licensing::printMap(std::cerr,V);
 
