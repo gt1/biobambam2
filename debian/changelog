@@ -1,3 +1,9 @@
+biobambam2 (2.0.39) unstable; urgency=medium
+
+  * fix collation in bamtofastq etc concerning comparison of reads names which only differ by leading zeros in number comparison 
+
+ -- German Tischler <tischler@mpi-cbg.de>  Tue, 19 Apr 2016 11:25:57 +0200
+
 biobambam2 (2.0.38) unstable; urgency=medium
 
   * fix for bamrecalculatecigar concerning CIGAR strings starting with a deletion
