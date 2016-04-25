@@ -37,6 +37,8 @@ static int getDefaultMD5() { return 0; }
 static int getDefaultIndex() { return 0; }
 static int getDefaultStreaming() { return 0; }
 
+#include <libmaus2/util/MemUsage.hpp>
+
 ::libmaus2::bambam::BamHeader::unique_ptr_type updateHeader(
 	::libmaus2::util::ArgInfo const & arginfo,
 	::libmaus2::bambam::BamHeader const & header
@@ -160,6 +162,11 @@ int bamcat(libmaus2::util::ArgInfo const & arginfo)
 	if ( Pindex )
 	{
 		Pindex->flush(std::string(indexfilename));
+	}
+
+	if ( verbose )
+	{
+		std::cerr << "[V] finished " << libmaus2::util::MemUsage() << std::endl;
 	}
 
 	return EXIT_SUCCESS;
