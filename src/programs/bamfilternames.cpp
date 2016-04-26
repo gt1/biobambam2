@@ -170,13 +170,21 @@ int bamfilternames(::libmaus2::util::ArgInfo const & arginfo)
 	}
 	else
 	{
+		uint64_t kept = 0;
+
 		while ( dec.readAlignment() )
 		{
 			if ( LHTsnofailure->searchCompleteNoFailureZ(algn.getName()) != -1 )
+			{
 				algn.serialise(writer->getStream());
+				kept += 1;
+			}
 			if ( verbose && (++c & (1024*1024-1)) == 0 )
-				std::cerr << "[V] " << c/(1024*1024) << std::endl;
+				std::cerr << "[V] " << c/(1024*1024) << " " << kept << std::endl;
 		}
+
+		if ( verbose )
+			std::cerr << "[V] " << c << " " << kept << std::endl;
 	}
 
 	writer.reset();
