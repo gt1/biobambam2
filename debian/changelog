@@ -1,3 +1,10 @@
+biobambam2 (2.0.41) unstable; urgency=medium
+
+  * update to libmaus2 2.0.178
+  * add number of alignments kept in verbose output of bamfilternames
+
+ -- German Tischler <tischler@mpi-cbg.de>  Mon, 02 May 2016 10:33:25 +0200
+
 biobambam2 (2.0.40) unstable; urgency=medium
 
   * print memory usage at end of bamcat in verbose mode
