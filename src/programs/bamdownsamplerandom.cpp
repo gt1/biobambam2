@@ -454,6 +454,13 @@ void bamdownsamplerandom(libmaus2::util::ArgInfo const & arginfo)
 	unsigned int const hlog = arginfo.getValue<unsigned int>("colhlog",18);
 	uint64_t const sbs = arginfo.getValueUnsignedNumeric<uint64_t>("colsbs",128ull*1024ull*1024ull);
 	bool hash = arginfo.getValue<unsigned int>("hash",false);
+	bool const index = arginfo.getValue<unsigned int>("index",getDefaultIndex());
+
+	if ( index && (!hash) )
+	{
+		std::cerr << "[W] index=1, forcing hash=1" << std::endl;
+		hash = 1;
+	}
 
 	libmaus2::bambam::BamAlignmentDecoderWrapper::unique_ptr_type
 		Pdecoder(libmaus2::bambam::BamMultiAlignmentDecoderFactory::construct(arginfo,false, /* put rank */NULL /* copy stream */,std::cin,false,false));
