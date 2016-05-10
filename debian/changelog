@@ -1,3 +1,9 @@
+biobambam2 (2.0.43) unstable; urgency=medium
+
+  * improve diagnosis of low memory situations (autoarraytrace option in libmaus2)
+
+ -- German Tischler <tischler@mpi-cbg.de>  Tue, 10 May 2016 09:10:42 +0200
+
 biobambam2 (2.0.42) unstable; urgency=medium
 
   * update to libmaus2 2.0.179 and fix EOF detection bug on pipes 
