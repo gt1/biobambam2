@@ -1,3 +1,9 @@
+biobambam2 (2.0.44) unstable; urgency=medium
+
+  * reduce input memory per block in bamsormadup if space required is high
+
+ -- German Tischler <tischler@mpi-cbg.de>  Tue, 17 May 2016 10:36:56 +0200
+
 biobambam2 (2.0.43) unstable; urgency=medium
 
   * improve diagnosis of low memory situations (autoarraytrace option in libmaus2)
