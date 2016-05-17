@@ -291,12 +291,34 @@ int bamsormadupTemplate(
 	std::cerr << "[V] blocks generated in time " << rtc.formatTime(rtc.getElapsedSeconds()) << std::endl;
 
 	rtc.start();
-	uint64_t const inputblocksize = 1024*1024;
-	uint64_t const inputblocksperfile = 8;
+	uint64_t const mergeinputmaxmem = arginfo.getValueUnsignedNumeric("mergeinputmaxmem", 8ull*1024ull * 1024ull * 1024ull);
+	uint64_t inputblocksize = 1024*1024;
+	uint64_t inputblocksperfile = 8;
+
+	while (
+		BI.size() * inputblocksize * inputblocksperfile > mergeinputmaxmem
+		&&
+		inputblocksperfile > 2
+	)
+	{
+		inputblocksperfile -= 1;
+	}
+
+	while (
+		BI.size() * inputblocksize * inputblocksperfile > mergeinputmaxmem
+		&&
+		inputblocksize >= 256ull*1024ull
+	)
+		inputblocksize /= 2;
+
+	std::cerr << "[V] number of blocks to be merged is " << BI.size() << " using " << inputblocksperfile << " blocks per input with block size " << inputblocksize << std::endl;
+
+	if ( BI.size() * inputblocksize * inputblocksperfile > mergeinputmaxmem )
+		std::cerr << "[V] warning: " << mergeinputmaxmem << " bytes insufficient for merging" << std::endl;
+
 	uint64_t const mergebuffermemory = arginfo.getValueUnsignedNumeric("mergebuffermemory", 1024ull * 1024ull * 1024ull);
 	uint64_t const complistsize = 32;
 	int const level = arginfo.getValue<int>("level",Z_DEFAULT_COMPRESSION);
-
 
 	uint64_t const mergebuffers =
 		(oformat == libmaus2::bambam::parallel::BlockMergeControlTypeBase::output_format_cram)
