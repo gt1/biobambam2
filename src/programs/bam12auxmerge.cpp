@@ -1,7 +1,7 @@
 /**
     bambam
     Copyright (C) 2009-2013 German Tischler
-    Copyright (C) 2011-2013 Genome Research Limited
+    Copyright (C) 2011-2013,2016 Genome Research Limited
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -156,6 +156,16 @@ int bam12auxmerge(::libmaus2::util::ArgInfo const & arginfo)
 				pgtodo.push(std::pair<uint64_t,std::string>(children[j],ID));
 		}
 	}
+	
+	// add PG line to header
+	upheadtext = ::libmaus2::bambam::ProgramHeaderLineSet::addProgramLine(
+		upheadtext,
+		"bam12auxmerge", // ID
+		"bam12auxmerge", // PN
+		arginfo.commandline, // CL
+		::libmaus2::bambam::ProgramHeaderLineSet(upheadtext).getLastIdInChain(), // PP
+		std::string(PACKAGE_VERSION) // VN
+	);
 
 	/* copy SQ lines */
 	std::ostringstream sqconcstr;
