@@ -156,7 +156,7 @@ int bam12auxmerge(::libmaus2::util::ArgInfo const & arginfo)
 				pgtodo.push(std::pair<uint64_t,std::string>(children[j],ID));
 		}
 	}
-	
+
 	// add PG line to header
 	upheadtext = ::libmaus2::bambam::ProgramHeaderLineSet::addProgramLine(
 		upheadtext,
