@@ -1,3 +1,11 @@
+biobambam2 (2.0.45) unstable; urgency=medium
+
+  * do not fail for alignments with no read base data in bamheap2
+  * add options for turning N bases randomly to A,C,G,T and to convert bases to upper case in normalisefasta
+  * Added a PG line for bam12auxmerge. (by Andrew Whitwham)
+
+ -- German Tischler <tischler@mpi-cbg.de>  Fri, 10 Jun 2016 11:08:55 +0200
+
 biobambam2 (2.0.44) unstable; urgency=medium
 
   * reduce input memory per block in bamsormadup if space required is high
