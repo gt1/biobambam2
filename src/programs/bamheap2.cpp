@@ -359,7 +359,10 @@ int bamheap2(libmaus2::util::ArgInfo const & arginfo)
 
 	while ( dec.readAlignment() )
 	{
-		if ( algn.isMapped() && (!algn.isQCFail()) )
+		if (
+			algn.isMapped() && (!algn.isQCFail()) &&
+			algn.getLseq()
+		)
 		{
 			assert ( ! pendinginserts.size() );
 

@@ -35,6 +35,16 @@ static unsigned int getDefaultCols()
 	return 80;
 }
 
+static unsigned int getDefaultNRandom()
+{
+	return 0;
+}
+
+static unsigned int getDefaultToUpper()
+{
+	return 0;
+}
+
 static unsigned int getDefaultBgzf()
 {
 	return 0;
@@ -63,12 +73,32 @@ void normalisefastaUncompressed(libmaus2::util::ArgInfo const & arginfo)
 	libmaus2::fastx::StreamFastAReaderWrapper in(std::cin);
 	libmaus2::fastx::StreamFastAReaderWrapper::pattern_type pattern;
 	unsigned int const cols = arginfo.getValue<unsigned int>("cols",getDefaultCols());
+	unsigned int const nrandom = arginfo.getValue<unsigned int>("nrandom",getDefaultNRandom());
+	unsigned int const ctoupper = arginfo.getValue<unsigned int>("toupper",getDefaultToUpper());
+	libmaus2::random::Random::setup(::time(0));
 	uint64_t offset = 0;
 
 	while ( in.getNextPatternUnlocked(pattern) )
 	{
 		std::string const name = pattern.getStringId();
 		std::string const shortname = stripName(name);
+
+		if ( nrandom )
+		{
+			std::string & s = pattern.spattern;
+			for ( uint64_t i = 0; i < s.size(); ++i )
+				if ( libmaus2::fastx::mapChar(s[i]) > 3 )
+					s[i] = libmaus2::fastx::remapChar(libmaus2::random::Random::rand8()&3);
+			pattern.pattern = pattern.spattern.c_str();
+		}
+
+		if ( ctoupper )
+		{
+			std::string & s = pattern.spattern;
+			for ( uint64_t i = 0; i < s.size(); ++i )
+				s[i] = ::toupper(s[i]);
+			pattern.pattern = pattern.spattern.c_str();
+		}
 
 		std::cerr <<  shortname << "\t" << pattern.patlen << "\t"
 			<< offset+pattern.getStringId().size()+2 << "\t" << cols << "\t" << cols+1 << std::endl;
@@ -201,6 +231,8 @@ int main(int argc, char * argv[])
 				std::vector< std::pair<std::string,std::string> > V;
 
 				V.push_back ( std::pair<std::string,std::string> ( std::string("cols=<[")+libmaus2::util::NumberSerialisation::formatNumber(getDefaultCols(),0)+"]>", "column width" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("nrandom=<[")+libmaus2::util::NumberSerialisation::formatNumber(getDefaultNRandom(),0)+"]>", "replace N bases randomly by A,C,G,T" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("toupper=<[")+libmaus2::util::NumberSerialisation::formatNumber(getDefaultToUpper(),0)+"]>", "convert bases to upper case" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("bgzf=<[")+libmaus2::util::NumberSerialisation::formatNumber(getDefaultBgzf(),0)+"]>", "compress output" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("index=<>"), "file name for index if bgzf=1 (no index is created if key is not given)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("level=<[")+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", std::string("compression level if bgzf=1 (") + libmaus2::bambam::BamBlockWriterBaseFactory::getLevelHelpText() + std::string(")") ) );
