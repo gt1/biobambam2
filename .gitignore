@@ -54,3 +54,4 @@ src/lasToBAM
 pull.sh
 test/bamcmp
 test/bamtosam
+src/filtersam
