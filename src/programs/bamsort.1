@@ -1,4 +1,4 @@
-.TH BAMSORT 1 "August 2014" BIOBAMBAM
+.TH BAMSORT 1 "June 2016" BIOBAMBAM
 .SH NAME
 bamsort - sort BAM files by coordinate or query name
 .SH SYNOPSIS
@@ -7,15 +7,16 @@ bamsort - sort BAM files by coordinate or query name
 [options]
 .SH DESCRIPTION
 bamsort reads a BAM, SAM or CRAM file, sorts it by coordinate
-(lexicographical by reference sequence id and position on reference sequence)
-or query name and writes the sorted file in BAM, SAM or CRAM format.
+(lexicographical by reference sequence id and position on reference
+sequence), query name or hash value computed for the query name
+and writes the sorted file in BAM, SAM or CRAM format.
 .PP
 Lexicographical order denotes that pairs (a,b) and (c,d) will be ordered
 such that (a,b) < (c,d) if either a < c or a = c and b < d. For coordinates
 this means that the alignments are first grouped by reference sequence id
 (i.e. all alignments for one chromosome appear in one block) and within the
 block for each reference sequence the alignments are ordered by the start
-position of on this sequence.
+position on this sequence.
 .PP
 The order by query name decomposes the read names into parts containing
 numbers and such containing no number. A read name A15_30_C50 will for
@@ -25,6 +26,10 @@ number fields are compared as numbers. As an example we have A15<B12 as
 A<B and A9<A12 as A=A and 9<12 (where 9 and 12 are considered as numbers and
 not as the sequences of their digits).
 .PP
+The order by hash value computes a hash value (effectively random number) for each read name
+and order the alignments by this number in increasing order. Alignments
+assigned the same hash value are ordered by query name.
+.PP
 If the memory buffer given is not sufficiently large to process the input
 file, then the program writes intermediate results to a temporary file. This
 file can be large and depending on the compression of the input file larger
@@ -32,12 +37,15 @@ than the input itself.
 .PP
 The following key=value pairs can be given:
 .PP
-.B SO=<coordinate|queryname>: 
+.B SO=<coordinate|queryname|hash>: 
 set the sort order. Valid values are
 .IP coordinate:
 sort alignments by coordinate
 .IP queryname
 sort alignments by query name
+.IP hash
+sort alignments by (Murmur3) hash of query name. This effectively puts them
+in a random order.
 .PP
 .B level=<-1|0|1|9|11>:
 set compression level of the output BAM file. Valid
@@ -213,7 +221,7 @@ Written by German Tischler.
 .SH "REPORTING BUGS"
 Report bugs to <tischler@mpi-cbg.de>
 .SH COPYRIGHT
-Copyright \(co 2009-2014 German Tischler, \(co 2011-2014 Genome Research Limited.
+Copyright \(co 2009-2016 German Tischler, \(co 2011-2014 Genome Research Limited.
 License GPLv3+: GNU GPL version 3 <http://gnu.org/licenses/gpl.html>
 .br
 This is free software: you are free to change and redistribute it.
