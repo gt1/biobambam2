@@ -44,6 +44,7 @@ int fastaexplode(libmaus2::util::ArgParser const & arg)
 			"p" : ( arg.uniqueArgPresent("prefix") ? "prefix" : "" );
 	std::string const prefix = prefixarg.size() ? arg[prefixarg] : getDefaultPrefix();
 	bool const singleline = arg.argPresent("s") || arg.argPresent("singleline");
+	bool const longname = arg.argPresent("L") || arg.argPresent("longname");
 	bool const dataonly = arg.argPresent("d") || arg.argPresent("dataonly");
 	uint64_t const linelength = arg.uniqueArgPresent("c") ? arg.getUnsignedNumericArg<uint64_t>("c") : getDefaultLineLength();
 
@@ -59,7 +60,8 @@ int fastaexplode(libmaus2::util::ArgParser const & arg)
 		for ( uint64_t i = 0; i < spat.size(); ++i )
 			spat[i] = toupper(spat[i]);
 
-		pattern.sid = pattern.getShortStringId();
+		if ( !longname )
+			pattern.sid = pattern.getShortStringId();
 
 		if ( dataonly )
 			OSI.write(pattern.spattern.c_str(),pattern.spattern.size());
@@ -101,6 +103,7 @@ int main(int argc, char * argv[])
 			V.push_back ( std::pair<std::string,std::string> ( "-v/--version", "print version number and quit" ) );
 			V.push_back ( std::pair<std::string,std::string> ( "-h/--help", "print help message and quit" ) );
 			V.push_back ( std::pair<std::string,std::string> ( "-s/--singleline", "do not wrap sequence data lines" ) );
+			V.push_back ( std::pair<std::string,std::string> ( "-L/--longname", "do not shorten name" ) );
 			V.push_back ( std::pair<std::string,std::string> ( "-l<cols>", "line length (default: "+libmaus2::util::NumberSerialisation::formatNumber(getDefaultLineLength(),0)+")" ) );
 			V.push_back ( std::pair<std::string,std::string> ( "-d/--dataonly", "do not print FastA header (data only)" ) );
 			V.push_back ( std::pair<std::string,std::string> ( "-p", std::string("prefix for FastA output files (default: ")+getDefaultPrefix()+")" ) );
