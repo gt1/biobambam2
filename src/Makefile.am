@@ -81,6 +81,7 @@ bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamr
 	bamtagconversion \
 	fastaexplode \
 	bamrecalculatecigar \
+	filtersam \
 	@BAMALIGNMENTOFFSETSINSTEXP@ @BLASTXMLTOBAMINSTEXP@
 
 noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments bamtoname \
@@ -444,3 +445,8 @@ bamrecalculatecigar_SOURCES = programs/bamrecalculatecigar.cpp biobambam2/Licens
 bamrecalculatecigar_LDADD = ${LIBMAUS2LIBS}
 bamrecalculatecigar_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
 bamrecalculatecigar_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
+
+filtersam_SOURCES = programs/filtersam.cpp biobambam2/Licensing.cpp
+filtersam_LDADD = ${LIBMAUS2LIBS}
+filtersam_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+filtersam_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
