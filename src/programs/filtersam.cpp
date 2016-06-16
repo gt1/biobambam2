@@ -66,11 +66,26 @@ int main(int argc, char *argv[])
 				try
 				{
 					Pinfo->parseSamLine(a,e);
+
+					if ( Pinfo->algn.isMapped() )
+					{
+						if (
+							static_cast<int64_t>(Pinfo->algn.getPos() + Pinfo->algn.getReferenceLength()) >
+							static_cast<int64_t>(Pheader->getRefIDLength(Pinfo->algn.getRefID()))
+						)
+						{
+							libmaus2::exception::LibMausException lme;
+							lme.getStream() << "[E] alignment extends past end of reference sequence" << std::endl;
+							lme.finish();
+							throw lme;
+						}
+					}
+
 					std::cout << std::string(a,e) << "\n";
 				}
 				catch(std::exception const & ex)
 				{
-					// std::cerr << ex.what() << std::endl;
+					std::cerr << ex.what() << std::endl;
 				}
 			}
 		}

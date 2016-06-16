@@ -184,6 +184,10 @@ int bamrecalculatecigar(libmaus2::util::ArgInfo const & arginfo)
 				refloaded = algn.getRefID();
 			}
 
+			assert (
+				algn.getPos() + algn.getReferenceLength() <= ref.size()
+			);
+
 			uint64_t const numcig = libmaus2::bambam::BamAlignmentDecoderBase::recalculateCigar(
 				algn.D.begin(),
 				ref.begin() + algn.getPos(),
