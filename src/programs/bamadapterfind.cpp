@@ -36,8 +36,6 @@
 
 #include <libmaus2/parallel/SimpleThreadPool.hpp>
 #include <libmaus2/parallel/SimpleThreadPoolWorkPackageFreeList.hpp>
-#include <libmaus2/parallel/LockedQueue.hpp>
-#include <libmaus2/parallel/LockedHeap.hpp>
 
 #include <biobambam2/Licensing.hpp>
 #include <biobambam2/ClipAdapters.hpp>
@@ -70,6 +68,10 @@ static int getDefaultWriteQueue() { return 100; }
 static int getDefaultWorkReads() { return 1000; }
 
 
+/*
+    Next few structures hold data that is passed
+    between threads
+*/
 struct HoldAlign
 {
     	libmaus2::bambam::BamAlignment algns[2];
@@ -129,12 +131,14 @@ struct StatsBlock
 };
 
 
-template<typename _value_type, typename _comparator_type = std::greater<_value_type>>
+
+/*
+    Heap with a passed in mutex to limit size.
+    Control of size is in AdapterFindControl below.
+*/
 struct LimitedLockedHeap
 {
-	typedef _value_type value_type;
-	typedef _comparator_type comparator_type;
-	typedef LimitedLockedHeap<value_type, comparator_type> this_type;
+	typedef LimitedLockedHeap this_type;
 	typedef typename libmaus2::util::unique_ptr<this_type>::type unique_ptr_type;
 	typedef typename libmaus2::util::shared_ptr<this_type>::type shared_ptr_type;
 
@@ -142,28 +146,18 @@ struct LimitedLockedHeap
 	pthread_cond_t  *space_available;
 	pthread_cond_t  result_available;
 
-	std::priority_queue<value_type,std::vector<value_type>,comparator_type> Q;
+	std::priority_queue<WorkBlock*,std::vector<WorkBlock*>, WorkBlockComparator> Q;
 	uint64_t max_size; 
-
-	LimitedLockedHeap() : Q(), max_size(0)
-	{
-	    	initialise();
-	}
 
 	LimitedLockedHeap(pthread_mutex_t *rmutex, pthread_cond_t  *rspace_available, const uint64_t rmax_size) : 
 	    mutex(rmutex), space_available(rspace_available), Q(), max_size(rmax_size)
 	{
-	    	initialise();
+	    	pthread_cond_init(&result_available, NULL);
 	}
 
 	~LimitedLockedHeap()
 	{
 	    	pthread_cond_destroy(&result_available);
-	}
-
-	void initialise()
-	{
-	    	pthread_cond_init(&result_available, NULL);
 	}
 
 	struct ScopeLimitedMutexLock
@@ -195,12 +189,6 @@ struct LimitedLockedHeap
 		}
 	};
 
-	uint64_t size()
-	{
-		ScopeLimitedMutexLock llock(mutex);
-		return Q.size();
-	}
-
 	bool empty()
 	{
 		ScopeLimitedMutexLock llock(mutex);
@@ -213,7 +201,7 @@ struct LimitedLockedHeap
 		return (Q.size() >= max_size);
 	}
 
-	void push(value_type const v)
+	void push(WorkBlock *v)
 	{
 		ScopeLimitedMutexLock llock(mutex);
 
@@ -222,10 +210,10 @@ struct LimitedLockedHeap
 	}
 
 
-	value_type pop()
+	WorkBlock* pop()
 	{
 		ScopeLimitedMutexLock llock(mutex);
-		value_type p = Q.top();
+		WorkBlock *p = Q.top();
 		Q.pop();
 
 		if (max_size && Q.size() < max_size)
@@ -237,56 +225,13 @@ struct LimitedLockedHeap
 	}
 
 
-	value_type top()
+	WorkBlock* top()
 	{
 		ScopeLimitedMutexLock llock(mutex);
 		return Q.top();
 	}
-
-
-	bool tryPop(value_type &v)
-	{
-		ScopeLimitedMutexLock llock(mutex);
-
-		if (Q.size())
-		{
-			v = Q.top();
-			Q.pop();
-
-			if (max_size && Q.size() < max_size)
-			{
-			    	pthread_cond_signal(space_available);
-			}
-
-			return true;
-		}
-		else
-		{
-		    	return false;
-		}
-	}
-
-	value_type waitingPop()
-	{
-		ScopeLimitedMutexLock llock(mutex);
-		value_type p;
-
-		while (!tryPop(p))
-		{
-			struct timeval now;
-			struct timespec timeout;
-
-			gettimeofday(&now, NULL);
-			timeout.tv_sec  = now.tv_sec + 10;
-			timeout.tv_nsec = now.tv_usec * 1000;
-
-			pthread_cond_timedwait(&result_available, mutex, &timeout);
-		}
-
-		return p;
-	}
 };
-	
+
 	
 void adapterListMatch(
 	libmaus2::autoarray::AutoArray<char> & Aread,
@@ -427,11 +372,7 @@ namespace libmaus2
 		{
 		    SimpleThreadPoolWorkPackageFreeList<AdapterFindWorkPackage> findWorkPackages;
 		    SimpleThreadPoolWorkPackageFreeList<AdapterFindWritePackage> findWritePackages;
-		    LimitedLockedHeap<WorkBlock*, WorkBlockComparator> write_queue;
-
-		    FreeLists()
-		    {
-		    }
+    	    	    LimitedLockedHeap write_queue;
 
 		    FreeLists(pthread_mutex_t *rmutex, pthread_cond_t  *rspace_available, const uint64_t rmax_size) : write_queue(rmutex, rspace_available, rmax_size)
 		    {
@@ -1199,6 +1140,7 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 
 	return EXIT_SUCCESS;
 }
+
 
 int main(int argc, char * argv[])
 {
