@@ -32,7 +32,7 @@ uint64_t resetAlignment(uint8_t * const D, uint64_t blocksize, bool const reseta
 	if ( rgfilter )
 		blocksize = libmaus2::bambam::BamAlignmentDecoderBase::filterAux(D,blocksize,*rgfilter);
 	if ( resetaux )
-		blocksize = libmaus2::bambam::BamAlignment::eraseAux(D);
+		blocksize = libmaus2::bambam::BamAlignmentDecoderBase::eraseAux(D);
 
 	blocksize = libmaus2::bambam::BamAlignment::eraseCigarString(D,blocksize);
 
