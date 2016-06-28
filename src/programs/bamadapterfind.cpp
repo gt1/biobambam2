@@ -63,8 +63,9 @@ static int getDefaultIndex() { return 0; }
 void adapterListMatch(
 	libmaus2::autoarray::AutoArray<char> & Aread,
 	libmaus2::util::PushBuffer<libmaus2::bambam::AdapterOffsetStrand> & AOSPB,
+	libmaus2::fastx::AutoArrayWordPutObject<uint64_t> & AAWPO,
 	libmaus2::bambam::BamAlignment & algn,
-	libmaus2::bambam::AdapterFilter & AF,
+	libmaus2::bambam::AdapterFilter const & AF,
 	int const verbose,
 	uint64_t const adpmatchminscore, // = getDefaultMatchMinScore(),
 	double const adpmatchminfrac, // = getDefaultMatchMinFrac(),
@@ -95,7 +96,9 @@ void adapterListMatch(
 		AOSPB,
 		adpmatchminscore /* min score */,
 		adpmatchminfrac /* minfrac */,
-		adpmatchminpfrac /* minpfrac */
+		adpmatchminpfrac /* minpfrac */,
+		AAWPO,
+		0 /* verbose */
 	);
 
 	if ( matched )
@@ -326,6 +329,7 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 	libmaus2::bambam::BamSeqEncodeTable const seqenc;
 	libmaus2::autoarray::AutoArray<libmaus2::bambam::cigar_operation> cigop;
 	libmaus2::bambam::BamAlignment::D_array_type T;
+	libmaus2::fastx::AutoArrayWordPutObject<uint64_t> AAWPO;
 
 	// std::cerr << "bmask=" << bmask << std::endl;
 
@@ -340,7 +344,7 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 		alcnt++;
 
 		// find adapters in given list
-		adapterListMatch(Aread,AOSPB,inputalgn,*AF,verbose,adpmatchminscore,adpmatchminfrac,adpmatchminpfrac,reflen,pA,pC,pG,pT);
+		adapterListMatch(Aread,AOSPB,AAWPO,inputalgn,*AF,verbose,adpmatchminscore,adpmatchminfrac,adpmatchminpfrac,reflen,pA,pC,pG,pT);
 
 		// if this is a single end read, then write it back and try the next one
 		if ( ! inputalgn.isPaired() )
@@ -392,7 +396,7 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 		algns[1].swap(inputalgn);
 
 		// find adapters in given list
-		adapterListMatch(Aread,AOSPB,algns[1],*AF,verbose,adpmatchminscore,adpmatchminfrac,adpmatchminpfrac,reflen,pA,pC,pG,pT);
+		adapterListMatch(Aread,AOSPB,AAWPO,algns[1],*AF,verbose,adpmatchminscore,adpmatchminfrac,adpmatchminpfrac,reflen,pA,pC,pG,pT);
 
 		// are the read in the correct order? if not, write them out without touching them
 		if ( !(algns[0].isRead1() && algns[1].isRead2()) )

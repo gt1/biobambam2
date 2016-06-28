@@ -49,6 +49,7 @@ static int getDefaultTempLevel() { return Z_BEST_SPEED; }
 static std::string getDefaultInputFormat() { return "bam"; }
 static std::string getDefaultSeqChksumHash() { return "crc32prod"; }
 static std::string getDefaultDigest() { return "md5"; }
+static int getDefaultBlockSortVerbose() { return 0; }
 
 template<typename heap_element_type>
 static int
@@ -159,6 +160,7 @@ int bamsormadupTemplate(
 
 	std::string const sinputformat = arginfo.getUnparsedValue("inputformat",getDefaultInputFormat());
 	libmaus2::bambam::parallel::BlockSortControlBase::block_sort_control_input_enum inform = libmaus2::bambam::parallel::BlockSortControlBase::block_sort_control_input_bam;
+	int const blocksortverbose = arginfo.getValue<int>("blocksortverbose",getDefaultBlockSortVerbose());
 
 	if ( sinputformat == "bam" )
 	{
@@ -184,6 +186,7 @@ int bamsormadupTemplate(
 			dupmarksupport
 		)
 	);
+	VC->setVerbose(blocksortverbose);
 	VC->enqueReadPackage();
 	VC->waitDecodingFinished();
 	// VC->printChecksums(std::cerr);
