@@ -1,3 +1,11 @@
+biobambam2 (2.0.48) unstable; urgency=medium
+
+  * use AdapterFilter object as const in bamadapterfind
+  * add blocksortverbose parameter in bamsormadup
+  * reflect API update in libmaus2
+
+ -- German Tischler <tischler@mpi-cbg.de>  Tue, 28 Jun 2016 12:28:37 +0200
+
 biobambam2 (2.0.47) unstable; urgency=medium
 
   * filter out alignments extending past the end of a reference sequence in filtersam
