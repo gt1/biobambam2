@@ -1,3 +1,9 @@
+biobambam2 (2.0.49) unstable; urgency=medium
+
+  * update to libmaus2 version 2.0.216 
+
+ -- German Tischler <tischler@mpi-cbg.de>  Wed, 29 Jun 2016 10:38:45 +0200
+
 biobambam2 (2.0.48) unstable; urgency=medium
 
   * use AdapterFilter object as const in bamadapterfind
