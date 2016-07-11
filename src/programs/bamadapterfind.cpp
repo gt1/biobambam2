@@ -82,6 +82,7 @@ struct HoldAlign
 struct WorkBlock 
 {
 	::libmaus2::util::ArgInfo const & arginfo;
+	libmaus2::bambam::AdapterFilter::shared_ptr_type AF;
 	libmaus2::autoarray::AutoArray<uint8_t> &S;
 	libmaus2::autoarray::AutoArray<uint8_t> &R;
 	uint64_t const & mmask;
@@ -93,13 +94,13 @@ struct WorkBlock
 	uint64_t adptcnt;
 	uint64_t paircnt;
 
-	WorkBlock(::libmaus2::util::ArgInfo const & inarg, libmaus2::autoarray::AutoArray<uint8_t> &inS, libmaus2::autoarray::AutoArray<uint8_t> &inR,
-    	    	    uint64_t const &inmmask) : arginfo(inarg), S(inS), R(inR), mmask(inmmask), adptcnt(0), paircnt(0) { }
+	WorkBlock(::libmaus2::util::ArgInfo const & inarg, libmaus2::bambam::AdapterFilter::shared_ptr_type rAF, libmaus2::autoarray::AutoArray<uint8_t> &inS, libmaus2::autoarray::AutoArray<uint8_t> &inR,
+    	    	    uint64_t const &inmmask) : arginfo(inarg), AF(rAF), S(inS), R(inR), mmask(inmmask), adptcnt(0), paircnt(0) { }
 
 	~WorkBlock() {}
 };
 
-
+libmaus2::bambam::AdapterFilter::unique_ptr_type AF;
 struct WorkBlockComparator 
 {
 	bool operator()(WorkBlock const &A, WorkBlock const &B) const
@@ -246,7 +247,8 @@ void adapterListMatch(
 	double const pA,
 	double const pC,
 	double const pG,
-	double const pT
+	double const pT,
+	libmaus2::fastx::AutoArrayWordPutObject<uint64_t> &data
 )
 {
     	uint64_t len;
@@ -268,7 +270,8 @@ void adapterListMatch(
 		AOSPB,
 		adpmatchminscore /* min score */,
 		adpmatchminfrac /* minfrac */,
-		adpmatchminpfrac /* minpfrac */
+		adpmatchminpfrac /* minpfrac */,
+		data
 	);
 			
 	if ( matched )
@@ -388,26 +391,7 @@ namespace libmaus2
 			{
 	    			AdapterFindWorkPackage *WP = dynamic_cast<AdapterFindWorkPackage *>(P);
 				WorkBlock *wb = WP->wb;
-
-				libmaus2::bambam::AdapterFilter::unique_ptr_type AF;
-
-				if ( wb->arginfo.hasArg("adaptersbam") )
-				{
-					libmaus2::aio::InputStreamInstance adapterCIS(wb->arginfo.getUnparsedValue("adaptersbam","adapters.bam"));
-					libmaus2::bambam::AdapterFilter::unique_ptr_type tAF(
-                                			new libmaus2::bambam::AdapterFilter(adapterCIS,12 /* seed length */)
-                        			);
-					AF = UNIQUE_PTR_MOVE(tAF);
-				}
-				else
-				{
-					std::string const builtinAdapters = libmaus2::bambam::BamDefaultAdapters::getDefaultAdapters();
-					std::istringstream builtinAdaptersStr(builtinAdapters);
-					libmaus2::bambam::AdapterFilter::unique_ptr_type tAF(
-                                			new libmaus2::bambam::AdapterFilter(builtinAdaptersStr,12 /* seed length */)
-                        			);
-					AF = UNIQUE_PTR_MOVE(tAF);
-				}
+				libmaus2::bambam::AdapterFilter::shared_ptr_type AF = wb->AF;
 
 				uint64_t const adpmatchminscore  = wb->arginfo.getValue<uint64_t>("adpmatchminscore",getDefaultMatchMinScore());
 				double   const adpmatchminfrac   = wb->arginfo.getValue<double>("adpmatchminfrac",getDefaultMatchMinFrac());
@@ -448,10 +432,11 @@ namespace libmaus2
 				libmaus2::bambam::BamSeqEncodeTable const seqenc;
 				libmaus2::autoarray::AutoArray<libmaus2::bambam::cigar_operation> cigop;
 				libmaus2::bambam::BamAlignment::D_array_type T;
+				libmaus2::fastx::AutoArrayWordPutObject<uint64_t> working_data;
 
     				for (std::vector<HoldAlign *>::iterator itr = wb->entries.begin(); itr != wb->entries.end(); itr++) {
 	    				// find adapters in given list
-					adapterListMatch(Aread,AOSPB,(*itr)->algns[0], *AF, verbose, adpmatchminscore,adpmatchminfrac,adpmatchminpfrac,reflen,pA,pC,pG,pT);
+					adapterListMatch(Aread,AOSPB,(*itr)->algns[0], *AF, verbose, adpmatchminscore,adpmatchminfrac,adpmatchminpfrac,reflen,pA,pC,pG,pT, working_data);
 
 					if (!(*itr)->pair) {
 					    if (clip) {
@@ -461,7 +446,7 @@ namespace libmaus2
 					    continue;
 					}
 
-					adapterListMatch(Aread,AOSPB,(*itr)->algns[1], *AF, verbose, adpmatchminscore,adpmatchminfrac,adpmatchminpfrac,reflen,pA,pC,pG,pT);
+					adapterListMatch(Aread,AOSPB,(*itr)->algns[1], *AF, verbose, adpmatchminscore,adpmatchminfrac,adpmatchminpfrac,reflen,pA,pC,pG,pT, working_data);
 
 					if (!((*itr)->algns[0].isRead1() && (*itr)->algns[1].isRead2())) {
 						std::cerr << "[D] warning: reads are not in the correct order" << std::endl;
@@ -943,6 +928,25 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 	int const max_write_queue = arginfo.getValue<int>("max_write_queue", getDefaultWriteQueue());
 	int const max_work_reads  = arginfo.getValue<int>("max_work_reads", getDefaultWorkReads());
 	
+	libmaus2::bambam::AdapterFilter::shared_ptr_type AF;
+
+	if ( arginfo.hasArg("adaptersbam") )
+	{
+		libmaus2::aio::InputStreamInstance adapterCIS(arginfo.getUnparsedValue("adaptersbam","adapters.bam"));
+		libmaus2::bambam::AdapterFilter::shared_ptr_type tAF(
+                                new libmaus2::bambam::AdapterFilter(adapterCIS,12 /* seed length */)
+                        );
+		AF = tAF;
+	}
+	else
+	{
+		std::string const builtinAdapters = libmaus2::bambam::BamDefaultAdapters::getDefaultAdapters();
+		std::istringstream builtinAdaptersStr(builtinAdapters);
+		libmaus2::bambam::AdapterFilter::shared_ptr_type tAF(
+                                new libmaus2::bambam::AdapterFilter(builtinAdaptersStr,12 /* seed length */)
+                        );
+		AF = tAF;
+	}
 	
 	
  	libmaus2::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
@@ -1023,7 +1027,7 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 
 	    	if (workb == NULL)
 		{
-		    	workb = new WorkBlock(arginfo, S, R, mmask);
+		    	workb = new WorkBlock(arginfo, AF, S, R, mmask);
 		    	workb->wb_no = wbnum++;
 		}
 		
@@ -1088,7 +1092,7 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 	else
 	{
 		// special ending job
-		workb = new WorkBlock(arginfo, S, R, mmask);
+		workb = new WorkBlock(arginfo, AF, S, R, mmask);
 		workb->wb_no = wbnum++;
 		workb->ending = true;
 	}
