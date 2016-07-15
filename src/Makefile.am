@@ -25,7 +25,7 @@ MANPAGES = programs/bamtofastq.1 programs/bamsort.1 programs/bammarkduplicates.1
 	programs/bamflagsplit.1 programs/bamintervalcomment.1 \
 	programs/bamstreamingmarkduplicates.1 \
 	programs/bamsormadup.1 programs/lasToBAM.1 programs/fastaexplode.1 \
-	programs/bamrecalculatecigar.1
+	programs/bamrecalculatecigar.1 programs/bamfiltermc.1
 
 man_MANS = ${MANPAGES}
 
@@ -82,6 +82,7 @@ bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamr
 	fastaexplode \
 	bamrecalculatecigar \
 	filtersam \
+	bamfiltermc \
 	@BAMALIGNMENTOFFSETSINSTEXP@ @BLASTXMLTOBAMINSTEXP@
 
 noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments bamtoname \
@@ -450,3 +451,8 @@ filtersam_SOURCES = programs/filtersam.cpp biobambam2/Licensing.cpp
 filtersam_LDADD = ${LIBMAUS2LIBS}
 filtersam_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
 filtersam_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
+
+bamfiltermc_SOURCES = programs/bamfiltermc.cpp biobambam2/Licensing.cpp
+bamfiltermc_LDADD = ${LIBMAUS2LIBS}
+bamfiltermc_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamfiltermc_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
