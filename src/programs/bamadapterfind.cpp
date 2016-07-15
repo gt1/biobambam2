@@ -26,7 +26,7 @@
 #include <libmaus2/bambam/AdapterFilter.hpp>
 #include <libmaus2/bambam/BamAlignment.hpp>
 #include <libmaus2/bambam/BamBlockWriterBaseFactory.hpp>
-#include <libmaus2/bambam/BamDecoder.hpp>
+#include <libmaus2/bambam/BamMultiAlignmentDecoderFactory.hpp>
 #include <libmaus2/bambam/BamWriter.hpp>
 #include <libmaus2/bambam/ProgramHeaderLineSet.hpp>
 #include <libmaus2/fastx/acgtnMap.hpp>
@@ -248,8 +248,7 @@ void adapterListMatch(
 	double const pA,
 	double const pC,
 	double const pG,
-	double const pT,
-	libmaus2::fastx::AutoArrayWordPutObject<uint64_t> &data
+	double const pT
 )
 {
     	uint64_t len;
@@ -272,12 +271,8 @@ void adapterListMatch(
 		adpmatchminscore /* min score */,
 		adpmatchminfrac /* minfrac */,
 		adpmatchminpfrac /* minpfrac */,
-<<<<<<< HEAD
-		data
-=======
 		AAWPO,
 		0 /* verbose */
->>>>>>> upstream/experimental
 	);
 			
 	if ( matched )
@@ -442,7 +437,7 @@ namespace libmaus2
 
     				for (std::vector<HoldAlign *>::iterator itr = wb->entries.begin(); itr != wb->entries.end(); itr++) {
 	    				// find adapters in given list
-					adapterListMatch(Aread,AOSPB,(*itr)->algns[0], *AF, verbose, adpmatchminscore,adpmatchminfrac,adpmatchminpfrac,reflen,pA,pC,pG,pT, working_data);
+					adapterListMatch(Aread,AOSPB,working_data,(*itr)->algns[0], *AF, verbose, adpmatchminscore,adpmatchminfrac,adpmatchminpfrac,reflen,pA,pC,pG,pT);
 
 					if (!(*itr)->pair) {
 					    if (clip) {
@@ -452,7 +447,7 @@ namespace libmaus2
 					    continue;
 					}
 
-					adapterListMatch(Aread,AOSPB,(*itr)->algns[1], *AF, verbose, adpmatchminscore,adpmatchminfrac,adpmatchminpfrac,reflen,pA,pC,pG,pT, working_data);
+					adapterListMatch(Aread,AOSPB, working_data, (*itr)->algns[1], *AF, verbose, adpmatchminscore,adpmatchminfrac,adpmatchminpfrac,reflen,pA,pC,pG,pT);
 
 					if (!((*itr)->algns[0].isRead1() && (*itr)->algns[1].isRead2())) {
 						std::cerr << "[D] warning: reads are not in the correct order" << std::endl;
@@ -1005,7 +1000,6 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 		(1ull << 60) |
 		(1ull << 63);
 
-<<<<<<< HEAD
     	libmaus2::parallel::SimpleThreadPool TP(max_threads < 2 ? 2 : max_threads); // 2 thread minimum
 	libmaus2::parallel::AdapterFindControl AFC(TP, max_write_queue);
 	
@@ -1025,35 +1019,6 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 	int const verbose     = arginfo.getValue<int>("verbose",getDefaultVerbose());
 	
 	while ( (bamdec.readAlignment()) )
-=======
-	libmaus2::bambam::BamAuxFilterVector auxfilter;
-	auxfilter.set("a3");
-	auxfilter.set("ah");
-
-	uint64_t alcnt = 0;
-	uint64_t adptcnt = 0;
-	uint64_t lastalcnt = std::numeric_limits<uint64_t>::max();
-	uint64_t paircnt = 0;
-	uint64_t orphcnt = 0;
-
-	uint64_t const bmod = libmaus2::math::nextTwoPow(mod);
-	// uint64_t const bmask = bmod-1;
-	uint64_t const bshift = libmaus2::math::ilog(bmod);
-
-	libmaus2::util::Histogram overlaphist;
-	libmaus2::util::Histogram adapterhist;
-
-	libmaus2::autoarray::AutoArray<char> CR;
-	libmaus2::autoarray::AutoArray<char> CQ;
-	libmaus2::bambam::BamSeqEncodeTable const seqenc;
-	libmaus2::autoarray::AutoArray<libmaus2::bambam::cigar_operation> cigop;
-	libmaus2::bambam::BamAlignment::D_array_type T;
-	libmaus2::fastx::AutoArrayWordPutObject<uint64_t> AAWPO;
-
-	// std::cerr << "bmask=" << bmask << std::endl;
-
-	while ( (running = bamdec.readAlignment()) )
->>>>>>> upstream/experimental
 	{
 		if ( verbose && ( (stats.alcnt >> bshift) != (stats.lastalcnt >> bshift) ) )
 		{
@@ -1061,22 +1026,11 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 			stats.lastalcnt = stats.alcnt;
 		}
 
-<<<<<<< HEAD
 	    	if (workb == NULL)
-=======
-		alcnt++;
-
-		// find adapters in given list
-		adapterListMatch(Aread,AOSPB,AAWPO,inputalgn,*AF,verbose,adpmatchminscore,adpmatchminfrac,adpmatchminpfrac,reflen,pA,pC,pG,pT);
-
-		// if this is a single end read, then write it back and try the next one
-		if ( ! inputalgn.isPaired() )
->>>>>>> upstream/experimental
 		{
 		    	workb = new WorkBlock(arginfo, AF, S, R, mmask);
 		    	workb->wb_no = wbnum++;
 		}
-<<<<<<< HEAD
 		
 		HoldAlign *hold = new HoldAlign();
 		
@@ -1085,96 +1039,6 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 		read_count++;
 
 		if ( !hold->algns[0].isPaired())
-=======
-
-		// store alignment in algns[0]
-		algns[0].swap(inputalgn);
-
-		// read next alignment
-		bool const okb = bamdec.readAlignment();
-		alcnt++;
-
-		// no next alignment, algns[0] is an orphan
-		if ( ! okb )
-		{
-			if ( clip )
-				clipAdapters(algns[0],CR,CQ,seqenc,cigop,T);
-
-			++orphcnt;
-			// std::cerr << "[D] warning: orphan alignment"  << std::endl;
-			algns[0].serialise(writer->getStream());
-			break;
-		}
-
-		// if next is not paired or name does not match
-		if ( (! inputalgn.isPaired()) || strcmp(algns[0].getName(), inputalgn.getName()) )
-		{
-			if ( clip )
-				clipAdapters(algns[0],CR,CQ,seqenc,cigop,T);
-			++orphcnt;
-			//std::cerr << "[D] warning: orphan alignment" << std::endl;
-			algns[0].serialise(writer->getStream());
-			bamdec.putback();
-			alcnt--;
-			continue;
-		}
-
-		// sanity checks
-		assert ( algns[0].isPaired() );
-		assert ( inputalgn.isPaired() );
-		assert ( strcmp(algns[0].getName(),inputalgn.getName()) == 0 );
-
-		// put second read in algns[1]
-		algns[1].swap(inputalgn);
-
-		// find adapters in given list
-		adapterListMatch(Aread,AOSPB,AAWPO,algns[1],*AF,verbose,adpmatchminscore,adpmatchminfrac,adpmatchminpfrac,reflen,pA,pC,pG,pT);
-
-		// are the read in the correct order? if not, write them out without touching them
-		if ( !(algns[0].isRead1() && algns[1].isRead2()) )
-		{
-			std::cerr << "[D] warning: reads are not in the correct order" << std::endl;
-
-			if ( clip )
-			{
-				clipAdapters(algns[0],CR,CQ,seqenc,cigop,T);
-				clipAdapters(algns[1],CR,CQ,seqenc,cigop,T);
-			}
-
-			algns[0].serialise(writer->getStream());
-			algns[1].serialise(writer->getStream());
-			continue;
-		}
-
-		// are the reads both non empty?
-		if ( !(algns[0].getLseq() && algns[1].getLseq()) )
-		{
-			std::cerr << "[D] warning: empty read" << std::endl;
-
-			if ( clip )
-			{
-				clipAdapters(algns[0],CR,CQ,seqenc,cigop,T);
-				clipAdapters(algns[1],CR,CQ,seqenc,cigop,T);
-			}
-
-			algns[0].serialise(writer->getStream());
-			algns[1].serialise(writer->getStream());
-			continue;
-		}
-
-		paircnt++;
-
-		unsigned int const rev0 = algns[0].isReverse() ? 1 : 0;
-		unsigned int const rev1 = algns[1].isReverse() ? 1 : 0;
-
-		/*
-		 * Whether a sequence needs to be reverse complemented for
-		 * adaptor detection depends on its strand and in what orientation
-		 * it is stored.
-		 */
-
-		if ( !rev0 )
->>>>>>> upstream/experimental
 		{
 		    	hold->pair = false;
 		}
