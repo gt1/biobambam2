@@ -79,7 +79,7 @@ struct HoldAlign
 };
 
 
-struct WorkBlock 
+struct WorkBlock
 {
 	::libmaus2::util::ArgInfo const & arginfo;
 	libmaus2::bambam::AdapterFilter::shared_ptr_type AF;
@@ -101,21 +101,21 @@ struct WorkBlock
 };
 
 libmaus2::bambam::AdapterFilter::unique_ptr_type AF;
-struct WorkBlockComparator 
+struct WorkBlockComparator
 {
 	bool operator()(WorkBlock const &A, WorkBlock const &B) const
 	{
     	    	return A.wb_no > B.wb_no;
 	}
 
-	bool operator()(WorkBlock const *A, WorkBlock const *B) const 
+	bool operator()(WorkBlock const *A, WorkBlock const *B) const
 	{
     	    	return A->wb_no > B->wb_no;
 	}
 };
 
 
-struct StatsBlock 
+struct StatsBlock
 {
 	uint64_t alcnt;
 	uint64_t adptcnt;
@@ -125,7 +125,7 @@ struct StatsBlock
 	libmaus2::util::Histogram overlaphist;
 	libmaus2::util::Histogram adapterhist;
 
-	StatsBlock() : alcnt(0), adptcnt(0), lastalcnt(std::numeric_limits<uint64_t>::max()), 
+	StatsBlock() : alcnt(0), adptcnt(0), lastalcnt(std::numeric_limits<uint64_t>::max()),
 	    paircnt(0), orphcnt(0)
 	{
 	}
@@ -148,9 +148,9 @@ struct LimitedLockedHeap
 	pthread_cond_t  result_available;
 
 	std::priority_queue<WorkBlock*,std::vector<WorkBlock*>, WorkBlockComparator> Q;
-	uint64_t max_size; 
+	uint64_t max_size;
 
-	LimitedLockedHeap(pthread_mutex_t *rmutex, pthread_cond_t  *rspace_available, const uint64_t rmax_size) : 
+	LimitedLockedHeap(pthread_mutex_t *rmutex, pthread_cond_t  *rspace_available, const uint64_t rmax_size) :
 	    mutex(rmutex), space_available(rspace_available), Q(), max_size(rmax_size)
 	{
 	    	pthread_cond_init(&result_available, NULL);
@@ -233,7 +233,7 @@ struct LimitedLockedHeap
 	}
 };
 
-	
+
 void adapterListMatch(
 	libmaus2::autoarray::AutoArray<char> & Aread,
 	libmaus2::util::PushBuffer<libmaus2::bambam::AdapterOffsetStrand> & AOSPB,
@@ -253,20 +253,20 @@ void adapterListMatch(
 {
     	uint64_t len;
 
-    	if ( algn.isReverse() ) 
+    	if ( algn.isReverse() )
 	{
 	        len = algn.decodeReadRC(Aread);
-	} 
+	}
 	else
 	{
 	    	len = algn.decodeRead(Aread);
 	}
 
 	uint8_t const * const ua = reinterpret_cast<uint8_t const *>(Aread.begin());
-			
+
 	bool const matched = AF.searchAdapters(
-		ua, len, 
-		2 /* max mismatches */, 
+		ua, len,
+		2 /* max mismatches */,
 		AOSPB,
 		adpmatchminscore /* min score */,
 		adpmatchminfrac /* minfrac */,
@@ -274,7 +274,7 @@ void adapterListMatch(
 		AAWPO,
 		0 /* verbose */
 	);
-			
+
 	if ( matched )
 	{
 		std::sort(AOSPB.begin(),AOSPB.end(),libmaus2::bambam::AdapterOffsetStrandMatchStartComparator());
@@ -285,17 +285,17 @@ void adapterListMatch(
 
 		// confidence that this is not a random event
 		double const randconfid = kmerPoisson(reflen,fA,fC,fG,fT,0/*n*/,pA,pC,pG,pT);
-		
+
 		if ( verbose > 1 )
 		{
 			std::cerr << "\n" << std::string(80,'-') << "\n\n";
-		
+
 			std::cerr << "read length " << len << " clip " << clip << " randconfig=" << randconfid << " fA=" << fA << " fC=" << fC << " fG=" << fG << " fT=" << fT << std::endl;
-				
+
 			for ( libmaus2::bambam::AdapterOffsetStrand const * it = AOSPB.begin(); it != AOSPB.end(); ++it )
 				AF.printAdapterMatch(ua,len,*it);
 		}
-		
+
 		algn.putAuxNumber("as",'i',clip);
 		algn.putAuxString("aa",AF.getAdapterName(AOSPB.begin()[0]));
 		algn.putAuxNumber("af",'f',AOSPB.begin()[0].pfrac);
@@ -308,7 +308,7 @@ namespace libmaus2
 {
     	namespace parallel
 	{
-    	    
+
     		struct FreeLists;
 
     		struct AdapterFindWorkPackage : public SimpleThreadWorkPackage
@@ -406,7 +406,7 @@ namespace libmaus2
 				int const verbose = wb->arginfo.getValue<int>("verbose",getDefaultVerbose());
 				int const clip    = wb->arginfo.getValue<int>("clip",getDefaultClip());
 
-				uint64_t const seedlength = 
+				uint64_t const seedlength =
 					std::min(
 						static_cast<unsigned int>((8*sizeof(uint64_t))/3),
 						std::max(wb->arginfo.getValue<unsigned int>("SEED_LENGTH",getDefaultSEED_LENGTH()),1u));
@@ -481,20 +481,20 @@ namespace libmaus2
 					unsigned int const rev0 = (*itr)->algns[0].isReverse() ? 1 : 0;
 					unsigned int const rev1 = (*itr)->algns[1].isReverse() ? 1 : 0;
 
-					/* 
+					/*
 					 * Whether a sequence needs to be reverse complemented for
 					 * adaptor detection depends on its strand and in what orientation
 					 * it is stored.
 					 */
 
-					if ( !rev0 ) 
+					if ( !rev0 )
 					{
     	    					(*itr)->algns[0].decodeRead(seqs[0]);
 
-						if ( !rev1 ) 
+						if ( !rev1 )
 						{
 			        			(*itr)->algns[1].decodeReadRC(seqs[1]);
-						} 
+						}
 						else
 						{
 		    	        			(*itr)->algns[1].decodeRead(seqs[1]);
@@ -504,7 +504,7 @@ namespace libmaus2
 					{
 						(*itr)->algns[0].decodeReadRC(seqs[0]);
 
-						if ( !rev1 ) 
+						if ( !rev1 )
 						{
 			        			(*itr)->algns[1].decodeReadRC(seqs[1]);
 						}
@@ -551,11 +551,11 @@ namespace libmaus2
 					do
 					{
 						// add next base (step backward from end)
-						query <<= 3;			
+						query <<= 3;
 						query |= wb->R[*(--q)];
 						query &= lseedmask;
 
-						// compute number of mismatches			
+						// compute number of mismatches
 						uint64_t dif = (query ^ seed);
 						dif = (dif | (dif >> 1) | (dif >> 2)) & wb->mmask;
 						unsigned int const difcnt = libmaus2::rank::PopCnt8<sizeof(unsigned long)>::popcnt8(dif);
@@ -633,11 +633,11 @@ namespace libmaus2
 										if ( verbose > 1 )
 										{
 											std::cerr
-												<< "[V2] overlap: " << (*itr)->algns[0].getName() 
-												<< " mismatchrate=" << 
+												<< "[V2] overlap: " << (*itr)->algns[0].getName()
+												<< " mismatchrate=" <<
 													nummis << "/" << (restoverlap+lseedlength) << "=" <<
 													static_cast<double>(nummis)/(restoverlap+lseedlength)
-												<< " al0=" << al0 
+												<< " al0=" << al0
 												<< " al1=" << al1
 												<< " aldif=" << aldif
 												<< " alcmp=" << alcmp
@@ -693,7 +693,7 @@ namespace libmaus2
 				WP->FL->findWorkPackages.returnPackage(WP);
 			}
 		};
-    	    	    	
+
 
 		struct AdapterFindWritePackageDispatcher : public SimpleThreadWorkPackageDispatcher
 		{
@@ -712,7 +712,7 @@ namespace libmaus2
 					"bamadapterfind", // PN
 					WP->arginfo->commandline, // CL
 					::libmaus2::bambam::ProgramHeaderLineSet(*(WP->headertext)).getLastIdInChain(), // PP
-					std::string(PACKAGE_VERSION) // VN			
+					std::string(PACKAGE_VERSION) // VN
 				);
 				// construct new header
 				::libmaus2::bambam::BamHeader uphead(upheadtext);
@@ -729,7 +729,7 @@ namespace libmaus2
 
 				std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > cbs;
 				::libmaus2::lz::BgzfDeflateOutputCallbackMD5::unique_ptr_type Pmd5cb;
-				
+
 				if ( WP->arginfo->getValue<unsigned int>("md5",getDefaultMD5()) )
 				{
    	    	    	        	if ( libmaus2::bambam::BamBlockWriterBaseFactory::getMD5FileName(*(WP->arginfo)) != std::string() )
@@ -748,7 +748,7 @@ namespace libmaus2
 
 				libmaus2::bambam::BgzfDeflateOutputCallbackBamIndex::unique_ptr_type Pindex;
 				if ( WP->arginfo->getValue<unsigned int>("index",getDefaultIndex()) )
-				{   	    	    	        
+				{
 			    		if ( libmaus2::bambam::BamBlockWriterBaseFactory::getIndexFileName(*(WP->arginfo)) != std::string() )
     	    	    		    		md5filename = libmaus2::bambam::BamBlockWriterBaseFactory::getIndexFileName(*(WP->arginfo));
 
@@ -762,9 +762,9 @@ namespace libmaus2
 						cbs.push_back(Pindex.get());
 					}
 				}
-				
+
 				std::vector< ::libmaus2::lz::BgzfDeflateOutputCallback * > * Pcbs = 0;
-				
+
 				if ( cbs.size() )
 					Pcbs = &cbs;
 				/*
@@ -893,7 +893,7 @@ namespace libmaus2
 				{
 				    	pthread_cond_wait(&space_available, &mutex);
 				}
-				
+
 	    			STP.enque(package);
 
 				pthread_mutex_unlock(&mutex);
@@ -924,11 +924,11 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 		se.finish();
 		throw se;
 	}
-	
+
 	int const max_threads     = arginfo.getValue<int>("threads", getDefaultThreads());
 	int const max_write_queue = arginfo.getValue<int>("max_write_queue", getDefaultWriteQueue());
 	int const max_work_reads  = arginfo.getValue<int>("max_work_reads", getDefaultWorkReads());
-	
+
 	libmaus2::bambam::AdapterFilter::shared_ptr_type AF;
 
 	if ( arginfo.hasArg("adaptersbam") )
@@ -948,8 +948,8 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
                         );
 		AF = tAF;
 	}
-	
-	
+
+
  	libmaus2::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
 		libmaus2::bambam::BamMultiAlignmentDecoderFactory::construct(
 			arginfo,false // put rank
@@ -961,7 +961,7 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 	::libmaus2::bambam::BamHeader const & header = bamdec.getHeader();
  	std::string const headertext(header.text);
 	libmaus2::bambam::BamAlignment & inputalgn = bamdec.getAlignment();
-	
+
 	libmaus2::autoarray::AutoArray<uint8_t> S(256,false);
 	std::fill(S.begin(),S.end(),4);
 	S['a'] = S['A'] = 0;
@@ -975,7 +975,7 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 	R['c'] = R['C'] = 1;
 	R['g'] = R['G'] = 2;
 	R['t'] = R['T'] = 3;
-	
+
 	static uint64_t const mmask =
 		(1ull << 0) |
 		(1ull << 3) |
@@ -1002,22 +1002,22 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 
     	libmaus2::parallel::SimpleThreadPool TP(max_threads < 2 ? 2 : max_threads); // 2 thread minimum
 	libmaus2::parallel::AdapterFindControl AFC(TP, max_write_queue);
-	
+
 	StatsBlock stats;
-	
+
 	libmaus2::parallel::AdapterFindWritePackage *wp = AFC.getWritePackage();
 	*wp = libmaus2::parallel::AdapterFindWritePackage(&(AFC.free), &arginfo, &headertext, &stats, 0, AFC.write_dispatcher_id, 0);
 	AFC.enque(wp);
 
 	libmaus2::parallel::AdapterFindWorkPackage *fp;
-	
+
 	WorkBlock *workb      = NULL;
 	int wbnum             = 0;
 	const int read_max    = max_work_reads;
 	int read_count        = 0;
 	uint64_t const bshift = libmaus2::math::ilog(libmaus2::math::nextTwoPow(arginfo.getValue<int>("mod",getDefaultMod())));
 	int const verbose     = arginfo.getValue<int>("verbose",getDefaultVerbose());
-	
+
 	while ( (bamdec.readAlignment()) )
 	{
 		if ( verbose && ( (stats.alcnt >> bshift) != (stats.lastalcnt >> bshift) ) )
@@ -1031,9 +1031,9 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 		    	workb = new WorkBlock(arginfo, AF, S, R, mmask);
 		    	workb->wb_no = wbnum++;
 		}
-		
+
 		HoldAlign *hold = new HoldAlign();
-		
+
 		hold->algns[0].swap(inputalgn);
 		stats.alcnt++;
 		read_count++;
@@ -1071,9 +1071,9 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 				}
 			}
 		}
-		
+
 		workb->entries.push_back(hold);
-		
+
 		if (read_count >= read_max)
 		{
 		        fp = AFC.getWorkPackage();
@@ -1084,7 +1084,7 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 			read_count = 0;
 		}
 	}
-	
+
 	// mark the last work block
 	if (workb)
 	{
@@ -1097,13 +1097,13 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 		workb->wb_no = wbnum++;
 		workb->ending = true;
 	}
-	
+
     	fp  = AFC.getWorkPackage();
 	*fp = libmaus2::parallel::AdapterFindWorkPackage(&(AFC.free), workb, 0/* workb->wb_no */, AFC.work_dispatcher_id, workb->wb_no, workb->wb_no);
     	AFC.enque(fp);
-	
+
 	AFC.join();
-	
+
 	if ( verbose )
 		std::cerr << "[V] processed " << stats.alcnt << std::endl;
 
@@ -1112,7 +1112,7 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 
 	std::map<uint64_t,uint64_t> const overlaphistmap = stats.overlaphist.get();
 	std::map<uint64_t,uint64_t> const adapterhistmap = stats.adapterhist.get();
-	
+
 	uint64_t totOverlaps = 0;
 	uint64_t totAdapters = 0;
 
@@ -1123,22 +1123,22 @@ int bamadapterfind(::libmaus2::util::ArgInfo const & arginfo)
 		// number of adapters for overlap
 		uint64_t const ladpt = (adapterhistmap.find(ita->first) != adapterhistmap.end()) ?
 			adapterhistmap.find(ita->first)->second : 0;
-			
-		std::cerr 
+
+		std::cerr
 			<< std::setfill('0') << std::setw(3) << ita->first << std::setw(0)
 			<< " "
 			<< std::setfill('0') << std::setw(7) << ita->second << std::setw(0)
 			<< " "
 			<< std::setfill('0') << std::setw(7) << ladpt << std::setw(0)
 			<< std::endl;
-			
+
 		totOverlaps += ita->second;
 		totAdapters += ladpt;
 	}
 
 	double const pctOverlaps = (static_cast<double>(totOverlaps)/stats.paircnt)*100.0;
 	double const pctAdapters = (static_cast<double>(totAdapters)/stats.paircnt)*100.0;
-	
+
 	std::cerr << "Processed " << std::setw(7) << std::setfill('0') << stats.paircnt << std::setw(0) << " read pairs." << std::endl;
 	std::cerr << "Found     " << std::setw(7) << std::setfill('0') << totOverlaps << std::setw(0) << " overlaps (" << pctOverlaps << ")" << std::endl;
 	std::cerr << "Found     " << std::setw(7) << std::setfill('0') << totAdapters << std::setw(0) << " adapters (" << pctAdapters << ")" << std::endl;
@@ -1152,9 +1152,9 @@ int main(int argc, char * argv[])
 	try
 	{
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
-		
+
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-			if ( 
+			if (
 				arginfo.restargs[i] == "-v"
 				||
 				arginfo.restargs[i] == "--version"
@@ -1163,7 +1163,7 @@ int main(int argc, char * argv[])
 				std::cerr << ::biobambam2::Licensing::license();
 				return EXIT_SUCCESS;
 			}
-			else if ( 
+			else if (
 				arginfo.restargs[i] == "-h"
 				||
 				arginfo.restargs[i] == "--help"
@@ -1173,9 +1173,9 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				std::cerr << "Key=Value pairs:" << std::endl;
 				std::cerr << std::endl;
-				
+
 				std::vector< std::pair<std::string,std::string> > V;
-			
+
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "mod=<["+::biobambam2::Licensing::formatNumber(getDefaultMod())+"]>", "print progress every mod'th line (if verbose>0)" ) );
@@ -1209,7 +1209,7 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;
 			}
-			
+
 		return bamadapterfind(arginfo);
 	}
 	catch(std::exception const & ex)
@@ -1218,4 +1218,3 @@ int main(int argc, char * argv[])
 		return EXIT_FAILURE;
 	}
 }
-
