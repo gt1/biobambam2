@@ -135,7 +135,12 @@ struct BamToFastQInputFileStream
 	}
 };
 
-enum bamtofastq_conversion_type { bamtofastq_conversion_type_fastq, bamtofastq_conversion_type_fasta, bamtofastq_conversion_type_fastq_try_oq };
+enum bamtofastq_conversion_type {
+	bamtofastq_conversion_type_fastq,
+	bamtofastq_conversion_type_fasta,
+	bamtofastq_conversion_type_fastq_try_oq,
+	bamtofastq_conversion_type_fastq_aux
+};
 
 template<bamtofastq_conversion_type conversion_type>
 uint64_t getSplitMultiplier()
@@ -146,9 +151,65 @@ uint64_t getSplitMultiplier()
 			return 2;
 		case bamtofastq_conversion_type_fastq:
 		case bamtofastq_conversion_type_fastq_try_oq:
+		case bamtofastq_conversion_type_fastq_aux:
 		default:
 			return 4;
 	}
+}
+
+static std::string getDefaultTags()
+{
+	return std::string();
+}
+
+static bool auxTagCheckFirst(char const c)
+{
+	return
+		(c >= 'a' && c <= 'z')
+		||
+		(c >= 'A' && c <= 'Z')
+		;
+}
+
+static bool auxTagCheckSecond(char const c)
+{
+	return
+		(c >= 'a' && c <= 'z')
+		||
+		(c >= 'A' && c <= 'Z')
+		||
+		(c >= '0' && c <= '9')
+		;
+}
+
+static std::vector<std::string> parseTags(std::string const s_auxtags)
+{
+	std::deque<std::string> const Dtok = libmaus2::util::stringFunctions::tokenize(s_auxtags,std::string(","));
+	std::vector<std::string> const Vtok(Dtok.begin(),Dtok.end());
+
+	for ( uint64_t i = 0; i < Vtok.size(); ++i )
+		if ( Vtok[i].size() != 2 )
+		{
+			libmaus2::exception::LibMausException lme;
+			lme.getStream() << "[E] malformed aux tag (length is not 2) " << Vtok[i] << std::endl;
+			lme.finish();
+			throw lme;
+		}
+		else if ( ! auxTagCheckFirst(Vtok[i][0]) )
+		{
+			libmaus2::exception::LibMausException lme;
+			lme.getStream() << "[E] malformed aux tag (first symbol is not in [a-zA-Z]) " << Vtok[i] << std::endl;
+			lme.finish();
+			throw lme;
+		}
+		else if ( ! auxTagCheckSecond(Vtok[i][1]) )
+		{
+			libmaus2::exception::LibMausException lme;
+			lme.getStream() << "[E] malformed aux tag (second symbol is not in [a-zA-Z0-9]) " << Vtok[i] << std::endl;
+			lme.finish();
+			throw lme;
+		}
+	return Vtok;
 }
 
 template<bamtofastq_conversion_type conversion_type>
@@ -172,6 +233,10 @@ void bamtofastqNonCollating(libmaus2::util::ArgInfo const & arginfo, libmaus2::b
 	std::ostream * poutputstream = &std::cout;
 	libmaus2::aio::LineSplittingPosixFdOutputStream::unique_ptr_type Psplitos;
 	libmaus2::lz::LineSplittingGzipOutputStream::unique_ptr_type Psplitgzos;
+
+	std::string const s_auxtags = arginfo.getUnparsedValue("tags",getDefaultTags());
+	std::vector<std::string> const Vtags = parseTags(s_auxtags);
+	libmaus2::bambam::BamAuxFilterVector auxtags(Vtags);
 
 	if ( split )
 	{
@@ -223,6 +288,9 @@ void bamtofastqNonCollating(libmaus2::util::ArgInfo const & arginfo, libmaus2::b
 				case bamtofastq_conversion_type_fastq_try_oq:
 					la = libmaus2::bambam::BamAlignmentDecoderBase::putFastQTryOQ(algn.D.begin(),algn.blocksize,T);
 					break;
+				case bamtofastq_conversion_type_fastq_aux:
+					la = libmaus2::bambam::BamAlignmentDecoderBase::putFastQAux(algn.D.begin(),algn.blocksize,auxtags,T);
+					break;
 			}
 
 			outputstream.write(reinterpret_cast<char const *>(T.begin()),la);
@@ -260,6 +328,9 @@ void bamtofastqNonCollating(libmaus2::util::ArgInfo const & arginfo, libmaus2::b
 		case bamtofastq_conversion_type_fastq_try_oq:
 			bamtofastqNonCollating<bamtofastq_conversion_type_fastq_try_oq>(arginfo,bamdec);
 			break;
+		case bamtofastq_conversion_type_fastq_aux:
+			bamtofastqNonCollating<bamtofastq_conversion_type_fastq_aux>(arginfo,bamdec);
+			break;
 	}
 }
 
@@ -270,7 +341,15 @@ void bamtofastqNonCollating(libmaus2::util::ArgInfo const & arginfo)
 
 	bool const fasta = arginfo.getValue<int>("fasta",getDefaultFastA());
 	bool const tryoq = arginfo.getValue<int>("tryoq",getDefaultTryOQ());
-	bamtofastq_conversion_type const conversion_type = fasta ? bamtofastq_conversion_type_fasta : (tryoq ? bamtofastq_conversion_type_fastq_try_oq : bamtofastq_conversion_type_fastq);
+	bool const aux = arginfo.getUnparsedValue("tags",getDefaultTags()) != std::string();
+	bamtofastq_conversion_type conversion_type = bamtofastq_conversion_type_fastq;
+
+	if ( fasta )
+		conversion_type = bamtofastq_conversion_type_fasta;
+	else if ( tryoq )
+		conversion_type = bamtofastq_conversion_type_fastq_try_oq;
+	else if ( aux )
+		conversion_type = bamtofastq_conversion_type_fastq_aux;
 
 	libmaus2::aio::PosixFdInputStream PFIS(STDIN_FILENO,inputbuffersize);
 	libmaus2::bambam::BamAlignmentDecoderWrapper::unique_ptr_type decwrapper(
@@ -331,6 +410,10 @@ void bamtofastqCollating(
 	CollateCombs combs;
 
 	bool const outputperreadgroup = arginfo.getValue<unsigned int>("outputperreadgroup",getDefaultOutputPerReadgroup());
+
+	std::string const s_auxtags = arginfo.getUnparsedValue("tags",getDefaultTags());
+	std::vector<std::string> const Vtags = parseTags(s_auxtags);
+	libmaus2::bambam::BamAuxFilterVector auxtags(Vtags);
 
 	if ( outputperreadgroup )
 	{
@@ -502,6 +585,9 @@ void bamtofastqCollating(
 					case bamtofastq_conversion_type_fastq_try_oq:
 						la = libmaus2::bambam::BamAlignmentDecoderBase::putFastQTryOQ(ob->Da,ob->blocksizea,T);
 						break;
+					case bamtofastq_conversion_type_fastq_aux:
+						la = libmaus2::bambam::BamAlignmentDecoderBase::putFastQAux(ob->Da,ob->blocksizea,auxtags,T);
+						break;
 				}
 
 				AOS[rgfshift + Fmap]->write(reinterpret_cast<char const *>(T.begin()),la);
@@ -518,6 +604,9 @@ void bamtofastqCollating(
 						break;
 					case bamtofastq_conversion_type_fastq_try_oq:
 						lb = libmaus2::bambam::BamAlignmentDecoderBase::putFastQTryOQ(ob->Db,ob->blocksizeb,T);
+						break;
+					case bamtofastq_conversion_type_fastq_aux:
+						lb = libmaus2::bambam::BamAlignmentDecoderBase::putFastQAux(ob->Db,ob->blocksizeb,auxtags,T);
 						break;
 				}
 
@@ -542,6 +631,9 @@ void bamtofastqCollating(
 					case bamtofastq_conversion_type_fastq_try_oq:
 						la = libmaus2::bambam::BamAlignmentDecoderBase::putFastQTryOQ(ob->Da,ob->blocksizea,T);
 						break;
+					case bamtofastq_conversion_type_fastq_aux:
+						la = libmaus2::bambam::BamAlignmentDecoderBase::putFastQAux(ob->Da,ob->blocksizea,auxtags,T);
+						break;
 				}
 
 				AOS[rgfshift + Smap]->write(reinterpret_cast<char const *>(T.begin()),la);
@@ -565,6 +657,9 @@ void bamtofastqCollating(
 					case bamtofastq_conversion_type_fastq_try_oq:
 						la = libmaus2::bambam::BamAlignmentDecoderBase::putFastQTryOQ(ob->Da,ob->blocksizea,T);
 						break;
+					case bamtofastq_conversion_type_fastq_aux:
+						la = libmaus2::bambam::BamAlignmentDecoderBase::putFastQAux(ob->Da,ob->blocksizea,auxtags,T);
+						break;
 				}
 
 				AOS[rgfshift + Omap]->write(reinterpret_cast<char const *>(T.begin()),la);
@@ -587,6 +682,9 @@ void bamtofastqCollating(
 						break;
 					case bamtofastq_conversion_type_fastq_try_oq:
 						la = libmaus2::bambam::BamAlignmentDecoderBase::putFastQTryOQ(ob->Da,ob->blocksizea,T);
+						break;
+					case bamtofastq_conversion_type_fastq_aux:
+						la = libmaus2::bambam::BamAlignmentDecoderBase::putFastQAux(ob->Da,ob->blocksizea,auxtags,T);
 						break;
 				}
 
@@ -654,6 +752,9 @@ void bamtofastqCollating(
 					case bamtofastq_conversion_type_fastq_try_oq:
 						la = libmaus2::bambam::BamAlignmentDecoderBase::putFastQTryOQ(ob->Da,ob->blocksizea,T);
 						break;
+					case bamtofastq_conversion_type_fastq_aux:
+						la = libmaus2::bambam::BamAlignmentDecoderBase::putFastQAux(ob->Da,ob->blocksizea,auxtags,T);
+						break;
 				}
 				OFS.Fout.write(reinterpret_cast<char const *>(T.begin()),la);
 
@@ -668,6 +769,9 @@ void bamtofastqCollating(
 						break;
 					case bamtofastq_conversion_type_fastq_try_oq:
 						lb = libmaus2::bambam::BamAlignmentDecoderBase::putFastQTryOQ(ob->Db,ob->blocksizeb,T);
+						break;
+					case bamtofastq_conversion_type_fastq_aux:
+						lb = libmaus2::bambam::BamAlignmentDecoderBase::putFastQAux(ob->Db,ob->blocksizeb,auxtags,T);
 						break;
 				}
 				OFS.F2out.write(reinterpret_cast<char const *>(T.begin()),lb);
@@ -690,6 +794,9 @@ void bamtofastqCollating(
 					case bamtofastq_conversion_type_fastq_try_oq:
 						la = libmaus2::bambam::BamAlignmentDecoderBase::putFastQTryOQ(ob->Da,ob->blocksizea,T);
 						break;
+					case bamtofastq_conversion_type_fastq_aux:
+						la = libmaus2::bambam::BamAlignmentDecoderBase::putFastQAux(ob->Da,ob->blocksizea,auxtags,T);
+						break;
 				}
 				OFS.Sout.write(reinterpret_cast<char const *>(T.begin()),la);
 
@@ -711,6 +818,9 @@ void bamtofastqCollating(
 					case bamtofastq_conversion_type_fastq_try_oq:
 						la = libmaus2::bambam::BamAlignmentDecoderBase::putFastQTryOQ(ob->Da,ob->blocksizea,T);
 						break;
+					case bamtofastq_conversion_type_fastq_aux:
+						la = libmaus2::bambam::BamAlignmentDecoderBase::putFastQAux(ob->Da,ob->blocksizea,auxtags,T);
+						break;
 				}
 				OFS.Oout.write(reinterpret_cast<char const *>(T.begin()),la);
 
@@ -731,6 +841,9 @@ void bamtofastqCollating(
 						break;
 					case bamtofastq_conversion_type_fastq_try_oq:
 						la = libmaus2::bambam::BamAlignmentDecoderBase::putFastQTryOQ(ob->Da,ob->blocksizea,T);
+						break;
+					case bamtofastq_conversion_type_fastq_aux:
+						la = libmaus2::bambam::BamAlignmentDecoderBase::putFastQAux(ob->Da,ob->blocksizea,auxtags,T);
 						break;
 				}
 				OFS.O2out.write(reinterpret_cast<char const *>(T.begin()),la);
@@ -777,6 +890,9 @@ void bamtofastqCollating(
 		case bamtofastq_conversion_type_fastq_try_oq:
 			bamtofastqCollating<bamtofastq_conversion_type_fastq_try_oq>(arginfo,CHCBD);
 			break;
+		case bamtofastq_conversion_type_fastq_aux:
+			bamtofastqCollating<bamtofastq_conversion_type_fastq_aux>(arginfo,CHCBD);
+			break;
 	}
 }
 
@@ -801,7 +917,15 @@ void bamtofastqCollating(libmaus2::util::ArgInfo const & arginfo)
 
 	bool const fasta = arginfo.getValue<int>("fasta",getDefaultFastA());
 	bool const tryoq = arginfo.getValue<int>("tryoq",getDefaultTryOQ());
-	bamtofastq_conversion_type const conversion_type = fasta ? bamtofastq_conversion_type_fasta : (tryoq ? bamtofastq_conversion_type_fastq_try_oq : bamtofastq_conversion_type_fastq);
+	bool const aux = arginfo.getUnparsedValue("tags",getDefaultTags()) != std::string();
+	bamtofastq_conversion_type conversion_type = bamtofastq_conversion_type_fastq;
+
+	if ( fasta )
+		conversion_type = bamtofastq_conversion_type_fasta;
+	else if ( tryoq )
+		conversion_type = bamtofastq_conversion_type_fastq_try_oq;
+	else if ( aux )
+		conversion_type = bamtofastq_conversion_type_fastq_aux;
 
 	// table size
 	unsigned int const hlog = arginfo.getValue<unsigned int>("colhlog",18);
@@ -1079,6 +1203,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( std::string("tryoq=<[") + ::biobambam2::Licensing::formatNumber(getDefaultTryOQ()) + "]>", "use OQ field instead of quality field if present (collate={0,1} only)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("split=<[")+libmaus2::util::NumberSerialisation::formatNumber(getDefaultSplit(),0)+"]>", "split named output files into chunks of this amount of reads (0: do not split)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("splitprefix=<[")+getDefaultSplitPrefix()+"]>", "file name prefix if collate=0 and split>0" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("tags=<[")+getDefaultTags()+"]>", "list of aux tags to be copied (default: do not copy any aux fields)" ) );
 
 				::biobambam2::Licensing::printMap(std::cerr,V);
 
