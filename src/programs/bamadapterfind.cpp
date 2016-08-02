@@ -88,14 +88,14 @@ struct WorkBlock
 	uint64_t const & mmask;
 	std::vector<HoldAlign *> entries;
 	int wb_no;
-	bool ending = false;
+	bool ending;
 	libmaus2::util::Histogram overlaphist;
 	libmaus2::util::Histogram adapterhist;
 	uint64_t adptcnt;
 	uint64_t paircnt;
 
 	WorkBlock(::libmaus2::util::ArgInfo const & inarg, libmaus2::bambam::AdapterFilter::shared_ptr_type rAF, libmaus2::autoarray::AutoArray<uint8_t> &inS, libmaus2::autoarray::AutoArray<uint8_t> &inR,
-    	    	    uint64_t const &inmmask) : arginfo(inarg), AF(rAF), S(inS), R(inR), mmask(inmmask), adptcnt(0), paircnt(0) { }
+		uint64_t const &inmmask) : arginfo(inarg), AF(rAF), S(inS), R(inR), mmask(inmmask), entries(), wb_no(0), ending(false), overlaphist(), adapterhist(), adptcnt(0), paircnt(0) {}
 
 	~WorkBlock() {}
 };
