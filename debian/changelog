@@ -1,3 +1,9 @@
+biobambam2 (2.0.54) unstable; urgency=medium
+
+  * implement the tags option in bamtofastq (support copying of aux fields from SAM/BAM/CRAM to FastQ)
+
+ -- German Tischler <tischler@mpi-cbg.de>  Tue, 02 Aug 2016 16:25:48 +0200
+
 biobambam2 (2.0.53) unstable; urgency=medium
 
   * update to libmaus2 version 2.0.240
