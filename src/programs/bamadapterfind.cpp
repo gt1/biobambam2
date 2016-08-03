@@ -861,7 +861,12 @@ namespace libmaus2
 
     	    			pthread_mutexattr_t attr;
     	    			pthread_mutexattr_init(&attr);
+
+    	    			#if defined(__APPLE__)
+    	    			pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+    	    			#else
     	    			pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE_NP);
+    	    			#endif
 
  	    			pthread_mutex_init(&mutex, &attr);
 				pthread_cond_init(&space_available, NULL);
