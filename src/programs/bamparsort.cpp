@@ -80,18 +80,18 @@ uint64_t getDefaultProcessBuffers()
 struct BamThreadPoolDecodeBamParseQueueInfo
 {
 	uint64_t packageid;
-	std::pair<uint64_t,uint64_t> blockmeta;
+	libmaus2::lz::BgzfInflateBase::BlockInfo blockmeta;
 	uint64_t baseid;
 	uint64_t blockid;
 
 	BamThreadPoolDecodeBamParseQueueInfo()
-	: packageid(0), blockmeta(0,0), baseid(0), blockid(0)
+	: packageid(0), blockmeta(0,0,0), baseid(0), blockid(0)
 	{
 
 	}
 	BamThreadPoolDecodeBamParseQueueInfo(
 		uint64_t rpackageid,
-		std::pair<uint64_t,uint64_t> rblockmeta,
+		libmaus2::lz::BgzfInflateBase::BlockInfo rblockmeta,
 		uint64_t rbaseid,
 		uint64_t rblockid
 	)
@@ -263,7 +263,7 @@ struct BamThreadPoolDecodeDecompressPackage : public ::libmaus2::parallel::Simpl
 
 	BamThreadPoolDecodeContextBase<order_type> * contextbase;
 
-	std::pair<uint64_t,uint64_t> blockmeta; // block size compressed and uncompressed
+	libmaus2::lz::BgzfInflateBase::BlockInfo blockmeta; // block size compressed and uncompressed
 	uint64_t baseid;
 	uint64_t blockid;
 
@@ -271,7 +271,7 @@ struct BamThreadPoolDecodeDecompressPackage : public ::libmaus2::parallel::Simpl
 	BamThreadPoolDecodeDecompressPackage(
 		uint64_t const rpackageid,
 		BamThreadPoolDecodeContextBase<order_type> * rcontextbase,
-		std::pair<uint64_t,uint64_t> rblockmeta,
+		libmaus2::lz::BgzfInflateBase::BlockInfo rblockmeta,
 		uint64_t rbaseid,
 		uint64_t rblockid
 
@@ -301,7 +301,7 @@ struct BamThreadPoolDecodeBamParsePackage : public ::libmaus2::parallel::SimpleT
 
 	BamThreadPoolDecodeContextBase<order_type> * contextbase;
 
-	std::pair<uint64_t,uint64_t> blockmeta; // block size compressed and uncompressed
+	libmaus2::lz::BgzfInflateBase::BlockInfo blockmeta; // block size compressed and uncompressed
 	uint64_t baseid;
 	uint64_t blockid;
 
@@ -309,7 +309,7 @@ struct BamThreadPoolDecodeBamParsePackage : public ::libmaus2::parallel::SimpleT
 	BamThreadPoolDecodeBamParsePackage(
 		uint64_t const rpackageid,
 		BamThreadPoolDecodeContextBase<order_type> * rcontextbase,
-		std::pair<uint64_t,uint64_t> rblockmeta,
+		libmaus2::lz::BgzfInflateBase::BlockInfo rblockmeta,
 		uint64_t rbaseid,
 		uint64_t rblockid
 	)
@@ -867,7 +867,7 @@ struct BamThreadPoolDecodeReadPackageDispatcher : public libmaus2::parallel::Sim
 				uint64_t readCnt;
 				uint64_t readCompCnt;
 				#endif
-				std::pair<uint64_t,uint64_t> blockmeta;
+				libmaus2::lz::BgzfInflateBase::BlockInfo blockmeta;
 
 				{
 					libmaus2::parallel::ScopePosixSpinLock slock(contextbase.inputLock);
@@ -880,7 +880,7 @@ struct BamThreadPoolDecodeReadPackageDispatcher : public libmaus2::parallel::Sim
 					#endif
 						contextbase.readCnt++;
 
-					contextbase.readCompCnt += blockmeta.first;
+					contextbase.readCompCnt += blockmeta.payloadsize;
 
 					#if 0
 					readCompCnt = contextbase.readCompCnt.get();
@@ -1019,7 +1019,7 @@ struct BamThreadPoolDecodeBamParsePackageDispatcher : public libmaus2::parallel:
 		char * const decompressSpace = contextbase.getDecompressSpace(RP.baseid);
 
 		uint8_t const * pa = reinterpret_cast<uint8_t const *>(decompressSpace);
-		uint8_t const * pc = pa + RP.blockmeta.second;
+		uint8_t const * pc = pa + RP.blockmeta.uncompdatasize;
 
 		if ( (! contextbase.haveheader.get()) && (pa != pc) )
 		{
@@ -1205,7 +1205,7 @@ struct BamThreadPoolDecodeBamParsePackageDispatcher : public libmaus2::parallel:
 			// move remaining data to start of buffer
 			memmove(reinterpret_cast<uint8_t *>(decompressSpace),pa,pc-pa);
 
-			RP.blockmeta.second = pc-pa;
+			RP.blockmeta.uncompdatasize = pc-pa;
 
 			#if 0
 			contextbase.cerrlock.lock();
