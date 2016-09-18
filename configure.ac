@@ -1,4 +1,4 @@
-AC_INIT(biobambam2,2.0.56,[tischler@mpi-cbg.de],[biobambam2],[http://www.sanger.ac.uk])
+AC_INIT(biobambam2,2.0.57,[tischler@mpi-cbg.de],[biobambam2],[http://www.sanger.ac.uk])
 AC_CANONICAL_SYSTEM
 AC_PROG_LIBTOOL
 
@@ -152,9 +152,9 @@ if test ! -z "${with_libmaus2}" ; then
 	fi
 fi
 
-PKG_CHECK_MODULES([libmaus2],[libmaus2 >= 2.0.258])
-PKG_CHECK_MODULES([libmaus2digests],[libmaus2digests >= 2.0.258])
-PKG_CHECK_MODULES([libmaus2seqchksumsfactory],[libmaus2seqchksumsfactory >= 2.0.258])
+PKG_CHECK_MODULES([libmaus2],[libmaus2 >= 2.0.261])
+PKG_CHECK_MODULES([libmaus2digests],[libmaus2digests >= 2.0.261])
+PKG_CHECK_MODULES([libmaus2seqchksumsfactory],[libmaus2seqchksumsfactory >= 2.0.261])
 
 if test ! -z "${with_libmaus2}" ; then
 	if test ! -z "${PKGCONFIGPATHSAVE}" ; then
@@ -245,7 +245,7 @@ if test "${have_libmaus2_irods}" = "yes" ; then
 		fi
 	fi
 
-	PKG_CHECK_MODULES([libmaus2irods],[libmaus2irods >= 2.0.258])
+	PKG_CHECK_MODULES([libmaus2irods],[libmaus2irods >= 2.0.261])
 
 	LIBMAUS2IRODSCPPFLAGS="${libmaus2irods_CFLAGS}"
 	LIBMAUS2IRODSLIBS="${libmaus2irods_LIBS}"

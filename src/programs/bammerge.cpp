@@ -206,6 +206,14 @@ int bammerge(libmaus2::util::ArgInfo const & arginfo)
 	{
 		Pindex->flush(std::string(indexfilename));
 	}
+	
+	#if defined(LIBMAUS2_HAVE_IRODS)
+	// need a explicit call to disconnect to avoid atexit deallocation problems in iRODS 4.19+
+    	if (libmaus2::irods::IRodsSystem::defaultIrodsSystem)
+	{
+    	        (libmaus2::irods::IRodsSystem::getDefaultIRodsSystem())->disconnect();
+	}
+	#endif
 
 	return EXIT_SUCCESS;
 }
@@ -226,7 +234,7 @@ int main(int argc, char * argv[])
 		irods_id  << PACKAGE_NAME << ":" << arginfo.getProgFileName(arginfo.progname) << ":" << PACKAGE_VERSION;
 		setenv(SP_OPTION, irods_id.str().c_str(), 1);
 		#endif
-
+		
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
 			if (
 				arginfo.restargs[i] == "-v"
@@ -266,7 +274,7 @@ int main(int argc, char * argv[])
 				std::cerr << std::endl;
 				return EXIT_SUCCESS;
 			}
-
+			
 		return bammerge(arginfo);
 	}
 	catch(std::exception const & ex)
