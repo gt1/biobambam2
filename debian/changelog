@@ -1,3 +1,9 @@
+biobambam2 (2.0.57) unstable; urgency=medium
+
+  * Added an explicit iRODS disconnect to avoid the iRODS 4.19 crash. (patch by Andrew Whitwham)
+
+ -- German Tischler <tischler@mpi-cbg.de>  Sun, 18 Sep 2016 18:56:06 +0200
+
 biobambam2 (2.0.56) unstable; urgency=medium
 
   * fix compilation after API change in libmaus2
