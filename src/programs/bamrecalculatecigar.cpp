@@ -197,14 +197,6 @@ int bamrecalculatecigar(libmaus2::util::ArgInfo const & arginfo)
 				algn.getPos() + algn.getReferenceLength() <= ref.size()
 			);
 
-			#if 0
-			std::cerr << algn.getRead() << std::endl;
-			uint64_t const startpos = algn.getPos() - algn.getFrontDel();
-			uint64_t const endpos = startpos + algn.getReferenceLength();
-			uint64_t const reflen = endpos - startpos;
-			std::cerr << std::string(ref.begin()+startpos,ref.begin()+endpos) << std::endl;
-			#endif
-
 			uint64_t const numcig = libmaus2::bambam::BamAlignmentDecoderBase::recalculateCigar(
 				algn.D.begin(),
 				ref.begin() + algn.getPos(),
