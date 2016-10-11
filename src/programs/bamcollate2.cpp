@@ -1525,7 +1525,7 @@ int main(int argc, char * argv[])
 		}
 
 		bamcollate2(arginfo);
-		
+
 		#if defined(LIBMAUS2_HAVE_IRODS)
 		// need a explicit call to disconnect to avoid atexit deallocation problems in iRODS 4.19+
     		if (libmaus2::irods::IRodsSystem::defaultIrodsSystem)
