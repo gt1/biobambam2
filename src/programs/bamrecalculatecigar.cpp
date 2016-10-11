@@ -60,6 +60,7 @@ static int getDefaultIndex() { return 0; }
 
 #include <libmaus2/bambam/BamMultiAlignmentDecoderFactory.hpp>
 #include <libmaus2/fastx/FastAIndex.hpp>
+#include <libmaus2/util/ToUpperTable.hpp>
 
 int bamrecalculatecigar(libmaus2::util::ArgInfo const & arginfo)
 {
@@ -164,6 +165,7 @@ int bamrecalculatecigar(libmaus2::util::ArgInfo const & arginfo)
 	uint64_t c = 0;
 	libmaus2::autoarray::AutoArray<char> ref;
 	int64_t refloaded = -1;
+	libmaus2::util::ToUpperTable toup;
 
 	while ( bamdec.readAlignment() )
 	{
@@ -181,12 +183,27 @@ int bamrecalculatecigar(libmaus2::util::ArgInfo const & arginfo)
 				}
 
 				ref = FAindex->readSequence(FAISI,algn.getRefID());
+
+				for ( uint64_t i = 0; i < ref.size(); ++i )
+					ref[i] =
+						static_cast<char>(
+							toup(static_cast<uint8_t>(ref[i]))
+						);
+
 				refloaded = algn.getRefID();
 			}
 
 			assert (
 				algn.getPos() + algn.getReferenceLength() <= ref.size()
 			);
+
+			#if 0
+			std::cerr << algn.getRead() << std::endl;
+			uint64_t const startpos = algn.getPos() - algn.getFrontDel();
+			uint64_t const endpos = startpos + algn.getReferenceLength();
+			uint64_t const reflen = endpos - startpos;
+			std::cerr << std::string(ref.begin()+startpos,ref.begin()+endpos) << std::endl;
+			#endif
 
 			uint64_t const numcig = libmaus2::bambam::BamAlignmentDecoderBase::recalculateCigar(
 				algn.D.begin(),
