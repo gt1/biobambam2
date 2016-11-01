@@ -1,3 +1,9 @@
+biobambam2 (2.0.58) unstable; urgency=medium
+
+  * Update to libmaus2 version 2.0.268 (fixes for mate cigar string copying in bamsormadup)
+
+ -- German Tischler <tischler@mpi-cbg.de>  Tue, 01 Nov 2016 10:35:57 +0100
+
 biobambam2 (2.0.57) unstable; urgency=medium
 
   * Added an explicit iRODS disconnect to avoid the iRODS 4.19 crash. (patch by Andrew Whitwham)
