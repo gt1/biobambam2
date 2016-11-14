@@ -1,3 +1,10 @@
+biobambam2 (2.0.59) unstable; urgency=medium
+
+  * adapt bamparsort to new libmaus2 API
+  * add numeric index construction in bamindex
+
+ -- German Tischler <tischler@mpi-cbg.de>  Mon, 14 Nov 2016 14:09:29 +0100
+
 biobambam2 (2.0.58) unstable; urgency=medium
 
   * Update to libmaus2 version 2.0.268 (fixes for mate cigar string copying in bamsormadup)
