@@ -19,6 +19,7 @@
 #include <config.h>
 
 #include <libmaus2/bambam/BamIndexGenerator.hpp>
+#include <libmaus2/bambam/BamNumericalIndexGenerator.hpp>
 #include <libmaus2/lz/BgzfInflate.hpp>
 #include <libmaus2/util/ArgInfo.hpp>
 #include <libmaus2/util/MemUsage.hpp>
@@ -34,17 +35,32 @@ int bamindex(libmaus2::util::ArgInfo const & arginfo, std::istream & in, std::os
 	unsigned int const verbose = arginfo.getValue<unsigned int>("verbose",getDefaultVerbose());
 	bool const validate = !(arginfo.getValue<unsigned int>("disablevalidation",getDefaultDisableValidation()));
 	std::string const tmpfileprefix = arginfo.getValue<std::string>("tmpfile",arginfo.getDefaultTmpFileName());
+	std::string const numfn = arginfo.getUnparsedValue("numerical",std::string());
+	uint64_t const nummod = arginfo.getValueUnsignedNumeric<uint64_t>("nummod",1024);
 
 	libmaus2::lz::BgzfInflate<std::istream> rec(in);
 
 	libmaus2::bambam::BamIndexGenerator BIG(tmpfileprefix,verbose,validate,debug);
+	libmaus2::bambam::BamNumericalIndexGenerator::unique_ptr_type Pnum;
+	if ( numfn.size() )
+	{
+		libmaus2::bambam::BamNumericalIndexGenerator::unique_ptr_type Tnum(
+			new libmaus2::bambam::BamNumericalIndexGenerator(numfn,nummod)
+		);
+		Pnum = UNIQUE_PTR_MOVE(Tnum);
+	}
 
 	libmaus2::autoarray::AutoArray<uint8_t> B(libmaus2::lz::BgzfConstants::getBgzfMaxBlockSize());
 	libmaus2::lz::BgzfInflateInfo rinfo;
 	while ( ! (rinfo=rec.readAndInfo(reinterpret_cast<char *>(B.begin()),B.size())).streameof )
+	{
 		BIG.addBlock(B.begin(),rinfo.compressed,rinfo.uncompressed);
+		if ( Pnum )
+			Pnum->addBlock(B.begin(),rinfo.compressed,rinfo.uncompressed);
+	}
 
 	BIG.flush(out);
+	Pnum.reset();
 
 	return EXIT_SUCCESS;
 }
