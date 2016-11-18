@@ -207,6 +207,14 @@ int bammerge(libmaus2::util::ArgInfo const & arginfo)
 		Pindex->flush(std::string(indexfilename));
 	}
 
+	#if defined(LIBMAUS2_HAVE_IRODS)
+	// need a explicit call to disconnect to avoid atexit deallocation problems in iRODS 4.19+
+    	if (libmaus2::irods::IRodsSystem::defaultIrodsSystem)
+	{
+    	        (libmaus2::irods::IRodsSystem::getDefaultIRodsSystem())->disconnect();
+	}
+	#endif
+
 	return EXIT_SUCCESS;
 }
 

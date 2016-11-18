@@ -18,7 +18,6 @@
 **/
 #include <config.h>
 
-#include <libmaus2/bambam/BamIndexGenerator.hpp>
 #include <libmaus2/bambam/BamNumericalIndexGenerator.hpp>
 #include <libmaus2/lz/BgzfInflate.hpp>
 #include <libmaus2/util/ArgInfo.hpp>
@@ -29,7 +28,7 @@
 bool getDefaultVerbose() { return true; }
 bool getDefaultDisableValidation() { return false; }
 
-int bamindex(libmaus2::util::ArgInfo const & arginfo, std::istream & in, std::ostream & out)
+int bamnumericalindex(libmaus2::util::ArgInfo const & arginfo, std::istream & in, std::ostream & out)
 {
 	bool const debug = arginfo.getValue<unsigned int>("debug",0);
 	unsigned int const verbose = arginfo.getValue<unsigned int>("verbose",getDefaultVerbose());
@@ -38,28 +37,27 @@ int bamindex(libmaus2::util::ArgInfo const & arginfo, std::istream & in, std::os
 	std::string const numfn = arginfo.getUnparsedValue("numerical",std::string());
 	uint64_t const nummod = arginfo.getValueUnsignedNumeric<uint64_t>("nummod",1024);
 
-	libmaus2::lz::BgzfInflate<std::istream> rec(in);
-
-	libmaus2::bambam::BamIndexGenerator BIG(tmpfileprefix,verbose,validate,debug);
-	libmaus2::bambam::BamNumericalIndexGenerator::unique_ptr_type Pnum;
-	if ( numfn.size() )
+	if ( ! numfn.size() )
 	{
-		libmaus2::bambam::BamNumericalIndexGenerator::unique_ptr_type Tnum(
-			new libmaus2::bambam::BamNumericalIndexGenerator(numfn,nummod)
-		);
-		Pnum = UNIQUE_PTR_MOVE(Tnum);
+		libmaus2::exception::LibMausException lme;
+		lme.getStream() << "[E] argument numerical (output file name) is required" << std::endl;
+		lme.finish();
+		throw lme;
 	}
+
+	libmaus2::lz::BgzfInflate<std::istream> rec(in);
+	libmaus2::bambam::BamNumericalIndexGenerator::unique_ptr_type Pnum(
+		new libmaus2::bambam::BamNumericalIndexGenerator(numfn,nummod,verbose,validate,debug)
+	);
 
 	libmaus2::autoarray::AutoArray<uint8_t> B(libmaus2::lz::BgzfConstants::getBgzfMaxBlockSize());
 	libmaus2::lz::BgzfInflateInfo rinfo;
 	while ( ! (rinfo=rec.readAndInfo(reinterpret_cast<char *>(B.begin()),B.size())).streameof )
 	{
-		BIG.addBlock(B.begin(),rinfo.compressed,rinfo.uncompressed);
 		if ( Pnum )
 			Pnum->addBlock(B.begin(),rinfo.compressed,rinfo.uncompressed);
 	}
 
-	BIG.flush(out);
 	Pnum.reset();
 
 	return EXIT_SUCCESS;
@@ -104,7 +102,7 @@ int main(int argc, char * argv[])
 				return EXIT_SUCCESS;
 			}
 
-		return bamindex(arginfo,std::cin,std::cout);
+		return bamnumericalindex(arginfo,std::cin,std::cout);
 	}
 	catch(std::exception const & ex)
 	{

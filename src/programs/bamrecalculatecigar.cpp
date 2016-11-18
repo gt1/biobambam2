@@ -60,6 +60,7 @@ static int getDefaultIndex() { return 0; }
 
 #include <libmaus2/bambam/BamMultiAlignmentDecoderFactory.hpp>
 #include <libmaus2/fastx/FastAIndex.hpp>
+#include <libmaus2/util/ToUpperTable.hpp>
 
 int bamrecalculatecigar(libmaus2::util::ArgInfo const & arginfo)
 {
@@ -164,6 +165,7 @@ int bamrecalculatecigar(libmaus2::util::ArgInfo const & arginfo)
 	uint64_t c = 0;
 	libmaus2::autoarray::AutoArray<char> ref;
 	int64_t refloaded = -1;
+	libmaus2::util::ToUpperTable toup;
 
 	while ( bamdec.readAlignment() )
 	{
@@ -181,6 +183,13 @@ int bamrecalculatecigar(libmaus2::util::ArgInfo const & arginfo)
 				}
 
 				ref = FAindex->readSequence(FAISI,algn.getRefID());
+
+				for ( uint64_t i = 0; i < ref.size(); ++i )
+					ref[i] =
+						static_cast<char>(
+							toup(static_cast<uint8_t>(ref[i]))
+						);
+
 				refloaded = algn.getRefID();
 			}
 
