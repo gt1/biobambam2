@@ -41,6 +41,15 @@ installed in ${HOME}/biobambam2 using
 		--prefix=${HOME}/biobambam2
 	- make install
 
+Command line arguments
+----------------------
+
+Different from a lot of other command line tools most options for biobambam2 commands
+are passed as key=value pairs. An example for sorting a BAM file by name
+order is:
+
+	bamsort SO=queryname <in.bam >out.bam
+
 Using bamsormadup
 -----------------
 

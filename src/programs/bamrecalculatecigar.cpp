@@ -169,6 +169,8 @@ int bamrecalculatecigar(libmaus2::util::ArgInfo const & arginfo)
 
 	while ( bamdec.readAlignment() )
 	{
+		bool ok = true;
+
 		if ( algn.isMapped() )
 		{
 			assert ( algn.getRefID() >= 0 );
@@ -193,20 +195,30 @@ int bamrecalculatecigar(libmaus2::util::ArgInfo const & arginfo)
 				refloaded = algn.getRefID();
 			}
 
-			assert (
-				algn.getPos() + algn.getReferenceLength() <= ref.size()
-			);
+			bool const boundok = algn.getPos() - algn.getFrontDel() + algn.getReferenceLength() <= ref.size();
 
-			uint64_t const numcig = libmaus2::bambam::BamAlignmentDecoderBase::recalculateCigar(
-				algn.D.begin(),
-				ref.begin() + algn.getPos(),
-				cigopin,
-				readdata
-			);
-			algn.replaceCigarString(cigopin,numcig,T);
+			if ( ! boundok )
+			{
+				std::cerr
+					<< "[E] bamrecalculatecigar: removing defective alignment crossing bound of refseq: " << algn.getName() << std::endl
+					<< "[E] " << algn.formatAlignment(header) << std::endl;
+					;
+				ok = false;
+			}
+			else
+			{
+				uint64_t const numcig = libmaus2::bambam::BamAlignmentDecoderBase::recalculateCigar(
+					algn.D.begin(),
+					ref.begin() + algn.getPos(),
+					cigopin,
+					readdata
+				);
+				algn.replaceCigarString(cigopin,numcig,T);
+			}
 		}
 
-		writer->writeAlignment(algn);
+		if ( ok )
+			writer->writeAlignment(algn);
 
 		if ( ((++c) & ((1ull<<20)-1)) == 0 && verbose )
 			std::cerr << "[V] " << c << std::endl;
