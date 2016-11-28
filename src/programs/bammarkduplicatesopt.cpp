@@ -75,6 +75,7 @@ static int getDefaultOptMinPixelDif() { return 100; }
 static std::string getDefaultODTag() { return "od"; }
 static std::string getProgId() { return "bammarkduplicatesopt"; }
 static std::string getDefaultInputFormat() { return "bam"; }
+static int getDefaultAddMateCigar() { return 0; }
 
 struct OptEntry
 {
@@ -278,6 +279,7 @@ static int markDuplicatesOpt(::libmaus2::util::ArgInfo const & arginfo)
 	int const rewritebamlevel = libmaus2::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("rewritebamlevel",getDefaultRewriteBamLevel()));
 	int const optminpixeldif = arginfo.getValue<unsigned int>("optminpixeldif",getDefaultOptMinPixelDif());
 	std::string const odtag = arginfo.getUnparsedValue("odtag",getDefaultODTag());
+	int const addmatecigar = arginfo.getValue<unsigned int>("addmatecigar",getDefaultAddMateCigar());
 
 	if ( odtag.size() != 2 )
 	{
@@ -382,6 +384,10 @@ static int markDuplicatesOpt(::libmaus2::util::ArgInfo const & arginfo)
 
 	std::string const nametmpfile = tmpfilenamebase + "_bamnames";
 	::libmaus2::util::TempFileRemovalContainer::addTempFile(nametmpfile);
+	std::string const matecigartmpfile = tmpfilenamebase + "_matecigar";
+	::libmaus2::util::TempFileRemovalContainer::addTempFile(matecigartmpfile);
+	std::string const matecigartmptmpfile = tmpfilenamebase + "_matecigartmp";
+	::libmaus2::util::TempFileRemovalContainer::addTempFile(matecigartmptmpfile);
 
 	std::string const opttmpfile = tmpfilenamebase + "_opttmpfile";
 	::libmaus2::util::TempFileRemovalContainer::addTempFile(opttmpfile);
@@ -511,6 +517,13 @@ static int markDuplicatesOpt(::libmaus2::util::ArgInfo const & arginfo)
 
 	libmaus2::timing::RealTimeClock readinrtc; readinrtc.start();
 
+	libmaus2::aio::OutputStreamInstance::unique_ptr_type Pmatecigartmp;
+	if ( addmatecigar )
+	{
+		libmaus2::aio::OutputStreamInstance::unique_ptr_type tptr(new libmaus2::aio::OutputStreamInstance(matecigartmpfile));
+		Pmatecigartmp = UNIQUE_PTR_MOVE(tptr);
+	}
+
 	while ( CBD->tryPair(P) )
 	{
 		assert ( P.first || P.second );
@@ -522,6 +535,25 @@ static int markDuplicatesOpt(::libmaus2::util::ArgInfo const & arginfo)
 			P.second->getLibraryId(bamheader)
 			;
 		::libmaus2::bambam::DuplicationMetrics & met = metrics[lib];
+
+		if ( addmatecigar )
+		{
+			if ( P.first && P.second )
+			{
+				if ( P.first->isMapped() )
+				{
+					uint64_t const rank = P.second->getRank();
+					std::string const scigar = P.first->getCigarString();
+					libmaus2::bambam::OptName(rank,scigar).serialise(*Pmatecigartmp);
+				}
+				if ( P.second->isMapped() )
+				{
+					uint64_t const rank = P.first->getRank();
+					std::string const scigar = P.second->getCigarString();
+					libmaus2::bambam::OptName(rank,scigar).serialise(*Pmatecigartmp);
+				}
+			}
+		}
 
 		if ( P.first )
 		{
@@ -693,6 +725,28 @@ static int markDuplicatesOpt(::libmaus2::util::ArgInfo const & arginfo)
 		copybamstr->flush();
 		copybamstr.reset();
 	}
+
+	if ( addmatecigar )
+	{
+		Pmatecigartmp->flush();
+		Pmatecigartmp.reset();
+
+		libmaus2::sorting::SerialisingSortingBufferedOutputFile<libmaus2::bambam::OptName>::reduce(std::vector<std::string>(1,matecigartmpfile),matecigartmptmpfile);
+		libmaus2::aio::OutputStreamFactoryContainer::rename(matecigartmptmpfile,matecigartmpfile);
+	}
+
+	#if 0
+	if ( addmatecigar )
+	{
+		libmaus2::bambam::OptNameReader ONR(matecigartmpfile);
+		libmaus2::bambam::OptName ON;
+		while ( ONR.peekNext(ON) )
+		{
+			std::cerr << ON.rank << " " << ON.refreadname << std::endl;
+			ONR.getNext(ON);
+		}
+	}
+	#endif
 
 	// number of lines in input file (due to dropping secondary etc. alignments this can be larger than
 	// maxrank+1 and larger than als)
