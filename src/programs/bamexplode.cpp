@@ -111,7 +111,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "outputthreads=<[1]>", "output helper threads (for outputformat=bam only, default: 1)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "O=<[stdout]>", "output filename (standard output if unset)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("prefix=<[")+getDefaultPrefix()+"]>", "prefix of output file names" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "thres=<["+::biobambam2::Licensing::formatNumber(getDefaultSizeThres())+"]>", "size threshold for the creation of next file" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "sizethres=<["+::biobambam2::Licensing::formatNumber(getDefaultSizeThres())+"]>", "size threshold for the creation of next file" ) );
 
 				::biobambam2::Licensing::printMap(std::cerr,V);
 
