@@ -29,6 +29,13 @@ The biobambam2 source code is hosted on github:
 
 	git@github.com:gt1/biobambam2.git
 
+Release packages can be found at
+
+	https://github.com/gt1/biobambam2/releases
+
+Please make sure to choose a package containing the word "release" in it's name if you
+intend to compile biobambam2 for production (i.e. non development) use.
+
 Compilation of biobambam2
 -------------------------
 
@@ -40,6 +47,8 @@ installed in ${HOME}/biobambam2 using
 	- ./configure --with-libmaus2=${LIBMAUSPREFIX} \
 		--prefix=${HOME}/biobambam2
 	- make install
+
+The release packages come with a configure script included (making the autoreconf call unnecessary for source obtained via one of those).
 
 Command line arguments
 ----------------------
