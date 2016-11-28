@@ -6,7 +6,7 @@ noinst_HEADERS=biobambam2/BamBamConfig.hpp biobambam2/Licensing.hpp \
 	biobambam2/ClipReinsert.hpp biobambam2/zzToName.hpp \
 	biobambam2/KmerPoisson.hpp
 
-MANPAGES = programs/bamtofastq.1 programs/bamsort.1 programs/bammarkduplicates.1 programs/bamcollate.1 \
+MANPAGES = programs/bamtofastq.1 programs/bamsort.1 programs/bammarkduplicates.1 programs/bammarkduplicatesopt.1 programs/bamcollate.1 \
 	programs/bammaskflags.1 programs/bamrecompress.1 programs/bamadapterfind.1 \
 	programs/bamfilteraux.1 programs/bamauxsort.1 programs/bamadapterclip.1 \
 	programs/bamcollate2.1 programs/bam12auxmerge.1 programs/bam12split.1 \
@@ -84,6 +84,7 @@ bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamr
 	filtersam \
 	bamfiltermc \
 	bamnumericalindex \
+	bammarkduplicatesopt \
 	@BAMALIGNMENTOFFSETSINSTEXP@ @BLASTXMLTOBAMINSTEXP@
 
 noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments bamtoname \
@@ -462,3 +463,8 @@ bamnumericalindex_SOURCES = programs/bamnumericalindex.cpp biobambam2/Licensing.
 bamnumericalindex_LDADD = ${LIBMAUS2LIBS}
 bamnumericalindex_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
 bamnumericalindex_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
+
+bammarkduplicatesopt_SOURCES = programs/bammarkduplicatesopt.cpp biobambam2/Licensing.cpp
+bammarkduplicatesopt_LDADD = ${LIBMAUS2LIBS}
+bammarkduplicatesopt_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bammarkduplicatesopt_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
