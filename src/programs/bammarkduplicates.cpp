@@ -68,6 +68,7 @@ static bool getDefaultRmDup() { return 0; }
 static int getDefaultMD5() { return 0; }
 static int getDefaultIndex() { return 0; }
 static std::string getProgId() { return "bammarkduplicates"; }
+static int getDefaultOptMinPixelDif() { return 100; }
 
 struct MarkDuplicatesRewriteRequest
 {
@@ -188,6 +189,8 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 	// rewritten file should be in bam format, if input is given via stdin
 	unsigned int const rewritebam = arginfo.getValue<unsigned int>("rewritebam",getDefaultRewriteBam());
 	int const rewritebamlevel = libmaus2::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("rewritebamlevel",getDefaultRewriteBamLevel()));
+
+	int const optminpixeldif = arginfo.getValue<unsigned int>("optminpixeldif",getDefaultOptMinPixelDif());
 
 	enum tag_type_enum
 	{
@@ -688,14 +691,14 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 	{
 		if ( ! libmaus2::bambam::DupMarkBase::isDupPair(nextfrag,lfrags.front()) )
 		{
-			dupcnt += libmaus2::bambam::DupMarkBase::markDuplicatePairsVector(lfrags,DSCV);
+			dupcnt += libmaus2::bambam::DupMarkBase::markDuplicatePairsVector(lfrags,DSCV,optminpixeldif);
 			lfrags.resize(0);
 		}
 
 		lfrags.push_back(nextfrag);
 	}
 
-	dupcnt += libmaus2::bambam::DupMarkBase::markDuplicatePairsVector(lfrags,DSCV);
+	dupcnt += libmaus2::bambam::DupMarkBase::markDuplicatePairsVector(lfrags,DSCV,optminpixeldif);
 	lfrags.resize(0);
 	pairDec.reset();
 	if ( verbose )
@@ -849,6 +852,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "dupmd5filename=<filename>", "file name for md5 check sum of dup file (default: extend duplicates output file name)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "dupindex=<["+::biobambam2::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index for duplicates file (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "dupindexfilename=<filename>", "file name for BAM index file for duplicates file (default: extend duplicates output file name)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "optminpixeldif=<["+::biobambam2::Licensing::formatNumber(getDefaultOptMinPixelDif())+"]>", "pixel difference threshold for optical duplicates (default: 100)" ) );
 
 				::biobambam2::Licensing::printMap(std::cerr,V);
 

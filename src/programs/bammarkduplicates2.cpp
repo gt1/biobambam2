@@ -78,6 +78,7 @@ static std::string getProgId() { return "bammarkduplicates2"; }
 static int getDefaultMD5() { return 0; }
 static int getDefaultIndex() { return 0; }
 static uint64_t getDefaultInputBufferSize() { return 64*1024; }
+static int getDefaultOptMinPixelDif() { return 100; }
 
 #include <libmaus2/aio/PosixFdInput.hpp>
 
@@ -180,6 +181,10 @@ typedef PairActiveCountTemplate<libmaus2::bambam::ReadEndsFreeList> ReadEndsActi
 
 struct BamAlignmentInputPositionCallbackDupMark : public libmaus2::bambam::BamAlignmentInputPositionUpdateCallback
 {
+	typedef BamAlignmentInputPositionCallbackDupMark this_type;
+	typedef libmaus2::util::unique_ptr<this_type>::type unique_ptr_type;
+	typedef libmaus2::util::shared_ptr<this_type>::type shared_ptr_type;
+
 	static unsigned int const defaultfreelistsize = 16*1024;
 
 	// static int const default_maxreadlength = 250;
@@ -227,13 +232,16 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus2::bambam::BamAl
 
 	int maxreadlength;
 
-	BamAlignmentInputPositionCallbackDupMark(libmaus2::bambam::BamHeader const & rbamheader, uint64_t const freelistsize = defaultfreelistsize)
+	int optminpixeldif;
+
+	BamAlignmentInputPositionCallbackDupMark(libmaus2::bambam::BamHeader const & rbamheader, int const roptminpixeldif, uint64_t const freelistsize = defaultfreelistsize)
 	:
 		bamheader(rbamheader), REcomp(), position(-1,-1),
 		expungepositionpairs(-1,-1), activepairs(), totalactivepairs(0), APFLpairs(freelistsize), excntpairs(0), fincntpairs(0), strcntpairs(0), REpairs(),
 		expungepositionfrags(-1,-1), activefrags(), totalactivefrags(0), APFLfrags(2*freelistsize), excntfrags(0), fincntfrags(0), strcntfrags(0), REfrags(),
 		DSC(0),
-		maxreadlength(getDefaultMaxReadLength())
+		maxreadlength(getDefaultMaxReadLength()),
+		optminpixeldif(roptminpixeldif)
 	{
 	}
 
@@ -496,9 +504,9 @@ struct BamAlignmentInputPositionCallbackDupMark : public libmaus2::bambam::BamAl
 			if ( h-l > 1 )
 			{
 				#if defined(POS_READ_ENDS)
-				libmaus2::bambam::DupMarkBase::markDuplicatePairsPointers(REpairs.begin()+l,REpairs.begin()+h,*DSC);
+				libmaus2::bambam::DupMarkBase::markDuplicatePairsPointers(REpairs.begin()+l,REpairs.begin()+h,*DSC,optminpixeldif);
 				#else
-				libmaus2::bambam::DupMarkBase::markDuplicatePairs(REpairs.begin()+l,REpairs.begin()+h,*DSC);
+				libmaus2::bambam::DupMarkBase::markDuplicatePairs(REpairs.begin()+l,REpairs.begin()+h,*DSC,optminpixeldif);
 				#endif
 			}
 
@@ -1109,8 +1117,8 @@ struct PositionTrackCallback :
 	public ::libmaus2::bambam::CollatingBamDecoderAlignmentInputCallback,
 	public BamAlignmentInputPositionCallbackDupMark
 {
-	PositionTrackCallback(libmaus2::bambam::BamHeader const & bamheader, uint64_t const freelistsize = getDefaultFreeListSize())
-	: BamAlignmentInputPositionCallbackDupMark(bamheader,freelistsize)
+	PositionTrackCallback(libmaus2::bambam::BamHeader const & bamheader, int const optminpixeldif, uint64_t const freelistsize = getDefaultFreeListSize())
+	: BamAlignmentInputPositionCallbackDupMark(bamheader,optminpixeldif,freelistsize)
 	{
 
 	}
@@ -1154,6 +1162,7 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 	bool const verbose = arginfo.getValue<unsigned int>("verbose",getDefaultVerbose());
 	// rewritten file should be in bam format, if input is given via stdin
 	unsigned int const rewritebam = arginfo.getValue<unsigned int>("rewritebam",getDefaultRewriteBam());
+	int const optminpixeldif = arginfo.getValue<unsigned int>("optminpixeldif",getDefaultOptMinPixelDif());
 
 	// buffer size for fragment and pair data
 	uint64_t const maxreadlength = arginfo.getValueUnsignedNumeric<uint64_t>("maxreadlength",getDefaultMaxReadLength());
@@ -1250,8 +1259,8 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 
 	::libmaus2::timing::RealTimeClock fragrtc; fragrtc.start();
 
-	libmaus2::bambam::BamAlignmentInputCallbackSnappy<BamAlignmentInputPositionCallbackDupMark>::unique_ptr_type SRC;
-	libmaus2::bambam::BamAlignmentInputCallbackBam<BamAlignmentInputPositionCallbackDupMark>::unique_ptr_type BWR;
+	libmaus2::bambam::BamAlignmentInputCallbackSnappyRef<BamAlignmentInputPositionCallbackDupMark>::unique_ptr_type SRC;
+	libmaus2::bambam::BamAlignmentInputCallbackBamRef   <BamAlignmentInputPositionCallbackDupMark>::unique_ptr_type BWR;
 	BamAlignmentInputPositionCallbackDupMark * PTI = 0;
 	::libmaus2::aio::InputStreamInstance::unique_ptr_type CIS;
 	libmaus2::aio::InputStreamInstance::unique_ptr_type PFIS;
@@ -1381,7 +1390,9 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 				}
 
 				// rewrite file and mark duplicates
-				libmaus2::bambam::BamAlignmentInputCallbackBam<BamAlignmentInputPositionCallbackDupMark>::unique_ptr_type tBWR(new libmaus2::bambam::BamAlignmentInputCallbackBam<BamAlignmentInputPositionCallbackDupMark>(tmpfilesnappyreads,CBD->getHeader(),rewritebamlevel));
+				BamAlignmentInputPositionCallbackDupMark::unique_ptr_type Pdup(new BamAlignmentInputPositionCallbackDupMark(CBD->getHeader(),optminpixeldif));
+				libmaus2::bambam::BamAlignmentInputCallbackBamRef<BamAlignmentInputPositionCallbackDupMark>::unique_ptr_type tBWR(
+					new libmaus2::bambam::BamAlignmentInputCallbackBamRef<BamAlignmentInputPositionCallbackDupMark>(tmpfilesnappyreads,CBD->getHeader(),rewritebamlevel,Pdup));
 				BWR = UNIQUE_PTR_MOVE(tBWR);
 				CBD->setInputCallback(BWR.get());
 
@@ -1399,8 +1410,9 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
                                 colhashbits,collistsize));
 			CBD = UNIQUE_PTR_MOVE(tCBD);
 
-			libmaus2::bambam::BamAlignmentInputCallbackSnappy<BamAlignmentInputPositionCallbackDupMark>::unique_ptr_type
-				tSRC(new libmaus2::bambam::BamAlignmentInputCallbackSnappy<BamAlignmentInputPositionCallbackDupMark>(tmpfilesnappyreads,CBD->getHeader()));
+			BamAlignmentInputPositionCallbackDupMark::unique_ptr_type Pdup(new BamAlignmentInputPositionCallbackDupMark(CBD->getHeader(),optminpixeldif));
+			libmaus2::bambam::BamAlignmentInputCallbackSnappyRef<BamAlignmentInputPositionCallbackDupMark>::unique_ptr_type
+				tSRC(new libmaus2::bambam::BamAlignmentInputCallbackSnappyRef<BamAlignmentInputPositionCallbackDupMark>(tmpfilesnappyreads,CBD->getHeader(),Pdup));
 			SRC = UNIQUE_PTR_MOVE(tSRC);
 			CBD->setInputCallback(SRC.get());
 			if ( verbose )
@@ -1414,12 +1426,12 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 		CBD->disableValidation();
 
 	uint64_t const trackfreelistsize = arginfo.getValueUnsignedNumeric<uint64_t>("trackfreelistsize",PositionTrackCallback::getDefaultFreeListSize());
-	PositionTrackCallback PTC(bamheader,trackfreelistsize);
+	PositionTrackCallback PTC(bamheader,optminpixeldif,trackfreelistsize);
 
 	if ( SRC )
-		PTI = SRC.get();
+		PTI = SRC->getUpdateBase();
 	else if ( BWR )
-		PTI = BWR.get();
+		PTI = BWR->getUpdateBase();
 	else
 	{
 		CBD->setInputCallback(&PTC);
@@ -1732,14 +1744,14 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 		if ( ! libmaus2::bambam::DupMarkBase::isDupPair(nextfrag,lfrags.front()) )
 		{
 			// dupcnt += markDuplicatePairs(lfrags.begin(),lfrags.end(),DSCV);
-			dupcnt += libmaus2::bambam::DupMarkBase::markDuplicatePairsVector(lfrags,DSCV);
+			dupcnt += libmaus2::bambam::DupMarkBase::markDuplicatePairsVector(lfrags,DSCV,optminpixeldif);
 			lfrags.resize(0);
 		}
 
 		lfrags.push_back(nextfrag);
 	}
 	// dupcnt += markDuplicatePairs(lfrags.begin(),lfrags.end(),DSCV);
-	dupcnt += libmaus2::bambam::DupMarkBase::markDuplicatePairsVector(lfrags,DSCV);
+	dupcnt += libmaus2::bambam::DupMarkBase::markDuplicatePairsVector(lfrags,DSCV,optminpixeldif);
 	lfrags.resize(0);
 	pairDec.reset();
 	if ( verbose )
@@ -1895,6 +1907,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "dupmd5filename=<filename>", "file name for md5 check sum of dup file (default: extend duplicates output file name)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "dupindex=<["+::biobambam2::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index for duplicates file (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "dupindexfilename=<filename>", "file name for BAM index file for duplicates file (default: extend duplicates output file name)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "optminpixeldif=<["+::biobambam2::Licensing::formatNumber(getDefaultOptMinPixelDif())+"]>", "pixel difference threshold for optical duplicates (default: 100)" ) );
 
 				::biobambam2::Licensing::printMap(std::cerr,V);
 

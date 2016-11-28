@@ -50,6 +50,7 @@ static std::string getDefaultInputFormat() { return "bam"; }
 static std::string getDefaultSeqChksumHash() { return "crc32prod"; }
 static std::string getDefaultDigest() { return "md5"; }
 static int getDefaultBlockSortVerbose() { return 0; }
+static int getDefaultOptMinPixelDif() { return 100; }
 
 template<typename heap_element_type>
 static int
@@ -137,6 +138,7 @@ int bamsormadupTemplate(
 	bool const bamindex,
 	bool const fixmates,
 	bool const dupmarksupport,
+	unsigned int const optminpixeldif,
 	std::string const & sortordername
 )
 {
@@ -183,7 +185,8 @@ int bamsormadupTemplate(
 		new libmaus2::bambam::parallel::BlockSortControl<order_type,create_dup_mark_info>(
 			inform,STP,in,templevel,tmpfilebase,seqchksumhash,
 			fixmates,
-			dupmarksupport
+			dupmarksupport,
+			optminpixeldif
 		)
 	);
 	VC->setVerbose(blocksortverbose);
@@ -365,17 +368,18 @@ int bamsormadupTemplate(
 int bamsormadup(::libmaus2::util::ArgInfo const & arginfo)
 {
 	std::string const so = arginfo.getUnparsedValue("SO","coordinate");
+	unsigned int const optminpixeldif = arginfo.getValueUnsignedNumeric<uint64_t>("optminpixeldif",getDefaultOptMinPixelDif());
 
 	if ( so == "queryname" )
 		return bamsormadupTemplate<
 				libmaus2::bambam::parallel::FragmentAlignmentBufferQueryNameComparator,
 				libmaus2::bambam::parallel::GenericInputControlMergeHeapEntryQueryName,
-				false /* create dup mark info */>(arginfo,false /* bam index */,false /* fix mates */,false /* dup mark support */,"queryname");
+				false /* create dup mark info */>(arginfo,false /* bam index */,false /* fix mates */,false /* dup mark support */,0 /* optminpixeldif */,"queryname");
 	else
 		return bamsormadupTemplate<
 				libmaus2::bambam::parallel::FragmentAlignmentBufferPosComparator,
 				libmaus2::bambam::parallel::GenericInputControlMergeHeapEntryCoordinate,
-				true /* create dup mark info */>(arginfo,true /* bam index */,true /* fix mates */,true /* dup mark support */,"coordinate");
+				true /* create dup mark info */>(arginfo,true /* bam index */,true /* fix mates */,true /* dup mark support */,optminpixeldif,"coordinate");
 }
 
 int main(int argc, char * argv[])
@@ -430,6 +434,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( std::string("SO=<coordinate|queryname>"), "output sort order (coordinate by default)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("outputformat=<[bam]>"), std::string("output format (sam,bam,cram)") ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("reference=<[]>"), std::string("reference FastA for writing cram") ) );
+				V.push_back ( std::pair<std::string,std::string> ( "optminpixeldif=<["+::biobambam2::Licensing::formatNumber(getDefaultOptMinPixelDif())+"]>", "pixel difference threshold for optical duplicates (default: 100)" ) );
 
 				::biobambam2::Licensing::printMap(std::cerr,V);
 

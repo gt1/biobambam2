@@ -81,28 +81,28 @@ struct OptEntry
 	typedef OptEntry this_type;
 	typedef libmaus2::util::unique_ptr<this_type>::type unique_ptr_type;
 	typedef libmaus2::util::shared_ptr<this_type>::type shared_ptr_type;
-	
+
 	uint64_t rank;
 	uint64_t refrank;
-	
+
 	OptEntry()
 	{
 	}
-	
+
 	OptEntry(uint64_t const rrank, uint64_t const rrefrank) : rank(rrank), refrank(rrefrank) {}
 	OptEntry(std::istream & in)
 	: rank(libmaus2::util::NumberSerialisation::deserialiseNumber(in)), refrank(libmaus2::util::NumberSerialisation::deserialiseNumber(in))
 	{
-	
+
 	}
-	
+
 	std::ostream & serialise(std::ostream & out) const
 	{
 		libmaus2::util::NumberSerialisation::serialiseNumber(out,rank);
 		libmaus2::util::NumberSerialisation::serialiseNumber(out,refrank);
 		return out;
 	}
-	
+
 	std::istream & deserialise(std::istream & in)
 	{
 		*this = OptEntry(in);
@@ -126,16 +126,16 @@ struct OptMark : public libmaus2::bambam::DupMarkBase::MarkOptical
 	typedef OptMark this_type;
 	typedef libmaus2::util::unique_ptr<this_type>::type unique_ptr_type;
 	typedef libmaus2::util::shared_ptr<this_type>::type shared_ptr_type;
-	
+
 	std::string const fn;
 	typedef libmaus2::sorting::SerialisingSortingBufferedOutputFile<OptEntry,OptEntryRefRankCmp> sort_file_type;
 	sort_file_type::unique_ptr_type Psortfile;
 	typedef sort_file_type::merger_ptr_type merger_ptr_type;
-	
+
 	OptMark(std::string const & rfn)
 	: fn(rfn), Psortfile(new sort_file_type(fn))
 	{
-	
+
 	}
 
 	virtual void operator()(uint64_t const readid, uint64_t const refreadid)
@@ -143,7 +143,7 @@ struct OptMark : public libmaus2::bambam::DupMarkBase::MarkOptical
 		// std::cerr << "[V] adding opt entry " << readid << "," << refreadid << std::endl;
 		Psortfile->put(OptEntry(readid,refreadid));
 	}
-	
+
 	merger_ptr_type getMerger()
 	{
 		merger_ptr_type merger(Psortfile->getMerger(64*1024));
@@ -156,16 +156,16 @@ struct NameInput
 	typedef NameInput this_type;
 	typedef libmaus2::util::unique_ptr<this_type>::type unique_ptr_type;
 	typedef libmaus2::util::shared_ptr<this_type>::type shared_ptr_type;
-	
+
 	std::string const fn;
 	libmaus2::aio::InputStreamInstance ISI;
 	libmaus2::lz::BufferedGzipStream BGS;
 
 	NameInput(std::string const & rfn) : fn(rfn), ISI(fn), BGS(ISI)
 	{
-	
+
 	}
-	
+
 	bool get(std::string & s)
 	{
 		if ( BGS.peek() != std::istream::traits_type::eof() )
@@ -190,20 +190,20 @@ struct NameArray
 	int64_t rank;
 	bool rankvalid;
 	std::string name;
-	
+
 	NameArray(std::string const & fn)
 	: NI(fn), rank(-1), rankvalid(false)
 	{
-	
+
 	}
-	
+
 	std::string operator[](uint64_t const r)
 	{
 		while ( rank < static_cast<int64_t>(r) )
 		{
 			bool const ok = NI.get(name);
 			assert ( ok );
-			rank += 1;			
+			rank += 1;
 		}
 		assert ( rank == static_cast<int64_t>(r) );
 		return name;
@@ -215,26 +215,26 @@ struct BamInputCallback : public libmaus2::bambam::CollatingBamDecoderAlignmentI
 	typedef BamInputCallback this_type;
 	typedef libmaus2::util::unique_ptr<this_type>::type unique_ptr_type;
 	typedef libmaus2::util::shared_ptr<this_type>::type shared_ptr_type;
-	
+
 	std::string const namefn;
 	libmaus2::aio::OutputStreamInstance::unique_ptr_type POSI;
 	libmaus2::lz::GzipOutputStream::unique_ptr_type PGZ;
 	std::ostream & OSI;
 	uint64_t rank;
-	
+
 	BamInputCallback(std::string const & rnamefn)
 	: namefn(rnamefn), POSI(new libmaus2::aio::OutputStreamInstance(namefn)), PGZ(new libmaus2::lz::GzipOutputStream(*POSI)), OSI(*PGZ), rank(0)
 	{
-	
+
 	}
-	
+
 	~BamInputCallback()
 	{
 		OSI.flush();
 		PGZ.reset();
 		POSI.reset();
 	}
-	
+
 	virtual void operator()(::libmaus2::bambam::BamAlignment const & A)
 	{
 		// uint64_t const lrank = rank++;
@@ -278,13 +278,13 @@ static int markDuplicatesOpt(::libmaus2::util::ArgInfo const & arginfo)
 	int const rewritebamlevel = libmaus2::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("rewritebamlevel",getDefaultRewriteBamLevel()));
 	int const optminpixeldif = arginfo.getValue<unsigned int>("optminpixeldif",getDefaultOptMinPixelDif());
 	std::string const odtag = arginfo.getUnparsedValue("odtag",getDefaultODTag());
-	
+
 	if ( odtag.size() != 2 )
 	{
 		::libmaus2::exception::LibMausException se;
 		se.getStream() << "[E] invalid odtag value (length is not two)" << std::endl;
 		se.finish();
-		throw se;	
+		throw se;
 	}
 	bool const odfirstvalid = (odtag[0] >= 'a' && odtag[0] <= 'z') || (odtag[0] >= 'A' && odtag[0] <= 'Z');
 	bool const odsecondvalid = (odtag[1] >= 'a' && odtag[1] <= 'z') || (odtag[1] >= 'A' && odtag[1] <= 'Z') || (odtag[1] >= '0' && odtag[1] <= '9');
@@ -294,9 +294,9 @@ static int markDuplicatesOpt(::libmaus2::util::ArgInfo const & arginfo)
 		::libmaus2::exception::LibMausException se;
 		se.getStream() << "[E] invalid odtag value (see SAM spec)" << std::endl;
 		se.finish();
-		throw se;	
+		throw se;
 	}
-	
+
 	std::cerr << "[V] optminpixeldif=" << optminpixeldif << std::endl;
 
 	enum tag_type_enum
@@ -389,7 +389,7 @@ static int markDuplicatesOpt(::libmaus2::util::ArgInfo const & arginfo)
 	std::string const optnametmptmpfile = tmpfilenamebase + "_optnametmptmpfile";
 	::libmaus2::util::TempFileRemovalContainer::addTempFile(optnametmpfile);
 	::libmaus2::util::TempFileRemovalContainer::addTempFile(optnametmptmpfile);
-	
+
 	int const level = libmaus2::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
 
 	if ( verbose )
@@ -408,8 +408,8 @@ static int markDuplicatesOpt(::libmaus2::util::ArgInfo const & arginfo)
 
 	libmaus2::bambam::BamAlignmentDecoderWrapper::unique_ptr_type inwrap;
 
-	if ( 
-		arginfo.getPairCount("I") >= 1 
+	if (
+		arginfo.getPairCount("I") >= 1
 		||
 		(arginfo.getPairCount("I") == 0 && rewritebam < 2)
 	)
@@ -422,7 +422,7 @@ static int markDuplicatesOpt(::libmaus2::util::ArgInfo const & arginfo)
 	else
 	{
 		assert ( arginfo.getPairCount("I") == 0 && rewritebam >= 2 );
-	
+
 		libmaus2::aio::OutputStreamInstance::unique_ptr_type tcopybamstr(new libmaus2::aio::OutputStreamInstance(tmpfilesnappyreads));
 		copybamstr = UNIQUE_PTR_MOVE(tcopybamstr);
 
@@ -510,7 +510,7 @@ static int markDuplicatesOpt(::libmaus2::util::ArgInfo const & arginfo)
 	#endif
 
 	libmaus2::timing::RealTimeClock readinrtc; readinrtc.start();
-	
+
 	while ( CBD->tryPair(P) )
 	{
 		assert ( P.first || P.second );
@@ -801,7 +801,7 @@ static int markDuplicatesOpt(::libmaus2::util::ArgInfo const & arginfo)
 	PoptnameOSI.reset();
 	libmaus2::sorting::SerialisingSortingBufferedOutputFile<libmaus2::bambam::OptName>::reduce(std::vector<std::string>(1,optnametmpfile),optnametmptmpfile);
 	libmaus2::aio::OutputStreamFactoryContainer::rename(optnametmptmpfile,optnametmpfile);
-	
+
 	#if 0
 	{
 		libmaus2::bambam::OptNameReader ONR(optnametmpfile);
