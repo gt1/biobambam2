@@ -1322,9 +1322,12 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 	// not a file, we are reading from standard input
 	else
 	{
-		// rewrite to bam
+		// 0 == snappy, 1 == rewrite to BAM, 2 == copy
+
+		// rewrite to bam (not snappy)
 		if ( rewritebam )
 		{
+			// copy
 			if ( rewritebam > 1 )
 			{
 				libmaus2::aio::OutputStreamInstance::unique_ptr_type tcopybamstr(new libmaus2::aio::OutputStreamInstance(tmpfilesnappyreads));
@@ -1355,6 +1358,7 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 				if ( verbose )
 					std::cerr << "[V] Copying bam compressed alignments to file " << tmpfilesnappyreads << std::endl;
 			}
+			// rewrite to bam
 			else
 			{
 				if ( markthreads > 1 )
@@ -1385,6 +1389,7 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 					std::cerr << "[V] Writing bam compressed alignments to file " << tmpfilesnappyreads << std::endl;
 			}
 		}
+		// rewrite to snappy
 		else
 		{
 			col_base_ptr_type tCBD(new col_type(std::cin,
