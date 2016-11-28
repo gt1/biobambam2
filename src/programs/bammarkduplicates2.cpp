@@ -1322,7 +1322,6 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 	// not a file, we are reading from standard input
 	else
 	{
-
 		// rewrite to bam
 		if ( rewritebam )
 		{
