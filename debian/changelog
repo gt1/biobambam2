@@ -1,3 +1,9 @@
+biobambam2 (2.0.64) unstable; urgency=medium
+
+  * add addmatecigar option in bammarkduplicatesopt
+
+ -- German Tischler <tischler@mpi-cbg.de>  Tue, 29 Nov 2016 12:31:07 +0100
+
 biobambam2 (2.0.63) unstable; urgency=medium
 
   * fix bug in bammarkduplicates/bammarkduplicates2 concerning input via pipe, markthreads>1 and rewritebam=2 
