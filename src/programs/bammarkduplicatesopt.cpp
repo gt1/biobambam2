@@ -919,7 +919,8 @@ static int markDuplicatesOpt(::libmaus2::util::ArgInfo const & arginfo)
 		getDefaultMD5(),
 		getDefaultIndex(),
 		optnametmpfile,
-		odtag
+		odtag,
+		addmatecigar ? matecigartmpfile : std::string()
 	);
 
 	if ( verbose )
@@ -995,6 +996,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "outputthreads=<[1]>", "output helper threads (for outputformat=bam only, default: 1)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("inputformat=<[")+getDefaultInputFormat()+"]>", std::string("input format (") + libmaus2::bambam::BamMultiAlignmentDecoderFactory::getValidInputFormats() + ")" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("outputformat=<[")+libmaus2::bambam::BamBlockWriterBaseFactory::getDefaultOutputFormat()+"]>", std::string("output format (") + libmaus2::bambam::BamBlockWriterBaseFactory::getValidOutputFormats() + ")" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "addmatecigar=<["+::biobambam2::Licensing::formatNumber(getDefaultAddMateCigar())+"]>", "add mate cigar string field MC (default: 0)" ) );
 
 				::biobambam2::Licensing::printMap(std::cerr,V);
 
