@@ -1,6 +1,6 @@
 /**
     bambam
-    Copyright (C) 2009-2014 German Tischler
+    Copyright (C) 2009-2016 German Tischler
     Copyright (C) 2011-2014 Genome Research Limited
 
     This program is free software: you can redistribute it and/or modify
@@ -18,6 +18,7 @@
 **/
 #include <config.h>
 
+#include <libmaus2/bambam/OptNameReader.hpp>
 #include <libmaus2/util/TempFileRemovalContainer.hpp>
 #include <libmaus2/aio/InputStreamInstance.hpp>
 #include <libmaus2/aio/OutputStreamInstance.hpp>
@@ -53,6 +54,10 @@
 #include <libmaus2/util/ContainerGetObject.hpp>
 #include <libmaus2/util/MemUsage.hpp>
 #include <biobambam2/Licensing.hpp>
+#include <libmaus2/lz/GzipOutputStream.hpp>
+#include <libmaus2/lz/BufferedGzipStream.hpp>
+#include <libmaus2/sorting/SortingBufferedOutputFile.hpp>
+#include <libmaus2/bambam/BamMultiAlignmentDecoderFactory.hpp>
 
 // static std::string formatNumber(int64_t const n) { std::ostringstream ostr; ostr << n; return ostr.str(); }
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
@@ -63,100 +68,183 @@ static int getDefaultRewriteBamLevel() { return Z_DEFAULT_COMPRESSION; }
 static unsigned int getDefaultColHashBits() { return 20; }
 static uint64_t getDefaultColListSize() { return 32*1024*1024; }
 static uint64_t getDefaultFragBufSize() { return 48*1024*1024; }
-static uint64_t getDefaultMarkThreads() { return 1; }
 static bool getDefaultRmDup() { return 0; }
 static int getDefaultMD5() { return 0; }
 static int getDefaultIndex() { return 0; }
-static std::string getProgId() { return "bammarkduplicates"; }
 static int getDefaultOptMinPixelDif() { return 100; }
+static std::string getDefaultODTag() { return "od"; }
+static std::string getProgId() { return "bammarkduplicatesopt"; }
+static std::string getDefaultInputFormat() { return "bam"; }
+static int getDefaultAddMateCigar() { return 0; }
 
-struct MarkDuplicatesRewriteRequest
+struct OptEntry
 {
-	libmaus2::util::ArgInfo const arginfo;
-	bool const verbose;
-	libmaus2::bambam::BamHeader const bamheader;
-	int64_t const maxrank;
-	uint64_t const mod;
-	int const level;
-	::libmaus2::bambam::DupSetCallbackVector const DSCV;
-	std::string const tmpfilesnappyreads;
-	unsigned int const rewritebam;
-	std::string const tmpfileindex;
-	std::string const progid;
-	std::string const packageversion;
-	bool const rmdup;
-	bool const md5;
-	bool const index;
-	uint64_t const markthreads;
+	typedef OptEntry this_type;
+	typedef libmaus2::util::unique_ptr<this_type>::type unique_ptr_type;
+	typedef libmaus2::util::shared_ptr<this_type>::type shared_ptr_type;
 
-	MarkDuplicatesRewriteRequest(std::istream & in)
-	:
-		arginfo(in),
-		verbose(libmaus2::util::NumberSerialisation::deserialiseNumber(in)),
-		bamheader(libmaus2::util::StringSerialisation::deserialiseString(in)),
-		maxrank(libmaus2::util::NumberSerialisation::deserialiseSignedNumber(in)),
-		mod(libmaus2::util::NumberSerialisation::deserialiseNumber(in)),
-		level(libmaus2::util::NumberSerialisation::deserialiseSignedNumber(in)),
-		DSCV(in),
-		tmpfilesnappyreads(libmaus2::util::StringSerialisation::deserialiseString(in)),
-		rewritebam(libmaus2::util::NumberSerialisation::deserialiseNumber(in)),
-		tmpfileindex(libmaus2::util::StringSerialisation::deserialiseString(in)),
-		progid(libmaus2::util::StringSerialisation::deserialiseString(in)),
-		packageversion(libmaus2::util::StringSerialisation::deserialiseString(in)),
-		rmdup(libmaus2::util::NumberSerialisation::deserialiseNumber(in)),
-		md5(libmaus2::util::NumberSerialisation::deserialiseNumber(in)),
-		index(libmaus2::util::NumberSerialisation::deserialiseNumber(in)),
-		markthreads(libmaus2::util::NumberSerialisation::deserialiseNumber(in))
+	uint64_t rank;
+	uint64_t refrank;
+
+	OptEntry()
 	{
 	}
 
-	static void serialise(
-		std::ostream & out,
-		libmaus2::util::ArgInfo const & arginfo,
-		bool const verbose,
-		libmaus2::bambam::BamHeader const & bamheader,
-		int64_t const maxrank,
-		uint64_t const mod,
-		int const level,
-		::libmaus2::bambam::DupSetCallbackVector const & DSCV,
-		std::string const & tmpfilesnappyreads,
-		unsigned int const rewritebam,
-		std::string const & tmpfileindex,
-		std::string const & progid,
-		std::string const & packageversion,
-		bool const rmdup,
-		bool const md5,
-		bool const index,
-		uint64_t const markthreads
-	)
+	OptEntry(uint64_t const rrank, uint64_t const rrefrank) : rank(rrank), refrank(rrefrank) {}
+	OptEntry(std::istream & in)
+	: rank(libmaus2::util::NumberSerialisation::deserialiseNumber(in)), refrank(libmaus2::util::NumberSerialisation::deserialiseNumber(in))
 	{
-		arginfo.serialise(out);
-		libmaus2::util::NumberSerialisation::serialiseNumber(out,verbose);
-		libmaus2::util::StringSerialisation::serialiseString(out,bamheader.text);
-		libmaus2::util::NumberSerialisation::serialiseSignedNumber(out,maxrank);
-		libmaus2::util::NumberSerialisation::serialiseNumber(out,mod);
-		libmaus2::util::NumberSerialisation::serialiseSignedNumber(out,level);
-		DSCV.serialise(out);
-		libmaus2::util::StringSerialisation::serialiseString(out,tmpfilesnappyreads);
-		libmaus2::util::NumberSerialisation::serialiseNumber(out,rewritebam);
-		libmaus2::util::StringSerialisation::serialiseString(out,tmpfileindex);
-		libmaus2::util::StringSerialisation::serialiseString(out,progid);
-		libmaus2::util::StringSerialisation::serialiseString(out,packageversion);
-		libmaus2::util::NumberSerialisation::serialiseNumber(out,rmdup);
-		libmaus2::util::NumberSerialisation::serialiseNumber(out,md5);
-		libmaus2::util::NumberSerialisation::serialiseNumber(out,index);
-		libmaus2::util::NumberSerialisation::serialiseNumber(out,markthreads);
+
 	}
 
-	void dispatch() const
+	std::ostream & serialise(std::ostream & out) const
 	{
-		libmaus2::bambam::DupMarkBase::markDuplicatesInFile(
-			arginfo,verbose,bamheader,maxrank,mod,level,DSCV,tmpfilesnappyreads,rewritebam,tmpfileindex,
-			progid,packageversion,rmdup,md5,index,markthreads);
+		libmaus2::util::NumberSerialisation::serialiseNumber(out,rank);
+		libmaus2::util::NumberSerialisation::serialiseNumber(out,refrank);
+		return out;
+	}
+
+	std::istream & deserialise(std::istream & in)
+	{
+		*this = OptEntry(in);
+		return in;
 	}
 };
 
-static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
+struct OptEntryRefRankCmp
+{
+	bool operator()(OptEntry const & A, OptEntry const & B) const
+	{
+		if ( A.refrank != B.refrank )
+			return A.refrank < B.refrank;
+		else
+			return A.rank < B.rank;
+	}
+};
+
+struct OptMark : public libmaus2::bambam::DupMarkBase::MarkOptical
+{
+	typedef OptMark this_type;
+	typedef libmaus2::util::unique_ptr<this_type>::type unique_ptr_type;
+	typedef libmaus2::util::shared_ptr<this_type>::type shared_ptr_type;
+
+	std::string const fn;
+	typedef libmaus2::sorting::SerialisingSortingBufferedOutputFile<OptEntry,OptEntryRefRankCmp> sort_file_type;
+	sort_file_type::unique_ptr_type Psortfile;
+	typedef sort_file_type::merger_ptr_type merger_ptr_type;
+
+	OptMark(std::string const & rfn)
+	: fn(rfn), Psortfile(new sort_file_type(fn))
+	{
+
+	}
+
+	virtual void operator()(uint64_t const readid, uint64_t const refreadid)
+	{
+		// std::cerr << "[V] adding opt entry " << readid << "," << refreadid << std::endl;
+		Psortfile->put(OptEntry(readid,refreadid));
+	}
+
+	merger_ptr_type getMerger()
+	{
+		merger_ptr_type merger(Psortfile->getMerger(64*1024));
+		return UNIQUE_PTR_MOVE(merger);
+	}
+};
+
+struct NameInput
+{
+	typedef NameInput this_type;
+	typedef libmaus2::util::unique_ptr<this_type>::type unique_ptr_type;
+	typedef libmaus2::util::shared_ptr<this_type>::type shared_ptr_type;
+
+	std::string const fn;
+	libmaus2::aio::InputStreamInstance ISI;
+	libmaus2::lz::BufferedGzipStream BGS;
+
+	NameInput(std::string const & rfn) : fn(rfn), ISI(fn), BGS(ISI)
+	{
+
+	}
+
+	bool get(std::string & s)
+	{
+		if ( BGS.peek() != std::istream::traits_type::eof() )
+		{
+			s = libmaus2::util::StringSerialisation::deserialiseString(BGS);
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+};
+
+struct NameArray
+{
+	typedef NameArray this_type;
+	typedef libmaus2::util::unique_ptr<this_type>::type unique_ptr_type;
+	typedef libmaus2::util::shared_ptr<this_type>::type shared_ptr_type;
+
+	NameInput NI;
+	int64_t rank;
+	bool rankvalid;
+	std::string name;
+
+	NameArray(std::string const & fn)
+	: NI(fn), rank(-1), rankvalid(false)
+	{
+
+	}
+
+	std::string operator[](uint64_t const r)
+	{
+		while ( rank < static_cast<int64_t>(r) )
+		{
+			bool const ok = NI.get(name);
+			assert ( ok );
+			rank += 1;
+		}
+		assert ( rank == static_cast<int64_t>(r) );
+		return name;
+	}
+};
+
+struct BamInputCallback : public libmaus2::bambam::CollatingBamDecoderAlignmentInputCallback
+{
+	typedef BamInputCallback this_type;
+	typedef libmaus2::util::unique_ptr<this_type>::type unique_ptr_type;
+	typedef libmaus2::util::shared_ptr<this_type>::type shared_ptr_type;
+
+	std::string const namefn;
+	libmaus2::aio::OutputStreamInstance::unique_ptr_type POSI;
+	libmaus2::lz::GzipOutputStream::unique_ptr_type PGZ;
+	std::ostream & OSI;
+	uint64_t rank;
+
+	BamInputCallback(std::string const & rnamefn)
+	: namefn(rnamefn), POSI(new libmaus2::aio::OutputStreamInstance(namefn)), PGZ(new libmaus2::lz::GzipOutputStream(*POSI)), OSI(*PGZ), rank(0)
+	{
+
+	}
+
+	~BamInputCallback()
+	{
+		OSI.flush();
+		PGZ.reset();
+		POSI.reset();
+	}
+
+	virtual void operator()(::libmaus2::bambam::BamAlignment const & A)
+	{
+		// uint64_t const lrank = rank++;
+		libmaus2::util::StringSerialisation::serialiseString(OSI,A.getName());
+		// std::cerr << lrank << " " << A.getName() << std::endl;
+	}
+};
+
+static int markDuplicatesOpt(::libmaus2::util::ArgInfo const & arginfo)
 {
 	libmaus2::timing::RealTimeClock globrtc; globrtc.start();
 
@@ -189,8 +277,29 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 	// rewritten file should be in bam format, if input is given via stdin
 	unsigned int const rewritebam = arginfo.getValue<unsigned int>("rewritebam",getDefaultRewriteBam());
 	int const rewritebamlevel = libmaus2::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("rewritebamlevel",getDefaultRewriteBamLevel()));
-
 	int const optminpixeldif = arginfo.getValue<unsigned int>("optminpixeldif",getDefaultOptMinPixelDif());
+	std::string const odtag = arginfo.getUnparsedValue("odtag",getDefaultODTag());
+	int const addmatecigar = arginfo.getValue<unsigned int>("addmatecigar",getDefaultAddMateCigar());
+
+	if ( odtag.size() != 2 )
+	{
+		::libmaus2::exception::LibMausException se;
+		se.getStream() << "[E] invalid odtag value (length is not two)" << std::endl;
+		se.finish();
+		throw se;
+	}
+	bool const odfirstvalid = (odtag[0] >= 'a' && odtag[0] <= 'z') || (odtag[0] >= 'A' && odtag[0] <= 'Z');
+	bool const odsecondvalid = (odtag[1] >= 'a' && odtag[1] <= 'z') || (odtag[1] >= 'A' && odtag[1] <= 'Z') || (odtag[1] >= '0' && odtag[1] <= '9');
+	bool const odvalid = odfirstvalid && odsecondvalid;
+	if ( ! odvalid )
+	{
+		::libmaus2::exception::LibMausException se;
+		se.getStream() << "[E] invalid odtag value (see SAM spec)" << std::endl;
+		se.finish();
+		throw se;
+	}
+
+	std::cerr << "[V] optminpixeldif=" << optminpixeldif << std::endl;
 
 	enum tag_type_enum
 	{
@@ -273,6 +382,20 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 	std::string const tmpfileindex = tmpfilenamebase + "_index";
 	::libmaus2::util::TempFileRemovalContainer::addTempFile(tmpfileindex);
 
+	std::string const nametmpfile = tmpfilenamebase + "_bamnames";
+	::libmaus2::util::TempFileRemovalContainer::addTempFile(nametmpfile);
+	std::string const matecigartmpfile = tmpfilenamebase + "_matecigar";
+	::libmaus2::util::TempFileRemovalContainer::addTempFile(matecigartmpfile);
+	std::string const matecigartmptmpfile = tmpfilenamebase + "_matecigartmp";
+	::libmaus2::util::TempFileRemovalContainer::addTempFile(matecigartmptmpfile);
+
+	std::string const opttmpfile = tmpfilenamebase + "_opttmpfile";
+	::libmaus2::util::TempFileRemovalContainer::addTempFile(opttmpfile);
+	std::string const optnametmpfile = tmpfilenamebase + "_optnametmpfile";
+	std::string const optnametmptmpfile = tmpfilenamebase + "_optnametmptmpfile";
+	::libmaus2::util::TempFileRemovalContainer::addTempFile(optnametmpfile);
+	::libmaus2::util::TempFileRemovalContainer::addTempFile(optnametmptmpfile);
+
 	int const level = libmaus2::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
 
 	if ( verbose )
@@ -285,132 +408,68 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 	::libmaus2::aio::InputStreamInstance::unique_ptr_type CIS;
 	libmaus2::aio::OutputStreamInstance::unique_ptr_type copybamstr;
 
-	typedef ::libmaus2::bambam::BamCircularHashCollatingBamDecoder col_type;
-	typedef ::libmaus2::bambam::BamParallelCircularHashCollatingBamDecoder par_col_type;
 	typedef ::libmaus2::bambam::CircularHashCollatingBamDecoder col_base_type;
-	typedef ::libmaus2::bambam::BamMergeCoordinateCircularHashCollatingBamDecoder merge_col_type;
 	typedef col_base_type::unique_ptr_type col_base_ptr_type;
 	col_base_ptr_type CBD;
 
-	uint64_t const markthreads =
-		std::max(static_cast<uint64_t>(1),arginfo.getValue<uint64_t>("markthreads",getDefaultMarkThreads()));
+	libmaus2::bambam::BamAlignmentDecoderWrapper::unique_ptr_type inwrap;
+
+	if (
+		arginfo.getPairCount("I") >= 1
+		||
+		(arginfo.getPairCount("I") == 0 && rewritebam < 2)
+	)
+	{
+		libmaus2::bambam::BamAlignmentDecoderWrapper::unique_ptr_type tinwrap(
+			libmaus2::bambam::BamMultiAlignmentDecoderFactory::construct(arginfo,true /* put rank */,0 /* copystr */,std::cin /* istdin */,false,false /* stream */)
+		);
+		inwrap = UNIQUE_PTR_MOVE(tinwrap);
+	}
+	else
+	{
+		assert ( arginfo.getPairCount("I") == 0 && rewritebam >= 2 );
+
+		libmaus2::aio::OutputStreamInstance::unique_ptr_type tcopybamstr(new libmaus2::aio::OutputStreamInstance(tmpfilesnappyreads));
+		copybamstr = UNIQUE_PTR_MOVE(tcopybamstr);
+
+		libmaus2::bambam::BamAlignmentDecoderWrapper::unique_ptr_type tinwrap(
+			libmaus2::bambam::BamMultiAlignmentDecoderFactory::construct(arginfo,true /* put rank */,copybamstr.get() /* copystr */,std::cin /* istdin */,false,false /* stream */)
+		);
+		inwrap = UNIQUE_PTR_MOVE(tinwrap);
+	}
 
 	uint64_t const colexcludeflags =
 		libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FSECONDARY |
 		libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FSUPPLEMENTARY |
 		libmaus2::bambam::BamFlagBase::LIBMAUS2_BAMBAM_FQCFAIL;
 
-	if ( arginfo.getPairCount("I") > 1 )
 	{
-		std::vector<std::string> const inputfilenames = arginfo.getPairValues("I");
-		col_base_ptr_type tCBD(new merge_col_type(inputfilenames,tmpfilename,colexcludeflags,true,colhashbits,collistsize));
+		col_base_ptr_type tCBD(new col_base_type(
+			inwrap->getDecoder(),
+			tmpfilename,
+			colexcludeflags,
+			colhashbits,
+			collistsize
+			)
+		)
+		;
 		CBD = UNIQUE_PTR_MOVE(tCBD);
 	}
-	// if we are reading the input from a file
-	else if ( arginfo.hasArg("I") && (arginfo.getValue<std::string>("I","") != "") )
+
+	if ( arginfo.getPairCount("I") == 0 )
 	{
-		std::string const inputfilename = arginfo.getValue<std::string>("I","I");
-		::libmaus2::aio::InputStreamInstance::unique_ptr_type tCIS(new ::libmaus2::aio::InputStreamInstance(inputfilename));
-		CIS = UNIQUE_PTR_MOVE(tCIS);
-
-		if ( markthreads > 1 )
+		if ( rewritebam == 1 )
 		{
-			col_base_ptr_type tCBD(new par_col_type(
-                                *CIS,
-                                markthreads,
-                                tmpfilename,
-                                colexcludeflags,
-                                true /* put rank */,
-                                colhashbits,collistsize));
-			CBD = UNIQUE_PTR_MOVE(tCBD);
+			// rewrite file and mark duplicates
+			::libmaus2::bambam::BamAlignmentInputCallbackBam<libmaus2::bambam::BamAlignmentInputPositionCallbackNull>::unique_ptr_type tBWR(new ::libmaus2::bambam::BamAlignmentInputCallbackBam<libmaus2::bambam::BamAlignmentInputPositionCallbackNull>(tmpfilesnappyreads,CBD->getHeader(),rewritebamlevel));
+			BWR = UNIQUE_PTR_MOVE(tBWR);
+			CBD->setInputCallback(BWR.get());
+
+			if ( verbose )
+				std::cerr << "[V] Writing bam compressed alignments to file " << tmpfilesnappyreads << std::endl;
 		}
-		else
+		else if ( rewritebam == 0 )
 		{
-			col_base_ptr_type tCBD(new col_type(
-                                *CIS,
-                                // numthreads
-                                tmpfilename,
-                                colexcludeflags,
-                                true /* put rank */,
-                                colhashbits,collistsize));
-			CBD = UNIQUE_PTR_MOVE(tCBD);
-		}
-	}
-	// not a file, we are reading from standard input
-	else
-	{
-		// rewrite to bam
-		if ( rewritebam )
-		{
-			if ( rewritebam > 1 )
-			{
-				libmaus2::aio::OutputStreamInstance::unique_ptr_type tcopybamstr(new libmaus2::aio::OutputStreamInstance(tmpfilesnappyreads));
-				copybamstr = UNIQUE_PTR_MOVE(tcopybamstr);
-
-				if ( markthreads > 1 )
-				{
-					col_base_ptr_type tCBD(new par_col_type(std::cin,
-                                                *copybamstr,
-                                                markthreads,
-                                                tmpfilename,
-                                                colexcludeflags,
-                                                true /* put rank */,
-                                                colhashbits,collistsize));
-					CBD = UNIQUE_PTR_MOVE(tCBD);
-				}
-				else
-				{
-					col_base_ptr_type tCBD(new col_type(std::cin,
-                                                *copybamstr,
-                                                tmpfilename,
-                                                colexcludeflags,
-                                                true /* put rank */,
-                                                colhashbits,collistsize));
-					CBD = UNIQUE_PTR_MOVE(tCBD);
-				}
-
-				if ( verbose )
-					std::cerr << "[V] Copying bam compressed alignments to file " << tmpfilesnappyreads << std::endl;
-			}
-			else
-			{
-				if ( markthreads > 1 )
-				{
-					col_base_ptr_type tCBD(new par_col_type(std::cin,markthreads,
-                                                tmpfilename,
-                                                colexcludeflags,
-                                                true /* put rank */,
-                                                colhashbits,collistsize));
-					CBD = UNIQUE_PTR_MOVE(tCBD);
-				}
-				else
-				{
-					col_base_ptr_type tCBD(new col_type(std::cin,
-                                                tmpfilename,
-                                                colexcludeflags,
-                                                true /* put rank */,
-                                                colhashbits,collistsize));
-					CBD = UNIQUE_PTR_MOVE(tCBD);
-				}
-
-				// rewrite file and mark duplicates
-				::libmaus2::bambam::BamAlignmentInputCallbackBam<libmaus2::bambam::BamAlignmentInputPositionCallbackNull>::unique_ptr_type tBWR(new ::libmaus2::bambam::BamAlignmentInputCallbackBam<libmaus2::bambam::BamAlignmentInputPositionCallbackNull>(tmpfilesnappyreads,CBD->getHeader(),rewritebamlevel));
-				BWR = UNIQUE_PTR_MOVE(tBWR);
-				CBD->setInputCallback(BWR.get());
-
-				if ( verbose )
-					std::cerr << "[V] Writing bam compressed alignments to file " << tmpfilesnappyreads << std::endl;
-			}
-		}
-		else
-		{
-			col_base_ptr_type tCBD(new col_type(std::cin,
-                                tmpfilename,
-                                colexcludeflags,
-                                true /* put rank */,
-                                colhashbits,collistsize));
-			CBD = UNIQUE_PTR_MOVE(tCBD);
-
 			libmaus2::bambam::BamAlignmentInputCallbackSnappy<libmaus2::bambam::BamAlignmentInputPositionCallbackNull>::unique_ptr_type tSRC(
 				new libmaus2::bambam::BamAlignmentInputCallbackSnappy<libmaus2::bambam::BamAlignmentInputPositionCallbackNull>(tmpfilesnappyreads,CBD->getHeader())
 			);
@@ -420,6 +479,11 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 				std::cerr << "[V] Writing snappy compressed alignments to file " << tmpfilesnappyreads << std::endl;
 		}
 	}
+
+	BamInputCallback::unique_ptr_type BIC(new BamInputCallback(nametmpfile));
+	CBD->addInputCallback(BIC.get());
+
+	OptMark::unique_ptr_type Poptmark(new OptMark(opttmpfile));
 
 	::libmaus2::bambam::BamHeader const bamheader = CBD->getHeader();
 
@@ -453,6 +517,13 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 
 	libmaus2::timing::RealTimeClock readinrtc; readinrtc.start();
 
+	libmaus2::aio::OutputStreamInstance::unique_ptr_type Pmatecigartmp;
+	if ( addmatecigar )
+	{
+		libmaus2::aio::OutputStreamInstance::unique_ptr_type tptr(new libmaus2::aio::OutputStreamInstance(matecigartmpfile));
+		Pmatecigartmp = UNIQUE_PTR_MOVE(tptr);
+	}
+
 	while ( CBD->tryPair(P) )
 	{
 		assert ( P.first || P.second );
@@ -464,6 +535,25 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 			P.second->getLibraryId(bamheader)
 			;
 		::libmaus2::bambam::DuplicationMetrics & met = metrics[lib];
+
+		if ( addmatecigar )
+		{
+			if ( P.first && P.second )
+			{
+				if ( P.first->isMapped() )
+				{
+					uint64_t const rank = P.second->getRank();
+					std::string const scigar = P.first->getCigarString();
+					libmaus2::bambam::OptName(rank,scigar).serialise(*Pmatecigartmp);
+				}
+				if ( P.second->isMapped() )
+				{
+					uint64_t const rank = P.first->getRank();
+					std::string const scigar = P.second->getCigarString();
+					libmaus2::bambam::OptName(rank,scigar).serialise(*Pmatecigartmp);
+				}
+			}
+		}
 
 		if ( P.first )
 		{
@@ -636,6 +726,28 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 		copybamstr.reset();
 	}
 
+	if ( addmatecigar )
+	{
+		Pmatecigartmp->flush();
+		Pmatecigartmp.reset();
+
+		libmaus2::sorting::SerialisingSortingBufferedOutputFile<libmaus2::bambam::OptName>::reduce(std::vector<std::string>(1,matecigartmpfile),matecigartmptmpfile);
+		libmaus2::aio::OutputStreamFactoryContainer::rename(matecigartmptmpfile,matecigartmpfile);
+	}
+
+	#if 0
+	if ( addmatecigar )
+	{
+		libmaus2::bambam::OptNameReader ONR(matecigartmpfile);
+		libmaus2::bambam::OptName ON;
+		while ( ONR.peekNext(ON) )
+		{
+			std::cerr << ON.rank << " " << ON.refreadname << std::endl;
+			ONR.getNext(ON);
+		}
+	}
+	#endif
+
 	// number of lines in input file (due to dropping secondary etc. alignments this can be larger than
 	// maxrank+1 and larger than als)
 	uint64_t const numranks = CBD->getRank(); // maxrank+1;
@@ -644,6 +756,7 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 	CIS.reset();
 	SRC.reset();
 	BWR.reset();
+	BIC.reset();
 
 	fragREC->flush();
 	pairREC->flush();
@@ -691,7 +804,7 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 	{
 		if ( ! libmaus2::bambam::DupMarkBase::isDupPair(nextfrag,lfrags.front()) )
 		{
-			dupcnt += libmaus2::bambam::DupMarkBase::markDuplicatePairsVector(lfrags,DSCV,optminpixeldif);
+			dupcnt += libmaus2::bambam::DupMarkBase::markDuplicatePairsVector(lfrags,DSCV,Poptmark.get(),optminpixeldif);
 			lfrags.resize(0);
 		}
 
@@ -731,6 +844,29 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 	/*
 	 * end of fragment processing
 	 */
+
+	libmaus2::aio::OutputStreamInstance::unique_ptr_type PoptnameOSI(new libmaus2::aio::OutputStreamInstance(optnametmpfile));
+	NameArray::unique_ptr_type NA(new NameArray(nametmpfile));
+	OptMark::merger_ptr_type optmerger(Poptmark->getMerger());
+	OptEntry OE;
+	while ( optmerger->getNext(OE) )
+		libmaus2::bambam::OptName(OE.rank,(*NA)[OE.refrank]).serialise(*PoptnameOSI);
+	PoptnameOSI->flush();
+	PoptnameOSI.reset();
+	libmaus2::sorting::SerialisingSortingBufferedOutputFile<libmaus2::bambam::OptName>::reduce(std::vector<std::string>(1,optnametmpfile),optnametmptmpfile);
+	libmaus2::aio::OutputStreamFactoryContainer::rename(optnametmptmpfile,optnametmpfile);
+
+	#if 0
+	{
+		libmaus2::bambam::OptNameReader ONR(optnametmpfile);
+		libmaus2::bambam::OptName ON;
+		while ( ONR.peekNext(ON) )
+		{
+			std::cerr << ON.rank << " " << ON.refreadname << std::endl;
+			ONR.getNext(ON);
+		}
+	}
+	#endif
 
 	/**
 	 * write metrics
@@ -775,14 +911,16 @@ static int markDuplicates(::libmaus2::util::ArgInfo const & arginfo)
 	/*
 	 * mark the duplicates
 	 */
-	libmaus2::bambam::DupMarkBase::markDuplicatesInFile(
-		arginfo,verbose,bamheader,maxrank,mod,level,DSCV,tmpfilesnappyreads,rewritebam,tmpfileindex,
+	libmaus2::bambam::DupMarkBase::markOptDuplicatesInFile(
+		arginfo,verbose,bamheader,maxrank,mod,DSCV,tmpfilesnappyreads,rewritebam,tmpfileindex,
 		getProgId(),
 		std::string(PACKAGE_VERSION),
 		getDefaultRmDup(),
 		getDefaultMD5(),
 		getDefaultIndex(),
-		getDefaultMarkThreads()
+		optnametmpfile,
+		odtag,
+		addmatecigar ? matecigartmpfile : std::string()
 	);
 
 	if ( verbose )
@@ -831,7 +969,6 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "D=<filename>", "duplicates output file if rmdup=1" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "tmpfile=<filename>", "prefix for temporary files, default: create files in current directory" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
-				V.push_back ( std::pair<std::string,std::string> ( "markthreads=<["+::biobambam2::Licensing::formatNumber(getDefaultMarkThreads())+"]>", "number of helper threads" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report (default: 1)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "mod=<["+::biobambam2::Licensing::formatNumber(getDefaultMod())+"]>", "print progress for each mod'th record/alignment" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "rewritebam=<["+::biobambam2::Licensing::formatNumber(getDefaultRewriteBam())+"]>", "compression of temporary alignment file when input is via stdin (0=snappy,1=gzip/bam,2=copy)" ) );
@@ -853,6 +990,13 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "dupindex=<["+::biobambam2::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index for duplicates file (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "dupindexfilename=<filename>", "file name for BAM index file for duplicates file (default: extend duplicates output file name)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "optminpixeldif=<["+::biobambam2::Licensing::formatNumber(getDefaultOptMinPixelDif())+"]>", "pixel difference threshold for optical duplicates (default: 100)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "odtag=<["+getDefaultODTag()+"]>", "tag added for optical duplicates (default: od)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "inputthreads=<[1]>", "input helper threads (for inputformat=bam only, default: 1)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "reference=<>", "reference FastA (.fai file required, for cram i/o only)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "outputthreads=<[1]>", "output helper threads (for outputformat=bam only, default: 1)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("inputformat=<[")+getDefaultInputFormat()+"]>", std::string("input format (") + libmaus2::bambam::BamMultiAlignmentDecoderFactory::getValidInputFormats() + ")" ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("outputformat=<[")+libmaus2::bambam::BamBlockWriterBaseFactory::getDefaultOutputFormat()+"]>", std::string("output format (") + libmaus2::bambam::BamBlockWriterBaseFactory::getValidOutputFormats() + ")" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "addmatecigar=<["+::biobambam2::Licensing::formatNumber(getDefaultAddMateCigar())+"]>", "add mate cigar string field MC (default: 0)" ) );
 
 				::biobambam2::Licensing::printMap(std::cerr,V);
 
@@ -860,7 +1004,7 @@ int main(int argc, char * argv[])
 				return EXIT_SUCCESS;
 			}
 
-		return markDuplicates(arginfo);
+		return markDuplicatesOpt(arginfo);
 	}
 	catch(std::exception const & ex)
 	{

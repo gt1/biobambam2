@@ -71,6 +71,10 @@ names are constructed from the directory name and the MD5 checksum of each
 reference sequence. This writing of cached files is omitted however, if a
 previously existing file is found in the list of read only cache locations
 given by the REF_PATH environment variable.
+.PP
+.B optminpixeldif=<100>:
+distance (x and y inside same tile) inside which reads are considered as
+optical duplicates
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"
