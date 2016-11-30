@@ -1,3 +1,9 @@
+biobambam2 (2.0.65) unstable; urgency=medium
+
+  * fix bug in bammarkduplicatesopt where last set of duplicates was no marked with od fields
+
+ -- German Tischler <tischler@mpi-cbg.de>  Wed, 30 Nov 2016 12:14:14 +0100
+
 biobambam2 (2.0.64) unstable; urgency=medium
 
   * add addmatecigar option in bammarkduplicatesopt
