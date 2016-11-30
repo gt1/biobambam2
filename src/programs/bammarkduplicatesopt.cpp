@@ -258,7 +258,11 @@ static int markDuplicatesOpt(::libmaus2::util::ArgInfo const & arginfo)
 		throw se;
 	}
 
-	if ( (!(arginfo.hasArg("O") && (arginfo.getValue<std::string>("O","") != ""))) && isatty(STDOUT_FILENO) )
+	if (
+		(!(arginfo.hasArg("O") && (arginfo.getValue<std::string>("O","") != ""))) && isatty(STDOUT_FILENO)
+		&&
+		(!arginfo.hasArg("outputformat") || arginfo.getUnparsedValue("outputformat",std::string()) != "sam" )
+	)
 	{
 		::libmaus2::exception::LibMausException se;
 		se.getStream() << "refusing to write compressed data to terminal. please use O=<filename> or redirect standard output to a file" << std::endl;
@@ -811,7 +815,7 @@ static int markDuplicatesOpt(::libmaus2::util::ArgInfo const & arginfo)
 		lfrags.push_back(nextfrag);
 	}
 
-	dupcnt += libmaus2::bambam::DupMarkBase::markDuplicatePairsVector(lfrags,DSCV,optminpixeldif);
+	dupcnt += libmaus2::bambam::DupMarkBase::markDuplicatePairsVector(lfrags,DSCV,Poptmark.get(),optminpixeldif);
 	lfrags.resize(0);
 	pairDec.reset();
 	if ( verbose )
