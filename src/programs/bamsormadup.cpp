@@ -163,6 +163,7 @@ int bamsormadupTemplate(
 	std::string const sinputformat = arginfo.getUnparsedValue("inputformat",getDefaultInputFormat());
 	libmaus2::bambam::parallel::BlockSortControlBase::block_sort_control_input_enum inform = libmaus2::bambam::parallel::BlockSortControlBase::block_sort_control_input_bam;
 	int const blocksortverbose = arginfo.getValue<int>("blocksortverbose",getDefaultBlockSortVerbose());
+	uint64_t const parsebuffersize = arginfo.getValueUnsignedNumeric<uint64_t>("parsebuffersize",libmaus2::bambam::parallel::BlockSortControl<order_type,create_dup_mark_info>::getParseBufferSize());
 
 	if ( sinputformat == "bam" )
 	{
@@ -186,7 +187,8 @@ int bamsormadupTemplate(
 			inform,STP,in,templevel,tmpfilebase,seqchksumhash,
 			fixmates,
 			dupmarksupport,
-			optminpixeldif
+			optminpixeldif,
+			parsebuffersize
 		)
 	);
 	VC->setVerbose(blocksortverbose);
@@ -316,6 +318,9 @@ int bamsormadupTemplate(
 		inputblocksize >= 256ull*1024ull
 	)
 		inputblocksize /= 2;
+
+	while ( BI.size() * inputblocksize * (inputblocksperfile+1) <= mergeinputmaxmem )
+		inputblocksperfile += 1;
 
 	std::cerr << "[V] number of blocks to be merged is " << BI.size() << " using " << inputblocksperfile << " blocks per input with block size " << inputblocksize << std::endl;
 
