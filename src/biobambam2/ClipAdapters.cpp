@@ -98,7 +98,7 @@ bool clipAdapters(
 		uint64_t const len = algn.decodeRead(R);
 		algn.decodeQual(Q);
 
-		if ( len - aclip )
+		if ( (len - aclip) > 1 )
 		{
 			if ( algn.isMapped() )
 			{
