@@ -1,3 +1,10 @@
+biobambam2 (2.0.67) unstable; urgency=medium
+
+  * no adapter clipping if remaining sequence would be a single base (fix by Andrew Whitwham)
+  * add bamauxmerge
+
+ -- German Tischler <tischler@mpi-cbg.de>  Thu, 26 Jan 2017 17:30:44 +0100
+
 biobambam2 (2.0.66) unstable; urgency=medium
 
   * add parserbuffersize parameter in bamsormadup 
