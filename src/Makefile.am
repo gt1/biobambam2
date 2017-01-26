@@ -86,6 +86,7 @@ bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamr
 	bamnumericalindex \
 	bammarkduplicatesopt \
 	bamfilterlength \
+	bamauxmerge \
 	@BAMALIGNMENTOFFSETSINSTEXP@ @BLASTXMLTOBAMINSTEXP@
 
 noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments bamtoname \
@@ -474,3 +475,8 @@ bamfilterlength_SOURCES = programs/bamfilterlength.cpp biobambam2/Licensing.cpp
 bamfilterlength_LDADD = ${LIBMAUS2LIBS}
 bamfilterlength_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
 bamfilterlength_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
+
+bamauxmerge_SOURCES = programs/bamauxmerge.cpp biobambam2/Licensing.cpp
+bamauxmerge_LDADD = ${LIBMAUS2LIBS}
+bamauxmerge_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamauxmerge_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
