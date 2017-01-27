@@ -1,4 +1,4 @@
-AC_INIT(biobambam2,2.0.68,[tischler@mpi-cbg.de],[biobambam2],[http://www.sanger.ac.uk])
+AC_INIT(biobambam2,2.0.69,[tischler@mpi-cbg.de],[biobambam2],[http://www.sanger.ac.uk])
 AC_CANONICAL_SYSTEM
 AC_PROG_LIBTOOL
 
