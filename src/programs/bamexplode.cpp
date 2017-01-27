@@ -53,7 +53,13 @@ int bamexplode(libmaus2::util::ArgInfo const & arginfo)
 			Pwriter.reset();
 			libmaus2::util::ArgInfo argcopy(arginfo);
 			std::ostringstream fnostr;
-			fnostr << prefix << std::setw(6) << std::setfill('0') << nextfn++ << std::setw(0) << "." << outputformat;
+			fnostr
+				<< prefix
+				<< std::setw(6) << std::setfill('0') << refid
+				<< std::setw(0) << "_"
+				<< std::setw(6) << std::setfill('0') << nextfn++
+				<< std::setw(0) << "." << outputformat
+				;
 			argcopy.replaceKey("O",fnostr.str());
 			libmaus2::bambam::BamBlockWriterBase::unique_ptr_type Twriter(libmaus2::bambam::BamBlockWriterBaseFactory::construct(header,argcopy));
 			Pwriter = UNIQUE_PTR_MOVE(Twriter);
