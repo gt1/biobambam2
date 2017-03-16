@@ -500,7 +500,7 @@ void bamtofastqCollating(
 		// construct output file names
 		std::vector<std::string> outputfilenamevector;
 		for ( std::set<std::string>::const_iterator ita = suffixset.begin(); ita != suffixset.end(); ++ita )
-			outputfilenamevector.push_back(outputdir + defaultid + *ita);
+			outputfilenamevector.push_back(outputdir + outputperreadgroupprefix + defaultid + *ita);
 		for ( uint64_t i = 0; i < readgroups.size(); ++i )
 			for ( std::set<std::string>::const_iterator ita = suffixset.begin(); ita != suffixset.end(); ++ita )
 			{
