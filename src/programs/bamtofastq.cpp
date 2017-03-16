@@ -92,6 +92,11 @@ std::string getDefaultSplitPrefix()
 	return "bamtofastq_split";
 }
 
+int getDefaultOutputperreadgrouprgsm()
+{
+	return 0;
+}
+
 struct BamToFastQInputFileStream
 {
 	std::string const fn;
@@ -417,6 +422,9 @@ void bamtofastqCollating(
 
 	if ( outputperreadgroup )
 	{
+		bool const outputperreadgrouprgsm = arginfo.getValue<unsigned int>("outputperreadgrouprgsm",getDefaultOutputperreadgrouprgsm());
+		std::string const outputperreadgroupprefix = arginfo.hasArg("outputperreadgroupprefix") ? (arginfo.getUnparsedValue("outputperreadgroupprefix",std::string()) + std::string("_")) : std::string();
+
 		bool const gz = arginfo.getValue<int>("gz",0);
 		uint64_t const split = arginfo.getValueUnsignedNumeric("split",getDefaultSplit());
 		std::string const Fsuffix = arginfo.getUnparsedValue("outputperreadgroupsuffixF",getDefaultReadGroupSuffixF(gz,split));
@@ -495,7 +503,11 @@ void bamtofastqCollating(
 			outputfilenamevector.push_back(outputdir + defaultid + *ita);
 		for ( uint64_t i = 0; i < readgroups.size(); ++i )
 			for ( std::set<std::string>::const_iterator ita = suffixset.begin(); ita != suffixset.end(); ++ita )
-				outputfilenamevector.push_back(outputdir + readgroups[i].ID + *ita);
+			{
+				std::string const preSM = (readgroups[i].M.find("SM") != readgroups[i].M.end()) ? readgroups[i].M.find("SM")->second : std::string();
+				std::string const SM = (outputperreadgrouprgsm && preSM.size()) ? (preSM + "_") : std::string();
+				outputfilenamevector.push_back(outputdir + outputperreadgroupprefix + SM + readgroups[i].ID + *ita);
+			}
 
 		assert ( outputfilenamevector.size() == numoutputfiles );
 		// int64_t const posixoutbufsize = 256*1024;
@@ -1204,6 +1216,8 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( std::string("split=<[")+libmaus2::util::NumberSerialisation::formatNumber(getDefaultSplit(),0)+"]>", "split named output files into chunks of this amount of reads (0: do not split)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("splitprefix=<[")+getDefaultSplitPrefix()+"]>", "file name prefix if collate=0 and split>0" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("tags=<[")+getDefaultTags()+"]>", "list of aux tags to be copied (default: do not copy any aux fields)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "outputperreadgrouprgsm=<["+::biobambam2::Licensing::formatNumber(getDefaultOutputperreadgrouprgsm())+"]>", "add read group field SM ahead of read group id when outputperreadgroup=1 (for collate=1 only)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "outputperreadgroupprefix=<[]>", "prefix added in front of file names if outputperreadgroup=1 (for collate=1 only)" ) );
 
 				::biobambam2::Licensing::printMap(std::cerr,V);
 

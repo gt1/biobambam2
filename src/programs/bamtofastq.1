@@ -160,6 +160,12 @@ names.
 output directory if outputperreadgroup=1. By default the output files are
 generated in the current directory.
 .PP
+.B outputperreadgrouprgsm=<0|1>
+include SM field of read group in output filenames if outputperreadgroup=1 (default is 0)
+.PP
+.B outputperreadgroupprefix=
+add given prefix ahead of file names if outputperreadgroup=1 (default is to add no prefix)
+.PP
 .B outputperreadgroupsuffixF=<_1.fq>
 output file name suffix for first mates of complete pairs if outputperreadgroup=1.
 Default is _1.fq if gz=0 and _1.fq.gz for gz=1.
