@@ -1,3 +1,9 @@
+biobambam2 (2.0.72) unstable; urgency=medium
+
+  * add output file prefix for default read group in bamtofastq
+
+ -- German Tischler <tischler@mpi-cbg.de>  Thu, 16 Mar 2017 10:22:23 +0100
+
 biobambam2 (2.0.71) unstable; urgency=medium
 
   * add outputperreadgrouprgsm and outputperreadgroupprefix options in bamtofastq
