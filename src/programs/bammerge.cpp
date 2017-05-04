@@ -66,7 +66,7 @@ static int getDefaultIndex() { return 0; }
 
 int bammerge(libmaus2::util::ArgInfo const & arginfo)
 {
-	if ( isatty(STDOUT_FILENO) )
+	if ( isatty(STDOUT_FILENO) && (!arginfo.hasArg("O")) )
 	{
 		::libmaus2::exception::LibMausException se;
 		se.getStream() << "Refusing write binary data to terminal, please redirect standard output to pipe or file." << std::endl;
