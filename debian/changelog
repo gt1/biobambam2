@@ -1,3 +1,11 @@
+biobambam2 (2.0.73) unstable; urgency=medium
+
+  * add bamfilterrefid
+  * allow O key in bammerge (disable check for stdout being a terminal if O key is set)
+  * add bamrefinterval program
+
+ -- German Tischler <tischler@mpi-cbg.de>  Tue, 20 Jun 2017 14:48:51 +0200
+
 biobambam2 (2.0.72) unstable; urgency=medium
 
   * add output file prefix for default read group in bamtofastq
