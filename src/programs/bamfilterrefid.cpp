@@ -1,6 +1,6 @@
 /**
     bambam
-    Copyright (C) 2009-2013 German Tischler
+    Copyright (C) 2009-2017 German Tischler
     Copyright (C) 2011-2013 Genome Research Limited
 
     This program is free software: you can redistribute it and/or modify
@@ -21,52 +21,42 @@
 #include <iostream>
 #include <queue>
 
-#include <libmaus2/util/ArgInfo.hpp>
+#include <libmaus2/aio/OutputStreamInstance.hpp>
+
+#include <libmaus2/bambam/BamAlignment.hpp>
 #include <libmaus2/bambam/BamBlockWriterBaseFactory.hpp>
-#include <libmaus2/bambam/BamMergeCoordinate.hpp>
-#include <libmaus2/bambam/BamMergeQueryName.hpp>
+#include <libmaus2/bambam/BamDecoder.hpp>
 #include <libmaus2/bambam/BamWriter.hpp>
+#include <libmaus2/bambam/ProgramHeaderLineSet.hpp>
+
+#include <libmaus2/util/ArgInfo.hpp>
+#include <libmaus2/util/GetObject.hpp>
+#include <libmaus2/util/PutObject.hpp>
+#include <libmaus2/util/TempFileRemovalContainer.hpp>
 
 #include <biobambam2/Licensing.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; }
-static std::string getDefaultSortOrder() { return "coordinate"; }
 
 #include <libmaus2/lz/BgzfDeflateOutputCallbackMD5.hpp>
 #include <libmaus2/bambam/BgzfDeflateOutputCallbackBamIndex.hpp>
 static int getDefaultMD5() { return 0; }
 static int getDefaultIndex() { return 0; }
 
-#if defined(LIBMAUS2_HAVE_IRODS)
-#include <libmaus2/irods/IRodsInputStreamFactory.hpp>
-#endif
-
-::libmaus2::bambam::BamHeader::unique_ptr_type updateHeader(
-	::libmaus2::util::ArgInfo const & arginfo,
-	::libmaus2::bambam::BamHeader const & header
-)
+int bamfilterrg(::libmaus2::util::ArgInfo const & arginfo)
 {
-	std::string const headertext(header.text);
+	::libmaus2::util::TempFileRemovalContainer::setup();
 
-	// add PG line to header
-	std::string const upheadtext = ::libmaus2::bambam::ProgramHeaderLineSet::addProgramLine(
-		headertext,
-		"bammerge", // ID
-		"bammerge", // PN
-		arginfo.commandline, // CL
-		::libmaus2::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
-		std::string(PACKAGE_VERSION) // VN
-	);
-	// construct new header
-	::libmaus2::bambam::BamHeader::unique_ptr_type uphead(new ::libmaus2::bambam::BamHeader(upheadtext));
+	if ( isatty(STDIN_FILENO) )
+	{
+		::libmaus2::exception::LibMausException se;
+		se.getStream() << "Refusing to read binary data from terminal, please redirect standard input to pipe or file." << std::endl;
+		se.finish();
+		throw se;
+	}
 
-	return UNIQUE_PTR_MOVE(uphead);
-}
-
-int bammerge(libmaus2::util::ArgInfo const & arginfo)
-{
-	if ( isatty(STDOUT_FILENO) && (!arginfo.hasArg("O")) )
+	if ( isatty(STDOUT_FILENO) )
 	{
 		::libmaus2::exception::LibMausException se;
 		se.getStream() << "Refusing write binary data to terminal, please redirect standard output to pipe or file." << std::endl;
@@ -74,25 +64,25 @@ int bammerge(libmaus2::util::ArgInfo const & arginfo)
 		throw se;
 	}
 
+	int const level = libmaus2::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue<int>("level",getDefaultLevel()));
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
-	std::string const sortorder = arginfo.getValue<std::string>("SO",getDefaultSortOrder());
 
-	std::vector<std::string> inputfilenames = arginfo.getPairValues("I");
-	for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
-		inputfilenames.push_back(arginfo.restargs[i]);
-	std::vector<std::string> inputmetafilenames = arginfo.getPairValues("IL");
-	for ( uint64_t i = 0; i < inputmetafilenames.size(); ++i )
-	{
-		libmaus2::aio::InputStream::unique_ptr_type iptr(libmaus2::aio::InputStreamFactoryContainer::constructUnique(inputmetafilenames[i]));
-		std::istream & in = *iptr;
-		while ( in )
-		{
-			std::string line;
-			std::getline(in,line);
-			if ( line.size() )
-				inputfilenames.push_back(line);
-		}
-	}
+	::libmaus2::bambam::BamDecoder dec(std::cin,false);
+	::libmaus2::bambam::BamHeader const & header = dec.getHeader();
+
+	std::string const headertext(header.text);
+
+	// add PG line to header
+	std::string const upheadtext = ::libmaus2::bambam::ProgramHeaderLineSet::addProgramLine(
+		headertext,
+		"bamfilterrg", // ID
+		"bamfilterrg", // PN
+		arginfo.commandline, // CL
+		::libmaus2::bambam::ProgramHeaderLineSet(headertext).getLastIdInChain(), // PP
+		std::string(PACKAGE_VERSION) // VN
+	);
+	// construct new header
+	libmaus2::bambam::BamHeader const uphead(upheadtext);
 
 	/*
 	 * start index/md5 callbacks
@@ -141,62 +131,66 @@ int bammerge(libmaus2::util::ArgInfo const & arginfo)
 	/*
 	 * end md5/index callbacks
 	 */
+	::libmaus2::bambam::BamWriter::unique_ptr_type writer(new ::libmaus2::bambam::BamWriter(std::cout,uphead,level,Pcbs));
 
-	if ( sortorder == "queryname" )
+	bool haverefidlist = false;
+	uint64_t const nref = header.getNumRef();
+	libmaus2::bitio::BitVector BV(nref);
+	for ( uint64_t i = 0; i < nref; ++i )
+		BV.erase(i);
+
+	if ( arginfo.hasArg("refids") )
 	{
-		libmaus2::bambam::BamMergeQueryName bamdec(arginfo,inputfilenames /* ,true */);
-		libmaus2::bambam::BamAlignment const & algn = bamdec.getAlignment();
-		libmaus2::bambam::BamHeader const & header = bamdec.getHeader();
-		::libmaus2::bambam::BamHeader::unique_ptr_type uphead(updateHeader(arginfo,header));
-		libmaus2::bambam::BamBlockWriterBase::unique_ptr_type Pwriter(
-			libmaus2::bambam::BamBlockWriterBaseFactory::construct(*uphead,arginfo,Pcbs));
+		std::vector<std::string> vreadgroups;
+		for ( uint64_t i = 0; i < nref; ++i )
+			vreadgroups.push_back(header.getRefIDName(i));
+		::libmaus2::trie::Trie<char> trienofailure;
+		trienofailure.insertContainer(vreadgroups);
+		::libmaus2::trie::LinearHashTrie<char,uint32_t>::unique_ptr_type LHTnofailure(trienofailure.toLinearHashTrie<uint32_t>());
 
-		if ( verbose )
+		libmaus2::aio::InputStreamInstance ISI(arginfo.getUnparsedValue("refids",std::string()));
+		while ( ISI )
 		{
-			uint64_t c = 0;
-			while ( bamdec.readAlignment() )
+			std::string line;
+			std::getline(ISI,line);
+			if ( line.size() )
 			{
-				Pwriter->writeAlignment(algn);
-
-				if ( ((++c) & ((1ull<<20)-1)) == 0 )
-					std::cerr << "[V] " << c << std::endl;
+				int64_t const id = LHTnofailure->searchCompleteNoFailureZ(line.c_str());
+				if ( id >= 0 )
+				{
+					std::cerr << "[V] keeping " << line << " id " << id << std::endl;
+					BV.set(id);
+				}
+				else
+				{
+					std::cerr << "[W] ref id " << line << " not found in header" << std::endl;
+				}
 			}
-
-			std::cerr << "[V] " << c << std::endl;
 		}
-		else
-			while ( bamdec.readAlignment() )
-				Pwriter->writeAlignment(algn);
+		haverefidlist = true;
 	}
+
+	libmaus2::bambam::BamAlignment & algn = dec.getAlignment();
+	uint64_t c = 0;
+
+	if ( ! haverefidlist )
+		while ( dec.readAlignment() )
+		{
+			algn.serialise(writer->getStream());
+			if ( verbose && (++c & (1024*1024-1)) == 0 )
+				std::cerr << "[V] " << c/(1024*1024) << std::endl;
+		}
 	else
-	{
-		libmaus2::bambam::BamMergeCoordinate bamdec(arginfo,inputfilenames /* ,true */);
-		libmaus2::bambam::BamAlignment const & algn = bamdec.getAlignment();
-		libmaus2::bambam::BamHeader const & header = bamdec.getHeader();
-		::libmaus2::bambam::BamHeader::unique_ptr_type uphead(updateHeader(arginfo,header));
-		libmaus2::bambam::BamBlockWriterBase::unique_ptr_type Pwriter(
-			libmaus2::bambam::BamBlockWriterBaseFactory::construct(*uphead,arginfo,Pcbs));
-
-		if ( verbose )
+		while ( dec.readAlignment() )
 		{
-			uint64_t c = 0;
-
-			while ( bamdec.readAlignment() )
-			{
-				Pwriter->writeAlignment(algn);
-
-				if ( ((++c) & ((1ull<<20)-1)) == 0 )
-					std::cerr << "[V] " << c << std::endl;
-			}
-
-			std::cerr << "[V] " << c << std::endl;
+			int64_t const refid = algn.getRefID();
+			if ( refid >= 0 && BV.get(refid) )
+				algn.serialise(writer->getStream());
+			if ( verbose && (++c & (1024*1024-1)) == 0 )
+				std::cerr << "[V] " << c/(1024*1024) << std::endl;
 		}
-		else
-		{
-			while ( bamdec.readAlignment() )
-				Pwriter->writeAlignment(algn);
-		}
-	}
+
+	writer.reset();
 
 	if ( Pmd5cb )
 	{
@@ -207,14 +201,6 @@ int bammerge(libmaus2::util::ArgInfo const & arginfo)
 		Pindex->flush(std::string(indexfilename));
 	}
 
-	#if defined(LIBMAUS2_HAVE_IRODS)
-	// need a explicit call to disconnect to avoid atexit deallocation problems in iRODS 4.19+
-    	if (libmaus2::irods::IRodsSystem::defaultIrodsSystem)
-	{
-    	        (libmaus2::irods::IRodsSystem::getDefaultIRodsSystem())->disconnect();
-	}
-	#endif
-
 	return EXIT_SUCCESS;
 }
 
@@ -222,18 +208,7 @@ int main(int argc, char * argv[])
 {
 	try
 	{
-		#if defined(LIBMAUS2_HAVE_IRODS)
-                libmaus2::irods::IRodsInputStreamFactory::registerHandler();
-                #endif
-
 		::libmaus2::util::ArgInfo const arginfo(argc,argv);
-
-		#if defined(LIBMAUS2_HAVE_IRODS)
-		// set program name for iRODS identification
-		std::stringstream irods_id;
-		irods_id  << PACKAGE_NAME << ":" << arginfo.getProgFileName(arginfo.progname) << ":" << PACKAGE_VERSION;
-		setenv(SP_OPTION, irods_id.str().c_str(), 1);
-		#endif
 
 		for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )
 			if (
@@ -258,24 +233,23 @@ int main(int argc, char * argv[])
 
 				std::vector< std::pair<std::string,std::string> > V;
 
-				V.push_back ( std::pair<std::string,std::string> ( "I=<[filename]>", "input file, can be set multiple times" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "SO=<["+getDefaultSortOrder()+"]>]", "sort order (coordinate or queryname)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
-				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress information" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "refids=<[]>", "file containing ref ids to be kept (default: keep all)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam2::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "md5filename=<filename>", "file name for md5 check sum (no checksum is computed if md5filename is unset)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "md5filename=<filename>", "file name for md5 check sum (default: extend output file name)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam2::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "indexfilename=<filename>", "file name for BAM index file (no BAM index is produced if indexfilename is unset)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "indexfilename=<filename>", "file name for BAM index file (default: extend output file name)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "tmpfile=<filename>", "prefix for temporary files, default: create files in current directory" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "IL=<filename>", "name of file containing input file names" ) );
 
 				::biobambam2::Licensing::printMap(std::cerr,V);
 
 				std::cerr << std::endl;
+
 				return EXIT_SUCCESS;
 			}
 
-		return bammerge(arginfo);
+		return bamfilterrg(arginfo);
 	}
 	catch(std::exception const & ex)
 	{
