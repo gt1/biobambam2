@@ -25,7 +25,8 @@ MANPAGES = programs/bamtofastq.1 programs/bamsort.1 programs/bammarkduplicates.1
 	programs/bamflagsplit.1 programs/bamintervalcomment.1 \
 	programs/bamstreamingmarkduplicates.1 \
 	programs/bamsormadup.1 programs/lasToBAM.1 programs/fastaexplode.1 \
-	programs/bamrecalculatecigar.1 programs/bamfiltermc.1
+	programs/bamrecalculatecigar.1 programs/bamfiltermc.1 \
+	programs/bamfillquery.1
 
 man_MANS = ${MANPAGES}
 
@@ -90,6 +91,7 @@ bin_PROGRAMS = bamtofastq bammarkduplicates bamsort bamcollate bammaskflags bamr
 	bamrefinterval \
 	bamscrapcount \
 	bamfilterrefid \
+	bamfillquery \
 	@BAMALIGNMENTOFFSETSINSTEXP@ @BLASTXMLTOBAMINSTEXP@
 
 noinst_PROGRAMS = bamfilter bamfixmatecoordinates bamfixmatecoordinatesnamesorted bamcheckalignments bamtoname \
@@ -222,6 +224,11 @@ bamrank_SOURCES = programs/bamrank.cpp biobambam2/Licensing.cpp biobambam2/Attac
 bamrank_LDADD = ${LIBMAUS2LIBS}
 bamrank_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
 bamrank_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
+
+bamfillquery_SOURCES = programs/bamfillquery.cpp biobambam2/Licensing.cpp biobambam2/AttachRank.cpp
+bamfillquery_LDADD = ${LIBMAUS2LIBS}
+bamfillquery_LDFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS} ${LIBMAUS2LDFLAGS} ${AM_LDFLAGS}
+bamfillquery_CPPFLAGS = ${AM_CPPFLAGS} ${LIBMAUS2CPPFLAGS}
 
 bamclipreinsert_SOURCES = programs/bamclipreinsert.cpp biobambam2/Licensing.cpp \
 	biobambam2/ClipReinsert.cpp

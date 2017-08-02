@@ -196,11 +196,31 @@ int bamrecalculatecigar(libmaus2::util::ArgInfo const & arginfo)
 			}
 
 			bool const boundok = algn.getPos() - algn.getFrontDel() + algn.getReferenceLength() <= ref.size();
+			bool const rlok =
+				static_cast<int64_t>(libmaus2::bambam::BamAlignmentDecoderBase::getLseqByCigar(algn.D.begin()))
+				==
+				static_cast<int64_t>(algn.getLseq());
 
 			if ( ! boundok )
 			{
 				std::cerr
 					<< "[E] bamrecalculatecigar: removing defective alignment crossing bound of refseq: " << algn.getName() << std::endl
+					<< "[E] " << algn.formatAlignment(header) << std::endl;
+					;
+				ok = false;
+			}
+			else if ( ! algn.getLseq() )
+			{
+				std::cerr
+					<< "[E] bamrecalculatecigar: undefined query sequence for " << algn.getName() << std::endl
+					<< "[E] " << algn.formatAlignment(header) << std::endl;
+					;
+				ok = false;
+			}
+			else if ( ! rlok )
+			{
+				std::cerr
+					<< "[E] bamrecalculatecigar: removing defective alignment getLseq()=" << algn.getLseq() << " != getLseqByCigar()=" << libmaus2::bambam::BamAlignmentDecoderBase::getLseqByCigar(algn.D.begin()) << " for " << algn.getName() << std::endl
 					<< "[E] " << algn.formatAlignment(header) << std::endl;
 					;
 				ok = false;
