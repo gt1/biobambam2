@@ -1,6 +1,6 @@
 /**
     bambam
-    Copyright (C) 2009-2016 German Tischler
+    Copyright (C) 2009-2017 German Tischler
     Copyright (C) 2011-2014 Genome Research Limited
 
     This program is free software: you can redistribute it and/or modify
@@ -548,13 +548,15 @@ static int markDuplicatesOpt(::libmaus2::util::ArgInfo const & arginfo)
 				{
 					uint64_t const rank = P.second->getRank();
 					std::string const scigar = P.first->getCigarString();
-					libmaus2::bambam::OptName(rank,scigar).serialise(*Pmatecigartmp);
+					int64_t const matecoordinate = P.first->getCoordinate();
+					libmaus2::bambam::OptName(rank,scigar,matecoordinate).serialise(*Pmatecigartmp);
 				}
 				if ( P.second->isMapped() )
 				{
 					uint64_t const rank = P.first->getRank();
 					std::string const scigar = P.second->getCigarString();
-					libmaus2::bambam::OptName(rank,scigar).serialise(*Pmatecigartmp);
+					int64_t const matecoordinate = P.second->getCoordinate();
+					libmaus2::bambam::OptName(rank,scigar,matecoordinate).serialise(*Pmatecigartmp);
 				}
 			}
 		}
