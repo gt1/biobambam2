@@ -1,3 +1,9 @@
+biobambam2 (2.0.76) unstable; urgency=medium
+
+  * add rcsupport switch in bamsormadup
+
+ -- German Tischler <tischler@mpi-cbg.de>  Tue, 08 Aug 2017 16:49:12 +0200
+
 biobambam2 (2.0.75) unstable; urgency=medium
 
   * add mc field in bammarkduplicatesopt
