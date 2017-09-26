@@ -2399,7 +2399,7 @@ struct BamThreadPoolMergeHeapComparator
 		std::pair<uint64_t,uint8_t const *> const & B
 	)
 	{
-		int const r = order_type::compareInt(A.second+4,B.second+4);
+		int const r = order_type::compareInt(A.second+4,libmaus2::bambam::DecoderBase::getLEInteger(A.second,4),B.second+4,libmaus2::bambam::DecoderBase::getLEInteger(B.second,4));
 
 		if ( r )
 			return r > 0;
