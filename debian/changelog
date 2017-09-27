@@ -1,3 +1,9 @@
+biobambam2 (2.0.78) unstable; urgency=medium
+
+  * update libmaus2 requirement
+
+ -- German Tischler <tischler@mpi-cbg.de>  Wed, 27 Sep 2017 10:56:56 +0200
+
 biobambam2 (2.0.77) unstable; urgency=medium
 
   * add sorting by string aux field in bamsort
