@@ -1,4 +1,4 @@
-.TH BAMSORT 1 "June 2016" BIOBAMBAM
+.TH BAMSORT 1 "September 2017" BIOBAMBAM
 .SH NAME
 bamsort - sort BAM files by coordinate or query name
 .SH SYNOPSIS
@@ -8,7 +8,7 @@ bamsort - sort BAM files by coordinate or query name
 .SH DESCRIPTION
 bamsort reads a BAM, SAM or CRAM file, sorts it by coordinate
 (lexicographical by reference sequence id and position on reference
-sequence), query name or hash value computed for the query name
+sequence), query name, hash value computed for the query name or an aux tag value
 and writes the sorted file in BAM, SAM or CRAM format.
 .PP
 Lexicographical order denotes that pairs (a,b) and (c,d) will be ordered
@@ -30,6 +30,11 @@ The order by hash value computes a hash value (effectively random number) for ea
 and order the alignments by this number in increasing order. Alignments
 assigned the same hash value are ordered by query name.
 .PP
+The order by aux tag compares alignments by the value of a given aux field
+storing a string value. This string comparison follows the same order used
+for comparing query names stated above. Alignments with the same aux value
+are sorted by coordinate order.
+.PP
 If the memory buffer given is not sufficiently large to process the input
 file, then the program writes intermediate results to a temporary file. This
 file can be large and depending on the compression of the input file larger
@@ -37,7 +42,7 @@ than the input itself.
 .PP
 The following key=value pairs can be given:
 .PP
-.B SO=<coordinate|queryname|hash>: 
+.B SO=<coordinate|queryname|hash|tag>:
 set the sort order. Valid values are
 .IP coordinate:
 sort alignments by coordinate
@@ -46,6 +51,9 @@ sort alignments by query name
 .IP hash
 sort alignments by (Murmur3) hash of query name. This effectively puts them
 in a random order.
+.IP tag
+sort alignments by string aux field. The tag of the aux fields need to be
+provided using the sorttag key.
 .PP
 .B level=<-1|0|1|9|11>:
 set compression level of the output BAM file. Valid
@@ -216,6 +224,9 @@ opened once (as it may take the form of a pipe or socket connection), then
 bamsort will keep all the files open at the same time. Otherwise the files
 will be opened only as needed to keep the number of open file descriptors
 lower.
+.PP
+.B sorttag=:
+tag of aux field used for comparison when SO=tag.
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"
