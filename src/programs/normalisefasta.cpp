@@ -68,6 +68,11 @@ std::string stripName(std::string const & s)
 	return s.substr(j,i-j);
 }
 
+static unsigned int getDefaultMinLength()
+{
+	return 0;
+}
+
 void normalisefastaUncompressed(libmaus2::util::ArgInfo const & arginfo)
 {
 	libmaus2::fastx::StreamFastAReaderWrapper in(std::cin);
@@ -75,6 +80,7 @@ void normalisefastaUncompressed(libmaus2::util::ArgInfo const & arginfo)
 	unsigned int const cols = arginfo.getValue<unsigned int>("cols",getDefaultCols());
 	unsigned int const nrandom = arginfo.getValue<unsigned int>("nrandom",getDefaultNRandom());
 	unsigned int const ctoupper = arginfo.getValue<unsigned int>("toupper",getDefaultToUpper());
+	unsigned int const minlength = arginfo.getValue<unsigned int>("minlength",getDefaultMinLength());
 	libmaus2::random::Random::setup(::time(0));
 	uint64_t offset = 0;
 
@@ -100,6 +106,9 @@ void normalisefastaUncompressed(libmaus2::util::ArgInfo const & arginfo)
 			pattern.pattern = pattern.spattern.c_str();
 		}
 
+		if ( pattern.spattern.size() < minlength )
+			continue;
+
 		std::cerr <<  shortname << "\t" << pattern.patlen << "\t"
 			<< offset+pattern.getStringId().size()+2 << "\t" << cols << "\t" << cols+1 << std::endl;
 
@@ -115,6 +124,7 @@ void normalisefastaBgzf(libmaus2::util::ArgInfo const & arginfo, std::ostream & 
 	libmaus2::fastx::StreamFastAReaderWrapper::pattern_type pattern;
 	int const level = libmaus2::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(arginfo.getValue("level",getDefaultLevel()));
 	std::string const indexfn = arginfo.getUnparsedValue("index","");
+	unsigned int const minlength = arginfo.getValue<unsigned int>("minlength",getDefaultMinLength());
 
 	::libmaus2::bambam::BamBlockWriterBaseFactory::checkCompressionLevel(level);
 
@@ -136,6 +146,9 @@ void normalisefastaBgzf(libmaus2::util::ArgInfo const & arginfo, std::ostream & 
 		char const * cpat = spat.c_str();
 		uint64_t const patlen = spat.size();
 		uint64_t const numblocks = (patlen + inbufsize - 1)/inbufsize;
+
+		if ( patlen < minlength )
+			continue;
 
 		index.push_back(libmaus2::fastx::BgzfFastAIndexEntry(shortname,patid++,ioffset));
 
@@ -236,6 +249,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( std::string("bgzf=<[")+libmaus2::util::NumberSerialisation::formatNumber(getDefaultBgzf(),0)+"]>", "compress output" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("index=<>"), "file name for index if bgzf=1 (no index is created if key is not given)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("level=<[")+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", std::string("compression level if bgzf=1 (") + libmaus2::bambam::BamBlockWriterBaseFactory::getLevelHelpText() + std::string(")") ) );
+				V.push_back ( std::pair<std::string,std::string> ( std::string("minlength=<[")+::biobambam2::Licensing::formatNumber(getDefaultMinLength())+"]>", std::string("minimum length") ) );
 
 				::biobambam2::Licensing::printMap(std::cerr,V);
 
