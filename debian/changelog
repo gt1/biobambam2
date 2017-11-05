@@ -1,3 +1,9 @@
+biobambam2 (2.0.81) unstable; urgency=medium
+
+  * remove typename keywords inside non template class
+
+ -- German Tischler <tischler@mpi-cbg.de>  Sun, 05 Nov 2017 20:24:16 +0100
+
 biobambam2 (2.0.80) unstable; urgency=medium
 
   * add minlength parameter in normalisefasta
