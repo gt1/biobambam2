@@ -1,4 +1,4 @@
-AC_INIT(biobambam2,2.0.81,[tischler@mpi-cbg.de],[biobambam2],[http://www.sanger.ac.uk])
+AC_INIT(biobambam2,2.0.82,[tischler@mpi-cbg.de],[biobambam2],[http://www.sanger.ac.uk])
 AC_CANONICAL_SYSTEM
 AC_PROG_LIBTOOL
 
@@ -152,9 +152,9 @@ if test ! -z "${with_libmaus2}" ; then
 	fi
 fi
 
-PKG_CHECK_MODULES([libmaus2],[libmaus2 >= 2.0.398])
-PKG_CHECK_MODULES([libmaus2digests],[libmaus2digests >= 2.0.398])
-PKG_CHECK_MODULES([libmaus2seqchksumsfactory],[libmaus2seqchksumsfactory >= 2.0.398])
+PKG_CHECK_MODULES([libmaus2],[libmaus2 >= 2.0.430])
+PKG_CHECK_MODULES([libmaus2digests],[libmaus2digests >= 2.0.430])
+PKG_CHECK_MODULES([libmaus2seqchksumsfactory],[libmaus2seqchksumsfactory >= 2.0.430])
 
 if test ! -z "${with_libmaus2}" ; then
 	if test ! -z "${PKGCONFIGPATHSAVE}" ; then
@@ -189,6 +189,50 @@ AC_MSG_RESULT($have_libmaus2)
 
 if test "${have_libmaus2}" = "no" ; then
 	AC_MSG_ERROR([Required libmaus2 is not available.])
+fi
+
+AC_LANG_PUSH([C++])
+AC_MSG_CHECKING([whether pthread_mutexattr_settype supports PTHREAD_MUTEX_RECURSIVE_NP])
+	AC_LINK_IFELSE([AC_LANG_SOURCE([
+#include <pthread.h>
+
+				int main(int argc, char * argv[[]]) {
+					pthread_mutexattr_t attr;
+					pthread_mutexattr_init(&attr);
+	                                pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE_NP);
+					return 0;
+			}])],
+			have_pthread_mutex_recursive_np=yes,
+			have_pthread_mutex_recursive_np=no
+		)
+AC_LANG_POP
+AC_MSG_RESULT($have_pthread_mutex_recursive_np)
+
+AC_LANG_PUSH([C++])
+AC_MSG_CHECKING([whether pthread_mutexattr_settype supports PTHREAD_MUTEX_RECURSIVE])
+	AC_LINK_IFELSE([AC_LANG_SOURCE([
+#include <pthread.h>
+
+				int main(int argc, char * argv[[]]) {
+					pthread_mutexattr_t attr;
+					pthread_mutexattr_init(&attr);
+	                                pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+					return 0;
+			}])],
+			have_pthread_mutex_recursive=yes,
+			have_pthread_mutex_recursive=no
+		)
+AC_LANG_POP
+AC_MSG_RESULT($have_pthread_mutex_recursive)
+
+HAVE_PTHREAD_MUTEX_RECURSIVE_NP=
+if test "${have_pthread_mutex_recursive_np}" = "yes" ; then
+	HAVE_PTHREAD_MUTEX_RECURSIVE_NP="#define HAVE_PTHREAD_MUTEX_RECURSIVE_NP"
+fi
+
+HAVE_PTHREAD_MUTEX_RECURSIVE=
+if test "${have_pthread_mutex_recursive}" = "yes" ; then
+	HAVE_PTHREAD_MUTEX_RECURSIVE="#define HAVE_PTHREAD_MUTEX_RECURSIVE"
 fi
 
 AC_LANG_PUSH([C++])
@@ -245,7 +289,7 @@ if test "${have_libmaus2_irods}" = "yes" ; then
 		fi
 	fi
 
-	PKG_CHECK_MODULES([libmaus2irods],[libmaus2irods >= 2.0.398])
+	PKG_CHECK_MODULES([libmaus2irods],[libmaus2irods >= 2.0.430])
 
 	LIBMAUS2IRODSCPPFLAGS="${libmaus2irods_CFLAGS}"
 	LIBMAUS2IRODSLIBS="${libmaus2irods_LIBS}"
@@ -434,5 +478,7 @@ AC_SUBST([BIOBAMBAM_HAVE_GMP])
 AC_SUBST([GMPLDFLAGS])
 AC_SUBST([GMPCPPFLAGS])
 AC_SUBST([GMPLIBS])
+AC_SUBST([HAVE_PTHREAD_MUTEX_RECURSIVE_NP])
+AC_SUBST([HAVE_PTHREAD_MUTEX_RECURSIVE])
 # 
 AC_OUTPUT(Makefile src/Makefile test/Makefile src/biobambam2/BamBamConfig.hpp)
