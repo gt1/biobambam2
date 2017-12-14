@@ -40,6 +40,7 @@
 #include <biobambam2/Licensing.hpp>
 #include <biobambam2/ClipAdapters.hpp>
 #include <biobambam2/KmerPoisson.hpp>
+#include <biobambam2/BamBamConfig.hpp>
 
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; }
@@ -862,10 +863,12 @@ namespace libmaus2
     	    			pthread_mutexattr_t attr;
     	    			pthread_mutexattr_init(&attr);
 
-    	    			#if defined(__APPLE__)
+    	    			#if defined(HAVE_PTHREAD_MUTEX_RECURSIVE_NP)
+    	    			pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE_NP);
+    	    			#elif defined(HAVE_PTHREAD_MUTEX_RECURSIVE)
     	    			pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
     	    			#else
-    	    			pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE_NP);
+    	    			#error "Neither PTHREAD_MUTEX_RECURSIVE_NP nor PTHREAD_MUTEX_RECURSIVE are supported for setting up recursive POSIX mutexes"
     	    			#endif
 
  	    			pthread_mutex_init(&mutex, &attr);
