@@ -1,3 +1,10 @@
+biobambam2 (2.0.82) unstable; urgency=medium
+
+  * use PTHREAD_MUTEX_RECURSIVE_NP or PTHREAD_MUTEX_RECURSIVE as available in bamadapterfind
+  * add detection of PTHREAD_MUTEX_RECURSIVE_NP and PTHREAD_MUTEX_RECURSIVE in configure
+
+ -- German Tischler <tischler@mpi-cbg.de>  Thu, 14 Dec 2017 12:02:52 +0100
+
 biobambam2 (2.0.81) unstable; urgency=medium
 
   * remove typename keywords inside non template class
