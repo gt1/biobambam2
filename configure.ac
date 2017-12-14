@@ -192,6 +192,50 @@ if test "${have_libmaus2}" = "no" ; then
 fi
 
 AC_LANG_PUSH([C++])
+AC_MSG_CHECKING([whether pthread_mutexattr_settype supports PTHREAD_MUTEX_RECURSIVE_NP])
+	AC_LINK_IFELSE([AC_LANG_SOURCE([
+#include <pthread.h>
+
+				int main(int argc, char * argv[[]]) {
+					pthread_mutexattr_t attr;
+					pthread_mutexattr_init(&attr);
+	                                pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE_NP);
+					return 0;
+			}])],
+			have_pthread_mutex_recursive_np=yes,
+			have_pthread_mutex_recursive_np=no
+		)
+AC_LANG_POP
+AC_MSG_RESULT($have_pthread_mutex_recursive_np)
+
+AC_LANG_PUSH([C++])
+AC_MSG_CHECKING([whether pthread_mutexattr_settype supports PTHREAD_MUTEX_RECURSIVE])
+	AC_LINK_IFELSE([AC_LANG_SOURCE([
+#include <pthread.h>
+
+				int main(int argc, char * argv[[]]) {
+					pthread_mutexattr_t attr;
+					pthread_mutexattr_init(&attr);
+	                                pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+					return 0;
+			}])],
+			have_pthread_mutex_recursive=yes,
+			have_pthread_mutex_recursive=no
+		)
+AC_LANG_POP
+AC_MSG_RESULT($have_pthread_mutex_recursive)
+
+HAVE_PTHREAD_MUTEX_RECURSIVE_NP=
+if test "${have_pthread_mutex_recursive_np}" = "yes" ; then
+	HAVE_PTHREAD_MUTEX_RECURSIVE_NP="#define HAVE_PTHREAD_MUTEX_RECURSIVE_NP"
+fi
+
+HAVE_PTHREAD_MUTEX_RECURSIVE=
+if test "${have_pthread_mutex_recursive}" = "yes" ; then
+	HAVE_PTHREAD_MUTEX_RECURSIVE="#define HAVE_PTHREAD_MUTEX_RECURSIVE"
+fi
+
+AC_LANG_PUSH([C++])
 AC_MSG_CHECKING([whether libmaus2 has support for io_lib])
 	AC_LINK_IFELSE([AC_LANG_SOURCE([
 #include <libmaus2/LibMausConfig.hpp>
@@ -434,5 +478,7 @@ AC_SUBST([BIOBAMBAM_HAVE_GMP])
 AC_SUBST([GMPLDFLAGS])
 AC_SUBST([GMPCPPFLAGS])
 AC_SUBST([GMPLIBS])
+AC_SUBST([HAVE_PTHREAD_MUTEX_RECURSIVE_NP])
+AC_SUBST([HAVE_PTHREAD_MUTEX_RECURSIVE])
 # 
 AC_OUTPUT(Makefile src/Makefile test/Makefile src/biobambam2/BamBamConfig.hpp)
