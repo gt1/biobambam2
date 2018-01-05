@@ -3,7 +3,7 @@ Maintainer: German Tischler <gt1@sanger.ac.uk>
 Section: universe/misc
 Priority: optional
 Standards-Version: 3.9.5
-Build-Depends: debhelper (>= 9), dh-autoreconf, dh-exec, autoconf (>= 2.61), automake (>= 1.10), libtool (>= 2.2.6), pkg-config (>= 0.22), libmaus2-dev (>= 2.0.430), zlib1g-dev (>= 1.2.3), libsnappy-dev (>= 1.0.3), libxerces-c-dev (>= 3.1.0), libgmp-dev (>= 5.0.2), libgnutls-dev (>= 2.12.14), nettle-dev (>= 2.4)
+Build-Depends: debhelper (>= 9), dh-autoreconf, dh-exec, autoconf (>= 2.61), automake (>= 1.10), libtool (>= 2.2.6), pkg-config (>= 0.22), libmaus2-dev (>= 2.0.437), zlib1g-dev (>= 1.2.3), libsnappy-dev (>= 1.0.3), libxerces-c-dev (>= 3.1.0), libgmp-dev (>= 5.0.2), libgnutls-dev (>= 2.12.14), nettle-dev (>= 2.4)
 Vcs-Git: https://github.com/gt1/biobambam.git
 Vcs-browser: https://github.com/gt1/biobambam
 Homepage: https://github.com/gt1/biobambam
