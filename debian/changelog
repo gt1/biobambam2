@@ -1,3 +1,9 @@
+biobambam2 (2.0.83) unstable; urgency=medium
+
+  * add queryname_HI sort mode in bamsort
+
+ -- German Tischler <tischler@mpi-cbg.de>  Fri, 05 Jan 2018 12:08:05 +0100
+
 biobambam2 (2.0.82) unstable; urgency=medium
 
   * use PTHREAD_MUTEX_RECURSIVE_NP or PTHREAD_MUTEX_RECURSIVE as available in bamadapterfind
