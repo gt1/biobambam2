@@ -8,7 +8,9 @@ bamsort - sort BAM files by coordinate or query name
 .SH DESCRIPTION
 bamsort reads a BAM, SAM or CRAM file, sorts it by coordinate
 (lexicographical by reference sequence id and position on reference
-sequence), query name, hash value computed for the query name or an aux tag value
+sequence), query name (possibly including the HI aux tag for ordering
+alignments featuring the same query name),
+hash value computed for the query name or an aux tag value
 and writes the sorted file in BAM, SAM or CRAM format.
 .PP
 Lexicographical order denotes that pairs (a,b) and (c,d) will be ordered
@@ -42,7 +44,7 @@ than the input itself.
 .PP
 The following key=value pairs can be given:
 .PP
-.B SO=<coordinate|queryname|hash|tag>:
+.B SO=<coordinate|queryname|hash|tag|queryname_HI>:
 set the sort order. Valid values are
 .IP coordinate:
 sort alignments by coordinate
@@ -54,6 +56,9 @@ in a random order.
 .IP tag
 sort alignments by string aux field. The tag of the aux fields need to be
 provided using the sorttag key.
+.IP queryname_HI
+sort alignments by query name. Alignments with identical query name are
+sorted by the value of their HI aux field.
 .PP
 .B level=<-1|0|1|9|11>:
 set compression level of the output BAM file. Valid

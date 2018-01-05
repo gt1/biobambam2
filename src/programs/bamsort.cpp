@@ -25,6 +25,7 @@
 
 #include <libmaus2/bambam/BamAlignment.hpp>
 #include <libmaus2/bambam/BamAlignmentNameComparator.hpp>
+#include <libmaus2/bambam/BamAlignmentNameHIComparator.hpp>
 #include <libmaus2/bambam/BamAlignmentPosComparator.hpp>
 #include <libmaus2/bambam/BamAlignmentHashComparator.hpp>
 #include <libmaus2/bambam/BamAlignmentTagComparator.hpp>
@@ -255,13 +256,18 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 	/*
 	 * end md5/index callbacks
 	 */
-	enum sort_order_type { sort_order_coordinate, sort_order_queryname, sort_order_hash, sort_order_tag };
+	enum sort_order_type { sort_order_coordinate, sort_order_queryname, sort_order_hash, sort_order_tag, sort_order_queryname_HI };
 	sort_order_type sort_order;
 
 	if ( sortorder == "queryname" )
 	{
 		uphead.changeSortOrder("queryname");
 		sort_order = sort_order_queryname;
+	}
+	else if ( sortorder == "queryname_HI" )
+	{
+		uphead.changeSortOrder("queryname");
+		sort_order = sort_order_queryname_HI;
 	}
 	else if ( sortorder == "hash" )
 	{
@@ -668,6 +674,103 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 			// BEC.createOutput(std::cout, uphead, level, verbose, Pcbs);
 			BEC.createOutput(alout, verbose);
 		}
+		else if ( sort_order == sort_order_queryname_HI )
+		{
+			::libmaus2::bambam::BamEntryContainer< ::libmaus2::bambam::BamAlignmentNameHIComparator >
+				BEC(blockmem,tmpfilenameout,sortthreads);
+
+			if ( verbose )
+				std::cerr << "[V] Reading alignments from source." << std::endl;
+			uint64_t incnt = 0;
+
+			// current alignment
+			libmaus2::bambam::BamAlignment & curalgn = dec.getAlignment();
+			// previous alignment
+			libmaus2::bambam::BamAlignment prevalgn;
+			// previous alignment valid
+			bool prevalgnvalid = false;
+			// MQ field filter
+			libmaus2::bambam::BamAuxFilterVector MQfilter;
+			libmaus2::bambam::BamAuxFilterVector MSfilter;
+			libmaus2::bambam::BamAuxFilterVector MCfilter;
+			libmaus2::bambam::BamAuxFilterVector MTfilter;
+			libmaus2::bambam::BamAuxFilterVector CMCfilter;
+			MQfilter.set("MQ");
+			MSfilter.set("ms");
+			MCfilter.set("mc");
+			MTfilter.set("mt");
+			CMCfilter.set("MC");
+
+			// remove the original style tags (MC handled separately)
+			MSfilter.set("MS");
+			MTfilter.set("MT");
+
+			while ( dec.readAlignment() )
+			{
+				if ( curalgn.isSecondary() || curalgn.isSupplementary() )
+				{
+					BEC.putAlignment(curalgn);
+				}
+				else if ( prevalgnvalid )
+				{
+					// different name
+					if ( strcmp(curalgn.getName(),prevalgn.getName()) )
+					{
+						BEC.putAlignment(prevalgn);
+						curalgn.swap(prevalgn);
+					}
+					// same name
+					else
+					{
+						libmaus2::bambam::BamAlignment::fixMateInformation(prevalgn,curalgn,MQfilter);
+
+						if ( addMSMC )
+						{
+							libmaus2::bambam::BamAlignment::addMateBaseScore(prevalgn,curalgn,MSfilter);
+							libmaus2::bambam::BamAlignment::addMateCoordinate(prevalgn,curalgn,MCfilter);
+							libmaus2::bambam::BamAlignment::addMateCigarString(prevalgn,curalgn,MCaux,CMCfilter);
+    	    	    	    	    	    	    	removeOldStyleMateCoordinate(prevalgn,curalgn);
+
+							switch ( tag_type )
+							{
+								case tag_type_string:
+									libmaus2::bambam::BamAlignment::addMateTag(prevalgn,curalgn,MTfilter,tag);
+									break;
+								case tag_type_nucleotide:
+									libmaus2::bambam::BamAlignment::addMateTag(prevalgn,curalgn,MTfilter,nucltag);
+									break;
+								default:
+									break;
+							}
+						}
+
+						BEC.putAlignment(prevalgn);
+						BEC.putAlignment(curalgn);
+						prevalgnvalid = false;
+					}
+				}
+				else
+				{
+					prevalgn.swap(curalgn);
+					prevalgnvalid = true;
+				}
+
+				if ( verbose && ( ( ++incnt & ((1ull<<20)-1) ) == 0 ) )
+					std::cerr << "[V] " << incnt << std::endl;
+			}
+
+			if ( prevalgnvalid )
+			{
+				BEC.putAlignment(prevalgn);
+				prevalgnvalid = false;
+			}
+
+			if ( verbose )
+				std::cerr << "[V] read " << incnt << " alignments" << std::endl;
+
+			// BEC.createOutput(std::cout, uphead, level, verbose, Pcbs);
+			BEC.createOutput(alout, verbose);
+		}
 		else
 		{
 			::libmaus2::bambam::BamEntryContainer< ::libmaus2::bambam::BamAlignmentNameComparator >
@@ -856,6 +959,28 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 			// BEC.createOutput(std::cout, uphead, level, verbose, Pcbs);
 			BEC.createOutput(alout, verbose);
 		}
+		else if ( sort_order == sort_order_queryname_HI )
+		{
+			::libmaus2::bambam::BamEntryContainer< ::libmaus2::bambam::BamAlignmentNameHIComparator > BEC(blockmem,tmpfilenameout,sortthreads);
+
+			if ( verbose )
+				std::cerr << "[V] Reading alignments from source." << std::endl;
+			uint64_t incnt = 0;
+
+			while ( dec.readAlignment() )
+			{
+				BEC.putAlignment(dec.getAlignment());
+				incnt++;
+				if ( verbose && (incnt % (1024*1024) == 0) )
+					std::cerr << "[V] " << incnt/(1024*1024) << "M" << std::endl;
+			}
+
+			if ( verbose )
+				std::cerr << "[V] read " << incnt << " alignments" << std::endl;
+
+			// BEC.createOutput(std::cout, uphead, level, verbose, Pcbs);
+			BEC.createOutput(alout, verbose);
+		}
 		else
 		{
 			::libmaus2::bambam::BamEntryContainer< ::libmaus2::bambam::BamAlignmentNameComparator > BEC(blockmem,tmpfilenameout,sortthreads);
@@ -933,7 +1058,7 @@ int main(int argc, char * argv[])
 				std::vector< std::pair<std::string,std::string> > V;
 
 				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
-				V.push_back ( std::pair<std::string,std::string> ( "SO=<["+getDefaultSortOrder()+"]>", "sorting order (coordinate, queryname, hash or tag)" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "SO=<["+getDefaultSortOrder()+"]>", "sorting order (coordinate, queryname, hash, tag or queryname_HI)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "blockmb=<["+::biobambam2::Licensing::formatNumber(getDefaultBlockSize())+"]>", "size of internal memory buffer used for sorting in MiB" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "disablevalidation=<["+::biobambam2::Licensing::formatNumber(getDefaultDisableValidation())+"]>", "disable input validation (default is 0)" ) );
