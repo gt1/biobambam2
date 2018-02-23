@@ -1,3 +1,9 @@
+biobambam2 (2.0.84) unstable; urgency=medium
+
+  * update to libmaus2 2.0.448
+
+ -- German Tischler <tischler@mpi-cbg.de>  Fri, 23 Feb 2018 15:21:44 +0100
+
 biobambam2 (2.0.83) unstable; urgency=medium
 
   * add queryname_HI sort mode in bamsort
