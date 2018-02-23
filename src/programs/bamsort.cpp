@@ -1087,6 +1087,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( std::string("rmdup=<[")+::biobambam2::Licensing::formatNumber(getDefaultRmDup())+"]>", "remove duplicates (only when input name collated and output coordinate sorted, disabled by default)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("streaming=<[")+::biobambam2::Licensing::formatNumber(getDefaultStreaming())+"]>", "do not open input files multiple times when set" ) );
 				V.push_back ( std::pair<std::string,std::string> ( std::string("sorttag=<[]>"), std::string("tag used by SO=tag (no default)") ) );
+				V.push_back ( std::pair<std::string,std::string> ( "sortthreads=<[1]>", "threads used for sorting (default: 1)" ) );
 
 				::biobambam2::Licensing::printMap(std::cerr,V);
 
