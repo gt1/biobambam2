@@ -83,6 +83,13 @@ written to the given file. If indexfilename is unset, then no BAM index will be 
 .PP
 .B indexfilename
 file name for BAM index if index=1.
+.PP
+.B auxexists=[taglist]:
+only mask records containing any of the given aux field tags. taglist is a
+comma separated list of aux field names. Flag fields of records are only
+filtered if the respective records contain any of the aux fields mentioned
+in this list. By default all records are filtered. If e.g. auxexists=AS is
+given, then only flag fields of records containing an AS aux field are masked.
 .SH AUTHOR
 Written by German Tischler.
 .SH "REPORTING BUGS"

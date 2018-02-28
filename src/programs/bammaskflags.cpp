@@ -46,6 +46,24 @@ int bammaskflags(::libmaus2::util::ArgInfo const & arginfo)
 	uint64_t const maskneg = arginfo.getValue<uint64_t>("maskneg",getDefaultMaskNeg());
 	uint64_t const mask = maskpos & (~maskneg);
 
+	::libmaus2::trie::LinearHashTrie<char,uint32_t>::shared_ptr_type Sauxexists;
+
+	if ( arginfo.hasArg("auxexists") )
+	{
+		std::string const auxex = arginfo.getUnparsedValue("auxexists",std::string());
+		std::deque<std::string> qauxex = ::libmaus2::util::stringFunctions::tokenize(auxex,std::string(","));
+		std::vector<std::string> vauxex = std::vector<std::string>(qauxex.begin(),qauxex.end());
+
+
+		for ( uint64_t i = 0; i < vauxex.size(); ++i )
+			std::cerr << "auxexists " << vauxex[i] << std::endl;
+
+		::libmaus2::trie::Trie<char> trienofailure;
+		trienofailure.insertContainer(vauxex);
+		::libmaus2::trie::LinearHashTrie<char,uint32_t>::unique_ptr_type LHTnofailure(trienofailure.toLinearHashTrie<uint32_t>());
+		Sauxexists = ::libmaus2::trie::LinearHashTrie<char,uint32_t>::shared_ptr_type(LHTnofailure.release());
+	}
+
 	if ( mask )
 	{
 		std::cerr << "Keeping flags ";
@@ -135,10 +153,30 @@ int bammaskflags(::libmaus2::util::ArgInfo const & arginfo)
 	 */
 
 	::libmaus2::bambam::BamWriter::unique_ptr_type writer(new ::libmaus2::bambam::BamWriter(std::cout,uphead,level,Pcbs));
+	libmaus2::autoarray::AutoArray < std::pair<uint8_t,uint8_t> > Aaux;
 
 	while ( BD.readAlignment() )
 	{
-		alignment.putFlags(alignment.getFlags() & mask);
+		bool dofilter = false;
+
+		if ( !Sauxexists )
+		{
+			dofilter = true;
+		}
+		else
+		{
+			uint64_t const numaux = alignment.enumerateAuxTags(Aaux);
+
+			for ( uint64_t i = 0; i < numaux; ++i )
+			{
+				uint8_t const A[3] = { Aaux[i].first, Aaux[i].second, 0 };
+				dofilter = dofilter || ( Sauxexists->searchCompleteNoFailureZ(&A[0]) != -1 );
+			}
+		}
+
+		if ( dofilter )
+			alignment.putFlags(alignment.getFlags() & mask);
+
 		if ( resetmatecoord )
 		{
 			alignment.putNextRefId(-1);
@@ -197,6 +235,7 @@ int main(int argc, char * argv[])
 				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam2::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "indexfilename=<filename>", "file name for BAM index file (default: extend output file name)" ) );
 				V.push_back ( std::pair<std::string,std::string> ( "tmpfile=<filename>", "prefix for temporary files, default: create files in current directory" ) );
+				V.push_back ( std::pair<std::string,std::string> ( "auxexists=[]", "only mask records containing any of the given aux field tags" ) );
 
 				::biobambam2::Licensing::printMap(std::cerr,V);
 
