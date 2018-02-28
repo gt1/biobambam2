@@ -1,3 +1,9 @@
+biobambam2 (2.0.85) unstable; urgency=medium
+
+  * update to libmaus2 2.0.449
+
+ -- German Tischler <tischler@mpi-cbg.de>  Wed, 28 Feb 2018 15:41:16 +0100
+
 biobambam2 (2.0.84) unstable; urgency=medium
 
   * update to libmaus2 2.0.448
