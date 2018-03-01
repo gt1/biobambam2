@@ -1,3 +1,9 @@
+biobambam2 (2.0.87) unstable; urgency=medium
+
+  * update to libmaus2 2.0.451
+
+ -- German Tischler <tischler@mpi-cbg.de>  Thu, 01 Mar 2018 13:15:37 +0100
+
 biobambam2 (2.0.86) unstable; urgency=medium
 
   * add auxexists option in bammaskflags
