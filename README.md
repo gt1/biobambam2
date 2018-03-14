@@ -94,3 +94,16 @@ The binaries provided on github have support for CRAM writing. The program will 
 If the program cannot find a required reference sequence for encoding CRAM in any of these locations, then it fails. Note that if a reference sequence is only present
 in a FastA file then the REF_CACHE environment variable must be set or CRAM encoding will fail in the current version.
 
+Using blastnxmltobam
+--------------------
+
+The blastnxmltobam program can be used to transform blastn's XML output to
+the BAM format. An example is shown below:
+
+```
+makeblastdb -in ref.fasta -dbtype nucl
+blastn -outfmt 5 -query query.fasta -db ref.fasta | blastnxmltobam ref.fasta query.fasta >query.bam
+```
+
+The compilation of blastnxmltobam requires the xerces-c (see https://xerces.apache.org/xerces-c/) library for XML
+parsing (see configure switch --with-xerces-c).
