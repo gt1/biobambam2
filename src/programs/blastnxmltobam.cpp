@@ -37,6 +37,20 @@
 
 #include <config.h>
 
+static std::string stripAfterSpace(std::string const & s)
+{
+	uint64_t firstspace = s.size();
+
+	for ( uint64_t i = 0; i < s.size(); ++i )
+		if ( isspace(s[i]) )
+		{
+			firstspace = i;
+			break;
+		}
+
+	return s.substr(0,firstspace);
+}
+
 struct XercesUtf8Transcoder
 {
 	typedef XercesUtf8Transcoder this_type;
@@ -845,13 +859,13 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 					std::ostringstream cigarostr;
 					for ( uint64_t i = 0; i < opruns.size(); ++i )
 					{
-						std::cerr << "(" << opruns[i].first << "," << opruns[i].second << ")";
+						// std::cerr << "(" << opruns[i].first << "," << opruns[i].second << ")";
 						cigarostr << opruns[i].second << opruns[i].first;
 					}
-					std::cerr << std::endl;
+					// std::cerr << std::endl;
 
 					bamwriter.encodeAlignment(
-						readName,
+						stripAfterSpace(readName),
 						refnametoid.find(hita->first)->second,
 						hitStart,
 						0, // mapq
@@ -1090,19 +1104,6 @@ void loadFastAFile(std::string const & filename, std::map<std::string,std::strin
 	}
 }
 
-std::string stripAfterSpace(std::string const & s)
-{
-	uint64_t firstspace = s.size();
-
-	for ( uint64_t i = 0; i < s.size(); ++i )
-		if ( isspace(s[i]) )
-		{
-			firstspace = i;
-			break;
-		}
-
-	return s.substr(0,firstspace);
-}
 
 int main(int argc, char * argv[])
 {
