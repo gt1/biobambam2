@@ -460,6 +460,7 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 			// std::cerr << "new query" << std::endl;
 			readNameObtained = false;
 			hspId = 0;
+			// std::cerr << "setting hspId=" << hspId << std::endl;
 			// std::cerr << "***" << std::endl;
 		}
 		if ( tag == "Iteration_query-def" )
@@ -473,7 +474,9 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 			hitDef.clear();
 			hitLenObtained = false;
 			hitLen.clear();
-			hitFirstScore = -1;
+			// hitFirstScore = -1;
+			// hspId = 0;
+			// std::cerr << "setting hspId=" << hspId << std::endl;
 		}
 		if ( tag == "Hit_num" )
 		{
@@ -716,6 +719,9 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 					<< readName << "[" << hspId << "]" << " queryFrame " << queryFrame << " hitFrame " << hitFrame
 					<< " query coord [" << hspQueryFrom << "," << hspQueryTo << "]"
 					<< " hit coord [" << hspHitFrom << "," << hspHitTo << "]"
+					<< " hit score " << thisHitScore
+					<< "/" << hitFirstScore
+					<< " hspId=" << hspId
 					<< std::endl;
 
 				uint64_t qlen = 0;
