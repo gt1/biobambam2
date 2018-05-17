@@ -64,6 +64,23 @@ static int getDefaultIndex() { return 0; }
 	return UNIQUE_PTR_MOVE(uphead);
 }
 
+struct SimpleThreadPoolTerminate
+{
+	libmaus2::parallel::SimpleThreadPool * STP;
+
+	SimpleThreadPoolTerminate(libmaus2::parallel::SimpleThreadPool * rSTP)
+	: STP(rSTP) {}
+
+	~SimpleThreadPoolTerminate()
+	{
+		if ( STP )
+		{
+			STP->terminate();
+			STP->join();
+		}
+	}
+};
+
 int bammerge(libmaus2::util::ArgInfo const & arginfo)
 {
 	if ( isatty(STDOUT_FILENO) && (!arginfo.hasArg("O")) )
@@ -76,6 +93,21 @@ int bammerge(libmaus2::util::ArgInfo const & arginfo)
 
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
 	std::string const sortorder = arginfo.getValue<std::string>("SO",getDefaultSortOrder());
+
+	uint64_t inputthreads = arginfo.getValue<uint64_t>("inputthreads",1);
+
+	libmaus2::parallel::SimpleThreadPool::unique_ptr_type PSTP;
+	if ( inputthreads > 1 )
+	{
+		libmaus2::parallel::SimpleThreadPool::unique_ptr_type TSTP(
+			new libmaus2::parallel::SimpleThreadPool(inputthreads)
+		);
+		PSTP = UNIQUE_PTR_MOVE(TSTP);
+
+		libmaus2::bambam::BamAlignmentDecoderFactory::setThreadPool(PSTP.get());
+	}
+
+	SimpleThreadPoolTerminate STPT(PSTP ? PSTP.get() : 0);
 
 	std::vector<std::string> inputfilenames = arginfo.getPairValues("I");
 	for ( uint64_t i = 0; i < arginfo.restargs.size(); ++i )

@@ -37,6 +37,20 @@
 
 #include <config.h>
 
+static std::string stripAfterSpace(std::string const & s)
+{
+	uint64_t firstspace = s.size();
+
+	for ( uint64_t i = 0; i < s.size(); ++i )
+		if ( isspace(s[i]) )
+		{
+			firstspace = i;
+			break;
+		}
+
+	return s.substr(0,firstspace);
+}
+
 struct XercesUtf8Transcoder
 {
 	typedef XercesUtf8Transcoder this_type;
@@ -446,6 +460,7 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 			// std::cerr << "new query" << std::endl;
 			readNameObtained = false;
 			hspId = 0;
+			// std::cerr << "setting hspId=" << hspId << std::endl;
 			// std::cerr << "***" << std::endl;
 		}
 		if ( tag == "Iteration_query-def" )
@@ -459,7 +474,9 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 			hitDef.clear();
 			hitLenObtained = false;
 			hitLen.clear();
-			hitFirstScore = -1;
+			// hitFirstScore = -1;
+			// hspId = 0;
+			// std::cerr << "setting hspId=" << hspId << std::endl;
 		}
 		if ( tag == "Hit_num" )
 		{
@@ -702,6 +719,9 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 					<< readName << "[" << hspId << "]" << " queryFrame " << queryFrame << " hitFrame " << hitFrame
 					<< " query coord [" << hspQueryFrom << "," << hspQueryTo << "]"
 					<< " hit coord [" << hspHitFrom << "," << hspHitTo << "]"
+					<< " hit score " << thisHitScore
+					<< "/" << hitFirstScore
+					<< " hspId=" << hspId
 					<< std::endl;
 
 				uint64_t qlen = 0;
@@ -845,13 +865,13 @@ struct BlastNDocumentHandler : public xercesc::DocumentHandler, public xercesc::
 					std::ostringstream cigarostr;
 					for ( uint64_t i = 0; i < opruns.size(); ++i )
 					{
-						std::cerr << "(" << opruns[i].first << "," << opruns[i].second << ")";
+						// std::cerr << "(" << opruns[i].first << "," << opruns[i].second << ")";
 						cigarostr << opruns[i].second << opruns[i].first;
 					}
-					std::cerr << std::endl;
+					// std::cerr << std::endl;
 
 					bamwriter.encodeAlignment(
-						readName,
+						stripAfterSpace(readName),
 						refnametoid.find(hita->first)->second,
 						hitStart,
 						0, // mapq
@@ -1090,19 +1110,6 @@ void loadFastAFile(std::string const & filename, std::map<std::string,std::strin
 	}
 }
 
-std::string stripAfterSpace(std::string const & s)
-{
-	uint64_t firstspace = s.size();
-
-	for ( uint64_t i = 0; i < s.size(); ++i )
-		if ( isspace(s[i]) )
-		{
-			firstspace = i;
-			break;
-		}
-
-	return s.substr(0,firstspace);
-}
 
 int main(int argc, char * argv[])
 {

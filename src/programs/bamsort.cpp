@@ -55,6 +55,7 @@ static int getDefaultIndex() { return 0; }
 
 #include <biobambam2/Licensing.hpp>
 
+
 static int getDefaultLevel() { return Z_DEFAULT_COMPRESSION; }
 static int getDefaultVerbose() { return 1; }
 static std::string getDefaultSortOrder() { return "coordinate"; }
@@ -70,6 +71,53 @@ static int getDefaultAddDupMarkSupport() { return 0; }
 static int getDefaultMarkDuplicates() { return 0; }
 static int getDefaultStreaming() { return 1; }
 static int getDefaultRmDup() { return 0; }
+
+void printHelpMessage(libmaus2::util::ArgInfo const & /* arginfo */)
+{
+	std::cerr << ::biobambam2::Licensing::license();
+	std::cerr << std::endl;
+	std::cerr << "Key=Value pairs:" << std::endl;
+	std::cerr << std::endl;
+
+	std::vector< std::pair<std::string,std::string> > V;
+
+	V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
+	V.push_back ( std::pair<std::string,std::string> ( "SO=<["+getDefaultSortOrder()+"]>", "sorting order (coordinate, queryname, hash, tag or queryname_HI)" ) );
+	V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
+	V.push_back ( std::pair<std::string,std::string> ( "blockmb=<["+::biobambam2::Licensing::formatNumber(getDefaultBlockSize())+"]>", "size of internal memory buffer used for sorting in MiB" ) );
+	V.push_back ( std::pair<std::string,std::string> ( "disablevalidation=<["+::biobambam2::Licensing::formatNumber(getDefaultDisableValidation())+"]>", "disable input validation (default is 0)" ) );
+	V.push_back ( std::pair<std::string,std::string> ( "tmpfile=<filename>", "prefix for temporary files, default: create files in current directory" ) );
+	V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam2::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
+	V.push_back ( std::pair<std::string,std::string> ( "md5filename=<filename>", "file name for md5 check sum" ) );
+	V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam2::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
+	V.push_back ( std::pair<std::string,std::string> ( "indexfilename=<filename>", "file name for BAM index file" ) );
+	V.push_back ( std::pair<std::string,std::string> ( std::string("inputformat=<[")+getDefaultInputFormat()+"]>", std::string("input format (") + libmaus2::bambam::BamMultiAlignmentDecoderFactory::getValidInputFormats() + ")" ) );
+	V.push_back ( std::pair<std::string,std::string> ( std::string("outputformat=<[")+libmaus2::bambam::BamBlockWriterBaseFactory::getDefaultOutputFormat()+"]>", std::string("output format (") + libmaus2::bambam::BamBlockWriterBaseFactory::getValidOutputFormats() + ")" ) );
+	V.push_back ( std::pair<std::string,std::string> ( "I=<[stdin]>", "input filename (standard input if unset)" ) );
+	V.push_back ( std::pair<std::string,std::string> ( "inputthreads=<[1]>", "input helper threads (for inputformat=bam only, default: 1)" ) );
+	V.push_back ( std::pair<std::string,std::string> ( "reference=<>", "reference FastA (.fai file required, for cram i/o only)" ) );
+	V.push_back ( std::pair<std::string,std::string> ( "range=<>", "coordinate range to be processed (for coordinate sorted indexed BAM input only)" ) );
+	V.push_back ( std::pair<std::string,std::string> ( "outputthreads=<[1]>", "output helper threads (for outputformat=bam only, default: 1)" ) );
+	V.push_back ( std::pair<std::string,std::string> ( "O=<[stdout]>", "output filename (standard output if unset)" ) );
+	V.push_back ( std::pair<std::string,std::string> ( std::string("fixmates=<[")+::biobambam2::Licensing::formatNumber(getDefaultFixMates())+"]>", "fix mate information (for name collated input only, disabled by default)" ) );
+	V.push_back ( std::pair<std::string,std::string> ( std::string("calmdnm=<[")+::biobambam2::Licensing::formatNumber(getDefaultCalMdNm())+"]>", "calculate MD and NM aux fields (for coordinate sorted output only)" ) );
+	V.push_back ( std::pair<std::string,std::string> ( std::string("calmdnmreference=<[]>"), "reference for calculating MD and NM aux fields (calmdnm=1 only)" ) );
+	V.push_back ( std::pair<std::string,std::string> ( std::string("calmdnmrecompindetonly=<[")+::biobambam2::Licensing::formatNumber(getDefaultCalMdNm())+"]>", "only recalculate MD and NM in the presence of indeterminate bases (calmdnm=1 only)" ) );
+	V.push_back ( std::pair<std::string,std::string> ( std::string("calmdnmwarnchange=<[")+::biobambam2::Licensing::formatNumber(getDefaultCalMdNmWarnChange())+"]>", "warn when changing existing MD/NM fields (calmdnm=1 only)" ) );
+	V.push_back ( std::pair<std::string,std::string> ( std::string("adddupmarksupport=<[")+::biobambam2::Licensing::formatNumber(getDefaultAddDupMarkSupport())+"]>", "add info for streaming duplicate marking (for name collated input only, ignored for fixmate=0, disabled by default)" ) );
+	V.push_back ( std::pair<std::string,std::string> ( "tag=<[a-zA-Z][a-zA-Z0-9]>", "aux field id for tag string extraction (adddupmarksupport=1 only)" ) );
+	V.push_back ( std::pair<std::string,std::string> ( "nucltag=<[a-zA-Z][a-zA-Z0-9]>", "aux field id for nucleotide tag extraction (adddupmarksupport=1 only)" ) );
+	V.push_back ( std::pair<std::string,std::string> ( std::string("markduplicates=<[")+::biobambam2::Licensing::formatNumber(getDefaultMarkDuplicates())+"]>", "mark duplicates (only when input name collated and output coordinate sorted, disabled by default)" ) );
+	V.push_back ( std::pair<std::string,std::string> ( std::string("rmdup=<[")+::biobambam2::Licensing::formatNumber(getDefaultRmDup())+"]>", "remove duplicates (only when input name collated and output coordinate sorted, disabled by default)" ) );
+	V.push_back ( std::pair<std::string,std::string> ( std::string("streaming=<[")+::biobambam2::Licensing::formatNumber(getDefaultStreaming())+"]>", "do not open input files multiple times when set" ) );
+	V.push_back ( std::pair<std::string,std::string> ( std::string("sorttag=<[]>"), std::string("tag used by SO=tag (no default)") ) );
+	V.push_back ( std::pair<std::string,std::string> ( "sortthreads=<[1]>", "threads used for sorting (default: 1)" ) );
+
+	::biobambam2::Licensing::printMap(std::cerr,V);
+
+	std::cerr << std::endl;
+}
+
 
 /*
    biobambam used MC as a mate coordinate tag which now has a clash
@@ -148,18 +196,26 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 
 	if ( isatty(STDIN_FILENO) && inputisstdin && (arginfo.getValue<std::string>("inputformat","bam") != "sam") )
 	{
+		printHelpMessage(arginfo);
+		return EXIT_FAILURE;
+		#if 0
 		::libmaus2::exception::LibMausException se;
 		se.getStream() << "Refusing to read binary data from terminal, please redirect standard input to pipe or file." << std::endl;
 		se.finish();
 		throw se;
+		#endif
 	}
 
 	if ( isatty(STDOUT_FILENO) && outputisstdout && (arginfo.getValue<std::string>("outputformat","bam") != "sam") )
 	{
+		printHelpMessage(arginfo);
+		return EXIT_FAILURE;
+		#if 0
 		::libmaus2::exception::LibMausException se;
 		se.getStream() << "Refusing write binary data to terminal, please redirect standard output to pipe or file." << std::endl;
 		se.finish();
 		throw se;
+		#endif
 	}
 
 	int const verbose = arginfo.getValue<int>("verbose",getDefaultVerbose());
@@ -1028,6 +1084,7 @@ int bamsort(::libmaus2::util::ArgInfo const & arginfo)
 	return EXIT_SUCCESS;
 }
 
+
 int main(int argc, char * argv[])
 {
 	try
@@ -1050,48 +1107,7 @@ int main(int argc, char * argv[])
 				arginfo.restargs[i] == "--help"
 			)
 			{
-				std::cerr << ::biobambam2::Licensing::license();
-				std::cerr << std::endl;
-				std::cerr << "Key=Value pairs:" << std::endl;
-				std::cerr << std::endl;
-
-				std::vector< std::pair<std::string,std::string> > V;
-
-				V.push_back ( std::pair<std::string,std::string> ( "level=<["+::biobambam2::Licensing::formatNumber(getDefaultLevel())+"]>", libmaus2::bambam::BamBlockWriterBaseFactory::getBamOutputLevelHelpText() ) );
-				V.push_back ( std::pair<std::string,std::string> ( "SO=<["+getDefaultSortOrder()+"]>", "sorting order (coordinate, queryname, hash, tag or queryname_HI)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "verbose=<["+::biobambam2::Licensing::formatNumber(getDefaultVerbose())+"]>", "print progress report" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "blockmb=<["+::biobambam2::Licensing::formatNumber(getDefaultBlockSize())+"]>", "size of internal memory buffer used for sorting in MiB" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "disablevalidation=<["+::biobambam2::Licensing::formatNumber(getDefaultDisableValidation())+"]>", "disable input validation (default is 0)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "tmpfile=<filename>", "prefix for temporary files, default: create files in current directory" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "md5=<["+::biobambam2::Licensing::formatNumber(getDefaultMD5())+"]>", "create md5 check sum (default: 0)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "md5filename=<filename>", "file name for md5 check sum" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "index=<["+::biobambam2::Licensing::formatNumber(getDefaultIndex())+"]>", "create BAM index (default: 0)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "indexfilename=<filename>", "file name for BAM index file" ) );
-				V.push_back ( std::pair<std::string,std::string> ( std::string("inputformat=<[")+getDefaultInputFormat()+"]>", std::string("input format (") + libmaus2::bambam::BamMultiAlignmentDecoderFactory::getValidInputFormats() + ")" ) );
-				V.push_back ( std::pair<std::string,std::string> ( std::string("outputformat=<[")+libmaus2::bambam::BamBlockWriterBaseFactory::getDefaultOutputFormat()+"]>", std::string("output format (") + libmaus2::bambam::BamBlockWriterBaseFactory::getValidOutputFormats() + ")" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "I=<[stdin]>", "input filename (standard input if unset)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "inputthreads=<[1]>", "input helper threads (for inputformat=bam only, default: 1)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "reference=<>", "reference FastA (.fai file required, for cram i/o only)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "range=<>", "coordinate range to be processed (for coordinate sorted indexed BAM input only)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "outputthreads=<[1]>", "output helper threads (for outputformat=bam only, default: 1)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "O=<[stdout]>", "output filename (standard output if unset)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( std::string("fixmates=<[")+::biobambam2::Licensing::formatNumber(getDefaultFixMates())+"]>", "fix mate information (for name collated input only, disabled by default)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( std::string("calmdnm=<[")+::biobambam2::Licensing::formatNumber(getDefaultCalMdNm())+"]>", "calculate MD and NM aux fields (for coordinate sorted output only)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( std::string("calmdnmreference=<[]>"), "reference for calculating MD and NM aux fields (calmdnm=1 only)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( std::string("calmdnmrecompindetonly=<[")+::biobambam2::Licensing::formatNumber(getDefaultCalMdNm())+"]>", "only recalculate MD and NM in the presence of indeterminate bases (calmdnm=1 only)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( std::string("calmdnmwarnchange=<[")+::biobambam2::Licensing::formatNumber(getDefaultCalMdNmWarnChange())+"]>", "warn when changing existing MD/NM fields (calmdnm=1 only)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( std::string("adddupmarksupport=<[")+::biobambam2::Licensing::formatNumber(getDefaultAddDupMarkSupport())+"]>", "add info for streaming duplicate marking (for name collated input only, ignored for fixmate=0, disabled by default)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "tag=<[a-zA-Z][a-zA-Z0-9]>", "aux field id for tag string extraction (adddupmarksupport=1 only)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( "nucltag=<[a-zA-Z][a-zA-Z0-9]>", "aux field id for nucleotide tag extraction (adddupmarksupport=1 only)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( std::string("markduplicates=<[")+::biobambam2::Licensing::formatNumber(getDefaultMarkDuplicates())+"]>", "mark duplicates (only when input name collated and output coordinate sorted, disabled by default)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( std::string("rmdup=<[")+::biobambam2::Licensing::formatNumber(getDefaultRmDup())+"]>", "remove duplicates (only when input name collated and output coordinate sorted, disabled by default)" ) );
-				V.push_back ( std::pair<std::string,std::string> ( std::string("streaming=<[")+::biobambam2::Licensing::formatNumber(getDefaultStreaming())+"]>", "do not open input files multiple times when set" ) );
-				V.push_back ( std::pair<std::string,std::string> ( std::string("sorttag=<[]>"), std::string("tag used by SO=tag (no default)") ) );
-				V.push_back ( std::pair<std::string,std::string> ( "sortthreads=<[1]>", "threads used for sorting (default: 1)" ) );
-
-				::biobambam2::Licensing::printMap(std::cerr,V);
-
-				std::cerr << std::endl;
+				printHelpMessage(arginfo);
 				return EXIT_SUCCESS;
 			}
 
