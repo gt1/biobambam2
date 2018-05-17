@@ -60,7 +60,9 @@ int bamexplode(libmaus2::util::ArgInfo const & arginfo)
 				<< std::setw(6) << std::setfill('0') << nextfn++
 				<< std::setw(0) << "." << outputformat
 				;
-			argcopy.replaceKey("O",fnostr.str());
+			std::string const fn = fnostr.str();
+			argcopy.replaceKey("O",fn);
+			std::cerr << "[O]\t" << fn << std::endl;
 			libmaus2::bambam::BamBlockWriterBase::unique_ptr_type Twriter(libmaus2::bambam::BamBlockWriterBaseFactory::construct(header,argcopy));
 			Pwriter = UNIQUE_PTR_MOVE(Twriter);
 			written = 0;
