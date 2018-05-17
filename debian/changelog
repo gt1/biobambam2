@@ -1,3 +1,14 @@
+biobambam2 (2.0.88) unstable; urgency=medium
+
+  * output filenames produces in bamexplode
+  * activate input thread pooling in bammerge
+  * change message when bamsort is run with bam input/output through standard channels
+  * fix score tracking in blastnxmltobam
+  * add documentation for blastnxmltobam
+  * implement shortening of query name in blastnxmltobam
+
+ -- German Tischler <tischler@mpi-cbg.de>  Thu, 17 May 2018 09:57:16 +0200
+
 biobambam2 (2.0.87) unstable; urgency=medium
 
   * update to libmaus2 2.0.451
