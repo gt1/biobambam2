@@ -1,6 +1,13 @@
 biobambam2
 ==========
 
+-------------------------------------------------------------------------------
+
+Important notice: this is legacy code, recent development on biobambam2 can be
+found at https://gitlab.com/german.tischler/biobambam2 .
+
+-------------------------------------------------------------------------------
+
 This package contains some tools for processing BAM files including
 
  - bamsormadup: parallel sorting and duplicate marking
